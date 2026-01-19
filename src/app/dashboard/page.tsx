@@ -39,7 +39,9 @@ interface AccountData {
     positionCount: number;
 }
 
-export default function Dashboard() {
+import { Suspense } from "react";
+
+function DashboardContent() {
     const { ready, authenticated, logout, user } = usePrivy();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -347,6 +349,20 @@ export default function Dashboard() {
                 </div>
             </nav>
         </main>
+    );
+}
+
+export default function Dashboard() {
+    return (
+        <Suspense fallback={
+            <main className="min-h-screen flex items-center justify-center">
+                <div className="animate-pulse">
+                    <div className="w-12 h-12 rounded-full bg-tm-purple/30" />
+                </div>
+            </main>
+        }>
+            <DashboardContent />
+        </Suspense>
     );
 }
 

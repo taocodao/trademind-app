@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #0A0A0F;
+  --bg-surface: #1A1A2E;
+  --accent-purple: #7C3AED;
+  --profit-green: #10B981;
+  --loss-red: #EF4444;
+  --text-primary: #F8FAFC;
+  --text-muted: #94A3B8;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Glassmorphism card */
+.glass-card {
+  background: rgba(26, 26, 46, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  border-radius: 16px;
+}
+
+/* Profit text with glow */
+.profit-glow {
+  color: var(--profit-green);
+  text-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+}
+
+/* Loss text with glow */
+.loss-glow {
+  color: var(--loss-red);
+  text-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+}
+
+/* Purple gradient button */
+.btn-primary {
+  background: linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%);
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.4);
+}

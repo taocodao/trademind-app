@@ -4,12 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:https": "node server.js",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
     "@privy-io/react-auth": "^1.66.0",
+    "@upstash/redis": "^1.36.1",
     "@vercel/postgres": "^0.5.1",
     "lucide-react": "^0.309.0",
     "next": "15.1.0",

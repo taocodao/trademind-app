@@ -1,36 +1,111 @@
 "use client";
 
 import { usePrivy } from "@privy-io/react-auth";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, useCallback } from "react";
 import {
     TrendingUp,
     Wallet,
     Activity,
     ChevronRight,
     LogOut,
-    Bell
+    Bell,
+    RefreshCw,
+    AlertCircle,
+    CheckCircle
 } from "lucide-react";
 import Link from "next/link";
+import { TastytradeLink } from "@/components/TastytradeLink";
 
-// Mock data - will be replaced with real API calls
-const mockData = {
-    balance: 12450.23,
-    todayPnL: 342.18,
-    todayPnLPercent: 2.75,
-    winRate: 73,
-    openPositions: 3,
-    positions: [
-        { symbol: "AAPL", type: "Calendar", pnl: 185.50, pnlPercent: 1.23 },
-        { symbol: "SPY", type: "Calendar", pnl: 127.50, pnlPercent: 2.15 },
-        { symbol: "MSFT", type: "Calendar", pnl: 29.18, pnlPercent: 0.87 },
-    ],
-};
+interface Position {
+    symbol: string;
+    underlying: string;
+    type: string;
+    quantity: number;
+    entryPrice: number;
+    currentPrice: number;
+    unrealizedPnL: number;
+    pnlPercent: number;
+}
+
+interface AccountData {
+    accountNumber: string;
+    balance: number;
+    netLiquidatingValue: number;
+    buyingPower: number;
+    todayPnL: number;
+    todayPnLPercent: number;
+    positions: Position[];
+    positionCount: number;
+}
 
 export default function Dashboard() {
     const { ready, authenticated, logout, user } = usePrivy();
     const router = useRouter();
-    const [data] = useState(mockData);
+    const searchParams = useSearchParams();
+    const [data, setData] = useState<AccountData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+    const [tastyLinked, setTastyLinked] = useState<boolean | null>(null);
+    const [showLinkedSuccess, setShowLinkedSuccess] = useState(false);
+
+    // Check for OAuth callback parameters
+    useEffect(() => {
+        const linked = searchParams.get("linked");
+        const oauthError = searchParams.get("error");
+
+        if (linked === "true") {
+            setShowLinkedSuccess(true);
+            setTastyLinked(true);
+            // Clear URL params
+            router.replace("/dashboard");
+            // Hide success message after 3 seconds
+            setTimeout(() => setShowLinkedSuccess(false), 3000);
+        }
+
+        if (oauthError) {
+            setError(decodeURIComponent(oauthError));
+            router.replace("/dashboard");
+        }
+    }, [searchParams, router]);
+
+    // Check Tastytrade link status
+    useEffect(() => {
+        if (ready && authenticated && tastyLinked === null) {
+            fetch("/api/tastytrade/status")
+                .then((res) => res.json())
+                .then((data) => {
+                    setTastyLinked(data.linked);
+                })
+                .catch(() => {
+                    setTastyLinked(false);
+                });
+        }
+    }, [ready, authenticated, tastyLinked]);
+
+    const fetchAccountData = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const response = await fetch('/api/tastytrade/account');
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to fetch account data');
+            }
+
+            const accountData = await response.json();
+            setData(accountData);
+            setLastUpdated(new Date());
+        } catch (err) {
+            console.error('Failed to fetch account:', err);
+            setError(err instanceof Error ? err.message : 'Failed to load account data');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
         if (ready && !authenticated) {
@@ -38,7 +113,18 @@ export default function Dashboard() {
         }
     }, [ready, authenticated, router]);
 
-    if (!ready || !authenticated) {
+    useEffect(() => {
+        if (ready && authenticated && tastyLinked) {
+            fetchAccountData();
+
+            // Auto-refresh every 30 seconds
+            const interval = setInterval(fetchAccountData, 30000);
+            return () => clearInterval(interval);
+        }
+    }, [ready, authenticated, tastyLinked, fetchAccountData]);
+
+    // Show loading while checking auth and link status
+    if (!ready || !authenticated || tastyLinked === null) {
         return (
             <main className="min-h-screen flex items-center justify-center">
                 <div className="animate-pulse">
@@ -47,6 +133,14 @@ export default function Dashboard() {
             </main>
         );
     }
+
+    // Show Tastytrade link modal if not linked
+    if (tastyLinked === false) {
+        return <TastytradeLink onLinked={() => setTastyLinked(true)} />;
+    }
+
+    // Win rate would come from trade history - using placeholder for now
+    const winRate = 73;
 
     return (
         <main className="min-h-screen pb-20">
@@ -59,6 +153,13 @@ export default function Dashboard() {
                     </h1>
                 </div>
                 <div className="flex items-center gap-3">
+                    <button
+                        onClick={fetchAccountData}
+                        disabled={loading}
+                        className="w-10 h-10 rounded-full bg-tm-surface flex items-center justify-center"
+                    >
+                        <RefreshCw className={`w-5 h-5 text-tm-muted ${loading ? 'animate-spin' : ''}`} />
+                    </button>
                     <button className="w-10 h-10 rounded-full bg-tm-surface flex items-center justify-center">
                         <Bell className="w-5 h-5 text-tm-muted" />
                     </button>
@@ -71,23 +172,59 @@ export default function Dashboard() {
                 </div>
             </header>
 
+            {/* Success Toast */}
+            {showLinkedSuccess && (
+                <div className="px-6 mb-6">
+                    <div className="glass-card p-4 border border-tm-green/30 flex items-center gap-3">
+                        <CheckCircle className="w-5 h-5 text-tm-green flex-shrink-0" />
+                        <p className="text-tm-green font-medium">Tastytrade account linked successfully!</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Error State */}
+            {error && (
+                <div className="px-6 mb-6">
+                    <div className="glass-card p-4 border border-tm-red/30 flex items-center gap-3">
+                        <AlertCircle className="w-5 h-5 text-tm-red flex-shrink-0" />
+                        <div>
+                            <p className="text-tm-red font-medium">Error loading data</p>
+                            <p className="text-sm text-tm-muted">{error}</p>
+                        </div>
+                        <button
+                            onClick={fetchAccountData}
+                            className="ml-auto text-sm text-tm-purple"
+                        >
+                            Retry
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Balance Card */}
             <div className="px-6 mb-6">
                 <div className="glass-card p-6">
                     <div className="flex items-center gap-2 text-tm-muted mb-2">
                         <Wallet className="w-4 h-4" />
-                        <span className="text-sm">Total Balance</span>
+                        <span className="text-sm">Net Liquidating Value</span>
+                        {data?.accountNumber && (
+                            <span className="text-xs ml-auto">Acct: {data.accountNumber}</span>
+                        )}
                     </div>
                     <h2 className="text-4xl font-bold font-mono mb-4">
-                        ${data.balance.toLocaleString()}
+                        {loading && !data ? (
+                            <span className="animate-pulse">Loading...</span>
+                        ) : (
+                            `$${(data?.netLiquidatingValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        )}
                     </h2>
 
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm text-tm-muted">Today's P&L</p>
-                            <p className={`text-xl font-semibold font-mono ${data.todayPnL >= 0 ? 'profit-glow' : 'loss-glow'}`}>
-                                {data.todayPnL >= 0 ? '+' : ''}${data.todayPnL.toFixed(2)}
-                                <span className="text-sm ml-1">({data.todayPnLPercent}%)</span>
+                            <p className="text-sm text-tm-muted">Today&apos;s P&amp;L</p>
+                            <p className={`text-xl font-semibold font-mono ${(data?.todayPnL || 0) >= 0 ? 'profit-glow' : 'loss-glow'}`}>
+                                {(data?.todayPnL || 0) >= 0 ? '+' : ''}${(data?.todayPnL || 0).toFixed(2)}
+                                <span className="text-sm ml-1">({(data?.todayPnLPercent || 0).toFixed(2)}%)</span>
                             </p>
                         </div>
                         <div className="text-right">
@@ -107,7 +244,7 @@ export default function Dashboard() {
                                         <circle
                                             className="text-tm-green"
                                             strokeWidth="4"
-                                            strokeDasharray={`${data.winRate * 1.26} 126`}
+                                            strokeDasharray={`${winRate * 1.26} 126`}
                                             strokeLinecap="round"
                                             stroke="currentColor"
                                             fill="transparent"
@@ -117,12 +254,18 @@ export default function Dashboard() {
                                         />
                                     </svg>
                                     <span className="absolute inset-0 flex items-center justify-center text-sm font-bold">
-                                        {data.winRate}%
+                                        {winRate}%
                                     </span>
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    {lastUpdated && (
+                        <p className="text-xs text-tm-muted mt-4">
+                            Last updated: {lastUpdated.toLocaleTimeString()}
+                        </p>
+                    )}
                 </div>
             </div>
 
@@ -135,7 +278,7 @@ export default function Dashboard() {
                         </div>
                         <div>
                             <p className="font-semibold">Signals</p>
-                            <p className="text-sm text-tm-green">3 new</p>
+                            <p className="text-sm text-tm-green">View trades</p>
                         </div>
                     </Link>
                     <Link href="/positions" className="glass-card p-4 flex items-center gap-3">
@@ -144,7 +287,7 @@ export default function Dashboard() {
                         </div>
                         <div>
                             <p className="font-semibold">Positions</p>
-                            <p className="text-sm text-tm-muted">{data.openPositions} open</p>
+                            <p className="text-sm text-tm-muted">{data?.positionCount || 0} open</p>
                         </div>
                     </Link>
                 </div>
@@ -160,27 +303,38 @@ export default function Dashboard() {
                 </div>
 
                 <div className="space-y-3">
-                    {data.positions.map((pos, i) => (
-                        <div key={i} className="glass-card p-4 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-tm-surface flex items-center justify-center font-bold text-sm">
-                                    {pos.symbol.slice(0, 2)}
-                                </div>
-                                <div>
-                                    <p className="font-semibold">{pos.symbol}</p>
-                                    <p className="text-sm text-tm-muted">{pos.type}</p>
-                                </div>
-                            </div>
-                            <div className="text-right">
-                                <p className={`font-mono font-semibold ${pos.pnl >= 0 ? 'text-tm-green' : 'text-tm-red'}`}>
-                                    {pos.pnl >= 0 ? '+' : ''}${pos.pnl.toFixed(2)}
-                                </p>
-                                <p className="text-sm text-tm-muted">
-                                    {pos.pnl >= 0 ? '+' : ''}{pos.pnlPercent}%
-                                </p>
-                            </div>
+                    {loading && !data ? (
+                        <div className="glass-card p-4 animate-pulse">
+                            <div className="h-4 bg-tm-surface rounded w-1/3 mb-2" />
+                            <div className="h-3 bg-tm-surface rounded w-1/4" />
                         </div>
-                    ))}
+                    ) : data?.positions && data.positions.length > 0 ? (
+                        data.positions.slice(0, 5).map((pos, i) => (
+                            <div key={i} className="glass-card p-4 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-tm-surface flex items-center justify-center font-bold text-sm">
+                                        {(pos.underlying || pos.symbol).slice(0, 2)}
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold">{pos.underlying || pos.symbol}</p>
+                                        <p className="text-sm text-tm-muted">{pos.type} × {pos.quantity}</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className={`font-mono font-semibold ${pos.unrealizedPnL >= 0 ? 'text-tm-green' : 'text-tm-red'}`}>
+                                        {pos.unrealizedPnL >= 0 ? '+' : ''}${pos.unrealizedPnL.toFixed(2)}
+                                    </p>
+                                    <p className="text-sm text-tm-muted">
+                                        {pos.pnlPercent >= 0 ? '+' : ''}{pos.pnlPercent.toFixed(2)}%
+                                    </p>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="glass-card p-6 text-center">
+                            <p className="text-tm-muted">No open positions</p>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -216,3 +370,4 @@ function NavItem({
 
     return href === "#" ? content : <Link href={href}>{content}</Link>;
 }
+

@@ -2,6 +2,7 @@
 
 import { usePrivy } from "@privy-io/react-auth";
 import { ArrowRight, TrendingUp, Shield, Zap } from "lucide-react";
+import Image from "next/image";
 
 export default function Home() {
     const { login, authenticated, ready } = usePrivy();
@@ -30,9 +31,14 @@ export default function Home() {
             <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
                 {/* Logo */}
                 <div className="mb-8">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-tm-purple to-purple-900 flex items-center justify-center">
-                        <TrendingUp className="w-8 h-8 text-white" />
-                    </div>
+                    <Image
+                        src="/logo.png"
+                        alt="TradeMind Logo"
+                        width={80}
+                        height={80}
+                        className="rounded-2xl"
+                        priority
+                    />
                 </div>
 
                 {/* Title */}

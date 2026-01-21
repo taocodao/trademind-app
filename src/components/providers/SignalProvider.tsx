@@ -25,6 +25,8 @@ const SignalContext = createContext<SignalContextValue>({
     pendingCount: 0,
 });
 
+const CHANNELS = ['calendar_spread', 'iron_condor', 'vertical'];
+
 export function useSignalContext() {
     return useContext(SignalContext);
 }
@@ -61,7 +63,7 @@ export function SignalProvider({ children }: SignalProviderProps) {
     // Only connect WebSocket on client side
     const { isConnected, lastSignal } = useSignalSocket(
         isMounted ? {
-            channels: ['calendar_spread', 'iron_condor', 'vertical'],
+            channels: CHANNELS,
             onSignal: handleSignal,
             onConnect: handleConnect,
             onDisconnect: handleDisconnect,

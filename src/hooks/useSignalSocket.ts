@@ -37,8 +37,9 @@ interface UseSignalSocketOptions {
     onDisconnect?: () => void;
 }
 
+
 export function useSignalSocket({
-    url = 'ws://localhost:8003',
+    url = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'ws://localhost:8003',
     channels = ['calendar_spread'],
     onSignal,
     onAccountUpdate,

@@ -35,20 +35,6 @@ export async function GET() {
         }
 
         // Fetch accounts directly from Tastytrade
-        const response = await fetch(`${TASTYTRADE_CONFIG.apiBaseUrl}/customers/me/accounts`, {
-            headers: {
-                'Authorization': `${tokens.accessToken}`, // Tastytrade expects token directly or Bearer? Usually Bearer, but check SDK. 
-                // Wait, typically it's 'Authorization': <token> or 'Authorization': 'Bearer <token>'
-                // Based on standard oauth, it's Bearer.
-                // But let's check lib/tastytrade-oauth.ts usage if any.
-                // The snippet `Authorization: \`Bearer ${tokenResponse.access_token}\`` in callback/route.ts used Bearer.
-            },
-        });
-
-        // Actually, let's stick to standard Bearer format.
-        // Re-reading SDK docs or existing code...
-        // callback/route.ts uses `Bearer ${tokenResponse.access_token}`.
-
         const accountResponse = await fetch(`${TASTYTRADE_CONFIG.apiBaseUrl}/customers/me/accounts`, {
             headers: {
                 'Authorization': `Bearer ${tokens.accessToken}`,
@@ -66,9 +52,6 @@ export async function GET() {
         }
 
         const data = await accountResponse.json();
-
-        // Enrich with positions? (Optional, maybe separate endpoint)
-        // For now, return account list.
         return NextResponse.json(data);
 
     } catch (error) {

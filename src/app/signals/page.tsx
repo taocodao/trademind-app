@@ -157,7 +157,7 @@ export default function SignalsPage() {
                     />
                 ))}
 
-                {!loading && signals.length === 0 && (
+                {isConnected && signals.length === 0 && (
                     <div className="glass-card p-8 text-center">
                         <CheckCircle className="w-12 h-12 text-tm-green mx-auto mb-4" />
                         <h3 className="font-semibold mb-2">All caught up!</h3>

@@ -36,30 +36,31 @@ export async function GET() {
 
         // Fetch accounts directly from Tastytrade
         const accountResponse = await fetch(`${TASTYTRADE_CONFIG.apiBaseUrl}/customers/me/accounts`, {
-            'Authorization': `Bearer ${tokens.accessToken}`,
-            'Accept': 'application/json',
-            'User-Agent': 'trademind/1.0'
-        }
+            headers: {
+                'Authorization': `Bearer ${tokens.accessToken}`,
+                'Accept': 'application/json',
+                'User-Agent': 'trademind/1.0'
+            }
         });
 
-    if (!accountResponse.ok) {
-        const errorText = await accountResponse.text();
-        console.error('Tastytrade Account Fetch Error:', errorText);
+        if (!accountResponse.ok) {
+            const errorText = await accountResponse.text();
+            console.error('Tastytrade Account Fetch Error:', errorText);
+            return NextResponse.json(
+                { error: `Tastytrade API error: ${accountResponse.status}` },
+                { status: accountResponse.status }
+            );
+        }
+
+        const data = await accountResponse.json();
+        return NextResponse.json(data);
+
+    } catch (error) {
+        console.error('Account fetch error:', error);
         return NextResponse.json(
-            { error: `Tastytrade API error: ${accountResponse.status}` },
-            { status: accountResponse.status }
+            { error: 'Failed to fetch account data' },
+            { status: 500 }
         );
     }
-
-    const data = await accountResponse.json();
-    return NextResponse.json(data);
-
-} catch (error) {
-    console.error('Account fetch error:', error);
-    return NextResponse.json(
-        { error: 'Failed to fetch account data' },
-        { status: 500 }
-    );
-}
 }
 

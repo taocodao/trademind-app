@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exchangeCodeForTokens, TASTYTRADE_CONFIG } from "@/lib/tastytrade-oauth";
 import { storeTastytradeTokens } from "@/lib/redis";
-import { cookies } from "next/headers";
 
 export async function GET(request: NextRequest) {
     try {
@@ -28,22 +27,19 @@ export async function GET(request: NextRequest) {
         // Exchange code for tokens
         const tokenResponse = await exchangeCodeForTokens(code);
 
-        // Get user ID from Privy cookie/session
-        // For now, we'll use a placeholder - in production, extract from Privy JWT
-        const cookieStore = await cookies();
-        const privyToken = cookieStore.get("privy-token")?.value;
-
-        // Decode Privy token to get user ID (simplified - use proper JWT verification in production)
+        // Extract user ID from state parameter (encoded by /api/tastytrade/oauth/url)
+        // This is the reliable way to pass user ID through cross-origin OAuth redirects
         let userId = "default-user";
-        if (privyToken) {
+        if (state) {
             try {
-                // Basic JWT decode (payload is base64 encoded)
-                const payload = privyToken.split(".")[1];
-                const decoded = JSON.parse(Buffer.from(payload, "base64").toString());
-                userId = decoded.sub || decoded.userId || "default-user";
-            } catch {
-                console.warn("Could not decode Privy token, using default user");
+                const stateData = JSON.parse(Buffer.from(state, "base64url").toString());
+                userId = stateData.userId || "default-user";
+                console.log("[OAuth Callback] Decoded userId from state:", userId);
+            } catch (err) {
+                console.warn("[OAuth Callback] Could not decode state, using default-user", err);
             }
+        } else {
+            console.warn("[OAuth Callback] No state parameter, using default-user");
         }
 
         // Fetch account info to store with tokens

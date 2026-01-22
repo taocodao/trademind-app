@@ -1,0 +1,17 @@
+[Unit]
+Description=TradeMind Signal Scanner
+After=network.target websocket.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu
+Environment=PYTHONUNBUFFERED=1
+Environment=IB_HOST=localhost
+Environment=IB_PORT=4004
+ExecStart=/usr/bin/python3 /home/ubuntu/scheduled_scanner.py --loop --interval 300 --force
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

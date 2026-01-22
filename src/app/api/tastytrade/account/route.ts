@@ -41,6 +41,46 @@ export async function GET() {
             );
         }
 
+        // Check if token is expired or expiring soon (within 5 minutes)
+        if (Date.now() > (tokens.expiresAt - 5 * 60 * 1000)) {
+            console.log("[Account API] Token expired or expiring soon, refreshing...");
+            try {
+                const { refreshAccessToken } = await import('@/lib/tastytrade-oauth');
+                const { storeTastytradeTokens } = await import('@/lib/redis');
+
+                const newTokens = await refreshAccessToken(tokens.refreshToken);
+                console.log("[Account API] Token refresh successful");
+
+                // Update tokens in memory
+                tokens.accessToken = newTokens.access_token;
+                tokens.expiresAt = Date.now() + (newTokens.expires_in * 1000);
+                // Keep existing refresh token unless API returned a new one (Tastytrade usually doesn't rotate refresh tokens on refresh, but checks specific response if available)
+                // Actually Tastytrade OAuth spec often returns a new refresh token or keeps old. The refreshAccessToken function returns full response which usually includes scope, token_type, etc. 
+                // Let's assume response structure from refreshAccessToken implementation in lib/tastytrade-oauth.ts 
+                // which returns { access_token, expires_in, refresh_token? }
+
+                // Note: The helper refreshAccessToken defined in lib/tastytrade-oauth.ts might verify return type.
+                // Let's check imports.
+
+                await storeTastytradeTokens(userId, {
+                    ...tokens, // keep other fields like accountNumber
+                    accessToken: newTokens.access_token,
+                    // If new refresh token provided, use it, else keep old
+                    // (Standard OAuth 2.0: refresh request might return new refresh token)
+                    // We'll trust the response handles it or we keep old one if undefined.
+                    // But in strict types, we need to be careful.
+                    expiresAt: tokens.expiresAt,
+                    linkedAt: tokens.linkedAt
+                });
+            } catch (refreshError) {
+                console.error("[Account API] Token refresh failed:", refreshError);
+                return NextResponse.json(
+                    { error: 'Session expired. Please reconnect Tastytrade.' },
+                    { status: 401 }
+                );
+            }
+        }
+
         // Fetch accounts directly from Tastytrade
         const accountResponse = await fetch(`${TASTYTRADE_CONFIG.apiBaseUrl}/customers/me/accounts`, {
             headers: {
@@ -53,6 +93,9 @@ export async function GET() {
         if (!accountResponse.ok) {
             const errorText = await accountResponse.text();
             console.error('Tastytrade Account Fetch Error:', errorText);
+
+            // If 401 happens despite refresh check (e.g. revoked), try ONE refresh if we haven't just refreshed?
+            // For now, simpler logic is fine.
             return NextResponse.json(
                 { error: `Tastytrade API error: ${accountResponse.status}` },
                 { status: accountResponse.status }

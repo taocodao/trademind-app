@@ -2,7 +2,7 @@
 
 import { usePrivy } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import {
     ArrowLeft,
     TrendingUp,
@@ -11,23 +11,26 @@ import {
     CheckCircle,
     XCircle,
     Loader2,
-    RefreshCw
+    RefreshCw,
+    Wifi,
+    WifiOff
 } from "lucide-react";
 import Link from "next/link";
+import { useSignalContext } from "@/components/providers/SignalProvider";
 
 interface Signal {
     id: string;
     symbol: string;
     strategy: string;
-    direction: string;
-    strike: number;
-    frontExpiry: string;
-    backExpiry: string;
+    direction?: string;
+    strike?: number;
+    frontExpiry?: string;
+    backExpiry?: string;
     cost: number;
     potentialReturn: number;
-    returnPercent: number;
-    winRate: number;
-    riskLevel: string;
+    returnPercent?: number;
+    winRate?: number;
+    riskLevel?: string;
     status: string;
     rationale?: string;
 }
@@ -35,44 +38,19 @@ interface Signal {
 export default function SignalsPage() {
     const { ready, authenticated } = usePrivy();
     const router = useRouter();
-    const [signals, setSignals] = useState<Signal[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const { allSignals, isConnected, removeSignal, updateSignalStatus } = useSignalContext();
     const [approving, setApproving] = useState<string | null>(null);
     const [confirmModal, setConfirmModal] = useState<Signal | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
-    const fetchSignals = useCallback(async () => {
-        try {
-            setLoading(true);
-            setError(null);
-
-            const response = await fetch('/api/signals');
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || 'Failed to fetch signals');
-            }
-
-            const data = await response.json();
-            setSignals(data.signals || []);
-        } catch (err) {
-            console.error('Failed to fetch signals:', err);
-            setError(err instanceof Error ? err.message : 'Failed to load signals');
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+    // Filter to show only pending signals
+    const signals = allSignals.filter(s => s.status === 'pending') as Signal[];
 
     useEffect(() => {
         if (ready && !authenticated) {
             router.push("/");
         }
     }, [ready, authenticated, router]);
-
-    useEffect(() => {
-        if (ready && authenticated) {
-            fetchSignals();
-        }
-    }, [ready, authenticated, fetchSignals]);
 
     const handleApproveClick = (signal: Signal) => {
         setConfirmModal(signal);
@@ -98,7 +76,7 @@ export default function SignalsPage() {
             }
 
             // Remove the executed signal from the list
-            setSignals(prev => prev.filter(s => s.id !== confirmModal.id));
+            removeSignal(confirmModal.id);
 
             // Navigate to positions to see the trade
             router.push('/positions');
@@ -112,7 +90,7 @@ export default function SignalsPage() {
     };
 
     const handleSkip = (id: string) => {
-        setSignals(prev => prev.filter(s => s.id !== id));
+        removeSignal(id);
     };
 
     if (!ready || !authenticated) {
@@ -127,22 +105,21 @@ export default function SignalsPage() {
 
     return (
         <main className="min-h-screen pb-6">
-            {/* Header */}
             <header className="px-6 pt-12 pb-6 flex items-center gap-4">
                 <Link href="/dashboard" className="w-10 h-10 rounded-full bg-tm-surface flex items-center justify-center">
                     <ArrowLeft className="w-5 h-5" />
                 </Link>
                 <div className="flex-1">
-                    <h1 className="text-xl font-bold">Calendar Spread Signals</h1>
+                    <h1 className="text-xl font-bold">Trade Signals</h1>
                     <p className="text-sm text-tm-muted">{signals.length} pending</p>
                 </div>
-                <button
-                    onClick={fetchSignals}
-                    disabled={loading}
-                    className="w-10 h-10 rounded-full bg-tm-surface flex items-center justify-center"
-                >
-                    <RefreshCw className={`w-5 h-5 text-tm-muted ${loading ? 'animate-spin' : ''}`} />
-                </button>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isConnected ? 'bg-tm-green/20' : 'bg-tm-red/20'}`}>
+                    {isConnected ? (
+                        <Wifi className="w-5 h-5 text-tm-green" />
+                    ) : (
+                        <WifiOff className="w-5 h-5 text-tm-red" />
+                    )}
+                </div>
             </header>
 
             {/* Error */}
@@ -151,32 +128,20 @@ export default function SignalsPage() {
                     <div className="glass-card p-4 border border-tm-red/30 flex items-center gap-3">
                         <AlertTriangle className="w-5 h-5 text-tm-red flex-shrink-0" />
                         <p className="text-sm text-tm-red">{error}</p>
-                        <button onClick={fetchSignals} className="ml-auto text-sm text-tm-purple">
-                            Retry
+                        <button onClick={() => setError(null)} className="ml-auto text-sm text-tm-purple">
+                            Dismiss
                         </button>
                     </div>
                 </div>
             )}
 
-            {/* Loading */}
-            {loading && signals.length === 0 && (
-                <div className="px-6 space-y-4">
-                    {[1, 2, 3].map(i => (
-                        <div key={i} className="glass-card p-5 animate-pulse">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-10 h-10 rounded-xl bg-tm-surface" />
-                                <div className="flex-1">
-                                    <div className="h-5 bg-tm-surface rounded w-16 mb-1" />
-                                    <div className="h-3 bg-tm-surface rounded w-24" />
-                                </div>
-                            </div>
-                            <div className="h-12 bg-tm-surface rounded mb-4" />
-                            <div className="flex gap-3">
-                                <div className="flex-1 h-10 bg-tm-surface rounded-xl" />
-                                <div className="flex-1 h-10 bg-tm-surface rounded-xl" />
-                            </div>
-                        </div>
-                    ))}
+            {/* Waiting for signals message when disconnected */}
+            {!isConnected && signals.length === 0 && (
+                <div className="px-6 mb-4">
+                    <div className="glass-card p-4 border border-yellow-500/30 flex items-center gap-3">
+                        <WifiOff className="w-5 h-5 text-yellow-400 flex-shrink-0" />
+                        <p className="text-sm text-yellow-400">Connecting to signal server...</p>
+                    </div>
                 </div>
             )}
 

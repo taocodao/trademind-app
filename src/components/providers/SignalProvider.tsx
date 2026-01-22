@@ -9,23 +9,51 @@ interface Signal {
     id: string;
     symbol: string;
     strategy: string;
+    direction?: string;
+    strike?: number;
+    frontExpiry?: string;
+    backExpiry?: string;
     cost: number;
     potentialReturn: number;
+    returnPercent?: number;
+    winRate?: number;
+    riskLevel?: string;
+    status: string;
+    rationale?: string;
+    signalType?: string;
+    createdAt?: string;
 }
 
 interface SignalContextValue {
     isConnected: boolean;
     lastSignal: Signal | null;
+    allSignals: Signal[];
     pendingCount: number;
+    removeSignal: (id: string) => void;
+    updateSignalStatus: (id: string, status: string) => void;
+    clearSignals: () => void;
 }
 
 const SignalContext = createContext<SignalContextValue>({
     isConnected: false,
     lastSignal: null,
+    allSignals: [],
     pendingCount: 0,
+    removeSignal: () => { },
+    updateSignalStatus: () => { },
+    clearSignals: () => { },
 });
 
-const CHANNELS = ['calendar_spread', 'iron_condor', 'vertical'];
+const CHANNELS = [
+    'calendar_spread',
+    'iron_condor',
+    'vertical',
+    'vertical_spread',
+    'vertical_spread.buy',
+    'vertical_spread.sell',
+    'vertical_spread.warning',
+    'earnings'
+];
 
 export function useSignalContext() {
     return useContext(SignalContext);
@@ -39,7 +67,7 @@ export function SignalProvider({ children }: SignalProviderProps) {
     const router = useRouter();
     const [isMounted, setIsMounted] = useState(false);
     const [notificationSignal, setNotificationSignal] = useState<Signal | null>(null);
-    const [pendingCount, setPendingCount] = useState(0);
+    const [allSignals, setAllSignals] = useState<Signal[]>([]);
 
     // Track client-side mount to prevent hydration mismatch
     useEffect(() => {
@@ -48,8 +76,20 @@ export function SignalProvider({ children }: SignalProviderProps) {
 
     const handleSignal = useCallback((signal: Signal, channel: string) => {
         console.log('🔔 New signal received:', signal.symbol, channel);
+
+        // Add signal to the list if not already present
+        setAllSignals(prev => {
+            const exists = prev.some(s => s.id === signal.id);
+            if (exists) {
+                // Update existing signal
+                return prev.map(s => s.id === signal.id ? { ...s, ...signal } : s);
+            }
+            // Add new signal at the beginning
+            return [{ ...signal, status: signal.status || 'pending' }, ...prev];
+        });
+
+        // Show notification
         setNotificationSignal(signal);
-        setPendingCount(prev => prev + 1);
     }, []);
 
     const handleConnect = useCallback(() => {
@@ -82,8 +122,33 @@ export function SignalProvider({ children }: SignalProviderProps) {
         router.push('/signals');
     }, [router]);
 
+    const removeSignal = useCallback((id: string) => {
+        setAllSignals(prev => prev.filter(s => s.id !== id));
+    }, []);
+
+    const updateSignalStatus = useCallback((id: string, status: string) => {
+        setAllSignals(prev => prev.map(s =>
+            s.id === id ? { ...s, status } : s
+        ));
+    }, []);
+
+    const clearSignals = useCallback(() => {
+        setAllSignals([]);
+    }, []);
+
+    // Calculate pending count
+    const pendingCount = allSignals.filter(s => s.status === 'pending').length;
+
     return (
-        <SignalContext.Provider value={{ isConnected, lastSignal, pendingCount }}>
+        <SignalContext.Provider value={{
+            isConnected,
+            lastSignal,
+            allSignals,
+            pendingCount,
+            removeSignal,
+            updateSignalStatus,
+            clearSignals,
+        }}>
             {children}
 
             {/* Only render client-side components after mount */}

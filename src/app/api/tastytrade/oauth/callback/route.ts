@@ -52,6 +52,7 @@ export async function GET(request: NextRequest) {
             const accountResponse = await fetch(`${TASTYTRADE_CONFIG.apiBaseUrl}/customers/me/accounts`, {
                 headers: {
                     Authorization: `Bearer ${tokenResponse.access_token}`,
+                    'User-Agent': 'trademind/1.0',
                 },
             });
             if (accountResponse.ok) {

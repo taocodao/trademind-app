@@ -53,6 +53,7 @@ export async function exchangeCodeForTokens(code: string): Promise<{
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'trademind/1.0',
         },
         body: new URLSearchParams({
             grant_type: 'authorization_code',
@@ -82,6 +83,7 @@ export async function refreshAccessToken(refreshToken: string): Promise<{
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'trademind/1.0',
         },
         body: new URLSearchParams({
             grant_type: 'refresh_token',

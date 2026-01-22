@@ -130,11 +130,19 @@ export function useSignalSocket({
     const disconnect = useCallback(() => {
         if (reconnectTimeoutRef.current) {
             clearTimeout(reconnectTimeoutRef.current);
+            reconnectTimeoutRef.current = null;
         }
         if (wsRef.current) {
+            // Prevent reconnection triggers by removing listeners
+            wsRef.current.onclose = null;
+            wsRef.current.onerror = null;
+            wsRef.current.onmessage = null;
+            wsRef.current.onopen = null;
+
             wsRef.current.close();
             wsRef.current = null;
         }
+        setIsConnected(false);
     }, []);
 
     const subscribe = useCallback((newChannels: string[]) => {

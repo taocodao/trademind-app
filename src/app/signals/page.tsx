@@ -260,8 +260,8 @@ function SignalCard({
                         <p className="text-sm text-tm-muted">{signal.strategy}</p>
                     </div>
                 </div>
-                <span className={`text-xs font-medium px-2 py-1 rounded-full ${riskColors[signal.riskLevel] || riskColors.Medium}`}>
-                    {signal.riskLevel}
+                <span className={`text-xs font-medium px-2 py-1 rounded-full ${riskColors[signal.riskLevel || 'Medium'] || riskColors.Medium}`}>
+                    {signal.riskLevel || 'Medium'}
                 </span>
             </div>
 
@@ -313,7 +313,7 @@ function SignalCard({
                             <circle
                                 className="text-tm-green"
                                 strokeWidth="3"
-                                strokeDasharray={`${signal.winRate * 1.26} 126`}
+                                strokeDasharray={`${(signal.winRate || 0) * 1.26} 126`}
                                 strokeLinecap="round"
                                 stroke="currentColor"
                                 fill="transparent"

@@ -189,16 +189,27 @@ function DashboardContent() {
                 <div className="px-6 mb-6">
                     <div className="glass-card p-4 border border-tm-red/30 flex items-center gap-3">
                         <AlertCircle className="w-5 h-5 text-tm-red flex-shrink-0" />
-                        <div>
+                        <div className="flex-1">
                             <p className="text-tm-red font-medium">Error loading data</p>
                             <p className="text-sm text-tm-muted">{error}</p>
                         </div>
-                        <button
-                            onClick={fetchAccountData}
-                            className="ml-auto text-sm text-tm-purple"
-                        >
-                            Retry
-                        </button>
+                        <div className="flex gap-2">
+                            {error.toLowerCase().includes('session') || error.toLowerCase().includes('reconnect') ? (
+                                <button
+                                    onClick={() => setTastyLinked(false)}
+                                    className="text-sm text-tm-purple font-medium hover:underline"
+                                >
+                                    Reconnect Tastytrade
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={fetchAccountData}
+                                    className="text-sm text-tm-purple"
+                                >
+                                    Retry
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

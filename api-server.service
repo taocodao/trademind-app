@@ -1,0 +1,14 @@
+[Unit]
+Description=TradeMind Tastytrade API Server
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu
+ExecStart=/usr/bin/python3 /home/ubuntu/tasty_api_server.py
+Restart=always
+RestartSec=10
+EnvironmentFile=/home/ubuntu/.env
+
+[Install]
+WantedBy=multi-user.target

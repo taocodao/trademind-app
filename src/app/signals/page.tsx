@@ -60,20 +60,24 @@ export default function SignalsPage() {
         if (!confirmModal) return;
 
         setApproving(confirmModal.id);
-        setConfirmModal(null);
+        setConfirmModal(null); // Close modal immediately to show loading state on card
 
         try {
+            console.log(`Approving signal ${confirmModal.id} with execution...`);
             const response = await fetch(`/api/signals/${confirmModal.id}/approve`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ execute: true }),
+                body: JSON.stringify({ execute: true }), // Explicitly request execution
             });
 
             const data = await response.json();
 
             if (!response.ok) {
+                console.error("Approval failed:", data);
                 throw new Error(data.error || 'Trade execution failed');
             }
+
+            console.log("Trade executed successfully:", data);
 
             // Remove the executed signal from the list
             removeSignal(confirmModal.id);

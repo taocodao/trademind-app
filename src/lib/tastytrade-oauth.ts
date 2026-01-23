@@ -79,6 +79,8 @@ export async function refreshAccessToken(refreshToken: string): Promise<{
     access_token: string;
     expires_in: number;
 }> {
+    console.log("[OAuth] Attempting token refresh...");
+
     const response = await fetch(TASTYTRADE_CONFIG.tokenUrl, {
         method: 'POST',
         headers: {
@@ -90,12 +92,16 @@ export async function refreshAccessToken(refreshToken: string): Promise<{
             refresh_token: refreshToken,
             client_id: TASTYTRADE_CONFIG.clientId,
             client_secret: TASTYTRADE_CONFIG.clientSecret,
+            redirect_uri: TASTYTRADE_CONFIG.redirectUri, // REQUIRED by Tastytrade!
         }),
     });
 
     if (!response.ok) {
-        throw new Error('Token refresh failed');
+        const errorText = await response.text();
+        console.error(`[OAuth] Token refresh failed: ${response.status} - ${errorText}`);
+        throw new Error(`Token refresh failed: ${response.status} - ${errorText}`);
     }
 
+    console.log("[OAuth] Token refresh successful");
     return response.json();
 }

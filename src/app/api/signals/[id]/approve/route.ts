@@ -1,9 +1,11 @@
 /**
  * Approve Signal API Route
- * Approves a signal and executes the trade
+ * Approves a signal and executes the trade using USER's credentials
  */
 
 import { NextResponse } from 'next/server';
+import { getTastytradeTokens } from '@/lib/redis';
+import { cookies } from 'next/headers';
 
 const PYTHON_API = process.env.TASTYTRADE_API_URL || 'http://localhost:8002';
 
@@ -15,13 +17,43 @@ export async function POST(
         const { id } = await params;
         const body = await request.json().catch(() => ({}));
 
+        // Get user ID from Privy token
+        const cookieStore = await cookies();
+        const privyToken = cookieStore.get("privy-token")?.value;
+
+        let userId = "default-user";
+        if (privyToken) {
+            try {
+                const payload = privyToken.split(".")[1];
+                const decoded = JSON.parse(Buffer.from(payload, "base64").toString());
+                userId = decoded.sub || decoded.userId || "default-user";
+            } catch (err) {
+                console.warn("Could not decode Privy token", err);
+            }
+        }
+
+        // Get user's Tastytrade credentials
+        const tokens = await getTastytradeTokens(userId);
+        if (!tokens || !tokens.refreshToken) {
+            return NextResponse.json(
+                { error: 'Not connected to Tastytrade. Please link your account first.' },
+                { status: 401 }
+            );
+        }
+
+        // Pass user's credentials to Python backend for per-user execution
         const response = await fetch(`${PYTHON_API}/api/signals/${id}/approve`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
             },
-            body: JSON.stringify(body),
+            body: JSON.stringify({
+                ...body,
+                // Per-user OAuth credentials
+                refreshToken: tokens.refreshToken,
+                accountNumber: tokens.accountNumber,
+            }),
         });
 
         const data = await response.json();

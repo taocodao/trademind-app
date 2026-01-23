@@ -74,6 +74,32 @@ export function SignalProvider({ children }: SignalProviderProps) {
         setIsMounted(true);
     }, []);
 
+    // Fetch initial signals
+    useEffect(() => {
+        const fetchSignals = async () => {
+            try {
+                // Use the NEXT_PUBLIC_API_URL or default to localhost:8002 for dev
+                // Note: In production/EC2, this should assume the API is reachable.
+                // Since this is client-side, we need the public IP.
+                // Ideally this comes from config, but for now we'll rely on the relative path or configured URL.
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002';
+                const response = await fetch(`${apiUrl}/api/signals`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.signals && Array.isArray(data.signals)) {
+                        setAllSignals(data.signals);
+                    }
+                } else {
+                    console.error('Failed to fetch initial signals:', response.statusText);
+                }
+            } catch (error) {
+                console.error('Error fetching signals:', error);
+            }
+        };
+
+        fetchSignals();
+    }, []);
+
     const handleSignal = useCallback((signal: Signal, channel: string) => {
         console.log('🔔 New signal received:', signal.symbol, channel);
 

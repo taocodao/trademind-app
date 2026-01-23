@@ -82,7 +82,9 @@ export function SignalProvider({ children }: SignalProviderProps) {
                 // Note: In production/EC2, this should assume the API is reachable.
                 // Since this is client-side, we need the public IP.
                 // Ideally this comes from config, but for now we'll rely on the relative path or configured URL.
-                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002';
+                // Use the NEXT_PUBLIC_API_URL or distinct logic for dev vs prod
+                const isLocal = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL || (isLocal ? 'http://localhost:8002' : 'https://ws.trademind.bot');
                 const response = await fetch(`${apiUrl}/api/signals`);
                 if (response.ok) {
                     const data = await response.json();

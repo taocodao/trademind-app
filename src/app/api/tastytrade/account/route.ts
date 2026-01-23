@@ -57,7 +57,10 @@ export async function GET() {
                 // Update stored tokens
                 await storeTastytradeTokens(userId, {
                     ...tokens,
+                    ...tokens,
                     accessToken: newTokens.access_token,
+                    // If Tastytrade rotates refresh tokens, save the new one
+                    refreshToken: newTokens.refresh_token || tokens.refreshToken,
                     expiresAt: Date.now() + (newTokens.expires_in * 1000),
                 });
 

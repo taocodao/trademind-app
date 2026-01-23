@@ -72,10 +72,10 @@ export async function GET() {
                         'User-Agent': 'trademind/1.0'
                     }
                 });
-            } catch (refreshError) {
+            } catch (refreshError: any) {
                 console.error("[Account API] Refresh failed:", refreshError);
                 return NextResponse.json(
-                    { error: 'Session expired. Please reconnect Tastytrade.' },
+                    { error: `Session expired: ${refreshError?.message || 'Unknown error'}` },
                     { status: 401 }
                 );
             }

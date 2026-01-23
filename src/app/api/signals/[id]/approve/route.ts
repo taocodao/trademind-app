@@ -7,7 +7,7 @@ import { NextResponse } from 'next/server';
 import { getTastytradeTokens } from '@/lib/redis';
 import { cookies } from 'next/headers';
 
-const PYTHON_API = process.env.TASTYTRADE_API_URL || 'http://localhost:8002';
+const PYTHON_API = process.env.TASTYTRADE_API_URL || 'http://34.235.119.67:8002';
 
 export async function POST(
     request: Request,

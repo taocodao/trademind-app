@@ -111,6 +111,8 @@ export async function refreshAccessToken(refreshToken: string): Promise<{
     if (!response.ok) {
         const errorText = await response.text();
         console.error(`[OAuth] Token refresh failed: ${response.status} - ${errorText}`);
+        // Log the exact request body for debugging (be careful with secrets in prod logs, but needed here)
+        console.error(`[OAuth] Failed params: client_id=${TASTYTRADE_CONFIG.clientId}, redirect_uri=${TASTYTRADE_CONFIG.redirectUri}`);
         throw new Error(`Token refresh failed: ${response.status} - ${errorText}`);
     }
 

@@ -77,7 +77,6 @@ export async function exchangeCodeForTokens(code: string): Promise<{
  */
 export async function refreshAccessToken(refreshToken: string): Promise<{
     access_token: string;
-    access_token: string;
     expires_in: number;
     refresh_token?: string; // Optional, present if rotated
 }> {

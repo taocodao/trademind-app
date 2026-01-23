@@ -74,33 +74,8 @@ export function SignalProvider({ children }: SignalProviderProps) {
         setIsMounted(true);
     }, []);
 
-    // Fetch initial signals
-    useEffect(() => {
-        const fetchSignals = async () => {
-            try {
-                // Use the NEXT_PUBLIC_API_URL or default to localhost:8002 for dev
-                // Note: In production/EC2, this should assume the API is reachable.
-                // Since this is client-side, we need the public IP.
-                // Ideally this comes from config, but for now we'll rely on the relative path or configured URL.
-                // Use the NEXT_PUBLIC_API_URL or distinct logic for dev vs prod
-                const isLocal = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-                const apiUrl = process.env.NEXT_PUBLIC_API_URL || (isLocal ? 'http://localhost:8002' : 'https://ws.trademind.bot');
-                const response = await fetch(`${apiUrl}/api/signals`);
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.signals && Array.isArray(data.signals)) {
-                        setAllSignals(data.signals);
-                    }
-                } else {
-                    console.error('Failed to fetch initial signals:', response.statusText);
-                }
-            } catch (error) {
-                console.error('Error fetching signals:', error);
-            }
-        };
-
-        fetchSignals();
-    }, []);
+    // Initial fetch removed to prevent CORS/426 errors on WebSocket server.
+    // relying on WebSocket to push signals.
 
     const handleSignal = useCallback((signal: Signal, channel: string) => {
         console.log('🔔 New signal received:', signal.symbol, channel);

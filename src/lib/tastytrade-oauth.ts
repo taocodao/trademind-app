@@ -82,19 +82,30 @@ export async function refreshAccessToken(refreshToken: string): Promise<{
 }> {
     console.log("[OAuth] Attempting token refresh...");
 
+    const bodyParams = new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken,
+        client_id: TASTYTRADE_CONFIG.clientId,
+        // client_secret: TASTYTRADE_CONFIG.clientSecret, // Avoid logging secret
+        redirect_uri: TASTYTRADE_CONFIG.redirectUri,
+    });
+    // Add secret back for actual request
+    bodyParams.append('client_secret', TASTYTRADE_CONFIG.clientSecret);
+
+    console.log("[OAuth] Refresh params (redacted):", {
+        grant_type: 'refresh_token',
+        client_id: TASTYTRADE_CONFIG.clientId,
+        redirect_uri: TASTYTRADE_CONFIG.redirectUri,
+        token_preview: refreshToken.substring(0, 10) + '...'
+    });
+
     const response = await fetch(TASTYTRADE_CONFIG.tokenUrl, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
             'User-Agent': 'trademind/1.0',
         },
-        body: new URLSearchParams({
-            grant_type: 'refresh_token',
-            refresh_token: refreshToken,
-            client_id: TASTYTRADE_CONFIG.clientId,
-            client_secret: TASTYTRADE_CONFIG.clientSecret,
-            redirect_uri: TASTYTRADE_CONFIG.redirectUri, // REQUIRED by Tastytrade!
-        }),
+        body: bodyParams,
     });
 
     if (!response.ok) {

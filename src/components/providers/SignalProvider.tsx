@@ -74,8 +74,37 @@ export function SignalProvider({ children }: SignalProviderProps) {
         setIsMounted(true);
     }, []);
 
-    // Initial fetch removed to prevent CORS/426 errors on WebSocket server.
-    // relying on WebSocket to push signals.
+    // Fetch existing signals from database on mount
+    useEffect(() => {
+        if (!isMounted) return;
+
+        const fetchExistingSignals = async () => {
+            try {
+                console.log('📥 Fetching existing signals from database...');
+                const response = await fetch('/api/signals');
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.signals && Array.isArray(data.signals)) {
+                        console.log(`✅ Loaded ${data.signals.length} signals from database`);
+                        setAllSignals(prev => {
+                            // Merge with any signals we already have from WebSocket
+                            const existingIds = new Set(prev.map(s => s.id));
+                            const newSignals = data.signals.filter((s: Signal) => !existingIds.has(s.id));
+                            return [...prev, ...newSignals];
+                        });
+                    }
+                } else {
+                    console.warn('⚠️ Failed to fetch signals:', response.status);
+                }
+            } catch (error) {
+                console.warn('⚠️ Could not fetch existing signals:', error);
+                // Non-fatal: WebSocket will still provide new signals
+            }
+        };
+
+        fetchExistingSignals();
+    }, [isMounted]);
 
     const handleSignal = useCallback((signal: Signal, channel: string) => {
         console.log('🔔 New signal received:', signal.symbol, channel);

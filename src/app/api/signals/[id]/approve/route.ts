@@ -53,6 +53,7 @@ export async function POST(
                 // Per-user OAuth credentials
                 refreshToken: tokens.refreshToken,
                 accountNumber: tokens.accountNumber,
+                username: tokens.username,  // User's Tastytrade username (not email!)
                 // User ID for per-user execution tracking
                 userId: userId,
             }),

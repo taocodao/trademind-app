@@ -13,6 +13,7 @@ export interface TastytradeTokens {
     expiresAt: number; // Unix timestamp
     linkedAt: number;
     accountNumber?: string;
+    username?: string;  // User's Tastytrade username for Session creation
 }
 
 /**

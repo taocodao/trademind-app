@@ -54,17 +54,18 @@ export async function createSession(
     console.log(`   Refresh token: ${refreshToken.slice(0, 20)}...`);
 
     // Build request body using explicit append() for proper encoding
+    // NOTE: scope is ONLY for authorization_code grant, NOT refresh_token grant!
     const body = new URLSearchParams();
     body.append('grant_type', 'refresh_token');
     body.append('refresh_token', refreshToken.trim());
     body.append('client_id', clientId.trim());
     body.append('client_secret', clientSecret.trim());
-    body.append('scope', 'PlaceTrades AccountAccess');
 
     const response = await fetch(`${TASTYTRADE_API_BASE}/oauth/token`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
         },
         body: body.toString(),
     });

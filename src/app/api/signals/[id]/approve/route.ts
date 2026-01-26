@@ -107,6 +107,22 @@ export async function POST(
         // Execute the trade based on signal type
         const signalData = body.signal || body;
 
+        // Helper: Get next Friday from a given date
+        const getNextFriday = (from: Date): string => {
+            const date = new Date(from);
+            const dayOfWeek = date.getDay();
+            const daysUntilFriday = (5 - dayOfWeek + 7) % 7 || 7; // If today is Friday, get next Friday
+            date.setDate(date.getDate() + daysUntilFriday);
+            return date.toISOString().split('T')[0]; // YYYY-MM-DD
+        };
+
+        // Get default expiry dates if not provided
+        const today = new Date();
+        const defaultFrontExpiry = getNextFriday(today);
+        const frontDate = new Date(defaultFrontExpiry);
+        frontDate.setDate(frontDate.getDate() + 7);
+        const defaultBackExpiry = frontDate.toISOString().split('T')[0];
+
         try {
             // For now, handling calendar spread signals
             const result = await executeCalendarSpread(
@@ -115,8 +131,8 @@ export async function POST(
                 {
                     symbol: signalData.symbol || 'TEST',
                     strike: signalData.strike || 100,
-                    frontExpiry: signalData.frontExpiry || signalData.expiry,
-                    backExpiry: signalData.backExpiry || signalData.expiry,
+                    frontExpiry: signalData.frontExpiry || signalData.expiry || defaultFrontExpiry,
+                    backExpiry: signalData.backExpiry || signalData.expiry || defaultBackExpiry,
                     price: signalData.price,
                     direction: signalData.direction,
                 }

@@ -5,7 +5,7 @@
  * This eliminates the need to sync credentials with the EC2 backend.
  */
 
-const TASTYTRADE_API_BASE = 'https://api.tastytrade.com';
+const TASTYTRADE_API_BASE = 'https://api.tastyworks.com';
 
 export interface TastytradeSession {
     accessToken: string;
@@ -63,6 +63,7 @@ export async function createSession(
             refresh_token: refreshToken,
             client_id: clientId,
             client_secret: clientSecret,
+            scope: 'PlaceTrades AccountAccess',
         }),
     });
 

@@ -37,9 +37,14 @@ export async function GET() {
         }
 
         console.log("[Account API] Tokens found, hasRefreshToken:", !!tokens.refreshToken);
+        console.log("[Account API] Access token preview:", tokens.accessToken.substring(0, 30) + "...");
+        console.log("[Account API] API Base URL:", TASTYTRADE_CONFIG.apiBaseUrl);
 
         // Try API call with current access token
-        let accountResponse = await fetch(`${TASTYTRADE_CONFIG.apiBaseUrl}/customers/me/accounts`, {
+        const apiUrl = `${TASTYTRADE_CONFIG.apiBaseUrl}/customers/me/accounts`;
+        console.log("[Account API] Fetching from:", apiUrl);
+
+        let accountResponse = await fetch(apiUrl, {
             headers: {
                 'Authorization': `Bearer ${tokens.accessToken}`,
                 'Accept': 'application/json',

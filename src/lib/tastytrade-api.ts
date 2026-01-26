@@ -138,11 +138,18 @@ export async function getAccounts(
         headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'User-Agent': 'TradeMind/1.0',  // REQUIRED by Tastytrade nginx!
         },
     });
 
     if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+        const text = await response.text();
+        if (text.startsWith('<')) {
+            console.error('Got HTML instead of JSON from accounts API:', text.substring(0, 200));
+            throw new Error(`Tastytrade API error (status ${response.status}): Check User-Agent header`);
+        }
+        const error = JSON.parse(text);
         throw new Error(error.error?.message || 'Failed to get accounts');
     }
 
@@ -177,28 +184,53 @@ export async function submitOrder(
         })),
     };
 
-    const response = await fetch(
-        `${TASTYTRADE_API_BASE}/accounts/${accountNumber}/orders`,
-        {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(apiOrder),
-        }
-    );
+    const orderUrl = `${TASTYTRADE_API_BASE}/accounts/${accountNumber}/orders`;
+    console.log(`📤 Submitting order to: ${orderUrl}`);
+    console.log(`   Order body:`, JSON.stringify(apiOrder, null, 2));
 
-    const data = await response.json();
+    const response = await fetch(orderUrl, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'User-Agent': 'TradeMind/1.0',  // REQUIRED by Tastytrade nginx!
+        },
+        body: JSON.stringify(apiOrder),
+    });
+
+    console.log(`📥 Order response status: ${response.status}`);
+
+    // Get response as text first to handle HTML errors
+    const responseText = await response.text();
+    console.log(`   Response (first 300 chars): ${responseText.substring(0, 300)}`);
+
+    // Check for HTML response (nginx error)
+    if (responseText.startsWith('<') || responseText.startsWith('<!DOCTYPE')) {
+        console.error('❌ Got HTML instead of JSON!');
+        console.error('   Full response:', responseText);
+        throw new Error(`Tastytrade API returned HTML (status ${response.status}). This usually means a routing or authentication issue.`);
+    }
+
+    // Parse JSON
+    let data;
+    try {
+        data = JSON.parse(responseText);
+    } catch (parseError) {
+        console.error('❌ Failed to parse response as JSON:', parseError);
+        throw new Error(`Invalid response from Tastytrade: ${responseText.substring(0, 200)}`);
+    }
 
     if (!response.ok) {
-        console.error('Order submission error:', data);
+        console.error('❌ Order submission error:', data);
         throw new Error(
             data.error?.message ||
             data.errors?.[0]?.message ||
-            'Failed to submit order'
+            `Order failed: ${JSON.stringify(data).substring(0, 200)}`
         );
     }
+
+    console.log('✅ Order submitted successfully:', data);
 
     return {
         orderId: data.data?.order?.id || data.data?.id || 'unknown',

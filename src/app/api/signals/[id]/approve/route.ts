@@ -42,10 +42,11 @@ export async function POST(
             );
         }
 
-        // Get client secret from environment (single source of truth!)
+        // Get OAuth credentials from environment (single source of truth!)
+        const clientId = process.env.TASTYTRADE_CLIENT_ID;
         const clientSecret = process.env.TASTYTRADE_CLIENT_SECRET;
-        if (!clientSecret) {
-            console.error('TASTYTRADE_CLIENT_SECRET not configured');
+        if (!clientId || !clientSecret) {
+            console.error('TASTYTRADE_CLIENT_ID or TASTYTRADE_CLIENT_SECRET not configured');
             return NextResponse.json(
                 { error: 'Server configuration error. Please contact support.' },
                 { status: 500 }
@@ -57,7 +58,7 @@ export async function POST(
         // Create Tastytrade session using OAuth refresh token
         let session;
         try {
-            session = await createSession(clientSecret, tokens.refreshToken);
+            session = await createSession(clientId, clientSecret, tokens.refreshToken);
             console.log('✅ Tastytrade session created');
 
             // Update stored tokens with new refresh token if provided

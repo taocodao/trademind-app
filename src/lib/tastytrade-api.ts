@@ -44,10 +44,12 @@ export interface OrderResponse {
  * Create a session using OAuth refresh token
  */
 export async function createSession(
+    clientId: string,
     clientSecret: string,
     refreshToken: string
 ): Promise<TastytradeSession> {
     console.log('🔐 Creating Tastytrade session...');
+    console.log(`   Client ID: ${clientId.slice(0, 8)}...`);
     console.log(`   Client secret: ${clientSecret.slice(0, 4)}...${clientSecret.slice(-4)}`);
     console.log(`   Refresh token: ${refreshToken.slice(0, 20)}...`);
 
@@ -59,6 +61,7 @@ export async function createSession(
         body: new URLSearchParams({
             grant_type: 'refresh_token',
             refresh_token: refreshToken,
+            client_id: clientId,
             client_secret: clientSecret,
         }),
     });

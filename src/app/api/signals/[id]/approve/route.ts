@@ -55,29 +55,42 @@ export async function POST(
 
         console.log(`📈 Approving signal ${id} for user ${userId}`);
 
-        // Create Tastytrade session using OAuth refresh token
-        let session;
-        try {
-            session = await createSession(clientId, clientSecret, tokens.refreshToken);
-            console.log('✅ Tastytrade session created');
+        // Check if access token is still valid (not expired)
+        const tokenStillValid = tokens.expiresAt && tokens.expiresAt > Date.now();
+        let accessToken = tokens.accessToken;
 
-            // Update stored tokens with new refresh token if provided
-            if (session.refreshToken && session.refreshToken !== tokens.refreshToken) {
+        if (tokenStillValid && accessToken) {
+            // Token still valid - use it directly without refresh
+            console.log('✅ Using existing valid access token');
+        } else {
+            // Token expired - try to refresh
+            console.log('⚠️ Access token expired, attempting refresh...');
+
+            try {
+                const session = await createSession(clientId, clientSecret, tokens.refreshToken);
+                console.log('✅ Token refreshed successfully');
+                accessToken = session.accessToken;
+
+                // Update stored tokens with new refresh token if provided
                 await storeTastytradeTokens(userId, {
                     ...tokens,
-                    refreshToken: session.refreshToken,
+                    refreshToken: session.refreshToken || tokens.refreshToken,
                     accessToken: session.accessToken,
                     expiresAt: session.expiresAt,
                 });
+            } catch (refreshError) {
+                // Refresh failed - this is expected due to Tastytrade API limitation
+                // User needs to reconnect
+                console.error('❌ Token refresh failed (likely Tastytrade API limitation):', refreshError);
+
+                return NextResponse.json({
+                    status: 'failed',
+                    signal: { id, ...body },
+                    error: 'Session expired. Please reconnect your Tastytrade account.',
+                    code: 'RECONNECT_REQUIRED',
+                    message: 'Your Tastytrade session has expired. Please click "Disconnect" then "Connect" to re-authenticate.',
+                }, { status: 401 });
             }
-        } catch (error) {
-            console.error('Session creation failed:', error);
-            return NextResponse.json({
-                status: 'failed',
-                signal: { id, ...body },
-                error: error instanceof Error ? error.message : 'Failed to authenticate with Tastytrade',
-                message: 'Trade failed: Could not authenticate. Please reconnect your Tastytrade account.',
-            }, { status: 401 });
         }
 
         // Get account number
@@ -97,7 +110,7 @@ export async function POST(
         try {
             // For now, handling calendar spread signals
             const result = await executeCalendarSpread(
-                session.accessToken,
+                accessToken,
                 accountNumber,
                 {
                     symbol: signalData.symbol || 'TEST',

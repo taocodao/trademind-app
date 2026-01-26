@@ -1,15 +1,12 @@
 // Tastytrade OAuth Configuration
-// Using PRODUCTION environment (credentials registered at my.tastytrade.com)
+// Using PRODUCTION environment - sandbox won't work for real trading
 
 export const TASTYTRADE_CONFIG = {
-    // Production environment - ALL endpoints must match!
-    // Auth codes from my.tastytrade.com only work with api.tastyworks.com
+    // Production endpoints - we NEED these for real trading
+    // Issue: token refresh returns nginx 401 (needs solution)
     authUrl: 'https://my.tastytrade.com/auth.html',
     tokenUrl: 'https://api.tastyworks.com/oauth/token',
     apiBaseUrl: 'https://api.tastyworks.com',
-
-    // NOTE: api.cert.tastyworks.com is for SANDBOX/TESTING only
-    // It requires auth codes from cert-my.staging-tasty.works, not my.tastytrade.com
 
     clientId: process.env.TASTYTRADE_CLIENT_ID || '',
     clientSecret: process.env.TASTYTRADE_CLIENT_SECRET || '',
@@ -18,7 +15,7 @@ export const TASTYTRADE_CONFIG = {
             ? `${window.location.origin}/api/tastytrade/oauth/callback`
             : 'https://localhost:3000/api/tastytrade/oauth/callback'),
 
-    scopes: ['read', 'trade', 'openid'],  // Correct Tastytrade scopes: read=account access, trade=place trades
+    scopes: ['read', 'trade', 'openid'],
 };
 
 /**

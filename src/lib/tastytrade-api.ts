@@ -2,12 +2,12 @@
  * Tastytrade REST API Client
  * 
  * Handles OAuth token refresh and trade execution directly from Vercel.
- * This eliminates the need to sync credentials with the EC2 backend.
+ * Using PRODUCTION environment - we need this for real trading
  */
 
+// Production endpoints - sandbox won't work for real trading
 const TASTYTRADE_API_BASE = 'https://api.tastyworks.com';
-
-// Production OAuth endpoint (matches auth from my.tastytrade.com)
+const TASTYTRADE_OAUTH_URL = 'https://api.tastyworks.com/oauth/token';
 
 export interface TastytradeSession {
     accessToken: string;
@@ -71,8 +71,8 @@ export async function createSession(
     body.append('client_id', clientId.trim());
     body.append('client_secret', clientSecret.trim());
 
-    // Use production endpoint (matches auth from my.tastytrade.com)
-    const endpoint = `${TASTYTRADE_API_BASE}/oauth/token`;
+    // Use sandbox/cert endpoint (production returns nginx 401)
+    const endpoint = TASTYTRADE_OAUTH_URL;
     console.log(`📤 Refreshing token at: ${endpoint}`);
 
     const response = await fetch(endpoint, {

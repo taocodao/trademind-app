@@ -53,18 +53,20 @@ export async function createSession(
     console.log(`   Client secret: ${clientSecret.slice(0, 4)}...${clientSecret.slice(-4)}`);
     console.log(`   Refresh token: ${refreshToken.slice(0, 20)}...`);
 
+    // Build request body using explicit append() for proper encoding
+    const body = new URLSearchParams();
+    body.append('grant_type', 'refresh_token');
+    body.append('refresh_token', refreshToken.trim());
+    body.append('client_id', clientId.trim());
+    body.append('client_secret', clientSecret.trim());
+    body.append('scope', 'PlaceTrades AccountAccess');
+
     const response = await fetch(`${TASTYTRADE_API_BASE}/oauth/token`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: new URLSearchParams({
-            grant_type: 'refresh_token',
-            refresh_token: refreshToken,
-            client_id: clientId,
-            client_secret: clientSecret,
-            scope: 'PlaceTrades AccountAccess',
-        }),
+        body: body.toString(),
     });
 
     const responseText = await response.text();

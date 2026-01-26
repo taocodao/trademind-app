@@ -20,7 +20,7 @@ export const TASTYTRADE_CONFIG = {
             ? `${window.location.origin}/api/tastytrade/oauth/callback`
             : 'https://localhost:3000/api/tastytrade/oauth/callback'),
 
-    scopes: ['read', 'trade', 'openid'],  // Note: offline_access is NOT supported by Tastytrade
+    scopes: ['PlaceTrades', 'AccountAccess'],  // Tastytrade-specific scopes (not generic OAuth scopes)
 };
 
 /**

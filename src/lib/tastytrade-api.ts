@@ -47,6 +47,10 @@ export async function createSession(
     clientSecret: string,
     refreshToken: string
 ): Promise<TastytradeSession> {
+    console.log('🔐 Creating Tastytrade session...');
+    console.log(`   Client secret: ${clientSecret.slice(0, 4)}...${clientSecret.slice(-4)}`);
+    console.log(`   Refresh token: ${refreshToken.slice(0, 20)}...`);
+
     const response = await fetch(`${TASTYTRADE_API_BASE}/oauth/token`, {
         method: 'POST',
         headers: {
@@ -59,13 +63,29 @@ export async function createSession(
         }),
     });
 
+    const responseText = await response.text();
+    console.log(`   Response status: ${response.status}`);
+    console.log(`   Response body: ${responseText.slice(0, 200)}...`);
+
     if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-        console.error('Tastytrade session error:', error);
-        throw new Error(error.error_description || error.error || 'Failed to create session');
+        let error;
+        try {
+            error = JSON.parse(responseText);
+        } catch {
+            error = { error: responseText || 'Unknown error' };
+        }
+        console.error('❌ Tastytrade session error:', error);
+        throw new Error(error.error_description || error.error || `HTTP ${response.status}: Failed to create session`);
     }
 
-    const data = await response.json();
+    let data;
+    try {
+        data = JSON.parse(responseText);
+    } catch {
+        throw new Error('Invalid JSON response from Tastytrade');
+    }
+
+    console.log('✅ Session created successfully');
 
     return {
         accessToken: data.access_token,

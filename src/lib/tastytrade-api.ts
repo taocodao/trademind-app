@@ -7,12 +7,7 @@
 
 const TASTYTRADE_API_BASE = 'https://api.tastyworks.com';
 
-// OAuth endpoints - must match environment where tokens are issued
-// Tokens from my.tastytrade.com auth only work with api.tastyworks.com
-const OAUTH_ENDPOINTS = [
-    'https://api.tastyworks.com/oauth/token',       // Production (matches auth URL)
-    'https://api.cert.tastyworks.com/oauth/token',  // Sandbox (for testing only)
-];
+// Production OAuth endpoint (matches auth from my.tastytrade.com)
 
 export interface TastytradeSession {
     accessToken: string;
@@ -67,104 +62,68 @@ export async function createSession(
     }
 
     console.log(`   Client ID: ${clientId.slice(0, 8)}...`);
-    console.log(`   Client secret: ${clientSecret.slice(0, 4)}...${clientSecret.slice(-4)}`);
-    console.log(`   Refresh token: ${refreshToken.slice(0, 20)}...${refreshToken.slice(-20)}`);
-    console.log(`   Refresh token length: ${refreshToken.length}`);
+    console.log(`   Refresh token: ${refreshToken.slice(0, 20)}...`);
 
-    // Build request body using explicit append() for proper encoding
-    // NOTE: scope is ONLY for authorization_code grant, NOT refresh_token grant!
+    // Build request body - NO scope or redirect_uri for refresh_token grant
     const body = new URLSearchParams();
     body.append('grant_type', 'refresh_token');
     body.append('refresh_token', refreshToken.trim());
     body.append('client_id', clientId.trim());
     body.append('client_secret', clientSecret.trim());
 
+    // Use production endpoint (matches auth from my.tastytrade.com)
+    const endpoint = `${TASTYTRADE_API_BASE}/oauth/token`;
+    console.log(`📤 Refreshing token at: ${endpoint}`);
 
-    // Try each OAuth endpoint until one works
-    let lastError: Error | null = null;
+    const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+        },
+        body: body.toString(),
+    });
 
-    for (const endpoint of OAUTH_ENDPOINTS) {
+    console.log(`📥 Response status: ${response.status}`);
+
+    const responseText = await response.text();
+
+    if (!response.ok) {
+        let error;
         try {
-            console.log(`📤 Trying endpoint: ${endpoint}`);
-            console.log('   Request details:', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'Accept': 'application/json',
-                },
-                bodyParams: {
-                    grant_type: 'refresh_token',
-                    client_id: clientId.substring(0, 8) + '...',
-                    client_secret: '***REDACTED***',
-                    refresh_token: `${refreshToken.substring(0, 20)}...`,
-                },
-            });
-
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'Accept': 'application/json',
-                },
-                body: body.toString(),
-            });
-
-            console.log(`📥 Response status: ${response.status} ${response.statusText}`);
-            console.log(`   Response headers:`, Object.fromEntries(response.headers.entries()));
-
-            const responseText = await response.text();
-            console.log(`   Response body (first 500 chars): ${responseText.slice(0, 500)}...`);
-
-            if (!response.ok) {
-                let error;
-                try {
-                    error = JSON.parse(responseText);
-                } catch {
-                    error = { error: responseText || 'Unknown error' };
-                }
-                console.error(`❌ ${endpoint} failed:`, error);
-
-                // If it's nginx 401, try next endpoint
-                if (response.status === 401 && responseText.includes('nginx')) {
-                    console.log(`   Skipping ${endpoint} - nginx 401, trying next...`);
-                    lastError = new Error(`nginx 401 from ${endpoint}`);
-                    continue;
-                }
-
-                // Other errors, throw immediately
-                throw new Error(
-                    error.error_description ||
-                    error.error ||
-                    `HTTP ${response.status}: ${responseText.substring(0, 300)}`
-                );
-            }
-
-            let data;
-            try {
-                data = JSON.parse(responseText);
-            } catch {
-                throw new Error('Invalid JSON response from Tastytrade');
-            }
-
-            console.log(`✅ Session created successfully with ${endpoint}`);
-            console.log(`   Access token: ${data.access_token?.slice(0, 20)}...`);
-            console.log(`   Expires in: ${data.expires_in} seconds`);
-
-            return {
-                accessToken: data.access_token,
-                refreshToken: data.refresh_token || refreshToken,
-                expiresAt: Date.now() + (data.expires_in * 1000),
-            };
-        } catch (error) {
-            const errorMsg = error instanceof Error ? error.message : String(error);
-            console.error(`💥 Error with ${endpoint}:`, errorMsg);
-            lastError = error instanceof Error ? error : new Error(errorMsg);
-            // Continue to next endpoint
+            error = JSON.parse(responseText);
+        } catch {
+            error = { error: responseText || 'Unknown error' };
         }
+        console.error('❌ Token refresh failed:', error);
+
+        // Provide specific error message for revoked tokens
+        if (error.error_code === 'invalid_grant') {
+            throw new Error(`Token revoked: ${error.error_description || 'Please reconnect Tastytrade'}`);
+        }
+
+        throw new Error(
+            error.error_description ||
+            error.error ||
+            `HTTP ${response.status}: ${responseText.substring(0, 300)}`
+        );
     }
 
-    // All endpoints failed
-    throw new Error(`Failed to refresh Tastytrade token with all endpoints. Last error: ${lastError?.message}`);
+    let data;
+    try {
+        data = JSON.parse(responseText);
+    } catch {
+        throw new Error('Invalid JSON response from Tastytrade');
+    }
+
+    console.log('✅ Token refreshed successfully');
+    console.log(`   Expires in: ${data.expires_in} seconds`);
+
+    return {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token || refreshToken,
+        expiresAt: Date.now() + (data.expires_in * 1000),
+    };
 }
 
 /**

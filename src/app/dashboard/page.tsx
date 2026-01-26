@@ -12,7 +12,8 @@ import {
     Bell,
     RefreshCw,
     AlertCircle,
-    CheckCircle
+    CheckCircle,
+    Link2Off
 } from "lucide-react";
 import Link from "next/link";
 import { TastytradeLink } from "@/components/TastytradeLink";
@@ -51,6 +52,35 @@ function DashboardContent() {
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
     const [tastyLinked, setTastyLinked] = useState<boolean | null>(null);
     const [showLinkedSuccess, setShowLinkedSuccess] = useState(false);
+    const [disconnecting, setDisconnecting] = useState(false);
+
+    // Handle Tastytrade disconnect
+    const handleDisconnect = async () => {
+        if (!confirm("Are you sure you want to disconnect your Tastytrade account? You'll need to reconnect to approve trades.")) {
+            return;
+        }
+
+        setDisconnecting(true);
+        try {
+            const response = await fetch('/api/tastytrade/disconnect', {
+                method: 'POST',
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to disconnect');
+            }
+
+            // Reset state to show link screen
+            setTastyLinked(false);
+            setData(null);
+        } catch (err) {
+            console.error('Disconnect error:', err);
+            setError(err instanceof Error ? err.message : 'Failed to disconnect');
+        } finally {
+            setDisconnecting(false);
+        }
+    };
 
     // Check for OAuth callback parameters
     useEffect(() => {
@@ -279,6 +309,18 @@ function DashboardContent() {
                             Last updated: {lastUpdated.toLocaleTimeString()}
                         </p>
                     )}
+
+                    {/* Disconnect Tastytrade Button */}
+                    <div className="mt-4 pt-4 border-t border-white/10">
+                        <button
+                            onClick={handleDisconnect}
+                            disabled={disconnecting}
+                            className="flex items-center gap-2 text-sm text-tm-muted hover:text-tm-red transition-colors"
+                        >
+                            <Link2Off className="w-4 h-4" />
+                            {disconnecting ? 'Disconnecting...' : 'Disconnect Tastytrade'}
+                        </button>
+                    </div>
                 </div>
             </div>
 

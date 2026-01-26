@@ -2,15 +2,16 @@
 // Using PRODUCTION environment (credentials registered at my.tastytrade.com)
 
 export const TASTYTRADE_CONFIG = {
-    // Production endpoints
+    // IMPORTANT: Must use api.cert.tastyworks.com for BOTH authorization_code AND refresh_token
+    // Tokens from api.tastyworks.com don't work with api.cert.tastyworks.com and vice versa
     authUrl: 'https://my.tastytrade.com/auth.html',
-    tokenUrl: 'https://api.tastyworks.com/oauth/token',
-    apiBaseUrl: 'https://api.tastyworks.com',
+    tokenUrl: 'https://api.cert.tastyworks.com/oauth/token',  // FIXED: was api.tastyworks.com
+    apiBaseUrl: 'https://api.cert.tastyworks.com',             // FIXED: was api.tastyworks.com
 
-    // To use sandbox instead, uncomment:
-    // authUrl: 'https://cert-my.staging-tasty.works/auth.html',
-    // tokenUrl: 'https://cert.api.tastyworks.com/oauth/token',
-    // apiBaseUrl: 'https://cert.api.tastyworks.com',
+    // Old production endpoints (blocked by nginx):
+    // authUrl: 'https://my.tastytrade.com/auth.html',
+    // tokenUrl: 'https://api.tastyworks.com/oauth/token',
+    // apiBaseUrl: 'https://api.tastyworks.com',
 
     clientId: process.env.TASTYTRADE_CLIENT_ID || '',
     clientSecret: process.env.TASTYTRADE_CLIENT_SECRET || '',

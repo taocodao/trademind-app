@@ -71,7 +71,7 @@ export async function createSession(
     body.append('client_id', clientId.trim());
     body.append('client_secret', clientSecret.trim());
 
-    // Use sandbox/cert endpoint (production returns nginx 401)
+    // Use production endpoint - requires User-Agent header!
     const endpoint = TASTYTRADE_OAUTH_URL;
     console.log(`📤 Refreshing token at: ${endpoint}`);
 
@@ -80,6 +80,7 @@ export async function createSession(
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
             'Accept': 'application/json',
+            'User-Agent': 'TradeMind/1.0',  // REQUIRED by Tastytrade - nginx rejects without this!
         },
         body: body.toString(),
     });

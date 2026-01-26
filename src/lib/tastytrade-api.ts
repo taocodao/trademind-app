@@ -7,11 +7,11 @@
 
 const TASTYTRADE_API_BASE = 'https://api.tastyworks.com';
 
-// OAuth endpoints - api.cert.tastyworks.com is the correct endpoint for token operations
+// OAuth endpoints - must match environment where tokens are issued
+// Tokens from my.tastytrade.com auth only work with api.tastyworks.com
 const OAUTH_ENDPOINTS = [
-    'https://api.cert.tastyworks.com/oauth/token',  // CORRECT endpoint (found via testing)
-    'https://auth.tastyworks.com/oauth/token',      // Alternative
-    'https://api.tastyworks.com/oauth/token',       // Production API (returns nginx 401)
+    'https://api.tastyworks.com/oauth/token',       // Production (matches auth URL)
+    'https://api.cert.tastyworks.com/oauth/token',  // Sandbox (for testing only)
 ];
 
 export interface TastytradeSession {

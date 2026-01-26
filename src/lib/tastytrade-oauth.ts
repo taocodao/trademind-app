@@ -2,16 +2,14 @@
 // Using PRODUCTION environment (credentials registered at my.tastytrade.com)
 
 export const TASTYTRADE_CONFIG = {
-    // IMPORTANT: Must use api.cert.tastyworks.com for BOTH authorization_code AND refresh_token
-    // Tokens from api.tastyworks.com don't work with api.cert.tastyworks.com and vice versa
+    // Production environment - ALL endpoints must match!
+    // Auth codes from my.tastytrade.com only work with api.tastyworks.com
     authUrl: 'https://my.tastytrade.com/auth.html',
-    tokenUrl: 'https://api.cert.tastyworks.com/oauth/token',  // FIXED: was api.tastyworks.com
-    apiBaseUrl: 'https://api.cert.tastyworks.com',             // FIXED: was api.tastyworks.com
+    tokenUrl: 'https://api.tastyworks.com/oauth/token',
+    apiBaseUrl: 'https://api.tastyworks.com',
 
-    // Old production endpoints (blocked by nginx):
-    // authUrl: 'https://my.tastytrade.com/auth.html',
-    // tokenUrl: 'https://api.tastyworks.com/oauth/token',
-    // apiBaseUrl: 'https://api.tastyworks.com',
+    // NOTE: api.cert.tastyworks.com is for SANDBOX/TESTING only
+    // It requires auth codes from cert-my.staging-tasty.works, not my.tastytrade.com
 
     clientId: process.env.TASTYTRADE_CLIENT_ID || '',
     clientSecret: process.env.TASTYTRADE_CLIENT_SECRET || '',
@@ -50,6 +48,18 @@ export async function exchangeCodeForTokens(code: string): Promise<{
     expires_in: number;
     token_type: string;
 }> {
+    // Use production redirect URI - MUST match what Tastytrade has registered
+    const redirectUri = process.env.NEXT_PUBLIC_TASTYTRADE_REDIRECT_URI
+        || 'https://trademind.bot/api/tastytrade/oauth/callback';
+
+    console.log('[OAuth Exchange] Parameters:', {
+        tokenUrl: TASTYTRADE_CONFIG.tokenUrl,
+        grant_type: 'authorization_code',
+        code: code.substring(0, 20) + '...',
+        client_id: TASTYTRADE_CONFIG.clientId.substring(0, 8) + '...',
+        redirect_uri: redirectUri,
+    });
+
     const response = await fetch(TASTYTRADE_CONFIG.tokenUrl, {
         method: 'POST',
         headers: {
@@ -61,16 +71,21 @@ export async function exchangeCodeForTokens(code: string): Promise<{
             code,
             client_id: TASTYTRADE_CONFIG.clientId,
             client_secret: TASTYTRADE_CONFIG.clientSecret,
-            redirect_uri: TASTYTRADE_CONFIG.redirectUri,
+            redirect_uri: redirectUri,
         }),
     });
 
+    console.log('[OAuth Exchange] Response status:', response.status);
+
     if (!response.ok) {
         const error = await response.text();
+        console.error('[OAuth Exchange] Error:', error);
         throw new Error(`Token exchange failed: ${error}`);
     }
 
-    return response.json();
+    const data = await response.json();
+    console.log('[OAuth Exchange] Success! Got access_token');
+    return data;
 }
 
 /**

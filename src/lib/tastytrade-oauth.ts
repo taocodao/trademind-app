@@ -87,8 +87,7 @@ export async function refreshAccessToken(refreshToken: string): Promise<{
         grant_type: 'refresh_token',
         refresh_token: refreshToken,
         client_id: TASTYTRADE_CONFIG.clientId,
-        // client_secret: TASTYTRADE_CONFIG.clientSecret, // Avoid logging secret
-        redirect_uri: TASTYTRADE_CONFIG.redirectUri,
+        // NOTE: redirect_uri is NOT needed for refresh_token grants, only authorization_code
     });
     // Add secret back for actual request
     bodyParams.append('client_secret', TASTYTRADE_CONFIG.clientSecret);

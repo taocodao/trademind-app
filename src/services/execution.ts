@@ -20,7 +20,9 @@ export class ExecutionService {
             } else if (isCalendarSignal(signal)) {
                 return await this.executeCalendarSignal(signal);
             } else {
-                throw new Error(`Unknown strategy: ${signal.strategy}`);
+                // TypeScript knows this should never happen, but handle it anyway
+                const exhaustiveCheck: never = signal;
+                throw new Error(`Unknown strategy: ${(signal as Signal).strategy}`);
             }
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Execution failed';

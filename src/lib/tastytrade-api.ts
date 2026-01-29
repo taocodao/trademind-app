@@ -240,6 +240,50 @@ export async function submitOrder(
 }
 
 /**
+ * Execute a theta trade (cash-secured put)
+ */
+export async function executeThetaPut(
+    accessToken: string,
+    accountNumber: string,
+    signal: {
+        symbol: string;
+        strike: number;
+        expiration: string;  // YYYY-MM-DD
+        contracts: number;
+        price?: number;  // Limit price if specified
+    }
+): Promise<OrderResponse> {
+    const { symbol, strike, expiration, contracts, price } = signal;
+
+    // Format OCC option symbol
+    // Format: SYMBOL YYMMDD[P]STRIKE (strike * 1000, 8 digits)
+    const date = expiration.replace(/-/g, '').slice(2); // YYMMDD
+    const strikeFormatted = (strike * 1000).toString().padStart(8, '0');
+    const optionSymbol = `${symbol.padEnd(6)}${date}P${strikeFormatted}`;
+
+    console.log(`📋 Theta Put: SELL ${symbol} ${strike}P @ ${expiration}`);
+    console.log(`   Option symbol: ${optionSymbol}`);
+    console.log(`   Contracts: ${contracts}`);
+
+    const order: OrderRequest = {
+        timeInForce: 'Day',
+        orderType: price ? 'Limit' : 'Market',
+        price: price,
+        priceEffect: 'Credit',  // Selling puts = credit
+        legs: [
+            {
+                instrumentType: 'Equity Option',
+                symbol: optionSymbol.trim(),
+                quantity: contracts,
+                action: 'Sell to Open',
+            },
+        ],
+    };
+
+    return submitOrder(accessToken, accountNumber, order);
+}
+
+/**
  * Execute a calendar spread trade
  */
 export async function executeCalendarSpread(

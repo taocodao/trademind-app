@@ -13,7 +13,8 @@ import {
     RefreshCw,
     AlertCircle,
     CheckCircle,
-    Link2Off
+    Link2Off,
+    Settings
 } from "lucide-react";
 import Link from "next/link";
 import { TastytradeLink } from "@/components/TastytradeLink";
@@ -399,6 +400,7 @@ function DashboardContent() {
                     <NavItem icon={<Wallet />} label="Home" active />
                     <NavItem icon={<TrendingUp />} label="Signals" href="/signals" />
                     <NavItem icon={<Activity />} label="Positions" href="/positions" />
+                    <NavItem icon={<Settings />} label="Settings" href="/settings" />
                 </div>
             </nav>
         </main>

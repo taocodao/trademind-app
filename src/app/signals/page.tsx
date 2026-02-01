@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useSignalContext } from "@/components/providers/SignalProvider";
+import { ThetaSignalCard, isThetaSignal } from "@/components/signals/ThetaSignalCard";
 
 interface Signal {
     id: string;
@@ -152,13 +153,23 @@ export default function SignalsPage() {
             {/* Signals List */}
             <div className="px-6 space-y-4">
                 {signals.map((signal) => (
-                    <SignalCard
-                        key={signal.id}
-                        signal={signal}
-                        onApprove={() => handleApproveClick(signal)}
-                        onSkip={() => handleSkip(signal.id)}
-                        isApproving={approving === signal.id}
-                    />
+                    isThetaSignal(signal) ? (
+                        <ThetaSignalCard
+                            key={signal.id}
+                            signal={signal as any}
+                            onApprove={() => handleApproveClick(signal)}
+                            onSkip={() => handleSkip(signal.id)}
+                            isApproving={approving === signal.id}
+                        />
+                    ) : (
+                        <SignalCard
+                            key={signal.id}
+                            signal={signal}
+                            onApprove={() => handleApproveClick(signal)}
+                            onSkip={() => handleSkip(signal.id)}
+                            isApproving={approving === signal.id}
+                        />
+                    )
                 ))}
 
                 {isConnected && signals.length === 0 && (

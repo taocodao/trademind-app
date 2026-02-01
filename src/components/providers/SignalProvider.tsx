@@ -52,7 +52,11 @@ const CHANNELS = [
     'vertical_spread.buy',
     'vertical_spread.sell',
     'vertical_spread.warning',
-    'earnings'
+    'earnings',
+    // Theta Sprint channels
+    'theta_puts',
+    'theta_entry',
+    'theta_exit'
 ];
 
 export function useSignalContext() {

@@ -9,6 +9,7 @@ import { NextResponse } from 'next/server';
 import { getTastytradeTokens, storeTastytradeTokens } from '@/lib/redis';
 import { cookies } from 'next/headers';
 import { createSession, executeCalendarSpread } from '@/lib/tastytrade-api';
+import { createPosition, createUserExecution, getUserSettings } from '@/lib/db';
 
 export async function POST(
     request: Request,
@@ -140,10 +141,38 @@ export async function POST(
 
             console.log(`✅ Trade executed: Order ID ${result.orderId}`);
 
+            // ✅ Create position in database for persistence
+            try {
+                const userSettings = await getUserSettings(userId);
+                const riskLevel = userSettings?.risk_level || 'moderate';
+
+                await createPosition({
+                    id: result.orderId,
+                    userId: userId,
+                    signalId: id,
+                    symbol: signalData.symbol || 'UNKNOWN',
+                    strike: signalData.strike || 0,
+                    expiration: signalData.frontExpiry || signalData.expiry || defaultFrontExpiry,
+                    contracts: signalData.contracts || 1,
+                    entryPrice: signalData.entry_price || signalData.price || 0,
+                    capitalRequired: (signalData.strike || 0) * 100 * (signalData.contracts || 1),
+                    riskLevel: riskLevel,
+                });
+
+                // Track user execution
+                await createUserExecution(userId, id, 'executed', result.orderId);
+
+                console.log(`✅ Position saved to database: ${result.orderId}`);
+            } catch (dbError) {
+                // Log but don't fail the request - trade was successful
+                console.error('⚠️ Failed to save position to database:', dbError);
+            }
+
             return NextResponse.json({
                 status: 'success',
                 signal: { id, ...signalData, status: 'executed' },
                 orderId: result.orderId,
+                positionId: result.orderId,
                 message: `Trade executed successfully! Order ID: ${result.orderId}`,
             });
 

@@ -163,6 +163,71 @@ export async function getAccounts(
 }
 
 /**
+ * Validate order using dry-run endpoint (doesn't submit to exchange)
+ */
+export async function dryRunOrder(
+    accessToken: string,
+    accountNumber: string,
+    order: OrderRequest
+): Promise<{ valid: boolean; errors?: unknown[]; buyingPowerEffect?: unknown }> {
+    const apiOrder = {
+        'time-in-force': order.timeInForce,
+        'order-type': order.orderType,
+        'price': order.price?.toString(),
+        'price-effect': order.priceEffect,
+        'legs': order.legs.map(leg => ({
+            'instrument-type': leg.instrumentType,
+            'symbol': leg.symbol,
+            'quantity': leg.quantity,
+            'action': leg.action,
+        })),
+    };
+
+    const dryRunUrl = `${TASTYTRADE_API_BASE}/accounts/${accountNumber}/orders/dry-run`;
+    console.log(`🧪 Dry-run validation at: ${dryRunUrl}`);
+
+    const response = await fetch(dryRunUrl, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'User-Agent': 'TradeMind/1.0',
+        },
+        body: JSON.stringify(apiOrder),
+    });
+
+    const responseText = await response.text();
+    let data;
+    try {
+        data = JSON.parse(responseText);
+    } catch {
+        return { valid: false, errors: [{ message: 'Invalid JSON response' }] };
+    }
+
+    if (!response.ok) {
+        console.error('❌ Dry-run validation failed');
+        if (data.error?.errors) {
+            console.error('   Validation errors:');
+            data.error.errors.forEach((err: { code: string; message: string }) => {
+                console.error(`     - ${err.code}: ${err.message}`);
+            });
+        }
+        return { valid: false, errors: data.error?.errors || [data.error] };
+    }
+
+    console.log('✅ Dry-run validation passed');
+    if (data.buying_power_effect) {
+        console.log(`   BP effect: ${JSON.stringify(data.buying_power_effect)}`);
+    }
+
+    return {
+        valid: true,
+        buyingPowerEffect: data.buying_power_effect
+    };
+}
+
+/**
  * Submit an order to Tastytrade
  */
 export async function submitOrder(
@@ -273,7 +338,7 @@ export async function executeThetaPut(
         legs: [
             {
                 instrumentType: 'Equity Option',
-                symbol: optionSymbol.trim(),
+                symbol: optionSymbol,  // DO NOT TRIM - OCC format requires exact spacing!
                 quantity: contracts,
                 action: 'Sell to Open',
             },
@@ -326,13 +391,13 @@ export async function executeCalendarSpread(
         legs: [
             {
                 instrumentType: 'Equity Option',
-                symbol: frontSymbol.trim(),
+                symbol: frontSymbol,  // DO NOT TRIM - OCC format requires exact spacing!
                 quantity: 1,
                 action: 'Sell to Open',
             },
             {
                 instrumentType: 'Equity Option',
-                symbol: backSymbol.trim(),
+                symbol: backSymbol,  // DO NOT TRIM - OCC format requires exact spacing!
                 quantity: 1,
                 action: 'Buy to Open',
             },

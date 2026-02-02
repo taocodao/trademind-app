@@ -8,7 +8,8 @@
 import { NextResponse } from 'next/server';
 import { getTastytradeTokens, storeTastytradeTokens } from '@/lib/redis';
 import { cookies } from 'next/headers';
-import { createSession, executeCalendarSpread, executeThetaPut } from '@/lib/tastytrade-api';
+import { createSession } from '@/lib/tastytrade-api';
+import { executeSignal } from '@/lib/strategy-executor';
 import { createPosition, createUserExecution, getUserSettings } from '@/lib/db';
 
 export async function POST(
@@ -125,39 +126,16 @@ export async function POST(
         const defaultBackExpiry = frontDate.toISOString().split('T')[0];
 
         try {
-            let result;
-
-            // Route to correct execution function based on strategy type
-            if (signalData.strategy === 'theta' || signalData.strategy === 'Theta Cash-Secured Put') {
-                // Execute theta cash-secured put (single leg, receive credit)
-                console.log(`📋 Executing Theta Put for ${signalData.symbol}`);
-                result = await executeThetaPut(
-                    accessToken,
-                    accountNumber,
-                    {
-                        symbol: signalData.symbol || 'TEST',
-                        strike: signalData.strike || 100,
-                        expiration: signalData.expiry || signalData.frontExpiry || defaultFrontExpiry,
-                        contracts: signalData.contracts || 1,
-                        price: signalData.entry_price || signalData.price,  // Credit received
-                    }
-                );
-            } else {
-                // Execute calendar spread (two legs, pay debit)
-                console.log(`📋 Executing Calendar Spread for ${signalData.symbol}`);
-                result = await executeCalendarSpread(
-                    accessToken,
-                    accountNumber,
-                    {
-                        symbol: signalData.symbol || 'TEST',
-                        strike: signalData.strike || 100,
-                        frontExpiry: signalData.frontExpiry || signalData.expiry || defaultFrontExpiry,
-                        backExpiry: signalData.backExpiry || signalData.expiry || defaultBackExpiry,
-                        price: signalData.price,
-                        direction: signalData.direction,
-                    }
-                );
-            }
+            // Execute trade using modular strategy executor
+            const result = await executeSignal(
+                accessToken,
+                accountNumber,
+                signalData,
+                {
+                    front: defaultFrontExpiry,
+                    back: defaultBackExpiry,
+                }
+            );
 
             console.log(`✅ Trade executed: Order ID ${result.orderId}`);
 

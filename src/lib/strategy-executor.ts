@@ -84,10 +84,13 @@ const executeCalendarStrategy: StrategyExecutor = async (
  * Add new strategies here - key is the strategy name from backend
  */
 const STRATEGY_EXECUTORS: Record<string, StrategyExecutor> = {
+    // Theta strategies
     'theta': executeThetaStrategy,
     'Theta Cash-Secured Put': executeThetaStrategy,
+    // Calendar spread strategies (from backend signal_publisher/calendar.py)
     'calendar': executeCalendarStrategy,
     'calendar-spread': executeCalendarStrategy,
+    'Calendar Spread': executeCalendarStrategy,  // Exact match from backend
     // Add new strategies here:
     // 'iron-condor': executeIronCondorStrategy,
     // 'butterfly': executeButterflyStrategy,

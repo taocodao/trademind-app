@@ -115,21 +115,32 @@ export interface CreatePositionData {
     userId: string;
     signalId?: string;
     symbol: string;
+    strategy?: string;       // 'theta', 'calendar', etc.
     strike: number;
-    expiration: string;
+    expiration: string;      // For theta: put expiry. For calendar: front expiry
+    backExpiry?: string;     // For calendar spreads only
     contracts: number;
-    entryPrice: number;
+    entryPrice: number;      // For theta: credit received. For calendar: debit paid
     capitalRequired: number;
     riskLevel: string;
+    direction?: string;      // For calendar: 'bullish' or 'bearish'
 }
 
 export async function createPosition(data: CreatePositionData): Promise<UserPosition> {
+    // Determine strategy and entry value
+    const strategy = data.strategy || 'theta';
+    const isCalendar = strategy.toLowerCase().includes('calendar');
+
+    // For theta (selling puts): entry is credit (negative debit)
+    // For calendar (buying spread): entry is debit (positive)
+    const entryDebit = isCalendar ? data.entryPrice : -data.entryPrice;
+
     const result = await query(
         `INSERT INTO positions (
             id, user_id, signal_id, symbol, strategy, strike, 
-            front_expiry, quantity, entry_debit, status, created_at
+            front_expiry, back_expiry, quantity, entry_debit, direction, status, created_at
         ) VALUES (
-            $1, $2, $3, $4, 'theta', $5, $6, $7, $8, 'open', NOW()
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'open', NOW()
         )
         ON CONFLICT (id) DO UPDATE SET
             updated_at = NOW()
@@ -139,10 +150,13 @@ export async function createPosition(data: CreatePositionData): Promise<UserPosi
             data.userId,
             data.signalId || null,
             data.symbol,
+            strategy,
             data.strike,
             data.expiration,
+            data.backExpiry || null,  // Only for calendar spreads
             data.contracts,
-            -data.entryPrice  // Negative because we received credit for selling puts
+            entryDebit,
+            data.direction || null    // bullish/bearish for calendar
         ]
     );
     return result.rows[0];

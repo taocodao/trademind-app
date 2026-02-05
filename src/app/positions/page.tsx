@@ -11,6 +11,7 @@ import {
     XCircle
 } from "lucide-react";
 import Link from "next/link";
+import { ShareButton } from "@/components/share/ShareButton";
 
 // Mock positions - will be replaced with real WebSocket data
 const initialPositions = [
@@ -181,9 +182,24 @@ function PositionCard({
                         <p className="text-sm text-tm-muted">{position.type}</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2 bg-tm-surface px-3 py-1.5 rounded-full">
-                    <span className="w-2 h-2 rounded-full bg-tm-green animate-pulse" />
-                    <span className="text-xs font-medium">LIVE</span>
+                <div className="flex items-center gap-2">
+                    {/* Share button for profitable positions */}
+                    {isProfit && (
+                        <ShareButton
+                            data={{
+                                type: 'trade',
+                                title: `${position.symbol} Win`,
+                                amount: position.unrealizedPnL,
+                                symbol: position.symbol,
+                                returnPercent: position.pnlPercent
+                            }}
+                            size="sm"
+                        />
+                    )}
+                    <div className="flex items-center gap-2 bg-tm-surface px-3 py-1.5 rounded-full">
+                        <span className="w-2 h-2 rounded-full bg-tm-green animate-pulse" />
+                        <span className="text-xs font-medium">LIVE</span>
+                    </div>
                 </div>
             </div>
 

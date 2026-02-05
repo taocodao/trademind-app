@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { TastytradeLink } from "@/components/TastytradeLink";
+import { GamificationCard } from "@/components/gamification/GamificationCard";
 
 interface Position {
     symbol: string;
@@ -347,6 +348,11 @@ function DashboardContent() {
                         </div>
                     </Link>
                 </div>
+            </div>
+
+            {/* Gamification Stats */}
+            <div className="px-6 mb-6">
+                <GamificationCard />
             </div>
 
             {/* Open Positions */}

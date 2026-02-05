@@ -149,12 +149,15 @@ export async function POST(
                     userId: userId,
                     signalId: id,
                     symbol: signalData.symbol || 'UNKNOWN',
+                    strategy: signalData.strategy || 'theta',  // Pass actual strategy
                     strike: signalData.strike || 0,
                     expiration: signalData.frontExpiry || signalData.expiry || defaultFrontExpiry,
+                    backExpiry: signalData.backExpiry || defaultBackExpiry,  // For calendar spreads
                     contracts: signalData.contracts || 1,
-                    entryPrice: signalData.entry_price || signalData.price || 0,
-                    capitalRequired: (signalData.strike || 0) * 100 * (signalData.contracts || 1),
+                    entryPrice: signalData.entry_price || signalData.price || signalData.cost || 0,
+                    capitalRequired: signalData.cost || (signalData.strike || 0) * 100 * (signalData.contracts || 1),
                     riskLevel: riskLevel,
+                    direction: signalData.direction,  // bullish/bearish for calendar
                 });
 
                 // Track user execution

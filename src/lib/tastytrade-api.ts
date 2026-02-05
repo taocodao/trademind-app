@@ -287,11 +287,35 @@ export async function submitOrder(
     }
 
     if (!response.ok) {
-        console.error('❌ Order submission error:', data);
+        console.error('❌ Order submission error:', JSON.stringify(data, null, 2));
+
+        // Parse Tastytrade preflight check errors (422 status)
+        if (response.status === 422 && data.error?.errors) {
+            const preflightErrors = data.error.errors.map((err: { code: string; message: string }) =>
+                `${err.code}: ${err.message}`
+            ).join('; ');
+            throw new Error(`Preflight check failed: ${preflightErrors}`);
+        }
+
+        // Handle specific error codes
+        const errorCode = data.error?.code || data.error?.errors?.[0]?.code;
+        const errorMessage = data.error?.message || data.error?.errors?.[0]?.message;
+
+        // Provide user-friendly error messages for common issues
+        const userFriendlyErrors: Record<string, string> = {
+            'margin_check_failed': 'Insufficient buying power for this trade',
+            'cant_buy_for_credit': 'Wrong price direction - check if this should be debit or credit',
+            'instrument_validation_failed': 'Symbol not tradeable or market closed',
+            'closing_only': 'This symbol is restricted to closing trades only',
+            'invalid_option_level': 'Account not approved for this option strategy',
+            'invalid_strike': 'Invalid strike price',
+            'invalid_expiration': 'Invalid expiration date',
+        };
+
+        const friendlyMessage = userFriendlyErrors[errorCode] || errorMessage;
         throw new Error(
-            data.error?.message ||
-            data.errors?.[0]?.message ||
-            `Order failed: ${JSON.stringify(data).substring(0, 200)}`
+            friendlyMessage ||
+            `Order failed (${response.status}): ${JSON.stringify(data).substring(0, 300)}`
         );
     }
 

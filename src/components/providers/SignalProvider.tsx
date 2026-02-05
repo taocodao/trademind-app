@@ -91,10 +91,15 @@ export function SignalProvider({ children }: SignalProviderProps) {
                     const data = await response.json();
                     if (data.signals && Array.isArray(data.signals)) {
                         console.log(`✅ Loaded ${data.signals.length} signals from database`);
+                        // Ensure all signals have IDs
+                        const signalsWithIds = data.signals.map((s: Signal, i: number) => ({
+                            ...s,
+                            id: s.id || `db_signal_${Date.now()}_${i}`,
+                        }));
                         setAllSignals(prev => {
                             // Merge with any signals we already have from WebSocket
                             const existingIds = new Set(prev.map(s => s.id));
-                            const newSignals = data.signals.filter((s: Signal) => !existingIds.has(s.id));
+                            const newSignals = signalsWithIds.filter((s: Signal) => !existingIds.has(s.id));
                             return [...prev, ...newSignals];
                         });
                     }
@@ -113,19 +118,26 @@ export function SignalProvider({ children }: SignalProviderProps) {
     const handleSignal = useCallback((signal: Signal, channel: string) => {
         console.log('🔔 New signal received:', signal.symbol, channel);
 
+        // Ensure signal has an ID (generate one if missing)
+        const signalWithId: Signal = {
+            ...signal,
+            id: signal.id || `signal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            status: signal.status || 'pending',
+        };
+
         // Add signal to the list if not already present
         setAllSignals(prev => {
-            const exists = prev.some(s => s.id === signal.id);
+            const exists = prev.some(s => s.id === signalWithId.id);
             if (exists) {
                 // Update existing signal
-                return prev.map(s => s.id === signal.id ? { ...s, ...signal } : s);
+                return prev.map(s => s.id === signalWithId.id ? { ...s, ...signalWithId } : s);
             }
             // Add new signal at the beginning
-            return [{ ...signal, status: signal.status || 'pending' }, ...prev];
+            return [signalWithId, ...prev];
         });
 
         // Show notification
-        setNotificationSignal(signal);
+        setNotificationSignal(signalWithId);
     }, []);
 
     const handleConnect = useCallback(() => {

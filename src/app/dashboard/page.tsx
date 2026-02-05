@@ -53,6 +53,7 @@ function DashboardContent() {
     const [error, setError] = useState<string | null>(null);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
     const [tastyLinked, setTastyLinked] = useState<boolean | null>(null);
+    const [tastyUsername, setTastyUsername] = useState<string | null>(null);
     const [showLinkedSuccess, setShowLinkedSuccess] = useState(false);
     const [disconnecting, setDisconnecting] = useState(false);
 
@@ -111,6 +112,9 @@ function DashboardContent() {
                 .then((res) => res.json())
                 .then((data) => {
                     setTastyLinked(data.linked);
+                    if (data.username) {
+                        setTastyUsername(data.username);
+                    }
                 })
                 .catch(() => {
                     setTastyLinked(false);
@@ -183,7 +187,7 @@ function DashboardContent() {
                 <div>
                     <p className="text-tm-muted text-sm">Welcome back</p>
                     <h1 className="text-xl font-bold">
-                        {user?.email?.address?.split("@")[0] || "Trader"}
+                        {tastyUsername || user?.email?.address?.split("@")[0] || "Trader"}
                     </h1>
                 </div>
                 <div className="flex items-center gap-3">

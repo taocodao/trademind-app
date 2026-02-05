@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({
                 linked: true,
                 accountNumber: tokens?.accountNumber,
+                username: tokens?.username,
                 linkedAt: tokens?.linkedAt,
             });
         }

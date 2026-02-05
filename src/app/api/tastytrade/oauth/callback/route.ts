@@ -42,9 +42,23 @@ export async function GET(request: NextRequest) {
             console.warn("[OAuth Callback] No state parameter, using default-user");
         }
 
-        // Fetch account info to store with tokens
+        // Fetch account info and username to store with tokens
         let accountNumber: string | undefined;
+        let username: string | undefined;
         try {
+            // Get customer info (includes username/email)
+            const customerResponse = await fetch(`${TASTYTRADE_CONFIG.apiBaseUrl}/customers/me`, {
+                headers: {
+                    Authorization: `Bearer ${tokenResponse.access_token}`,
+                    'User-Agent': 'trademind/1.0',
+                },
+            });
+            if (customerResponse.ok) {
+                const customerData = await customerResponse.json();
+                username = customerData.data?.username || customerData.data?.email;
+            }
+
+            // Get account number
             const accountResponse = await fetch(`${TASTYTRADE_CONFIG.apiBaseUrl}/customers/me/accounts`, {
                 headers: {
                     Authorization: `Bearer ${tokenResponse.access_token}`,
@@ -56,7 +70,7 @@ export async function GET(request: NextRequest) {
                 accountNumber = accountData.data?.items?.[0]?.account?.["account-number"];
             }
         } catch (err) {
-            console.warn("Could not fetch account number:", err);
+            console.warn("Could not fetch account info:", err);
         }
 
         // Store tokens in Redis
@@ -66,6 +80,7 @@ export async function GET(request: NextRequest) {
             expiresAt: Date.now() + (tokenResponse.expires_in * 1000),
             linkedAt: Date.now(),
             accountNumber,
+            username,
         });
 
         console.log(`Tastytrade linked for user ${userId}, account: ${accountNumber || "unknown"}`);

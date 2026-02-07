@@ -2,61 +2,81 @@
 
 import { usePrivy } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
     ArrowLeft,
     Clock,
     AlertTriangle,
     TrendingUp,
-    XCircle
+    XCircle,
+    RefreshCw
 } from "lucide-react";
 import Link from "next/link";
 import { ShareButton } from "@/components/share/ShareButton";
 
-// Mock positions - will be replaced with real WebSocket data
-const initialPositions = [
-    {
-        id: "pos-1",
-        symbol: "AAPL",
-        type: "Calendar Spread",
-        entryPrice: 2.15,
-        currentPrice: 3.42,
-        unrealizedPnL: 127.50,
-        pnlPercent: 59.3,
-        stopLoss: -75,
-        expiryTime: "2d 14h",
-        status: "profit",
-    },
-    {
-        id: "pos-2",
-        symbol: "SPY",
-        type: "Calendar Spread",
-        entryPrice: 1.85,
-        currentPrice: 2.23,
-        unrealizedPnL: 38.00,
-        pnlPercent: 20.5,
-        stopLoss: -50,
-        expiryTime: "4d 6h",
-        status: "profit",
-    },
-    {
-        id: "pos-3",
-        symbol: "MSFT",
-        type: "Calendar Spread",
-        entryPrice: 2.50,
-        currentPrice: 2.35,
-        unrealizedPnL: -15.00,
-        pnlPercent: -6.0,
-        stopLoss: -50,
-        expiryTime: "1d 2h",
-        status: "loss",
-    },
-];
+interface Position {
+    id: string;
+    symbol: string;
+    strategy: string;
+    strike: number;
+    front_expiry: string;
+    back_expiry?: string;
+    quantity: number;
+    entry_debit: number;
+    current_value?: number;
+    unrealized_pnl?: number;
+    direction?: string;
+    status: string;
+    created_at: string;
+}
+
+// Helper to format strategy name for display
+function formatStrategy(strategy: string): string {
+    const lower = strategy?.toLowerCase() || '';
+    if (lower.includes('theta') || lower === 'cash-secured put') {
+        return 'Cash-Secured Put';
+    }
+    if (lower.includes('calendar')) {
+        return 'Calendar Spread';
+    }
+    return strategy || 'Unknown';
+}
+
+// Helper to calculate expiry time remaining
+function getExpiryTime(expiryDate: string): string {
+    const expiry = new Date(expiryDate);
+    const now = new Date();
+    const diffMs = expiry.getTime() - now.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    if (diffDays < 0) return 'Expired';
+    if (diffDays === 0) return `${diffHours}h`;
+    return `${diffDays}d ${diffHours}h`;
+}
 
 export default function PositionsPage() {
     const { ready, authenticated } = usePrivy();
     const router = useRouter();
-    const [positions, setPositions] = useState(initialPositions);
+    const [positions, setPositions] = useState<Position[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchPositions = useCallback(async () => {
+        try {
+            const response = await fetch('/api/positions?status=open');
+            if (!response.ok) {
+                throw new Error('Failed to fetch positions');
+            }
+            const data = await response.json();
+            setPositions(data.positions || []);
+            setError(null);
+        } catch (err) {
+            console.error('Error fetching positions:', err);
+            setError(err instanceof Error ? err.message : 'Failed to load positions');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
         if (ready && !authenticated) {
@@ -64,19 +84,16 @@ export default function PositionsPage() {
         }
     }, [ready, authenticated, router]);
 
-    // Simulate real-time updates (would be WebSocket in production)
+    // Fetch positions on mount and refresh every 5 seconds
     useEffect(() => {
-        const interval = setInterval(() => {
-            setPositions(prev => prev.map(pos => ({
-                ...pos,
-                currentPrice: pos.currentPrice + (Math.random() - 0.5) * 0.05,
-                unrealizedPnL: pos.unrealizedPnL + (Math.random() - 0.5) * 2,
-            })));
-        }, 5000);
-        return () => clearInterval(interval);
-    }, []);
+        if (ready && authenticated) {
+            fetchPositions();
+            const interval = setInterval(fetchPositions, 5000);
+            return () => clearInterval(interval);
+        }
+    }, [ready, authenticated, fetchPositions]);
 
-    const handleClose = (id: string) => {
+    const handleClose = async (id: string) => {
         // TODO: Call API to close position
         setPositions(positions.filter(p => p.id !== id));
     };
@@ -91,7 +108,7 @@ export default function PositionsPage() {
         );
     }
 
-    const totalPnL = positions.reduce((sum, p) => sum + p.unrealizedPnL, 0);
+    const totalPnL = positions.reduce((sum, p) => sum + (p.unrealized_pnl || 0), 0);
 
     return (
         <main className="min-h-screen pb-6">
@@ -145,19 +162,6 @@ export default function PositionsPage() {
     );
 }
 
-interface Position {
-    id: string;
-    symbol: string;
-    type: string;
-    entryPrice: number;
-    currentPrice: number;
-    unrealizedPnL: number;
-    pnlPercent: number;
-    stopLoss: number;
-    expiryTime: string;
-    status: string;
-}
-
 function PositionCard({
     position,
     onClose,
@@ -165,8 +169,14 @@ function PositionCard({
     position: Position;
     onClose: () => void;
 }) {
-    const isProfit = position.unrealizedPnL >= 0;
+    const pnl = position.unrealized_pnl || 0;
+    const isProfit = pnl >= 0;
     const [showConfirm, setShowConfirm] = useState(false);
+
+    // Calculate entry price (entry_debit is negative for puts = credit received)
+    const entryPrice = Math.abs(position.entry_debit || 0);
+    const currentPrice = position.current_value || entryPrice;
+    const pnlPercent = entryPrice > 0 ? ((pnl / (entryPrice * 100 * position.quantity)) * 100) : 0;
 
     return (
         <div className="glass-card p-5">
@@ -179,7 +189,7 @@ function PositionCard({
                     </div>
                     <div>
                         <h3 className="font-bold text-lg">{position.symbol}</h3>
-                        <p className="text-sm text-tm-muted">{position.type}</p>
+                        <p className="text-sm text-tm-muted">{formatStrategy(position.strategy)}</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -189,9 +199,9 @@ function PositionCard({
                             data={{
                                 type: 'trade',
                                 title: `${position.symbol} Win`,
-                                amount: position.unrealizedPnL,
+                                amount: pnl,
                                 symbol: position.symbol,
-                                returnPercent: position.pnlPercent
+                                returnPercent: pnlPercent
                             }}
                             size="sm"
                         />
@@ -207,10 +217,10 @@ function PositionCard({
             <div className="text-center py-4 mb-4">
                 <p className="text-sm text-tm-muted mb-1">Unrealized P&L</p>
                 <p className={`text-4xl font-mono font-bold ${isProfit ? 'profit-glow' : 'loss-glow'}`}>
-                    {isProfit ? '+' : ''}${position.unrealizedPnL.toFixed(2)}
+                    {isProfit ? '+' : ''}${pnl.toFixed(2)}
                 </p>
                 <p className={`text-lg ${isProfit ? 'text-tm-green' : 'text-tm-red'}`}>
-                    {isProfit ? '+' : ''}{position.pnlPercent.toFixed(1)}%
+                    {isProfit ? '+' : ''}{pnlPercent.toFixed(1)}%
                 </p>
             </div>
 
@@ -218,28 +228,31 @@ function PositionCard({
             <div className="grid grid-cols-3 gap-4 mb-4 pb-4 border-b border-white/10">
                 <div>
                     <p className="text-xs text-tm-muted">Entry</p>
-                    <p className="font-mono font-semibold">${position.entryPrice.toFixed(2)}</p>
+                    <p className="font-mono font-semibold">${entryPrice.toFixed(2)}</p>
                 </div>
                 <div className="text-center">
                     <p className="text-xs text-tm-muted">Current</p>
                     <p className={`font-mono font-semibold ${isProfit ? 'text-tm-green' : 'text-tm-red'}`}>
-                        ${position.currentPrice.toFixed(2)}
+                        ${currentPrice.toFixed(2)}
                     </p>
                 </div>
                 <div className="text-right">
                     <p className="text-xs text-tm-muted">Expiry</p>
                     <p className="font-semibold flex items-center justify-end gap-1">
                         <Clock className="w-3 h-3" />
-                        {position.expiryTime}
+                        {getExpiryTime(position.front_expiry)}
                     </p>
                 </div>
             </div>
 
-            {/* Stop Loss Warning */}
-            <div className="flex items-center gap-2 mb-4 text-sm">
-                <AlertTriangle className="w-4 h-4 text-yellow-400" />
-                <span className="text-tm-muted">Auto stop-loss at</span>
-                <span className="text-tm-red font-mono">${position.stopLoss}</span>
+            {/* Strike and Quantity Info */}
+            <div className="flex items-center justify-between mb-4 text-sm">
+                <span className="text-tm-muted">
+                    Strike: <span className="text-white font-mono">${position.strike}</span>
+                </span>
+                <span className="text-tm-muted">
+                    Qty: <span className="text-white font-mono">{position.quantity}</span>
+                </span>
             </div>
 
             {/* Close Button */}

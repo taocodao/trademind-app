@@ -300,7 +300,7 @@ export async function getSignal(signalId: string): Promise<Signal | null> {
 
 export async function initializeUserTables(): Promise<void> {
     try {
-        // User settings table
+        // User settings table with TEXT user_id for Privy DID format
         await query(`
             CREATE TABLE IF NOT EXISTS user_settings (
                 user_id VARCHAR(128) PRIMARY KEY,
@@ -309,6 +309,46 @@ export async function initializeUserTables(): Promise<void> {
                 created_at TIMESTAMP DEFAULT NOW(),
                 updated_at TIMESTAMP DEFAULT NOW()
             )
+        `);
+
+        // Migrate user_id columns from UUID to TEXT for Privy DID support
+        // This handles cases where tables were created with UUID type
+        await query(`
+            DO $$ 
+            BEGIN
+                -- Migrate user_settings.user_id if it's UUID type
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'user_settings' 
+                    AND column_name = 'user_id' 
+                    AND data_type = 'uuid'
+                ) THEN
+                    ALTER TABLE user_settings ALTER COLUMN user_id TYPE VARCHAR(128) USING user_id::VARCHAR;
+                END IF;
+
+                -- Migrate positions.user_id if it's UUID type
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'positions' 
+                    AND column_name = 'user_id' 
+                    AND data_type = 'uuid'
+                ) THEN
+                    ALTER TABLE positions ALTER COLUMN user_id TYPE VARCHAR(128) USING user_id::VARCHAR;
+                END IF;
+
+                -- Migrate user_signal_executions.user_id if it's UUID type
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'user_signal_executions' 
+                    AND column_name = 'user_id' 
+                    AND data_type = 'uuid'
+                ) THEN
+                    ALTER TABLE user_signal_executions ALTER COLUMN user_id TYPE VARCHAR(128) USING user_id::VARCHAR;
+                END IF;
+            EXCEPTION WHEN others THEN
+                -- Log but don't fail on migration errors
+                RAISE NOTICE 'Migration warning: %', SQLERRM;
+            END $$
         `);
 
         // Add unique constraint for user_signal_executions if not exists
@@ -329,7 +369,7 @@ export async function initializeUserTables(): Promise<void> {
             END $$
         `);
 
-        console.log('✅ User tables initialized');
+        console.log('✅ User tables initialized and migrated');
     } catch (error) {
         console.error('❌ Failed to initialize user tables:', error);
         throw error;

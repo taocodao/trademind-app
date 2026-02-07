@@ -2,34 +2,27 @@
 
 import { usePrivy } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
     ArrowLeft,
     Settings,
-    Shield,
     AlertTriangle,
-    Target,
+    BookOpen,
 } from "lucide-react";
 import Link from "next/link";
 import { AutoApproveSettings } from "@/components/gamification/AutoApproveSettings";
 import { DisplayNameSettings } from "@/components/gamification/DisplayNameSettings";
-import { StrategySettings } from "@/components/settings/StrategySettings";
+import { RiskAnalysisReport } from "@/components/settings/RiskAnalysisReport";
 
 export default function SettingsPage() {
     const { ready, authenticated } = usePrivy();
     const router = useRouter();
-    const [currentRiskLevel, setCurrentRiskLevel] = useState<string>('MEDIUM');
 
     useEffect(() => {
         if (ready && !authenticated) {
             router.push("/");
         }
     }, [ready, authenticated, router]);
-
-    const handleRiskLevelChange = (level: string) => {
-        setCurrentRiskLevel(level);
-        console.log('Risk level changed to:', level);
-    };
 
     if (!ready || !authenticated) {
         return (
@@ -40,12 +33,6 @@ export default function SettingsPage() {
             </main>
         );
     }
-
-    // Get API base URL for risk settings
-    const apiBase = process.env.NEXT_PUBLIC_API_URL ||
-        (typeof window !== 'undefined' && window.location.hostname === 'localhost'
-            ? 'http://localhost:8002'
-            : 'https://api.trademind.bot');
 
     return (
         <main className="min-h-screen pb-6">
@@ -63,18 +50,18 @@ export default function SettingsPage() {
             </header>
 
             <div className="px-6 space-y-6">
-                {/* Strategy Configuration */}
+                {/* Risk Analysis Reference Guide */}
                 <section>
                     <div className="flex items-center gap-2 mb-4">
-                        <Target className="w-5 h-5 text-tm-purple" />
-                        <h2 className="text-lg font-semibold">Strategy Configuration</h2>
+                        <BookOpen className="w-5 h-5 text-tm-purple" />
+                        <h2 className="text-lg font-semibold">Risk Analysis Reference</h2>
                     </div>
 
                     <p className="text-sm text-tm-muted mb-4">
-                        Customize your trading parameters. Changes apply to new signals immediately.
+                        Research-backed insights on strategy performance and exit strategies.
                     </p>
 
-                    <StrategySettings buyingPower={50000} />
+                    <RiskAnalysisReport />
                 </section>
 
                 {/* AI Autopilot Section */}
@@ -100,19 +87,19 @@ export default function SettingsPage() {
 
                 {/* Strategy Info */}
                 <section className="glass-card p-5">
-                    <h3 className="font-semibold mb-3">Current Risk Profile Summary</h3>
+                    <h3 className="font-semibold mb-3">Current Strategy Summary</h3>
                     <div className="space-y-2 text-sm">
-                        <div className="flex items-center justify-between py-2 border-b border-white/10">
-                            <span className="text-tm-muted">Active Risk Level</span>
-                            <span className="font-semibold text-tm-purple">{currentRiskLevel}</span>
-                        </div>
                         <div className="flex items-center justify-between py-2 border-b border-white/10">
                             <span className="text-tm-muted">Strategy</span>
                             <span className="font-semibold">Theta Sprint (Cash-Secured Puts)</span>
                         </div>
                         <div className="flex items-center justify-between py-2 border-b border-white/10">
-                            <span className="text-tm-muted">Defensive Exits</span>
-                            <span className="font-semibold">Research-Validated Profiles</span>
+                            <span className="text-tm-muted">Exit Strategy</span>
+                            <span className="font-semibold text-tm-green">Time-Based + Trailing Defensive</span>
+                        </div>
+                        <div className="flex items-center justify-between py-2 border-b border-white/10">
+                            <span className="text-tm-muted">Trailing P&L Stops</span>
+                            <span className="font-semibold text-red-400">Disabled (hurts returns)</span>
                         </div>
                         <div className="flex items-center justify-between py-2">
                             <span className="text-tm-muted">VIX Protection</span>

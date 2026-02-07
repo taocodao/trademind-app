@@ -9,10 +9,14 @@ import {
     AlertTriangle,
     TrendingUp,
     XCircle,
-    RefreshCw
+    RefreshCw,
+    Settings,
+    Wallet
 } from "lucide-react";
 import Link from "next/link";
 import { ShareButton } from "@/components/share/ShareButton";
+import { CapitalOptimizer } from "@/components/positions/CapitalOptimizer";
+import { TrailingStopConfig } from "@/components/positions/TrailingStopConfig";
 
 interface Position {
     id: string;
@@ -28,6 +32,12 @@ interface Position {
     direction?: string;
     status: string;
     created_at: string;
+}
+
+interface AccountBalance {
+    cashAvailable: number;
+    buyingPower: number;
+    netLiquidation: number;
 }
 
 // Helper to format strategy name for display
@@ -60,6 +70,27 @@ export default function PositionsPage() {
     const [positions, setPositions] = useState<Position[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [balance, setBalance] = useState<AccountBalance | null>(null);
+
+    // Fetch account balance from Tastytrade
+    const fetchBalance = useCallback(async () => {
+        try {
+            const response = await fetch('/api/tastytrade/account');
+            if (response.ok) {
+                const data = await response.json();
+                const account = data.data?.items?.[0];
+                if (account) {
+                    setBalance({
+                        cashAvailable: parseFloat(account['cash-available'] || '0'),
+                        buyingPower: parseFloat(account['buying-power'] || '0'),
+                        netLiquidation: parseFloat(account['net-liquidating-value'] || '0')
+                    });
+                }
+            }
+        } catch (err) {
+            console.error('Error fetching balance:', err);
+        }
+    }, []);
 
     const fetchPositions = useCallback(async () => {
         try {
@@ -88,10 +119,15 @@ export default function PositionsPage() {
     useEffect(() => {
         if (ready && authenticated) {
             fetchPositions();
+            fetchBalance();
             const interval = setInterval(fetchPositions, 5000);
-            return () => clearInterval(interval);
+            const balanceInterval = setInterval(fetchBalance, 30000); // Balance every 30s
+            return () => {
+                clearInterval(interval);
+                clearInterval(balanceInterval);
+            };
         }
-    }, [ready, authenticated, fetchPositions]);
+    }, [ready, authenticated, fetchPositions, fetchBalance]);
 
     const handleClose = async (id: string) => {
         // TODO: Call API to close position
@@ -135,6 +171,49 @@ export default function PositionsPage() {
                     <span className="w-2 h-2 rounded-full bg-tm-green animate-pulse" />
                     Live - Updates every 5s
                 </div>
+            </div>
+
+            {/* Account Balance Header */}
+            {balance && (
+                <div className="px-6 mb-6">
+                    <div className="glass-card p-5">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Wallet className="w-5 h-5 text-tm-purple" />
+                            <h3 className="font-bold">Account Overview</h3>
+                            <Link
+                                href="/settings"
+                                className="ml-auto p-2 rounded-full hover:bg-tm-surface/50 transition-colors"
+                            >
+                                <Settings className="w-4 h-4 text-tm-muted" />
+                            </Link>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4 text-center">
+                            <div>
+                                <p className="text-xs text-tm-muted">Cash Available</p>
+                                <p className="text-lg font-bold font-mono">
+                                    ${balance.cashAvailable.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-tm-muted">Buying Power</p>
+                                <p className="text-lg font-bold font-mono text-tm-purple">
+                                    ${balance.buyingPower.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-tm-muted">Net Liquidation</p>
+                                <p className="text-lg font-bold font-mono text-tm-green">
+                                    ${balance.netLiquidation.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Capital Optimizer */}
+            <div className="px-6">
+                <CapitalOptimizer balance={balance} positions={positions} />
             </div>
 
             {/* Positions List */}

@@ -69,7 +69,10 @@ export default function SignalsPage() {
             const response = await fetch(`/api/signals/${confirmModal.id}/approve`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ execute: true }), // Explicitly request execution
+                body: JSON.stringify({
+                    execute: true,
+                    signal: confirmModal,  // Include full signal data for strategy routing
+                }),
             });
 
             const data = await response.json();

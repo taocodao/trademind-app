@@ -34,7 +34,7 @@ interface Position {
 function formatStrategy(strategy: string): string {
     const lower = strategy?.toLowerCase() || '';
     if (lower.includes('theta') || lower === 'cash-secured put') {
-        return 'Cash-Secured Put';
+        return 'Theta Sprint';
     }
     if (lower.includes('calendar')) {
         return 'Calendar Spread';

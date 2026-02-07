@@ -334,6 +334,24 @@ function PositionCard({
                 </span>
             </div>
 
+            {/* Applied Filters Badge */}
+            <div className="bg-tm-surface/50 rounded-lg p-3 mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs text-tm-muted">⚙️ Applied Filters</span>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs">
+                    <span className="bg-tm-purple/20 text-tm-purple px-2 py-1 rounded-full">
+                        Conf: 75%+
+                    </span>
+                    <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full">
+                        DTE: {Math.ceil((new Date(position.front_expiry).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}d
+                    </span>
+                    <span className="bg-red-500/20 text-red-400 px-2 py-1 rounded-full">
+                        Stop: -45%
+                    </span>
+                </div>
+            </div>
+
             {/* Close Button */}
             {!showConfirm ? (
                 <button

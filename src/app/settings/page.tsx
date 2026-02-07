@@ -8,11 +8,12 @@ import {
     Settings,
     Shield,
     AlertTriangle,
+    Target,
 } from "lucide-react";
 import Link from "next/link";
-import { RiskLevelSelector } from "@/components/signals/RiskLevelSelector";
 import { AutoApproveSettings } from "@/components/gamification/AutoApproveSettings";
 import { DisplayNameSettings } from "@/components/gamification/DisplayNameSettings";
+import { StrategySettings } from "@/components/settings/StrategySettings";
 
 export default function SettingsPage() {
     const { ready, authenticated } = usePrivy();
@@ -62,22 +63,18 @@ export default function SettingsPage() {
             </header>
 
             <div className="px-6 space-y-6">
-                {/* Theta Sprint Risk Level Section */}
+                {/* Strategy Configuration */}
                 <section>
                     <div className="flex items-center gap-2 mb-4">
-                        <Shield className="w-5 h-5 text-tm-purple" />
-                        <h2 className="text-lg font-semibold">Theta Sprint Risk Level</h2>
+                        <Target className="w-5 h-5 text-tm-purple" />
+                        <h2 className="text-lg font-semibold">Strategy Configuration</h2>
                     </div>
 
                     <p className="text-sm text-tm-muted mb-4">
-                        Control position sizing, maximum positions, and VIX thresholds for the Theta Sprint strategy.
-                        Changes take effect on the next scheduler run.
+                        Customize your trading parameters. Changes apply to new signals immediately.
                     </p>
 
-                    <RiskLevelSelector
-                        apiBase={apiBase}
-                        onLevelChange={handleRiskLevelChange}
-                    />
+                    <StrategySettings buyingPower={50000} />
                 </section>
 
                 {/* AI Autopilot Section */}

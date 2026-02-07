@@ -1,0 +1,21 @@
+# .antigravity
+
+## Project
+- Name: TradeMind.bot Frontend
+- Domain: Options trading UI, signal display, user experience
+- Primary knowledge directory: ./brain
+
+## Agent Behavior
+- On every new conversation:
+  - Read ./brain/00_INDEX.md
+  - Skim file headings in ./brain/*.md
+- For backend context, also read `d:\Projects\tastywork-trading-1\brain\00_INDEX.md`
+
+## Documentation Rules
+- All specs must be stored in ./brain
+- When making UI changes, update relevant docs
+
+## Coding Rules
+- Follow existing component patterns
+- Use TypeScript strictly
+- Test UI changes in browser before committing

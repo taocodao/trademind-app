@@ -182,30 +182,30 @@ function DashboardContent() {
 
     return (
         <main className="min-h-screen pb-20">
-            {/* Header */}
-            <header className="px-6 pt-12 pb-6 flex items-center justify-between">
+            {/* Header - Compact */}
+            <header className="px-4 pt-8 pb-3 flex items-center justify-between">
                 <div>
-                    <p className="text-tm-muted text-sm">Welcome back</p>
-                    <h1 className="text-xl font-bold">
-                        {tastyUsername || user?.email?.address?.split("@")[0] || "Trader"}
+                    <p className="text-tm-muted text-xs">Welcome back</p>
+                    <h1 className="text-lg font-bold truncate max-w-[180px]">
+                        {tastyUsername || user?.email?.address || "Trader"}
                     </h1>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                     <button
                         onClick={fetchAccountData}
                         disabled={loading}
-                        className="w-10 h-10 rounded-full bg-tm-surface flex items-center justify-center"
+                        className="w-9 h-9 rounded-full bg-tm-surface flex items-center justify-center"
                     >
-                        <RefreshCw className={`w-5 h-5 text-tm-muted ${loading ? 'animate-spin' : ''}`} />
+                        <RefreshCw className={`w-4 h-4 text-tm-muted ${loading ? 'animate-spin' : ''}`} />
                     </button>
-                    <button className="w-10 h-10 rounded-full bg-tm-surface flex items-center justify-center">
-                        <Bell className="w-5 h-5 text-tm-muted" />
+                    <button className="w-9 h-9 rounded-full bg-tm-surface flex items-center justify-center">
+                        <Bell className="w-4 h-4 text-tm-muted" />
                     </button>
                     <button
                         onClick={logout}
-                        className="w-10 h-10 rounded-full bg-tm-surface flex items-center justify-center"
+                        className="w-9 h-9 rounded-full bg-tm-surface flex items-center justify-center"
                     >
-                        <LogOut className="w-5 h-5 text-tm-muted" />
+                        <LogOut className="w-4 h-4 text-tm-muted" />
                     </button>
                 </div>
             </header>
@@ -250,159 +250,88 @@ function DashboardContent() {
                 </div>
             )}
 
-            {/* Balance Card */}
-            <div className="px-6 mb-6">
-                <div className="glass-card p-6">
-                    <div className="flex items-center gap-2 text-tm-muted mb-2">
-                        <Wallet className="w-4 h-4" />
-                        <span className="text-sm">Net Liquidating Value</span>
-                        {data?.accountNumber && (
-                            <span className="text-xs ml-auto">Acct: {data.accountNumber}</span>
-                        )}
+            {/* Balance Card - Compact */}
+            <div className="px-4 mb-4">
+                <div className="glass-card p-4">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2 text-tm-muted">
+                            <Wallet className="w-4 h-4" />
+                            <span className="text-xs">Net Liquidating Value</span>
+                        </div>
+                        <div className="relative w-10 h-10">
+                            <svg className="w-10 h-10 transform -rotate-90">
+                                <circle className="text-tm-surface" strokeWidth="3" stroke="currentColor" fill="transparent" r="16" cx="20" cy="20" />
+                                <circle className="text-tm-green" strokeWidth="3" strokeDasharray={`${winRate * 1.0} 100`} strokeLinecap="round" stroke="currentColor" fill="transparent" r="16" cx="20" cy="20" />
+                            </svg>
+                            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold">{winRate}%</span>
+                        </div>
                     </div>
-                    <h2 className="text-4xl font-bold font-mono mb-4">
+                    <h2 className="text-3xl font-bold font-mono mb-2">
                         {loading && !data ? (
                             <span className="animate-pulse">Loading...</span>
                         ) : (
                             `$${(data?.netLiquidatingValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                         )}
                     </h2>
-
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between text-sm">
                         <div>
-                            <p className="text-sm text-tm-muted">Today&apos;s P&amp;L</p>
-                            <p className={`text-xl font-semibold font-mono ${(data?.todayPnL || 0) >= 0 ? 'profit-glow' : 'loss-glow'}`}>
+                            <span className="text-tm-muted">Today&apos;s P&amp;L: </span>
+                            <span className={`font-mono font-semibold ${(data?.todayPnL || 0) >= 0 ? 'text-tm-green' : 'text-tm-red'}`}>
                                 {(data?.todayPnL || 0) >= 0 ? '+' : ''}${(data?.todayPnL || 0).toFixed(2)}
-                                <span className="text-sm ml-1">({(data?.todayPnLPercent || 0).toFixed(2)}%)</span>
-                            </p>
+                            </span>
                         </div>
-                        <div className="text-right">
-                            <p className="text-sm text-tm-muted">Win Rate</p>
-                            <div className="flex items-center gap-2">
-                                <div className="relative w-12 h-12">
-                                    <svg className="w-12 h-12 transform -rotate-90">
-                                        <circle
-                                            className="text-tm-surface"
-                                            strokeWidth="4"
-                                            stroke="currentColor"
-                                            fill="transparent"
-                                            r="20"
-                                            cx="24"
-                                            cy="24"
-                                        />
-                                        <circle
-                                            className="text-tm-green"
-                                            strokeWidth="4"
-                                            strokeDasharray={`${winRate * 1.26} 126`}
-                                            strokeLinecap="round"
-                                            stroke="currentColor"
-                                            fill="transparent"
-                                            r="20"
-                                            cx="24"
-                                            cy="24"
-                                        />
-                                    </svg>
-                                    <span className="absolute inset-0 flex items-center justify-center text-sm font-bold">
-                                        {winRate}%
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {lastUpdated && (
-                        <p className="text-xs text-tm-muted mt-4">
-                            Last updated: {lastUpdated.toLocaleTimeString()}
-                        </p>
-                    )}
-
-                    {/* Disconnect Tastytrade Button */}
-                    <div className="mt-4 pt-4 border-t border-white/10">
-                        <button
-                            onClick={handleDisconnect}
-                            disabled={disconnecting}
-                            className="flex items-center gap-2 text-sm text-tm-muted hover:text-tm-red transition-colors"
-                        >
-                            <Link2Off className="w-4 h-4" />
-                            {disconnecting ? 'Disconnecting...' : 'Disconnect Tastytrade'}
-                        </button>
+                        {lastUpdated && (
+                            <span className="text-xs text-tm-muted">
+                                {lastUpdated.toLocaleTimeString()}
+                            </span>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className="px-6 mb-6">
-                <div className="grid grid-cols-2 gap-4">
-                    <Link href="/signals" className="glass-card p-4 flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-tm-purple/20 flex items-center justify-center">
-                            <TrendingUp className="w-5 h-5 text-tm-purple" />
+            {/* Quick Actions - Compact */}
+            <div className="px-4 mb-4">
+                <div className="grid grid-cols-2 gap-3">
+                    <Link href="/signals" className="glass-card p-3 flex items-center gap-2">
+                        <div className="w-9 h-9 rounded-lg bg-tm-purple/20 flex items-center justify-center">
+                            <TrendingUp className="w-4 h-4 text-tm-purple" />
                         </div>
                         <div>
-                            <p className="font-semibold">Signals</p>
-                            <p className="text-sm text-tm-green">View trades</p>
+                            <p className="font-semibold text-sm">Signals</p>
+                            <p className="text-xs text-tm-green">View trades</p>
                         </div>
                     </Link>
-                    <Link href="/positions" className="glass-card p-4 flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-tm-green/20 flex items-center justify-center">
-                            <Activity className="w-5 h-5 text-tm-green" />
+                    <Link href="/positions" className="glass-card p-3 flex items-center gap-2">
+                        <div className="w-9 h-9 rounded-lg bg-tm-green/20 flex items-center justify-center">
+                            <Activity className="w-4 h-4 text-tm-green" />
                         </div>
                         <div>
-                            <p className="font-semibold">Positions</p>
-                            <p className="text-sm text-tm-muted">{data?.positionCount || 0} open</p>
+                            <p className="font-semibold text-sm">Positions</p>
+                            <p className="text-xs text-tm-muted">{data?.positionCount || 0} open</p>
                         </div>
                     </Link>
                 </div>
             </div>
 
-            {/* Gamification Stats */}
-            <div className="px-6 mb-6">
+            {/* Gamification Stats - Compact */}
+            <div className="px-4 mb-4">
                 <GamificationCard />
             </div>
 
-            {/* Open Positions */}
-            <div className="px-6">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold">Open Positions</h3>
-                    <Link href="/positions" className="text-sm text-tm-purple flex items-center gap-1">
-                        View all <ChevronRight className="w-4 h-4" />
+            {/* Open Positions - Minimal Preview */}
+            {data?.positions && data.positions.length > 0 && (
+                <div className="px-4">
+                    <Link href="/positions" className="glass-card p-3 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold">Open Positions</span>
+                            <span className="text-xs bg-tm-purple/20 text-tm-purple px-2 py-0.5 rounded-full">
+                                {data.positionCount}
+                            </span>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-tm-muted" />
                     </Link>
                 </div>
-
-                <div className="space-y-3">
-                    {loading && !data ? (
-                        <div className="glass-card p-4 animate-pulse">
-                            <div className="h-4 bg-tm-surface rounded w-1/3 mb-2" />
-                            <div className="h-3 bg-tm-surface rounded w-1/4" />
-                        </div>
-                    ) : data?.positions && data.positions.length > 0 ? (
-                        data.positions.slice(0, 5).map((pos, i) => (
-                            <div key={i} className="glass-card p-4 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-tm-surface flex items-center justify-center font-bold text-sm">
-                                        {(pos.underlying || pos.symbol).slice(0, 2)}
-                                    </div>
-                                    <div>
-                                        <p className="font-semibold">{pos.underlying || pos.symbol}</p>
-                                        <p className="text-sm text-tm-muted">{pos.type} × {pos.quantity}</p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className={`font-mono font-semibold ${pos.unrealizedPnL >= 0 ? 'text-tm-green' : 'text-tm-red'}`}>
-                                        {pos.unrealizedPnL >= 0 ? '+' : ''}${pos.unrealizedPnL.toFixed(2)}
-                                    </p>
-                                    <p className="text-sm text-tm-muted">
-                                        {pos.pnlPercent >= 0 ? '+' : ''}{pos.pnlPercent.toFixed(2)}%
-                                    </p>
-                                </div>
-                            </div>
-                        ))
-                    ) : (
-                        <div className="glass-card p-6 text-center">
-                            <p className="text-tm-muted">No open positions</p>
-                        </div>
-                    )}
-                </div>
-            </div>
+            )}
 
             {/* Bottom Nav */}
             <nav className="fixed bottom-0 left-0 right-0 bg-tm-surface/90 backdrop-blur-lg border-t border-white/5 px-6 py-4">

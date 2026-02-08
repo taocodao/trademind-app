@@ -1,7 +1,7 @@
 // Centralized Execution Service for All Strategies
 // ================================================
 
-import { Signal, ThetaSignal, CalendarSignal, isThetaSignal, isCalendarSignal } from '@/types/signals';
+import { Signal, ThetaSignal, DiagonalSignal, isThetaSignal, isDiagonalSignal } from '@/types/signals';
 
 export interface ExecutionResult {
     success: boolean;
@@ -17,8 +17,8 @@ export class ExecutionService {
         try {
             if (isThetaSignal(signal)) {
                 return await this.executeThetaSignal(signal);
-            } else if (isCalendarSignal(signal)) {
-                return await this.executeCalendarSignal(signal);
+            } else if (isDiagonalSignal(signal)) {
+                return await this.executeDiagonalSignal(signal);
             } else {
                 // TypeScript knows this should never happen, but handle it anyway
                 const exhaustiveCheck: never = signal;
@@ -70,26 +70,35 @@ export class ExecutionService {
     }
 
     /**
-     * Execute calendar spread signal
+     * Execute diagonal/calendar spread signal
      */
-    private static async executeCalendarSignal(signal: CalendarSignal): Promise<ExecutionResult> {
+    private static async executeDiagonalSignal(signal: DiagonalSignal): Promise<ExecutionResult> {
+        // Use short_expiry/long_expiry if available, otherwise fall back to front_expiry/back_expiry
+        const frontExpiry = signal.short_expiry || signal.front_expiry;
+        const backExpiry = signal.long_expiry || signal.back_expiry;
+        const strike = signal.short_strike || signal.strike;
+
+        if (!frontExpiry || !backExpiry || !strike) {
+            throw new Error('Missing required expiry or strike information');
+        }
+
         const response = await fetch('/api/tastytrade/orders', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                strategy: 'calendar',
+                strategy: 'diagonal',
                 symbol: signal.symbol,
                 order_type: 'Limit',
                 time_in_force: 'Day',
-                price: signal.cost,
+                price: signal.net_debit || signal.cost,
                 legs: [
                     {
                         instrument_type: 'Equity Option',
                         symbol: this.buildOptionSymbol(
                             signal.symbol,
-                            signal.front_expiry,
-                            'P',
-                            signal.strike
+                            frontExpiry,
+                            signal.option_type || 'P',
+                            strike
                         ),
                         action: 'SELL_TO_OPEN',
                         quantity: 1
@@ -98,9 +107,9 @@ export class ExecutionService {
                         instrument_type: 'Equity Option',
                         symbol: this.buildOptionSymbol(
                             signal.symbol,
-                            signal.back_expiry,
-                            'P',
-                            signal.strike
+                            backExpiry,
+                            signal.option_type || 'P',
+                            signal.long_strike || strike
                         ),
                         action: 'BUY_TO_OPEN',
                         quantity: 1

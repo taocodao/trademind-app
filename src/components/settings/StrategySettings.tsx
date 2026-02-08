@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { RiskLevelPicker, RiskLevel, RiskPreset, PRESETS } from './RiskLevelPicker';
 import { FilterSlider, RangeSlider } from './FilterSlider';
-import { Save, Check, ChevronDown, ChevronUp, Zap, Target } from 'lucide-react';
+import { Save, Check, ChevronDown, ChevronUp, Target } from 'lucide-react';
 
 export interface StrategySettingsData {
     globalRiskLevel: RiskLevel;
@@ -137,50 +137,13 @@ export function StrategySettings({ buyingPower = 50000 }: StrategySettingsProps)
                 />
             </div>
 
-            {/* Common Filters */}
-            <div className="glass-card p-4">
-                <div className="flex items-center gap-2 mb-4">
-                    <Zap className="w-4 h-4 text-tm-purple" />
-                    <h3 className="font-semibold text-sm">Common Filters</h3>
-                </div>
-                <div className="space-y-4">
-                    <FilterSlider
-                        label="Min Confidence"
-                        value={settings.confidence}
-                        min={50}
-                        max={95}
-                        unit="%"
-                        onChange={(v) => update('confidence', v)}
-                        color="purple"
-                    />
-                    <FilterSlider
-                        label="Trailing Stop"
-                        value={settings.trailingStop}
-                        min={-70}
-                        max={-20}
-                        unit="%"
-                        onChange={(v) => update('trailingStop', v)}
-                        color="red"
-                    />
-                    <FilterSlider
-                        label="Max Heat"
-                        value={settings.maxHeat}
-                        min={5}
-                        max={30}
-                        unit="%"
-                        onChange={(v) => update('maxHeat', v)}
-                        color="yellow"
-                    />
-                </div>
-            </div>
-
             {/* Product Tabs */}
             <div className="flex gap-2">
                 <button
                     onClick={() => setActiveTab('theta')}
                     className={`flex-1 py-2.5 px-4 rounded-xl font-medium text-sm transition-all ${activeTab === 'theta'
-                            ? 'bg-tm-purple text-white'
-                            : 'bg-tm-surface text-tm-muted'
+                        ? 'bg-tm-purple text-white'
+                        : 'bg-tm-surface text-tm-muted'
                         }`}
                 >
                     💜 Theta Sprint
@@ -188,8 +151,8 @@ export function StrategySettings({ buyingPower = 50000 }: StrategySettingsProps)
                 <button
                     onClick={() => setActiveTab('calendar')}
                     className={`flex-1 py-2.5 px-4 rounded-xl font-medium text-sm transition-all ${activeTab === 'calendar'
-                            ? 'bg-tm-green text-white'
-                            : 'bg-tm-surface text-tm-muted'
+                        ? 'bg-tm-green text-white'
+                        : 'bg-tm-surface text-tm-muted'
                         }`}
                 >
                     💚 Calendar
@@ -344,8 +307,8 @@ export function StrategySettings({ buyingPower = 50000 }: StrategySettingsProps)
                 onClick={handleSave}
                 disabled={saving || saved}
                 className={`w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${saved
-                        ? 'bg-tm-green text-white'
-                        : 'bg-tm-purple text-white hover:bg-tm-purple/80'
+                    ? 'bg-tm-green text-white'
+                    : 'bg-tm-purple text-white hover:bg-tm-purple/80'
                     }`}
             >
                 {saving ? (

@@ -12,7 +12,6 @@ import {
 import Link from "next/link";
 import { AutoApproveSettings } from "@/components/gamification/AutoApproveSettings";
 import { DisplayNameSettings } from "@/components/gamification/DisplayNameSettings";
-import { RiskAnalysisReport } from "@/components/settings/RiskAnalysisReport";
 
 export default function SettingsPage() {
     const { ready, authenticated } = usePrivy();
@@ -50,19 +49,23 @@ export default function SettingsPage() {
             </header>
 
             <div className="px-6 space-y-6">
-                {/* Risk Analysis Reference Guide */}
-                <section>
-                    <div className="flex items-center gap-2 mb-4">
-                        <BookOpen className="w-5 h-5 text-tm-purple" />
-                        <h2 className="text-lg font-semibold">Risk Analysis Reference</h2>
-                    </div>
-
-                    <p className="text-sm text-tm-muted mb-4">
-                        Research-backed insights on strategy performance and exit strategies.
-                    </p>
-
-                    <RiskAnalysisReport />
-                </section>
+                {/* Risk Analysis Reference Link */}
+                <Link href="/risk-analysis">
+                    <section className="glass-card p-4 hover:bg-tm-surface/50 transition-all cursor-pointer border border-transparent hover:border-tm-purple/20">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-tm-purple/20 flex items-center justify-center">
+                                    <BookOpen className="w-5 h-5 text-tm-purple" />
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold">Risk Analysis Reference</h3>
+                                    <p className="text-sm text-tm-muted">Research-backed strategy insights</p>
+                                </div>
+                            </div>
+                            <ArrowLeft className="w-5 h-5 text-tm-muted rotate-180" />
+                        </div>
+                    </section>
+                </Link>
 
                 {/* AI Autopilot Section */}
                 <AutoApproveSettings />

@@ -81,7 +81,10 @@ export function useSignalSocket({
                     switch (message.type) {
                         case 'signal':
                             if (message.data && message.channel) {
-                                const signal = message.data as Signal;
+                                // Handle both wrapped {"signal": {...}} and direct signal data
+                                const rawData = message.data as Record<string, unknown>;
+                                const signal = (rawData.signal || rawData) as Signal;
+                                console.log('📥 Signal received:', signal.symbol, signal.strategy);
                                 setLastSignal(signal);
                                 onSignal?.(signal, message.channel);
                             }

@@ -73,7 +73,7 @@ export function CalendarSignalCard({ signal, onApprove, onSkip, isApproving }: C
                     </div>
                     <div>
                         <h3 className="font-bold text-lg">{signal.symbol}</h3>
-                        <p className="text-sm text-tm-muted">Calendar Spread</p>
+                        <p className="text-sm text-tm-muted">Diagonal Spread</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -260,8 +260,9 @@ export function CalendarSignalCard({ signal, onApprove, onSkip, isApproving }: C
     );
 }
 
-// Type guard to identify calendar signals
+// Type guard to identify calendar/diagonal signals
 export function isCalendarSignal(signal: { strategy?: string }): boolean {
     const strategy = signal.strategy?.toLowerCase() || '';
-    return strategy.includes('calendar') || strategy === 'calendar spread';
+    return strategy.includes('calendar') || strategy.includes('diagonal') ||
+        strategy === 'calendar spread' || strategy === 'diagonal spread';
 }

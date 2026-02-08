@@ -46,6 +46,8 @@ const SignalContext = createContext<SignalContextValue>({
 
 const CHANNELS = [
     'calendar_spread',
+    'diagonal_spread',  // NEW: Diagonal signals
+    'diagonal',         // NEW: Alternate channel name
     'iron_condor',
     'vertical',
     'vertical_spread',

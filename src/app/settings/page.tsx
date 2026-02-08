@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { AutoApproveSettings } from "@/components/gamification/AutoApproveSettings";
-import { DisplayNameSettings } from "@/components/gamification/DisplayNameSettings";
 
 export default function SettingsPage() {
     const { ready, authenticated } = usePrivy();
@@ -69,9 +68,6 @@ export default function SettingsPage() {
 
                 {/* AI Autopilot Section */}
                 <AutoApproveSettings />
-
-                {/* Display Name Section */}
-                <DisplayNameSettings />
 
                 {/* Warning Section */}
                 <section className="glass-card p-4 border border-yellow-500/20">

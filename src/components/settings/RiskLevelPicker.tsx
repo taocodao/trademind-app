@@ -11,54 +11,66 @@ interface RiskLevelPickerProps {
 }
 
 export interface RiskPreset {
-    confidence: number;
-    trailingStop: number;
-    maxHeat: number;
+    // Theta Sprint
+    thetaConfidence: number;
+    thetaTrailingStop: number;
     thetaDteMin: number;
     thetaDteMax: number;
     thetaDelta: number;
     thetaTradesWeek: number;
-    calendarDteMin: number;
-    calendarDteMax: number;
-    calendarTradesWeek: number;
+    // Diagonal Spread
+    diagonalConfidence: number;
+    diagonalShortDteMin: number;
+    diagonalShortDteMax: number;
+    diagonalLongDteMin: number;
+    diagonalLongDteMax: number;
 }
 
 const PRESETS: Record<RiskLevel, RiskPreset> = {
     safe: {
-        confidence: 85,
-        trailingStop: -30,
-        maxHeat: 10,
+        // Theta Sprint - Conservative
+        thetaConfidence: 85,
+        thetaTrailingStop: -30,
         thetaDteMin: 28,
         thetaDteMax: 45,
         thetaDelta: 0.15,
         thetaTradesWeek: 2,
-        calendarDteMin: 7,
-        calendarDteMax: 14,
-        calendarTradesWeek: 3,
+        // Diagonal Spread - Conservative
+        diagonalConfidence: 85,
+        diagonalShortDteMin: 7,
+        diagonalShortDteMax: 14,
+        diagonalLongDteMin: 45,
+        diagonalLongDteMax: 90,
     },
     smart: {
-        confidence: 75,
-        trailingStop: -45,
-        maxHeat: 15,
+        // Theta Sprint - Balanced
+        thetaConfidence: 75,
+        thetaTrailingStop: -45,
         thetaDteMin: 21,
         thetaDteMax: 45,
         thetaDelta: 0.20,
         thetaTradesWeek: 3,
-        calendarDteMin: 5,
-        calendarDteMax: 14,
-        calendarTradesWeek: 5,
+        // Diagonal Spread - Balanced
+        diagonalConfidence: 70,
+        diagonalShortDteMin: 5,
+        diagonalShortDteMax: 14,
+        diagonalLongDteMin: 30,
+        diagonalLongDteMax: 60,
     },
     bold: {
-        confidence: 60,
-        trailingStop: -60,
-        maxHeat: 25,
+        // Theta Sprint - Aggressive
+        thetaConfidence: 60,
+        thetaTrailingStop: -60,
         thetaDteMin: 14,
         thetaDteMax: 45,
         thetaDelta: 0.30,
         thetaTradesWeek: 5,
-        calendarDteMin: 3,
-        calendarDteMax: 14,
-        calendarTradesWeek: 8,
+        // Diagonal Spread - Aggressive
+        diagonalConfidence: 60,
+        diagonalShortDteMin: 3,
+        diagonalShortDteMax: 14,
+        diagonalLongDteMin: 21,
+        diagonalLongDteMax: 45,
     },
 };
 
@@ -133,16 +145,16 @@ export function RiskLevelPicker({ value, onChange, onPresetApply }: RiskLevelPic
             <div className="bg-tm-surface/50 rounded-lg p-3 text-xs text-tm-muted">
                 <div className="grid grid-cols-3 gap-2 text-center">
                     <div>
-                        <p className="font-medium text-white">{PRESETS[value].confidence}%+</p>
-                        <p>Confidence</p>
+                        <p className="font-medium text-white">{PRESETS[value].thetaConfidence}%+</p>
+                        <p>Theta Conf</p>
                     </div>
                     <div>
-                        <p className="font-medium text-white">{PRESETS[value].trailingStop}%</p>
+                        <p className="font-medium text-white">{PRESETS[value].thetaTrailingStop}%</p>
                         <p>Trail Stop</p>
                     </div>
                     <div>
-                        <p className="font-medium text-white">{PRESETS[value].maxHeat}%</p>
-                        <p>Max Heat</p>
+                        <p className="font-medium text-white">{PRESETS[value].diagonalConfidence}%+</p>
+                        <p>Diag Conf</p>
                     </div>
                 </div>
             </div>

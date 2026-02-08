@@ -7,41 +7,48 @@ import { Save, Check, ChevronDown, ChevronUp, Target } from 'lucide-react';
 
 export interface StrategySettingsData {
     globalRiskLevel: RiskLevel;
-    // Common Filters
-    confidence: number;
-    trailingStop: number;
-    maxHeat: number;
-    // Theta Sprint
+
+    // Theta Sprint Filters
     thetaEnabled: boolean;
     thetaCapital: number;
+    thetaConfidence: number;
+    thetaTrailingStop: number;
     thetaDteMin: number;
     thetaDteMax: number;
     thetaDelta: number;
     thetaTradesWeek: number;
-    // Calendar Spread
-    calendarEnabled: boolean;
-    calendarCapital: number;
-    calendarDteMin: number;
-    calendarDteMax: number;
-    calendarTradesWeek: number;
+
+    // Diagonal Spread Filters
+    diagonalEnabled: boolean;
+    diagonalCapital: number;
+    diagonalConfidence: number;
+    diagonalShortDteMin: number;
+    diagonalShortDteMax: number;
+    diagonalLongDteMin: number;
+    diagonalLongDteMax: number;
 }
 
 const DEFAULT_SETTINGS: StrategySettingsData = {
     globalRiskLevel: 'smart',
-    confidence: 75,
-    trailingStop: -45,
-    maxHeat: 15,
+
+    // Theta Sprint
     thetaEnabled: true,
     thetaCapital: 15000,
+    thetaConfidence: 75,
+    thetaTrailingStop: -45,
     thetaDteMin: 21,
     thetaDteMax: 45,
     thetaDelta: 0.20,
     thetaTradesWeek: 3,
-    calendarEnabled: true,
-    calendarCapital: 5000,
-    calendarDteMin: 5,
-    calendarDteMax: 14,
-    calendarTradesWeek: 5,
+
+    // Diagonal Spread
+    diagonalEnabled: true,
+    diagonalCapital: 5000,
+    diagonalConfidence: 70,
+    diagonalShortDteMin: 7,
+    diagonalShortDteMax: 21,
+    diagonalLongDteMin: 45,
+    diagonalLongDteMax: 90,
 };
 
 interface StrategySettingsProps {
@@ -50,7 +57,7 @@ interface StrategySettingsProps {
 
 export function StrategySettings({ buyingPower = 50000 }: StrategySettingsProps) {
     const [settings, setSettings] = useState<StrategySettingsData>(DEFAULT_SETTINGS);
-    const [activeTab, setActiveTab] = useState<'theta' | 'calendar'>('theta');
+    const [activeTab, setActiveTab] = useState<'theta' | 'diagonal'>('theta');
     const [showAdvanced, setShowAdvanced] = useState(false);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
@@ -64,7 +71,8 @@ export function StrategySettings({ buyingPower = 50000 }: StrategySettingsProps)
                 if (response.ok) {
                     const data = await response.json();
                     if (data.settings) {
-                        setSettings(data.settings);
+                        // Merge with defaults to handle new fields
+                        setSettings(prev => ({ ...DEFAULT_SETTINGS, ...data.settings }));
                     }
                 }
             } catch (err) {
@@ -80,16 +88,19 @@ export function StrategySettings({ buyingPower = 50000 }: StrategySettingsProps)
     const handlePresetApply = (preset: RiskPreset) => {
         setSettings(prev => ({
             ...prev,
-            confidence: preset.confidence,
-            trailingStop: preset.trailingStop,
-            maxHeat: preset.maxHeat,
+            // Theta Sprint
+            thetaConfidence: preset.thetaConfidence,
+            thetaTrailingStop: preset.thetaTrailingStop,
             thetaDteMin: preset.thetaDteMin,
             thetaDteMax: preset.thetaDteMax,
             thetaDelta: preset.thetaDelta,
             thetaTradesWeek: preset.thetaTradesWeek,
-            calendarDteMin: preset.calendarDteMin,
-            calendarDteMax: preset.calendarDteMax,
-            calendarTradesWeek: preset.calendarTradesWeek,
+            // Diagonal Spread
+            diagonalConfidence: preset.diagonalConfidence,
+            diagonalShortDteMin: preset.diagonalShortDteMin,
+            diagonalShortDteMax: preset.diagonalShortDteMax,
+            diagonalLongDteMin: preset.diagonalLongDteMin,
+            diagonalLongDteMax: preset.diagonalLongDteMax,
         }));
     };
 
@@ -149,13 +160,13 @@ export function StrategySettings({ buyingPower = 50000 }: StrategySettingsProps)
                     💜 Theta Sprint
                 </button>
                 <button
-                    onClick={() => setActiveTab('calendar')}
-                    className={`flex-1 py-2.5 px-4 rounded-xl font-medium text-sm transition-all ${activeTab === 'calendar'
+                    onClick={() => setActiveTab('diagonal')}
+                    className={`flex-1 py-2.5 px-4 rounded-xl font-medium text-sm transition-all ${activeTab === 'diagonal'
                         ? 'bg-tm-green text-white'
                         : 'bg-tm-surface text-tm-muted'
                         }`}
                 >
-                    💚 Calendar
+                    💚 Diagonal Spread
                 </button>
             </div>
 
@@ -191,6 +202,17 @@ export function StrategySettings({ buyingPower = 50000 }: StrategySettingsProps)
                             </div>
                         </div>
 
+                        {/* Min Confidence */}
+                        <FilterSlider
+                            label="Min Confidence"
+                            value={settings.thetaConfidence}
+                            min={50}
+                            max={95}
+                            unit="%"
+                            onChange={(v) => update('thetaConfidence', v)}
+                            color="purple"
+                        />
+
                         {/* DTE Range */}
                         <RangeSlider
                             label="DTE Range"
@@ -201,6 +223,17 @@ export function StrategySettings({ buyingPower = 50000 }: StrategySettingsProps)
                             unit="d"
                             onMinChange={(v) => update('thetaDteMin', v)}
                             onMaxChange={(v) => update('thetaDteMax', v)}
+                        />
+
+                        {/* Trailing Stop */}
+                        <FilterSlider
+                            label="Trailing Stop"
+                            value={settings.thetaTrailingStop}
+                            min={-70}
+                            max={-20}
+                            unit="%"
+                            onChange={(v) => update('thetaTrailingStop', v)}
+                            color="red"
                         />
 
                         {/* Advanced Options */}
@@ -239,13 +272,13 @@ export function StrategySettings({ buyingPower = 50000 }: StrategySettingsProps)
                     <div className="space-y-4">
                         {/* Enable Toggle */}
                         <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">Enable Calendar Spreads</span>
+                            <span className="text-sm font-medium">Enable Diagonal Spreads</span>
                             <button
-                                onClick={() => update('calendarEnabled', !settings.calendarEnabled)}
-                                className={`w-12 h-6 rounded-full transition-all ${settings.calendarEnabled ? 'bg-tm-green' : 'bg-tm-surface'
+                                onClick={() => update('diagonalEnabled', !settings.diagonalEnabled)}
+                                className={`w-12 h-6 rounded-full transition-all ${settings.diagonalEnabled ? 'bg-tm-green' : 'bg-tm-surface'
                                     }`}
                             >
-                                <div className={`w-5 h-5 bg-white rounded-full transition-all ${settings.calendarEnabled ? 'ml-6' : 'ml-0.5'
+                                <div className={`w-5 h-5 bg-white rounded-full transition-all ${settings.diagonalEnabled ? 'ml-6' : 'ml-0.5'
                                     }`} />
                             </button>
                         </div>
@@ -257,47 +290,48 @@ export function StrategySettings({ buyingPower = 50000 }: StrategySettingsProps)
                                 <span className="text-tm-muted">$</span>
                                 <input
                                     type="number"
-                                    value={settings.calendarCapital}
-                                    onChange={(e) => update('calendarCapital', Math.min(Number(e.target.value), buyingPower * 0.15))}
+                                    value={settings.diagonalCapital}
+                                    onChange={(e) => update('diagonalCapital', Math.min(Number(e.target.value), buyingPower * 0.15))}
                                     className="flex-1 bg-tm-surface rounded-lg px-3 py-2 font-mono text-lg border border-white/10 focus:border-tm-green focus:outline-none"
                                 />
                                 <span className="text-xs text-tm-muted">of ${buyingPower.toLocaleString()}</span>
                             </div>
                         </div>
 
-                        {/* DTE Range */}
-                        <RangeSlider
-                            label="DTE Range"
-                            minValue={settings.calendarDteMin}
-                            maxValue={settings.calendarDteMax}
-                            rangeMin={2}
-                            rangeMax={21}
-                            unit="d"
-                            onMinChange={(v) => update('calendarDteMin', v)}
-                            onMaxChange={(v) => update('calendarDteMax', v)}
+                        {/* Min Confidence */}
+                        <FilterSlider
+                            label="Min Confidence"
+                            value={settings.diagonalConfidence}
+                            min={50}
+                            max={95}
+                            unit="%"
+                            onChange={(v) => update('diagonalConfidence', v)}
+                            color="green"
                         />
 
-                        {/* Advanced Options */}
-                        <button
-                            onClick={() => setShowAdvanced(!showAdvanced)}
-                            className="flex items-center gap-2 text-sm text-tm-muted"
-                        >
-                            {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                            Advanced Options
-                        </button>
+                        {/* Short Leg DTE Range */}
+                        <RangeSlider
+                            label="Short Leg DTE"
+                            minValue={settings.diagonalShortDteMin}
+                            maxValue={settings.diagonalShortDteMax}
+                            rangeMin={2}
+                            rangeMax={30}
+                            unit="d"
+                            onMinChange={(v) => update('diagonalShortDteMin', v)}
+                            onMaxChange={(v) => update('diagonalShortDteMax', v)}
+                        />
 
-                        {showAdvanced && (
-                            <div className="space-y-4 pt-2">
-                                <FilterSlider
-                                    label="Max Trades/Week"
-                                    value={settings.calendarTradesWeek}
-                                    min={1}
-                                    max={15}
-                                    onChange={(v) => update('calendarTradesWeek', v)}
-                                    color="green"
-                                />
-                            </div>
-                        )}
+                        {/* Long Leg DTE Range */}
+                        <RangeSlider
+                            label="Long Leg DTE"
+                            minValue={settings.diagonalLongDteMin}
+                            maxValue={settings.diagonalLongDteMax}
+                            rangeMin={30}
+                            rangeMax={120}
+                            unit="d"
+                            onMinChange={(v) => update('diagonalLongDteMin', v)}
+                            onMaxChange={(v) => update('diagonalLongDteMax', v)}
+                        />
                     </div>
                 )}
             </div>

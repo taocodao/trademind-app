@@ -13,13 +13,18 @@ export interface SignalData {
     strategy?: string;
     symbol?: string;
     strike?: number;
+    short_strike?: number;   // For diagonal spreads
+    long_strike?: number;    // For diagonal spreads
     expiry?: string;
     frontExpiry?: string;
     backExpiry?: string;
+    short_expiry?: string;   // Alias for frontExpiry
+    long_expiry?: string;    // Alias for backExpiry
     entry_price?: number;
     price?: number;
+    net_debit?: number;      // For diagonal spreads
     contracts?: number;
-    direction?: 'bullish' | 'bearish';
+    direction?: 'bullish' | 'bearish' | 'neutral';
     [key: string]: unknown;
 }
 
@@ -55,26 +60,29 @@ const executeThetaStrategy: StrategyExecutor = async (
 };
 
 /**
- * Execute Calendar Spread Strategy
+ * Execute Diagonal/Calendar Spread Strategy
+ * Handles both directional (PMCC/PMCP) and neutral (calendar) modes
  */
-const executeCalendarStrategy: StrategyExecutor = async (
+const executeDiagonalStrategy: StrategyExecutor = async (
     accessToken,
     accountNumber,
     signal,
     defaultExpiry
 ) => {
-    console.log(`📋 Executing Calendar Spread for ${signal.symbol}`);
+    const mode = signal.direction && signal.direction !== 'neutral' ? 'Diagonal' : 'Calendar';
+    console.log(`📋 Executing ${mode} Spread for ${signal.symbol}`);
 
     return await executeCalendarSpread(
         accessToken,
         accountNumber,
         {
             symbol: signal.symbol || 'UNKNOWN',
-            strike: signal.strike || 0,
-            frontExpiry: signal.frontExpiry || signal.expiry || defaultExpiry.front,
-            backExpiry: signal.backExpiry || defaultExpiry.back,
-            price: signal.price,
-            direction: signal.direction,
+            strike: signal.strike || signal.short_strike || 0,
+            frontExpiry: signal.frontExpiry || signal.short_expiry || signal.expiry || defaultExpiry.front,
+            backExpiry: signal.backExpiry || signal.long_expiry || defaultExpiry.back,
+            price: signal.price || signal.net_debit,
+            // API only accepts bullish/bearish, neutral mode uses same execution as calendar (no direction needed)
+            direction: signal.direction === 'neutral' ? undefined : signal.direction,
         }
     );
 };
@@ -87,14 +95,22 @@ const STRATEGY_EXECUTORS: Record<string, StrategyExecutor> = {
     // Theta strategies
     'theta': executeThetaStrategy,
     'Theta Cash-Secured Put': executeThetaStrategy,
-    // Calendar spread strategies (from backend signal_publisher/calendar.py)
-    'calendar': executeCalendarStrategy,
-    'calendar-spread': executeCalendarStrategy,
-    'Calendar Spread': executeCalendarStrategy,  // Exact match from backend
+
+    // Diagonal spread strategies (unified: PMCC/PMCP + Calendar)
+    'diagonal': executeDiagonalStrategy,
+    'diagonal-spread': executeDiagonalStrategy,
+    'Diagonal Spread': executeDiagonalStrategy,
+    'BULL_DIAGONAL': executeDiagonalStrategy,
+    'BEAR_DIAGONAL': executeDiagonalStrategy,
+    'NEUTRAL_DIAGONAL': executeDiagonalStrategy,
+
+    // Legacy calendar support (backward compat)
+    'calendar': executeDiagonalStrategy,
+    'calendar-spread': executeDiagonalStrategy,
+    'Calendar Spread': executeDiagonalStrategy,
+
     // Add new strategies here:
     // 'iron-condor': executeIronCondorStrategy,
-    // 'butterfly': executeButterflyStrategy,
-    // 'straddle': executeStraddleStrategy,
 };
 
 /**
@@ -102,15 +118,15 @@ const STRATEGY_EXECUTORS: Record<string, StrategyExecutor> = {
  */
 export function getStrategyExecutor(strategy?: string): StrategyExecutor {
     if (!strategy) {
-        console.warn('⚠️ No strategy specified, defaulting to calendar spread');
-        return executeCalendarStrategy;
+        console.warn('⚠️ No strategy specified, defaulting to diagonal spread');
+        return executeDiagonalStrategy;
     }
 
     const executor = STRATEGY_EXECUTORS[strategy];
 
     if (!executor) {
-        console.warn(`⚠️ Unknown strategy "${strategy}", defaulting to calendar spread`);
-        return executeCalendarStrategy;
+        console.warn(`⚠️ Unknown strategy "${strategy}", defaulting to diagonal spread`);
+        return executeDiagonalStrategy;
     }
 
     return executor;

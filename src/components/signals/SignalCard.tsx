@@ -1,8 +1,8 @@
 'use client';
 
-import { Signal, isThetaSignal, isCalendarSignal } from '@/types/signals';
+import { Signal, isThetaSignal, isDiagonalSignal } from '@/types/signals';
 import { ThetaSignalDetails } from './ThetaSignalDetails';
-import { CalendarSignalDetails } from './CalendarSignalDetails';
+import { DiagonalSignalDetails } from './DiagonalSignalDetails';
 
 interface SignalCardProps {
     signal: Signal;
@@ -61,7 +61,7 @@ export function SignalCard({ signal, onApprove, onReject, loading }: SignalCardP
 
             {/* Strategy-Specific Details */}
             {isThetaSignal(signal) && <ThetaSignalDetails signal={signal} />}
-            {isCalendarSignal(signal) && <CalendarSignalDetails signal={signal} />}
+            {isDiagonalSignal(signal) && <DiagonalSignalDetails signal={signal} />}
 
             {/* Common Metrics */}
             <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t">

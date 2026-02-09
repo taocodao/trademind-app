@@ -1,6 +1,9 @@
 /**
  * Auto-Approve Settings API
  * GET/PUT /api/settings/auto-approve
+ * 
+ * Manages per-strategy auto-approve settings with risk profiles.
+ * Each strategy (theta, diagonal) has its own risk level and configuration.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -8,12 +11,31 @@ import { cookies } from 'next/headers';
 import { query } from '@/lib/db';
 import { initializeGamificationTables } from '@/lib/gamification';
 
-export interface AutoApproveSettings {
+interface StrategySettings {
     enabled: boolean;
-    minConfidence: number;
-    maxCapital: number;
-    strategies: string[];
+    riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+    customOverrides: Record<string, number>;
 }
+
+interface AutoApproveSettings {
+    enabled: boolean;
+    theta: StrategySettings;
+    diagonal: StrategySettings;
+}
+
+const DEFAULT_SETTINGS: AutoApproveSettings = {
+    enabled: false,
+    theta: {
+        enabled: true,
+        riskLevel: 'MEDIUM',
+        customOverrides: {},
+    },
+    diagonal: {
+        enabled: false,
+        riskLevel: 'MEDIUM',
+        customOverrides: {},
+    },
+};
 
 async function getUserId(): Promise<string | null> {
     const cookieStore = await cookies();
@@ -40,36 +62,39 @@ export async function GET() {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Ensure columns exist
         await initializeGamificationTables();
 
         const result = await query(
             `SELECT 
                 auto_approve_enabled,
-                auto_approve_min_confidence,
-                auto_approve_max_capital,
-                auto_approve_strategies
+                auto_approve_settings
              FROM user_settings 
              WHERE user_id = $1`,
             [userId]
         );
 
         if (result.rows.length === 0) {
-            // Return defaults
-            return NextResponse.json({
-                enabled: false,
-                minConfidence: 80,
-                maxCapital: 500,
-                strategies: ['theta']
-            });
+            return NextResponse.json(DEFAULT_SETTINGS);
         }
 
         const row = result.rows[0];
+
+        // If we have the new JSON settings, use them
+        if (row.auto_approve_settings) {
+            const stored = typeof row.auto_approve_settings === 'string'
+                ? JSON.parse(row.auto_approve_settings)
+                : row.auto_approve_settings;
+            return NextResponse.json({
+                ...DEFAULT_SETTINGS,
+                ...stored,
+                enabled: row.auto_approve_enabled ?? stored.enabled ?? false,
+            });
+        }
+
+        // Migration: old format → new format
         return NextResponse.json({
+            ...DEFAULT_SETTINGS,
             enabled: row.auto_approve_enabled || false,
-            minConfidence: row.auto_approve_min_confidence || 80,
-            maxCapital: parseFloat(row.auto_approve_max_capital) || 500,
-            strategies: row.auto_approve_strategies || ['theta']
         });
     } catch (error) {
         console.error('❌ Error fetching auto-approve settings:', error);
@@ -89,49 +114,66 @@ export async function PUT(request: NextRequest) {
 
         const body: AutoApproveSettings = await request.json();
 
-        // Validate
-        if (body.minConfidence < 70 || body.minConfidence > 95) {
+        // Validate risk levels
+        const validRiskLevels = ['LOW', 'MEDIUM', 'HIGH'];
+        if (body.theta?.riskLevel && !validRiskLevels.includes(body.theta.riskLevel)) {
             return NextResponse.json(
-                { error: 'Minimum confidence must be between 70 and 95' },
+                { error: 'Invalid theta risk level' },
+                { status: 400 }
+            );
+        }
+        if (body.diagonal?.riskLevel && !validRiskLevels.includes(body.diagonal.riskLevel)) {
+            return NextResponse.json(
+                { error: 'Invalid diagonal risk level' },
                 { status: 400 }
             );
         }
 
-        if (body.maxCapital < 100 || body.maxCapital > 10000) {
-            return NextResponse.json(
-                { error: 'Max capital must be between $100 and $10,000' },
-                { status: 400 }
+        const settingsJson = JSON.stringify({
+            theta: body.theta || DEFAULT_SETTINGS.theta,
+            diagonal: body.diagonal || DEFAULT_SETTINGS.diagonal,
+        });
+
+        // Upsert settings - try with new column first
+        try {
+            await query(
+                `INSERT INTO user_settings (
+                    user_id, 
+                    auto_approve_enabled, 
+                    auto_approve_settings,
+                    updated_at
+                 ) VALUES ($1, $2, $3, NOW())
+                 ON CONFLICT (user_id) DO UPDATE SET
+                    auto_approve_enabled = $2,
+                    auto_approve_settings = $3,
+                    updated_at = NOW()`,
+                [userId, body.enabled, settingsJson]
+            );
+        } catch (dbError) {
+            // Column might not exist yet - add it and retry
+            console.warn('Adding auto_approve_settings column...', dbError);
+            await query(
+                `ALTER TABLE user_settings 
+                 ADD COLUMN IF NOT EXISTS auto_approve_settings JSONB DEFAULT '{}'::jsonb`
+            );
+            await query(
+                `INSERT INTO user_settings (
+                    user_id, 
+                    auto_approve_enabled, 
+                    auto_approve_settings,
+                    updated_at
+                 ) VALUES ($1, $2, $3, NOW())
+                 ON CONFLICT (user_id) DO UPDATE SET
+                    auto_approve_enabled = $2,
+                    auto_approve_settings = $3,
+                    updated_at = NOW()`,
+                [userId, body.enabled, settingsJson]
             );
         }
-
-        const validStrategies = ['theta', 'calendar'];
-        const strategies = body.strategies.filter(s => validStrategies.includes(s));
-
-        // Upsert settings
-        await query(
-            `INSERT INTO user_settings (
-                user_id, 
-                auto_approve_enabled, 
-                auto_approve_min_confidence,
-                auto_approve_max_capital,
-                auto_approve_strategies,
-                updated_at
-             ) VALUES ($1, $2, $3, $4, $5, NOW())
-             ON CONFLICT (user_id) DO UPDATE SET
-                auto_approve_enabled = $2,
-                auto_approve_min_confidence = $3,
-                auto_approve_max_capital = $4,
-                auto_approve_strategies = $5,
-                updated_at = NOW()`,
-            [userId, body.enabled, body.minConfidence, body.maxCapital, strategies]
-        );
 
         return NextResponse.json({
             success: true,
-            enabled: body.enabled,
-            minConfidence: body.minConfidence,
-            maxCapital: body.maxCapital,
-            strategies
+            ...body,
         });
     } catch (error) {
         console.error('❌ Error updating auto-approve settings:', error);

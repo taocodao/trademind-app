@@ -66,7 +66,7 @@ export default function SettingsPage() {
                     </section>
                 </Link>
 
-                {/* AI Autopilot Section */}
+                {/* Auto-Approve Section */}
                 <AutoApproveSettings />
 
                 {/* Warning Section */}

@@ -19,6 +19,7 @@ import {
 import Link from "next/link";
 import { TastytradeLink } from "@/components/TastytradeLink";
 import { GamificationCard } from "@/components/gamification/GamificationCard";
+import { CircuitBreakerBanner } from "@/components/diagonal/CircuitBreakerBanner";
 
 interface Position {
     symbol: string;
@@ -217,6 +218,16 @@ function DashboardContent() {
                         <CheckCircle className="w-5 h-5 text-tm-green flex-shrink-0" />
                         <p className="text-tm-green font-medium">Tastytrade account linked successfully!</p>
                     </div>
+                </div>
+            )}
+
+            {/* Circuit Breaker Status Banner */}
+            {tastyLinked && (
+                <div className="px-4 mb-4">
+                    <CircuitBreakerBanner
+                        apiEndpoint="http://localhost:8002/diagonal/status"
+                        refreshInterval={60}
+                    />
                 </div>
             )}
 

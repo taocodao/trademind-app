@@ -42,6 +42,75 @@ export interface OrderResponse {
     message?: string;
 }
 
+export interface OptionQuote {
+    symbol: string;
+    bid: number;
+    ask: number;
+    mid: number;
+    last?: number;
+    volume?: number;
+    openInterest?: number;
+}
+
+/**
+ * Get current market quote for an option symbol
+ * Returns bid/ask/mid prices for accurate order pricing
+ */
+export async function getOptionQuote(
+    accessToken: string,
+    optionSymbol: string
+): Promise<OptionQuote | null> {
+    console.log(`📊 Fetching quote for: ${optionSymbol}`);
+
+    try {
+        // Tastytrade market-data endpoint
+        const quoteUrl = `${TASTYTRADE_API_BASE}/market-data/options/quotes`;
+
+        const response = await fetch(quoteUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'User-Agent': 'TradeMind/1.0',
+            },
+            body: JSON.stringify({ symbols: [optionSymbol] }),
+        });
+
+        if (!response.ok) {
+            console.warn(`⚠️ Quote fetch failed (${response.status}), will use signal price`);
+            return null;
+        }
+
+        const data = await response.json();
+        const quote = data.data?.items?.[0];
+
+        if (!quote) {
+            console.warn('⚠️ No quote data returned');
+            return null;
+        }
+
+        const bid = parseFloat(quote.bid || '0');
+        const ask = parseFloat(quote.ask || '0');
+        const mid = (bid + ask) / 2;
+
+        console.log(`✅ Quote received: Bid ${bid} / Ask ${ask} / Mid ${mid.toFixed(2)}`);
+
+        return {
+            symbol: optionSymbol,
+            bid,
+            ask,
+            mid,
+            last: parseFloat(quote.last || '0'),
+            volume: parseInt(quote.volume || '0'),
+            openInterest: parseInt(quote['open-interest'] || '0'),
+        };
+    } catch (error) {
+        console.warn(`⚠️ Quote fetch error: ${error}, will use signal price`);
+        return null;
+    }
+}
+
 /**
  * Create a session using OAuth refresh token
  */
@@ -330,6 +399,7 @@ export async function submitOrder(
 
 /**
  * Execute a theta trade (cash-secured put)
+ * UPDATED: Now fetches current market price to avoid stale signal prices
  */
 export async function executeThetaPut(
     accessToken: string,
@@ -339,10 +409,10 @@ export async function executeThetaPut(
         strike: number;
         expiration: string;  // YYYY-MM-DD
         contracts: number;
-        price?: number;  // Limit price if specified
+        price?: number;  // Signal price (backup if quote fails)
     }
 ): Promise<OrderResponse> {
-    const { symbol, strike, expiration, contracts, price } = signal;
+    const { symbol, strike, expiration, contracts, price: signalPrice } = signal;
 
     // Format OCC option symbol
     // Format: SYMBOL YYMMDD[P]STRIKE (strike * 1000, 8 digits)
@@ -353,11 +423,34 @@ export async function executeThetaPut(
     console.log(`📋 Theta Put: SELL ${symbol} ${strike}P @ ${expiration}`);
     console.log(`   Option symbol: ${optionSymbol}`);
     console.log(`   Contracts: ${contracts}`);
+    console.log(`   Signal price (stale): ${signalPrice}`);
+
+    // ✅ FETCH CURRENT MARKET PRICE - This is the key fix!
+    const quote = await getOptionQuote(accessToken, optionSymbol);
+
+    let orderPrice: number | undefined;
+    let orderType: 'Limit' | 'Market' = 'Market';
+
+    if (quote && quote.bid > 0) {
+        // Use current bid price for selling (what we'll receive)
+        // Add a small buffer (95% of bid) to help fill
+        orderPrice = Math.round(quote.bid * 95) / 100;
+        orderType = 'Limit';
+        console.log(`✅ Using LIVE market bid: $${quote.bid} → Order at $${orderPrice} (95%)`);
+    } else if (signalPrice && signalPrice > 0) {
+        // Fallback to signal price if quote fetch failed
+        orderPrice = signalPrice;
+        orderType = 'Limit';
+        console.log(`⚠️ Quote unavailable, using signal price: $${orderPrice}`);
+    } else {
+        // No price available - use market order
+        console.log(`⚠️ No price data available, using MARKET order`);
+    }
 
     const order: OrderRequest = {
         timeInForce: 'Day',
-        orderType: price ? 'Limit' : 'Market',
-        price: price,
+        orderType: orderType,
+        price: orderPrice,
         priceEffect: 'Credit',  // Selling puts = credit
         legs: [
             {
@@ -374,6 +467,7 @@ export async function executeThetaPut(
 
 /**
  * Execute a calendar spread trade
+ * UPDATED: Now fetches current market prices for both legs
  */
 export async function executeCalendarSpread(
     accessToken: string,
@@ -383,11 +477,11 @@ export async function executeCalendarSpread(
         strike: number;
         frontExpiry: string;  // YYYY-MM-DD
         backExpiry: string;   // YYYY-MM-DD
-        price?: number;
+        price?: number;       // Signal price (backup if quote fails)
         direction?: 'bullish' | 'bearish';
     }
 ): Promise<OrderResponse> {
-    const { symbol, strike, frontExpiry, backExpiry, price, direction } = signal;
+    const { symbol, strike, frontExpiry, backExpiry, price: signalPrice, direction } = signal;
 
     // Determine option type based on direction
     const optionType = direction === 'bearish' ? 'P' : 'C';
@@ -406,11 +500,40 @@ export async function executeCalendarSpread(
     console.log(`📋 Calendar Spread: ${symbol} ${strike}${optionType}`);
     console.log(`   Short leg: ${frontSymbol}`);
     console.log(`   Long leg: ${backSymbol}`);
+    console.log(`   Signal price (stale): ${signalPrice}`);
+
+    // ✅ FETCH CURRENT MARKET PRICES - This is the key fix!
+    const [frontQuote, backQuote] = await Promise.all([
+        getOptionQuote(accessToken, frontSymbol),
+        getOptionQuote(accessToken, backSymbol),
+    ]);
+
+    let orderPrice: number | undefined;
+    let orderType: 'Limit' | 'Market' = 'Market';
+
+    if (frontQuote && backQuote && frontQuote.bid > 0 && backQuote.ask > 0) {
+        // Calendar spread: SELL front (get bid), BUY back (pay ask)
+        // Net debit = back ask - front bid
+        const netDebit = backQuote.ask - frontQuote.bid;
+        // Round to 2 decimals
+        orderPrice = Math.round(netDebit * 100) / 100;
+        orderType = 'Limit';
+        console.log(`✅ Using LIVE prices: Sell @ ${frontQuote.bid} / Buy @ ${backQuote.ask}`);
+        console.log(`   Net debit: $${orderPrice}`);
+    } else if (signalPrice && signalPrice > 0) {
+        // Fallback to signal price if quote fetch failed
+        orderPrice = signalPrice;
+        orderType = 'Limit';
+        console.log(`⚠️ Quotes unavailable, using signal price: $${orderPrice}`);
+    } else {
+        // No price available - use market order
+        console.log(`⚠️ No price data available, using MARKET order`);
+    }
 
     const order: OrderRequest = {
         timeInForce: 'Day',
-        orderType: price ? 'Limit' : 'Market',
-        price: price,
+        orderType: orderType,
+        price: orderPrice,
         priceEffect: 'Debit',
         legs: [
             {

@@ -424,6 +424,26 @@ export async function initializeGamificationTables(): Promise<void> {
                 );
 
                 if (check.rows.length > 0 && check.rows[0].data_type === 'uuid') {
+                    // Drop ALL foreign key constraints on user_id before changing type
+                    const fkConstraints = await query(
+                        `SELECT tc.constraint_name
+                         FROM information_schema.table_constraints tc
+                         JOIN information_schema.key_column_usage kcu
+                           ON tc.constraint_name = kcu.constraint_name
+                           AND tc.table_schema = kcu.table_schema
+                         WHERE tc.constraint_type = 'FOREIGN KEY'
+                           AND tc.table_schema = 'public'
+                           AND tc.table_name = $1
+                           AND kcu.column_name = 'user_id'`,
+                        [table]
+                    );
+
+                    for (const fk of fkConstraints.rows) {
+                        await query(`ALTER TABLE ${table} DROP CONSTRAINT ${fk.constraint_name}`);
+                        console.log(`🔗 Dropped FK constraint ${fk.constraint_name} on ${table}`);
+                    }
+
+                    // Now safe to change column type
                     await query(
                         `ALTER TABLE ${table} ALTER COLUMN user_id TYPE VARCHAR(128) USING user_id::VARCHAR`
                     );

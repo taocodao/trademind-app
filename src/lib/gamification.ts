@@ -401,6 +401,70 @@ export async function getDisplayName(userId: string): Promise<string | null> {
 
 export async function initializeGamificationTables(): Promise<void> {
     try {
+        // CRITICAL: Migrate user_id columns from UUID to VARCHAR FIRST
+        // Privy sends DID strings like "did:privy:xxx" which are NOT valid UUIDs
+        await query(`
+            DO $$ 
+            BEGIN
+                -- Migrate user_settings.user_id if it's UUID type
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'user_settings' 
+                    AND column_name = 'user_id' 
+                    AND data_type = 'uuid'
+                ) THEN
+                    ALTER TABLE user_settings ALTER COLUMN user_id TYPE VARCHAR(128) USING user_id::VARCHAR;
+                    RAISE NOTICE 'Migrated user_settings.user_id from UUID to VARCHAR';
+                END IF;
+
+                -- Migrate user_gamification.user_id if it's UUID type
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'user_gamification' 
+                    AND column_name = 'user_id' 
+                    AND data_type = 'uuid'
+                ) THEN
+                    ALTER TABLE user_gamification ALTER COLUMN user_id TYPE VARCHAR(128) USING user_id::VARCHAR;
+                    RAISE NOTICE 'Migrated user_gamification.user_id from UUID to VARCHAR';
+                END IF;
+
+                -- Migrate user_badges.user_id if it's UUID type
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'user_badges' 
+                    AND column_name = 'user_id' 
+                    AND data_type = 'uuid'
+                ) THEN
+                    ALTER TABLE user_badges ALTER COLUMN user_id TYPE VARCHAR(128) USING user_id::VARCHAR;
+                    RAISE NOTICE 'Migrated user_badges.user_id from UUID to VARCHAR';
+                END IF;
+
+                -- Migrate positions.user_id if it's UUID type
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'positions' 
+                    AND column_name = 'user_id' 
+                    AND data_type = 'uuid'
+                ) THEN
+                    ALTER TABLE positions ALTER COLUMN user_id TYPE VARCHAR(128) USING user_id::VARCHAR;
+                    RAISE NOTICE 'Migrated positions.user_id from UUID to VARCHAR';
+                END IF;
+
+                -- Migrate user_signal_executions.user_id if it's UUID type  
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'user_signal_executions' 
+                    AND column_name = 'user_id' 
+                    AND data_type = 'uuid'
+                ) THEN
+                    ALTER TABLE user_signal_executions ALTER COLUMN user_id TYPE VARCHAR(128) USING user_id::VARCHAR;
+                    RAISE NOTICE 'Migrated user_signal_executions.user_id from UUID to VARCHAR';
+                END IF;
+            EXCEPTION WHEN others THEN
+                RAISE NOTICE 'UUID migration warning: %', SQLERRM;
+            END $$
+        `);
+
         // User gamification stats
         await query(`
             CREATE TABLE IF NOT EXISTS user_gamification (

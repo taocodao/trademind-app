@@ -23,7 +23,7 @@ interface CircuitBreakerBannerProps {
 }
 
 export function CircuitBreakerBanner({
-    apiEndpoint = "http://localhost:8002/diagonal/status",
+    apiEndpoint = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://34.235.119.67:8002'}/diagonal/status`,
     refreshInterval = 60,
     compact = false
 }: CircuitBreakerBannerProps) {

@@ -24,7 +24,7 @@ interface RiskLevelSelectorProps {
 }
 
 export function RiskLevelSelector({
-    apiBase = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://34.235.119.67:8002',
+    apiBase = '',
     onLevelChange
 }: RiskLevelSelectorProps) {
     const [currentLevel, setCurrentLevel] = useState<string>('MEDIUM');

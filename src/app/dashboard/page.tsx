@@ -225,7 +225,7 @@ function DashboardContent() {
             {tastyLinked && (
                 <div className="px-4 mb-4">
                     <CircuitBreakerBanner
-                        apiEndpoint={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://34.235.119.67:8002'}/diagonal/status`}
+                        apiEndpoint="/api/diagonal/status"
                         refreshInterval={60}
                     />
                 </div>

@@ -443,22 +443,29 @@ export async function initializeGamificationTables(): Promise<void> {
             END $$
         `);
 
-        // Add auto-approve columns to user_settings
+        // Add auto-approve settings column to user_settings (JSONB for per-strategy config)
         await query(`
             DO $$ 
             BEGIN
                 IF NOT EXISTS (
                     SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'user_settings' AND column_name = 'auto_approve_settings'
+                ) THEN
+                    ALTER TABLE user_settings 
+                    ADD COLUMN auto_approve_settings JSONB DEFAULT '{}'::jsonb;
+                END IF;
+                
+                -- Also add auto_approve_enabled if not exists (for backward compatibility)
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
                     WHERE table_name = 'user_settings' AND column_name = 'auto_approve_enabled'
                 ) THEN
                     ALTER TABLE user_settings 
-                    ADD COLUMN auto_approve_enabled BOOLEAN DEFAULT false,
-                    ADD COLUMN auto_approve_min_confidence INTEGER DEFAULT 80,
-                    ADD COLUMN auto_approve_max_capital DECIMAL(12,2) DEFAULT 500,
-                    ADD COLUMN auto_approve_strategies TEXT[] DEFAULT ARRAY['theta'];
+                    ADD COLUMN auto_approve_enabled BOOLEAN DEFAULT false;
                 END IF;
             END $$
         `);
+
 
         console.log('✅ Gamification tables initialized');
     } catch (error) {

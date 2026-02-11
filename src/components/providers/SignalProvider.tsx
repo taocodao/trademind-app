@@ -107,7 +107,12 @@ export function SignalProvider({ children }: SignalProviderProps) {
                                 receivedAt: s.createdAt ? new Date(s.createdAt).getTime() : now,
                             }))
                             // Filter out signals older than 30 minutes
-                            .filter((s: Signal) => (now - (s.receivedAt || 0)) < SIGNAL_TTL_MS);
+                            // Signals WITHOUT a createdAt are treated as old and removed
+                            .filter((s: Signal) => {
+                                if (s.status && s.status !== 'pending') return true; // Keep executed/rejected
+                                const age = now - (s.receivedAt || 0);
+                                return age < SIGNAL_TTL_MS;
+                            });
 
                         console.log(`✅ Loaded ${signalsWithIds.length} signals from database (filtered expired)`);
                         setAllSignals(prev => {

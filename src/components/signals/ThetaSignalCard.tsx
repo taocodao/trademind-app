@@ -13,6 +13,7 @@ import {
     Activity,
     Shield
 } from 'lucide-react';
+import { ExpirationBadge } from './ExpirationBadge';
 
 interface ThetaSignal {
     id: string;
@@ -45,6 +46,8 @@ interface ThetaSignal {
     // UI
     status: string;
     risk_level?: string;
+    createdAt?: string;
+    receivedAt?: number;
 }
 
 interface ThetaSignalCardProps {
@@ -84,6 +87,11 @@ export function ThetaSignalCard({ signal, onApprove, onSkip, isApproving }: Thet
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    <ExpirationBadge
+                        receivedAt={signal.receivedAt}
+                        createdAt={signal.createdAt}
+                        onExpired={onSkip}
+                    />
                     <span className={`text-xs font-medium px-2 py-1 rounded-full ${riskColors[signal.risk_level || 'medium']}`}>
                         {signal.risk_level || 'Medium'}
                     </span>

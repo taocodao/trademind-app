@@ -14,6 +14,7 @@ import {
     ChevronDown,
     ChevronUp
 } from 'lucide-react';
+import { ExpirationBadge } from './ExpirationBadge';
 
 interface CalendarSignal {
     id: string;
@@ -35,6 +36,7 @@ interface CalendarSignal {
     iv?: number;
     thetaEdge?: number;
     createdAt?: string;
+    receivedAt?: number;
 }
 
 interface CalendarSignalCardProps {
@@ -77,6 +79,11 @@ export function CalendarSignalCard({ signal, onApprove, onSkip, isApproving }: C
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    <ExpirationBadge
+                        receivedAt={signal.receivedAt}
+                        createdAt={signal.createdAt}
+                        onExpired={onSkip}
+                    />
                     <span className={`text-xs font-medium px-2 py-1 rounded-full ${riskColors[signal.riskLevel || 'Medium']}`}>
                         {signal.riskLevel || 'Medium'}
                     </span>

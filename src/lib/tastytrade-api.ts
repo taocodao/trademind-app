@@ -322,6 +322,60 @@ export async function submitOrder(
     console.log(`📤 Submitting order to: ${orderUrl}`);
     console.log(`   Order body:`, JSON.stringify(apiOrder, null, 2));
 
+    // ✅ DRY-RUN PRE-FLIGHT: Validate the order before submitting
+    try {
+        const dryRunUrl = `${orderUrl}/dry-run`;
+        console.log(`🔍 Running dry-run validation...`);
+
+        const dryRunResponse = await fetch(dryRunUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'User-Agent': 'TradeMind/1.0',
+            },
+            body: JSON.stringify(apiOrder),
+        });
+
+        if (!dryRunResponse.ok) {
+            const dryRunText = await dryRunResponse.text();
+            let dryRunData;
+            try { dryRunData = JSON.parse(dryRunText); } catch { dryRunData = null; }
+
+            if (dryRunData?.error?.errors) {
+                const failedSymbols = order.legs.map(l => l.symbol.trim()).join(', ');
+                const reasons = dryRunData.error.errors
+                    .map((e: { code: string; message: string }) => `${e.code}: ${e.message}`)
+                    .join('; ');
+                console.error(`❌ Dry-run FAILED for [${failedSymbols}]: ${reasons}`);
+                throw new Error(
+                    `Trade failed: ${reasons}. ` +
+                    `Symbols: ${failedSymbols}. The option contract may not exist at this strike/expiry.`
+                );
+            }
+            console.warn(`⚠️ Dry-run returned ${dryRunResponse.status}, proceeding cautiously...`);
+        } else {
+            const dryRunData = await dryRunResponse.json();
+            // Check for warnings in the dry-run response
+            if (dryRunData?.data?.warnings?.length > 0) {
+                const warnings = dryRunData.data.warnings
+                    .map((w: { message: string }) => w.message)
+                    .join('; ');
+                console.warn(`⚠️ Dry-run warnings: ${warnings}`);
+            } else {
+                console.log(`✅ Dry-run passed — order is valid`);
+            }
+        }
+    } catch (dryRunError) {
+        // If the dry-run specifically identified an instrument issue, re-throw it
+        if (dryRunError instanceof Error && dryRunError.message.includes('Trade failed:')) {
+            throw dryRunError;
+        }
+        // Otherwise log and continue — dry-run itself might have a transient issue
+        console.warn(`⚠️ Dry-run check inconclusive:`, dryRunError);
+    }
+
     const response = await fetch(orderUrl, {
         method: 'POST',
         headers: {

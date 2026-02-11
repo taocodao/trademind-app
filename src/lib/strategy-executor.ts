@@ -22,6 +22,7 @@ export interface SignalData {
     long_expiry?: string;    // Alias for backExpiry
     entry_price?: number;
     price?: number;
+    cost?: number;           // Frontend signal uses 'cost' for price
     net_debit?: number;      // For diagonal spreads
     contracts?: number;
     direction?: 'bullish' | 'bearish' | 'neutral';
@@ -54,7 +55,7 @@ const executeThetaStrategy: StrategyExecutor = async (
             strike: signal.strike || 0,
             expiration: signal.expiry || signal.frontExpiry || defaultExpiry.front,
             contracts: signal.contracts || 1,
-            price: signal.entry_price || signal.price,
+            price: signal.entry_price || signal.price || signal.cost,
         }
     );
 };
@@ -80,7 +81,7 @@ const executeDiagonalStrategy: StrategyExecutor = async (
             strike: signal.strike || signal.short_strike || 0,
             frontExpiry: signal.frontExpiry || signal.short_expiry || signal.expiry || defaultExpiry.front,
             backExpiry: signal.backExpiry || signal.long_expiry || defaultExpiry.back,
-            price: signal.price || signal.net_debit,
+            price: signal.price || signal.net_debit || signal.cost,
             // API only accepts bullish/bearish, neutral mode uses same execution as calendar (no direction needed)
             direction: signal.direction === 'neutral' ? undefined : signal.direction,
         }

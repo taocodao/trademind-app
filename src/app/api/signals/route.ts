@@ -21,6 +21,33 @@ export async function GET() {
         }
 
         const data = await response.json();
+
+        // Filter out signals older than 30 minutes
+        const SIGNAL_TTL_MS = 30 * 60 * 1000;
+        const now = Date.now();
+        if (Array.isArray(data)) {
+            const fresh = data.filter((s: { created_at?: string; createdAt?: string; status?: string }) => {
+                if (s.status && s.status !== 'pending') return true; // Keep executed/rejected
+                const createdStr = s.created_at || s.createdAt;
+                if (!createdStr) return true; // Keep if no timestamp
+                const age = now - new Date(createdStr).getTime();
+                return age < SIGNAL_TTL_MS;
+            });
+            return NextResponse.json({ signals: fresh });
+        }
+
+        // If data has a signals array wrapper
+        if (data.signals && Array.isArray(data.signals)) {
+            const fresh = data.signals.filter((s: { created_at?: string; createdAt?: string; status?: string }) => {
+                if (s.status && s.status !== 'pending') return true;
+                const createdStr = s.created_at || s.createdAt;
+                if (!createdStr) return true;
+                const age = now - new Date(createdStr).getTime();
+                return age < SIGNAL_TTL_MS;
+            });
+            return NextResponse.json({ signals: fresh });
+        }
+
         return NextResponse.json(data);
 
     } catch (error) {

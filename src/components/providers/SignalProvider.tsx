@@ -22,7 +22,12 @@ interface Signal {
     rationale?: string;
     signalType?: string;
     createdAt?: string;
+    receivedAt?: number;  // Timestamp when signal was received (for expiration)
 }
+
+// Signals expire after 30 minutes
+const SIGNAL_TTL_MS = 30 * 60 * 1000;
+const EXPIRY_CHECK_INTERVAL_MS = 60 * 1000; // Check every 60 seconds
 
 interface SignalContextValue {
     isConnected: boolean;
@@ -93,11 +98,18 @@ export function SignalProvider({ children }: SignalProviderProps) {
                     const data = await response.json();
                     if (data.signals && Array.isArray(data.signals)) {
                         console.log(`✅ Loaded ${data.signals.length} signals from database`);
-                        // Ensure all signals have IDs
-                        const signalsWithIds = data.signals.map((s: Signal, i: number) => ({
-                            ...s,
-                            id: s.id || `db_signal_${Date.now()}_${i}`,
-                        }));
+                        // Ensure all signals have IDs and receivedAt timestamp
+                        const now = Date.now();
+                        const signalsWithIds = data.signals
+                            .map((s: Signal, i: number) => ({
+                                ...s,
+                                id: s.id || `db_signal_${Date.now()}_${i}`,
+                                receivedAt: s.createdAt ? new Date(s.createdAt).getTime() : now,
+                            }))
+                            // Filter out signals older than 30 minutes
+                            .filter((s: Signal) => (now - (s.receivedAt || 0)) < SIGNAL_TTL_MS);
+
+                        console.log(`✅ Loaded ${signalsWithIds.length} signals from database (filtered expired)`);
                         setAllSignals(prev => {
                             // Merge with any signals we already have from WebSocket
                             const existingIds = new Set(prev.map(s => s.id));
@@ -120,11 +132,12 @@ export function SignalProvider({ children }: SignalProviderProps) {
     const handleSignal = useCallback((signal: Signal, channel: string) => {
         console.log('🔔 New signal received:', signal.symbol, channel);
 
-        // Ensure signal has an ID (generate one if missing)
+        // Ensure signal has an ID and receivedAt timestamp
         const signalWithId: Signal = {
             ...signal,
             id: signal.id || `signal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             status: signal.status || 'pending',
+            receivedAt: Date.now(),
         };
 
         // Add signal to the list if not already present
@@ -185,6 +198,30 @@ export function SignalProvider({ children }: SignalProviderProps) {
     const clearSignals = useCallback(() => {
         setAllSignals([]);
     }, []);
+
+    // Auto-expire signals older than 30 minutes
+    useEffect(() => {
+        if (!isMounted) return;
+
+        const interval = setInterval(() => {
+            const now = Date.now();
+            setAllSignals(prev => {
+                const before = prev.length;
+                const filtered = prev.filter(s => {
+                    // Keep non-pending signals (executed/rejected) and fresh pending signals
+                    if (s.status !== 'pending') return true;
+                    const age = now - (s.receivedAt || 0);
+                    return age < SIGNAL_TTL_MS;
+                });
+                if (filtered.length < before) {
+                    console.log(`🧹 Expired ${before - filtered.length} stale signal(s)`);
+                }
+                return filtered;
+            });
+        }, EXPIRY_CHECK_INTERVAL_MS);
+
+        return () => clearInterval(interval);
+    }, [isMounted]);
 
     // Calculate pending count
     const pendingCount = allSignals.filter(s => s.status === 'pending').length;

@@ -22,16 +22,31 @@ export async function GET() {
 
         const data = await response.json();
 
-        const SIGNAL_TTL_MS = 30 * 60 * 1000;
-        const now = Date.now();
+        // Filter signals: expire at market close (4:00 PM ET) on creation day
+        const MARKET_CLOSE_HOUR_ET = 16;
+
+        const getMarketCloseTime = (date: Date): number => {
+            const year = date.getFullYear();
+            const month = date.getMonth();
+            const day = date.getDate();
+            const marketClose = new Date(year, month, day, MARKET_CLOSE_HOUR_ET, 0, 0, 0);
+            const etOffset = 5 * 60 * 60 * 1000;
+            const localOffset = marketClose.getTimezoneOffset() * 60 * 1000;
+            return marketClose.getTime() - localOffset - etOffset;
+        };
+
+        const isExpired = (createdStr: string | undefined): boolean => {
+            if (!createdStr) return true; // No timestamp = expired
+            const createdTime = new Date(createdStr).getTime();
+            const marketClose = getMarketCloseTime(new Date(createdTime));
+            return Date.now() > marketClose;
+        };
 
         const filterFresh = (signals: Array<{ created_at?: string; createdAt?: string; status?: string }>) => {
             return signals.filter(s => {
                 if (s.status && s.status !== 'pending') return true; // Keep executed/rejected
                 const createdStr = s.created_at || s.createdAt;
-                if (!createdStr) return false; // No timestamp = treat as expired
-                const age = now - new Date(createdStr).getTime();
-                return age < SIGNAL_TTL_MS;
+                return !isExpired(createdStr);
             });
         };
 

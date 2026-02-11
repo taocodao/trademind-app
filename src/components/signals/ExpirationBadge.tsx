@@ -3,8 +3,25 @@
 import { useState, useEffect } from 'react';
 import { Timer } from 'lucide-react';
 
-// Must match SignalProvider.tsx
-const SIGNAL_TTL_MS = 30 * 60 * 1000;
+const MARKET_CLOSE_HOUR_ET = 16; // 4:00 PM
+
+/**
+ * Get market close time (4:00 PM ET) for a given date
+ */
+function getMarketCloseTime(date: Date): number {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDate();
+
+    // Create market close time: 4:00 PM ET
+    const marketClose = new Date(year, month, day, MARKET_CLOSE_HOUR_ET, 0, 0, 0);
+
+    // Adjust for ET timezone (approximate: -5 hours from UTC)
+    const etOffset = 5 * 60 * 60 * 1000;
+    const localOffset = marketClose.getTimezoneOffset() * 60 * 1000;
+
+    return marketClose.getTime() - localOffset - etOffset;
+}
 
 interface ExpirationBadgeProps {
     receivedAt?: number;
@@ -13,22 +30,39 @@ interface ExpirationBadgeProps {
 }
 
 /**
- * Shows a live countdown "Expires in X min" badge on signal cards.
- * Calls onExpired when the signal reaches 0 minutes remaining.
+ * Shows countdown to market close (4:00 PM ET) on signal cards.
  */
 export function ExpirationBadge({ receivedAt, createdAt, onExpired }: ExpirationBadgeProps) {
-    const [minutesLeft, setMinutesLeft] = useState<number | null>(null);
+    const [timeLeft, setTimeLeft] = useState<string | null>(null);
+    const [isUrgent, setIsUrgent] = useState(false);
 
     useEffect(() => {
-        const origin = receivedAt || (createdAt ? new Date(createdAt).getTime() : null);
-        if (!origin) return;
+        const createdTime = receivedAt || (createdAt ? new Date(createdAt).getTime() : null);
+        if (!createdTime) return;
+
+        const createdDate = new Date(createdTime);
+        const marketClose = getMarketCloseTime(createdDate);
 
         const update = () => {
-            const elapsed = Date.now() - origin;
-            const remaining = Math.max(0, Math.ceil((SIGNAL_TTL_MS - elapsed) / 60000));
-            setMinutesLeft(remaining);
-            if (remaining <= 0 && onExpired) {
-                onExpired();
+            const now = Date.now();
+            const remaining = marketClose - now;
+
+            if (remaining <= 0) {
+                setTimeLeft('Expired');
+                setIsUrgent(true);
+                if (onExpired) onExpired();
+                return;
+            }
+
+            const hours = Math.floor(remaining / (60 * 60 * 1000));
+            const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+
+            if (hours > 0) {
+                setTimeLeft(`${hours}h ${minutes}m`);
+                setIsUrgent(hours === 0 && minutes <= 30);
+            } else {
+                setTimeLeft(`${minutes}m`);
+                setIsUrgent(minutes <= 30);
             }
         };
 
@@ -37,19 +71,18 @@ export function ExpirationBadge({ receivedAt, createdAt, onExpired }: Expiration
         return () => clearInterval(interval);
     }, [receivedAt, createdAt, onExpired]);
 
-    if (minutesLeft === null) return null;
+    if (!timeLeft) return null;
 
-    const isUrgent = minutesLeft <= 5;
-    const colorClass = isUrgent
+    const colorClass = timeLeft === 'Expired'
         ? 'text-tm-red bg-tm-red/15 border-tm-red/30'
-        : minutesLeft <= 15
+        : isUrgent
             ? 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20'
             : 'text-tm-muted bg-white/5 border-white/10';
 
     return (
         <div className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${colorClass}`}>
             <Timer className="w-3 h-3" />
-            <span>{minutesLeft > 0 ? `${minutesLeft}m left` : 'Expired'}</span>
+            <span>{timeLeft === 'Expired' ? 'Expired' : `${timeLeft} left`}</span>
         </div>
     );
 }

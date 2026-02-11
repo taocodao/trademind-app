@@ -25,9 +25,44 @@ interface Signal {
     receivedAt?: number;  // Timestamp when signal was received (for expiration)
 }
 
-// Signals expire after 30 minutes
-const SIGNAL_TTL_MS = 30 * 60 * 1000;
+// Signals expire at market close (4:00 PM ET) on the day they were created
+const MARKET_CLOSE_HOUR_ET = 16; // 4:00 PM
 const EXPIRY_CHECK_INTERVAL_MS = 60 * 1000; // Check every 60 seconds
+
+/**
+ * Get market close time (4:00 PM ET) for a given date
+ */
+function getMarketCloseTime(date: Date): number {
+    // Create a date in ET timezone for market close
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDate();
+
+    // Create market close time: 4:00 PM ET on the same day
+    // ET is UTC-5 (standard) or UTC-4 (daylight)
+    // For simplicity, use a fixed offset of UTC-5 (adjust for DST if needed)
+    const marketClose = new Date(year, month, day, MARKET_CLOSE_HOUR_ET, 0, 0, 0);
+
+    // Adjust for ET timezone (approximate: -5 hours from UTC)
+    const etOffset = 5 * 60 * 60 * 1000; // 5 hours in ms
+    const localOffset = marketClose.getTimezoneOffset() * 60 * 1000;
+
+    return marketClose.getTime() - localOffset - etOffset;
+}
+
+/**
+ * Check if a signal is expired (past market close on creation day)
+ */
+function isSignalExpired(createdAt: string | number | undefined): boolean {
+    if (!createdAt) return true; // No timestamp = expired
+
+    const createdTime = typeof createdAt === 'string' ? new Date(createdAt).getTime() : createdAt;
+    const createdDate = new Date(createdTime);
+    const marketClose = getMarketCloseTime(createdDate);
+    const now = Date.now();
+
+    return now > marketClose;
+}
 
 interface SignalContextValue {
     isConnected: boolean;
@@ -106,12 +141,11 @@ export function SignalProvider({ children }: SignalProviderProps) {
                                 id: s.id || `db_signal_${Date.now()}_${i}`,
                                 receivedAt: s.createdAt ? new Date(s.createdAt).getTime() : now,
                             }))
-                            // Filter out signals older than 30 minutes
-                            // Signals WITHOUT a createdAt are treated as old and removed
+                            // Filter out signals past market close on creation day
+                            // Signals WITHOUT a createdAt are treated as expired
                             .filter((s: Signal) => {
                                 if (s.status && s.status !== 'pending') return true; // Keep executed/rejected
-                                const age = now - (s.receivedAt || 0);
-                                return age < SIGNAL_TTL_MS;
+                                return !isSignalExpired(s.createdAt || s.receivedAt);
                             });
 
                         console.log(`✅ Loaded ${signalsWithIds.length} signals from database (filtered expired)`);
@@ -209,17 +243,15 @@ export function SignalProvider({ children }: SignalProviderProps) {
         if (!isMounted) return;
 
         const interval = setInterval(() => {
-            const now = Date.now();
             setAllSignals(prev => {
                 const before = prev.length;
                 const filtered = prev.filter(s => {
                     // Keep non-pending signals (executed/rejected) and fresh pending signals
                     if (s.status !== 'pending') return true;
-                    const age = now - (s.receivedAt || 0);
-                    return age < SIGNAL_TTL_MS;
+                    return !isSignalExpired(s.createdAt || s.receivedAt);
                 });
                 if (filtered.length < before) {
-                    console.log(`🧹 Expired ${before - filtered.length} stale signal(s)`);
+                    console.log(`🧹 Expired ${before - filtered.length} signal(s) past market close`);
                 }
                 return filtered;
             });

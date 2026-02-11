@@ -429,27 +429,28 @@ export async function executeThetaPut(
     const quote = await getOptionQuote(accessToken, optionSymbol);
 
     let orderPrice: number | undefined;
-    let orderType: 'Limit' | 'Market' = 'Market';
 
     if (quote && quote.bid > 0) {
         // Use current bid price for selling (what we'll receive)
         // Add a small buffer (95% of bid) to help fill
         orderPrice = Math.round(quote.bid * 95) / 100;
-        orderType = 'Limit';
         console.log(`✅ Using LIVE market bid: $${quote.bid} → Order at $${orderPrice} (95%)`);
     } else if (signalPrice && signalPrice > 0) {
         // Fallback to signal price if quote fetch failed
         orderPrice = signalPrice;
-        orderType = 'Limit';
         console.log(`⚠️ Quote unavailable, using signal price: $${orderPrice}`);
     } else {
-        // No price available - use market order
-        console.log(`⚠️ No price data available, using MARKET order`);
+        // No price available - cannot place order without a limit price
+        // Tastytrade rejects market orders for options
+        throw new Error(
+            `Cannot place order for ${symbol}: no market quote available and no signal price provided. ` +
+            `Tastytrade requires limit orders for options.`
+        );
     }
 
     const order: OrderRequest = {
         timeInForce: 'Day',
-        orderType: orderType,
+        orderType: 'Limit' as const,
         price: orderPrice,
         priceEffect: 'Credit',  // Selling puts = credit
         legs: [
@@ -509,7 +510,6 @@ export async function executeCalendarSpread(
     ]);
 
     let orderPrice: number | undefined;
-    let orderType: 'Limit' | 'Market' = 'Market';
 
     if (frontQuote && backQuote && frontQuote.bid > 0 && backQuote.ask > 0) {
         // Calendar spread: SELL front (get bid), BUY back (pay ask)
@@ -517,22 +517,24 @@ export async function executeCalendarSpread(
         const netDebit = backQuote.ask - frontQuote.bid;
         // Round to 2 decimals
         orderPrice = Math.round(netDebit * 100) / 100;
-        orderType = 'Limit';
         console.log(`✅ Using LIVE prices: Sell @ ${frontQuote.bid} / Buy @ ${backQuote.ask}`);
         console.log(`   Net debit: $${orderPrice}`);
     } else if (signalPrice && signalPrice > 0) {
         // Fallback to signal price if quote fetch failed
         orderPrice = signalPrice;
-        orderType = 'Limit';
         console.log(`⚠️ Quotes unavailable, using signal price: $${orderPrice}`);
     } else {
-        // No price available - use market order
-        console.log(`⚠️ No price data available, using MARKET order`);
+        // No price available - cannot place order without a limit price
+        // Tastytrade rejects market orders for options
+        throw new Error(
+            `Cannot place calendar spread for ${symbol}: no market quotes available and no signal price provided. ` +
+            `Tastytrade requires limit orders for options.`
+        );
     }
 
     const order: OrderRequest = {
         timeInForce: 'Day',
-        orderType: orderType,
+        orderType: 'Limit' as const,
         price: orderPrice,
         priceEffect: 'Debit',
         legs: [

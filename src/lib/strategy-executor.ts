@@ -15,6 +15,7 @@ export interface SignalData {
     strike?: number;
     short_strike?: number;   // For diagonal spreads
     long_strike?: number;    // For diagonal spreads
+    expiration?: string;     // Option expiration from backend (YYYY-MM-DD)
     expiry?: string;
     frontExpiry?: string;
     backExpiry?: string;
@@ -26,6 +27,7 @@ export interface SignalData {
     net_debit?: number;      // For diagonal spreads
     contracts?: number;
     direction?: 'bullish' | 'bearish' | 'neutral';
+    dte?: number;
     [key: string]: unknown;
 }
 
@@ -47,13 +49,18 @@ const executeThetaStrategy: StrategyExecutor = async (
 ) => {
     console.log(`📋 Executing Theta Cash-Secured Put for ${signal.symbol}`);
 
+    // Use expiration from backend first (real option chain data)
+    const expiration = signal.expiration || signal.expiry || signal.frontExpiry || defaultExpiry.front;
+    console.log(`   Expiration source: expiration=${signal.expiration}, expiry=${signal.expiry}, frontExpiry=${signal.frontExpiry}, default=${defaultExpiry.front}`);
+    console.log(`   Using expiration: ${expiration}`);
+
     return await executeThetaPut(
         accessToken,
         accountNumber,
         {
             symbol: signal.symbol || 'UNKNOWN',
             strike: signal.strike || 0,
-            expiration: signal.expiry || signal.frontExpiry || defaultExpiry.front,
+            expiration,
             contracts: signal.contracts || 1,
             price: signal.entry_price || signal.price || signal.cost,
         }

@@ -11,6 +11,8 @@ interface Signal {
     strategy: string;
     direction?: string;
     strike?: number;
+    expiration?: string;  // Option expiration date (YYYY-MM-DD) from backend
+    expiry?: string;      // Alias for expiration
     frontExpiry?: string;
     backExpiry?: string;
     cost: number;
@@ -23,6 +25,9 @@ interface Signal {
     signalType?: string;
     createdAt?: string;
     receivedAt?: number;  // Timestamp when signal was received (for expiration)
+    contracts?: number;
+    entry_price?: number;
+    dte?: number;
 }
 
 // Signals expire at market close (4:00 PM ET) on the day they were created

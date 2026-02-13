@@ -171,6 +171,19 @@ export async function PUT(request: NextRequest) {
             );
         }
 
+        // Sync to Python backend (fire-and-forget, best-effort)
+        const PYTHON_API = process.env.TASTYTRADE_API_URL || 'http://34.235.119.67:8002';
+        try {
+            await fetch(`${PYTHON_API}/api/settings/auto-approve`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            console.log('✅ Auto-approve settings synced to Python backend');
+        } catch (syncError) {
+            console.warn('⚠️ Could not sync auto-approve to Python backend (non-fatal):', syncError);
+        }
+
         return NextResponse.json({
             success: true,
             ...body,

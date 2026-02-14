@@ -21,6 +21,15 @@ export interface TastytradeAccount {
     accountType: string;
 }
 
+export interface AccountBalance {
+    accountNumber: string;
+    cashAvailable: number;
+    netLiquidatingValue: number;
+    equity: number;
+    buyingPower: number;
+    dayTradingBuyingPower: number;
+}
+
 export interface OrderLeg {
     instrumentType: 'Equity Option' | 'Equity' | 'Future Option' | 'Future';
     symbol: string;
@@ -229,6 +238,41 @@ export async function getAccounts(
         nickname: item.account.nickname,
         accountType: item.account['account-type-name'],
     })) || [];
+}
+
+/**
+ * Get account balances
+ */
+export async function getAccountBalance(
+    accessToken: string,
+    accountNumber: string
+): Promise<AccountBalance> {
+    const response = await fetch(`${TASTYTRADE_API_BASE}/accounts/${accountNumber}/balances`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'User-Agent': 'TradeMind/1.0',
+        },
+    });
+
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Failed to fetch balances status ${response.status}: ${text}`);
+    }
+
+    const data = await response.json();
+    const item = data.data;
+
+    return {
+        accountNumber: data.data?.['account-number'] || accountNumber,
+        cashAvailable: parseFloat(item['cash-available'] || '0'),
+        netLiquidatingValue: parseFloat(item['net-liquidating-value'] || '0'),
+        equity: parseFloat(item['equity-prior-close-total-quantity'] || '0'), // Approximation or other field
+        buyingPower: parseFloat(item['buying-power'] || '0'),
+        dayTradingBuyingPower: parseFloat(item['day-trading-buying-power'] || '0'),
+    };
 }
 
 /**

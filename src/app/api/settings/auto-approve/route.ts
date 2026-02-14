@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { query } from '@/lib/db';
+import { query, initializeUserTables } from '@/lib/db';
 import { initializeGamificationTables } from '@/lib/gamification';
 
 interface StrategySettings {
@@ -62,7 +62,10 @@ export async function GET() {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        await initializeGamificationTables();
+        await Promise.all([
+            initializeUserTables(),
+            initializeGamificationTables()
+        ]);
 
         const result = await query(
             `SELECT 

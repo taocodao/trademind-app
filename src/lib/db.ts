@@ -233,19 +233,21 @@ export async function createUserExecution(
     userId: string,
     signalId: string,
     status: string,
-    orderId?: string
+    orderId?: string,
+    source?: string
 ): Promise<UserSignalExecution> {
     const result = await query(
         `INSERT INTO user_signal_executions (
-            user_id, signal_id, status, order_id, created_at
-        ) VALUES ($1, $2, $3, $4, NOW())
+            user_id, signal_id, status, order_id, source, created_at
+        ) VALUES ($1, $2, $3, $4, $5, NOW())
         ON CONFLICT (user_id, signal_id) 
         DO UPDATE SET 
             status = $3,
             order_id = COALESCE($4, user_signal_executions.order_id),
+            source = COALESCE($5, user_signal_executions.source),
             executed_at = CASE WHEN $3 = 'executed' THEN NOW() ELSE user_signal_executions.executed_at END
         RETURNING *`,
-        [userId, signalId, status, orderId || null]
+        [userId, signalId, status, orderId || null, source || 'manual']
     );
     return result.rows[0];
 }
@@ -367,6 +369,12 @@ export async function initializeUserTables(): Promise<void> {
                 -- Constraint might already exist
                 NULL;
             END $$
+        `);
+
+        // Add source column to user_signal_executions if not exists
+        await query(`
+            ALTER TABLE user_signal_executions 
+            ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'manual'
         `);
 
         console.log('✅ User tables initialized and migrated');

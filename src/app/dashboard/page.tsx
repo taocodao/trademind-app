@@ -20,6 +20,7 @@ import Link from "next/link";
 import { TastytradeLink } from "@/components/TastytradeLink";
 import { GamificationCard } from "@/components/gamification/GamificationCard";
 import { CircuitBreakerBanner } from "@/components/diagonal/CircuitBreakerBanner";
+import { ActivityLog } from "@/components/dashboard/ActivityLog";
 
 interface Position {
     symbol: string;
@@ -322,6 +323,11 @@ function DashboardContent() {
                         </div>
                     </Link>
                 </div>
+            </div>
+
+            {/* Recent Activity Log */}
+            <div className="px-4 mb-4">
+                <ActivityLog limit={3} />
             </div>
 
             {/* Gamification Stats - Compact */}

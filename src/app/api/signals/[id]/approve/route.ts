@@ -8,7 +8,7 @@
 import { NextResponse } from 'next/server';
 import { getTastytradeTokens, storeTastytradeTokens } from '@/lib/redis';
 import { cookies } from 'next/headers';
-import { createSession } from '@/lib/tastytrade-api';
+import { createSession, getAccountBalance } from '@/lib/tastytrade-api';
 import { executeSignal } from '@/lib/strategy-executor';
 import { createPosition, createUserExecution, getUserSettings } from '@/lib/db';
 
@@ -109,6 +109,29 @@ export async function POST(
         // Execute the trade based on signal type
         const signalData = body.signal || body;
 
+        // 🛡️ SAFETY CHECK: Verify Buying Power
+        try {
+            const balanceData = await getAccountBalance(accessToken, accountNumber);
+            const buyingPower = balanceData.buyingPower;
+
+            const estimatedCost = signalData.cost ||
+                (signalData.capital_required) ||
+                ((signalData.strike || 0) * 100 * (signalData.contracts || 1));
+
+            if (buyingPower < estimatedCost) {
+                console.error(`❌ Insufficient Buying Power: $${buyingPower} < $${estimatedCost}`);
+                return NextResponse.json({
+                    status: 'failed',
+                    signal: { id, ...signalData },
+                    error: 'Insufficient buying power',
+                    message: `Account has $${buyingPower.toFixed(2)} BP, but trade requires ~$${estimatedCost.toFixed(2)}`
+                }, { status: 400 });
+            }
+            console.log(`✅ Buying Power OK: $${buyingPower} available > $${estimatedCost} required`);
+        } catch (bpError) {
+            console.warn('⚠️ Could not verify buying power (proceeding with caution):', bpError);
+        }
+
         // Helper: Get next Friday from a given date
         const getNextFriday = (from: Date): string => {
             const date = new Date(from);
@@ -161,7 +184,7 @@ export async function POST(
                 });
 
                 // Track user execution
-                await createUserExecution(userId, id, 'executed', result.orderId);
+                await createUserExecution(userId, id, 'executed', result.orderId, body.source || 'manual');
 
                 console.log(`✅ Position saved to database: ${result.orderId}`);
             } catch (dbError) {

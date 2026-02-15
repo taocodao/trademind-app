@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { AutoApproveSettings } from "@/components/gamification/AutoApproveSettings";
+import { TastytradeCredentials } from "@/components/settings/TastytradeCredentials";
 
 export default function SettingsPage() {
     const { ready, authenticated } = usePrivy();
@@ -65,6 +66,9 @@ export default function SettingsPage() {
                         </div>
                     </section>
                 </Link>
+
+                {/* Tastytrade Credentials */}
+                <TastytradeCredentials />
 
                 {/* Auto-Approve Section */}
                 <AutoApproveSettings />

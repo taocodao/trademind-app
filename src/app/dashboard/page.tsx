@@ -322,6 +322,15 @@ function DashboardContent() {
                             <p className="text-xs text-tm-muted">{data?.positionCount || 0} open</p>
                         </div>
                     </Link>
+                    <Link href="/zebra" className="glass-card p-3 flex items-center gap-2 col-span-2">
+                        <div className="w-9 h-9 rounded-lg bg-tm-purple/20 flex items-center justify-center">
+                            <TrendingUp className="w-4 h-4 text-tm-purple" />
+                        </div>
+                        <div>
+                            <p className="font-semibold text-sm">ZEBRA Strategy</p>
+                            <p className="text-xs text-tm-muted">Zero Extrinsic Back Ratio Spread</p>
+                        </div>
+                    </Link>
                 </div>
             </div>
 

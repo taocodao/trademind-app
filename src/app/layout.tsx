@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { PrivyProvider } from "@/components/providers/PrivyProvider";
 import { SignalProvider } from "@/components/providers/SignalProvider";
+import { SettingsProvider } from "@/components/providers/SettingsProvider";
 
 const inter = Inter({
     subsets: ["latin"],
@@ -37,9 +38,11 @@ export default function RootLayout({
         <html lang="en" className="dark">
             <body className={`${inter.variable} ${jetbrainsMono.variable} antialiased min-h-screen bg-tm-bg`}>
                 <PrivyProvider>
-                    <SignalProvider>
-                        {children}
-                    </SignalProvider>
+                    <SettingsProvider>
+                        <SignalProvider>
+                            {children}
+                        </SignalProvider>
+                    </SettingsProvider>
                 </PrivyProvider>
             </body>
         </html>

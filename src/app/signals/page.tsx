@@ -19,6 +19,7 @@ import Link from "next/link";
 import { useSignalContext } from "@/components/providers/SignalProvider";
 import { ThetaSignalCard, isThetaSignal } from "@/components/signals/ThetaSignalCard";
 import { CalendarSignalCard, isCalendarSignal } from "@/components/signals/CalendarSignalCard";
+import { ZebraSignalCard, isZebraSignal } from "@/components/zebra/ZebraSignalCard";
 
 interface Signal {
     id: string;
@@ -167,6 +168,14 @@ export default function SignalsPage() {
                         />
                     ) : isCalendarSignal(signal) ? (
                         <CalendarSignalCard
+                            key={signal.id}
+                            signal={signal as any}
+                            onApprove={() => handleApproveClick(signal)}
+                            onSkip={() => handleSkip(signal.id)}
+                            isApproving={approving === signal.id}
+                        />
+                    ) : isZebraSignal(signal) ? (
+                        <ZebraSignalCard
                             key={signal.id}
                             signal={signal as any}
                             onApprove={() => handleApproveClick(signal)}

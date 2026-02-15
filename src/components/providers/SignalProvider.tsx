@@ -102,7 +102,9 @@ const CHANNELS = [
     'earnings',
     'theta_puts',
     'theta_entry',
-    'theta_exit'
+    'theta_exit',
+    'zebra',
+    'zebra_entry'
 ];
 
 // Risk Limits (Hardcoded safeguards for auto-approve)
@@ -327,7 +329,7 @@ export function SignalProvider({ children }: SignalProviderProps) {
     const handleDisconnect = useCallback(() => console.log('❌ Signal socket disconnected'), []);
 
     const { isConnected, lastSignal } = useSignalSocket({
-        channels: ['theta_entry', 'theta_puts', 'calendar_spread', 'diagonal_spread'],
+        channels: ['theta_entry', 'theta_puts', 'calendar_spread', 'diagonal_spread', 'zebra', 'zebra_entry'],
         onSignal: handleSignal,
         onConnect: handleConnect,
         onDisconnect: handleDisconnect,

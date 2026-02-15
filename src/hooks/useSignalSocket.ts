@@ -40,7 +40,7 @@ interface UseSignalSocketOptions {
 
 export function useSignalSocket({
     url = process.env.NEXT_PUBLIC_WEBSOCKET_URL ||
-    (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'ws://localhost:8003' : 'wss://ws.trademind.bot'),
+    (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'ws://34.235.119.67:8003' : 'wss://ws.trademind.bot'),
     channels = ['calendar_spread'],
     onSignal,
     onAccountUpdate,

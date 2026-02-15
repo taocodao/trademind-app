@@ -178,3 +178,7 @@ export function ZebraSignalCard({ signal, onApprove, onSkip, isApproving }: Zebr
         </div>
     );
 }
+
+export function isZebraSignal(signal: any): boolean {
+    return signal?.strategy?.toLowerCase().includes('zebra');
+}

@@ -53,6 +53,20 @@ export function useSignalSocket({
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const reconnectAttempts = useRef(0);
 
+    // Refs for callbacks to avoid re-connecting when they change
+    const onSignalRef = useRef(onSignal);
+    const onAccountUpdateRef = useRef(onAccountUpdate);
+    const onConnectRef = useRef(onConnect);
+    const onDisconnectRef = useRef(onDisconnect);
+
+    // Update refs on every render
+    useEffect(() => {
+        onSignalRef.current = onSignal;
+        onAccountUpdateRef.current = onAccountUpdate;
+        onConnectRef.current = onConnect;
+        onDisconnectRef.current = onDisconnect;
+    }, [onSignal, onAccountUpdate, onConnect, onDisconnect]);
+
     const connect = useCallback(() => {
         if (wsRef.current?.readyState === WebSocket.OPEN) {
             return;
@@ -65,7 +79,7 @@ export function useSignalSocket({
                 console.log('🔌 WebSocket connected');
                 setIsConnected(true);
                 reconnectAttempts.current = 0;
-                onConnect?.();
+                onConnectRef.current?.();
 
                 // Subscribe to channels
                 ws.send(JSON.stringify({
@@ -86,13 +100,13 @@ export function useSignalSocket({
                                 const signal = (rawData.signal || rawData) as Signal;
                                 console.log('📥 Signal received:', signal.symbol, signal.strategy);
                                 setLastSignal(signal);
-                                onSignal?.(signal, message.channel);
+                                onSignalRef.current?.(signal, message.channel);
                             }
                             break;
 
                         case 'account_update':
                             if (message.data) {
-                                onAccountUpdate?.(message.data as Record<string, unknown>);
+                                onAccountUpdateRef.current?.(message.data as Record<string, unknown>);
                             }
                             break;
 
@@ -112,7 +126,7 @@ export function useSignalSocket({
             ws.onclose = () => {
                 console.log('🔌 WebSocket disconnected');
                 setIsConnected(false);
-                onDisconnect?.();
+                onDisconnectRef.current?.();
 
                 // Reconnect with exponential backoff
                 const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
@@ -129,7 +143,7 @@ export function useSignalSocket({
         } catch (error) {
             console.error('Failed to create WebSocket:', error);
         }
-    }, [url, channels, onSignal, onAccountUpdate, onConnect, onDisconnect]);
+    }, [url, channels]); // Removed callbacks from dependencies
 
     const disconnect = useCallback(() => {
         if (reconnectTimeoutRef.current) {

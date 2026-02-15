@@ -133,23 +133,7 @@ export function SignalProvider({ children }: SignalProviderProps) {
     const [isAutoApproving, setIsAutoApproving] = useState(false);
 
     // Track client-side mount
-    useEffect(() => {
-        setIsMounted(true);
-        fetchSettings();
-        fetchAccountData();
-    }, []);
-
-    // Refresh account data and settings periodically
-    useEffect(() => {
-        if (!isMounted) return;
-        const interval = setInterval(() => {
-            fetchAccountData();
-            fetchSettings();
-        }, 60000); // Every minute
-        return () => clearInterval(interval);
-    }, [isMounted]);
-
-    const fetchSettings = async () => {
+    const fetchSettings = useCallback(async () => {
         try {
             const res = await fetch('/api/settings/auto-approve');
             if (res.ok) {
@@ -160,9 +144,9 @@ export function SignalProvider({ children }: SignalProviderProps) {
         } catch (e) {
             console.error('Failed to load auto-approve settings', e);
         }
-    };
+    }, []);
 
-    const fetchAccountData = async () => {
+    const fetchAccountData = useCallback(async () => {
         try {
             // Get Balance
             const balanceRes = await fetch('/api/tastytrade/account');
@@ -183,7 +167,13 @@ export function SignalProvider({ children }: SignalProviderProps) {
         } catch (e) {
             console.warn('Failed to fetch account data for auto-approve checks', e);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        setIsMounted(true);
+        fetchSettings();
+        fetchAccountData();
+    }, [fetchSettings, fetchAccountData]);
 
     const processedSignalIds = useRef(new Set<string>());
 
@@ -328,8 +318,11 @@ export function SignalProvider({ children }: SignalProviderProps) {
     const handleConnect = useCallback(() => console.log('✅ Signal socket connected'), []);
     const handleDisconnect = useCallback(() => console.log('❌ Signal socket disconnected'), []);
 
+    // Stable channel configuration
+    const CHANNEL_SUBSCRIPTIONS = useRef(['theta_entry', 'theta_puts', 'calendar_spread', 'diagonal_spread', 'zebra', 'zebra_entry']).current;
+
     const { isConnected, lastSignal } = useSignalSocket({
-        channels: ['theta_entry', 'theta_puts', 'calendar_spread', 'diagonal_spread', 'zebra', 'zebra_entry'],
+        channels: CHANNEL_SUBSCRIPTIONS,
         onSignal: handleSignal,
         onConnect: handleConnect,
         onDisconnect: handleDisconnect,

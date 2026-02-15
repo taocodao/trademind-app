@@ -322,7 +322,7 @@ function DashboardContent() {
                             <p className="text-xs text-tm-muted">{data?.positionCount || 0} open</p>
                         </div>
                     </Link>
-// ZEBRA link removed
+
                 </div>
             </div>
 

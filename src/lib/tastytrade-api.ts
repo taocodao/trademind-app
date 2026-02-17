@@ -267,13 +267,14 @@ export async function getAccountBalance(
 
     return {
         accountNumber: data.data?.['account-number'] || accountNumber,
-        cashAvailable: parseFloat(item['cash-available'] || '0'),
+        cashAvailable: parseFloat(item['cash-available-to-withdraw'] || item['cash-available'] || '0'),
         netLiquidatingValue: parseFloat(item['net-liquidating-value'] || '0'),
-        equity: parseFloat(item['equity-prior-close-total-quantity'] || '0'), // Approximation or other field
-        buyingPower: parseFloat(item['buying-power'] || '0'),
-        dayTradingBuyingPower: parseFloat(item['day-trading-buying-power'] || '0'),
+        equity: parseFloat(item['equity-buying-power'] || '0'),
+        buyingPower: parseFloat(item['derivative-buying-power'] || item['equity-buying-power'] || '0'),
+        dayTradingBuyingPower: parseFloat(item['day-trading-buying-power'] || item['day-equity-buying-power'] || '0'),
     };
 }
+
 
 /**
  * Validate order using dry-run endpoint (doesn't submit to exchange)

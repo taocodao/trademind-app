@@ -20,6 +20,7 @@ import { useSignalContext } from "@/components/providers/SignalProvider";
 import { ThetaSignalCard, isThetaSignal } from "@/components/signals/ThetaSignalCard";
 import { CalendarSignalCard, isCalendarSignal } from "@/components/signals/CalendarSignalCard";
 import { ZebraSignalCard, isZebraSignal } from "@/components/zebra/ZebraSignalCard";
+import { DVOSignalCard, isDVOSignal } from "@/components/dvo/DVOSignalCard";
 
 interface Signal {
     id: string;
@@ -176,6 +177,14 @@ export default function SignalsPage() {
                         />
                     ) : isZebraSignal(signal) ? (
                         <ZebraSignalCard
+                            key={signal.id}
+                            signal={signal as any}
+                            onApprove={() => handleApproveClick(signal)}
+                            onSkip={() => handleSkip(signal.id)}
+                            isApproving={approving === signal.id}
+                        />
+                    ) : isDVOSignal(signal) ? (
+                        <DVOSignalCard
                             key={signal.id}
                             signal={signal as any}
                             onApprove={() => handleApproveClick(signal)}

@@ -113,6 +113,93 @@ const DIAGONAL_RISK_PROFILES = {
     },
 };
 
+const ZEBRA_RISK_PROFILES = {
+    LOW: {
+        label: "Conservative",
+        icon: "🛡️",
+        expectedROI: "30%",
+        maxDrawdown: "-15%",
+        winRate: "75%",
+        bestFor: "Steady growth",
+        minConfidence: 80,
+        maxCapital: 1000,
+        maxContracts: 1,
+        maxPositions: 1,
+        stopLossPct: 15,
+        takeProfitPct: 30,
+    },
+    MEDIUM: {
+        label: "Balanced",
+        icon: "⚖️",
+        expectedROI: "50%",
+        maxDrawdown: "-25%",
+        winRate: "70%",
+        bestFor: "Growth & income",
+        minConfidence: 75,
+        maxCapital: 2500,
+        maxContracts: 2,
+        maxPositions: 3,
+        stopLossPct: 20,
+        takeProfitPct: 50,
+    },
+    HIGH: {
+        label: "Aggressive",
+        icon: "⚠️",
+        expectedROI: "75%",
+        maxDrawdown: "-40%",
+        winRate: "65%",
+        bestFor: "Max growth",
+        minConfidence: 70,
+        maxCapital: 5000,
+        maxContracts: 3,
+        maxPositions: 5,
+        stopLossPct: 25,
+        takeProfitPct: 100,
+    },
+};
+
+const DVO_RISK_PROFILES = {
+    LOW: {
+        label: "Conservative",
+        icon: "🛡️",
+        expectedROI: "20%",
+        maxDrawdown: "-10%",
+        winRate: "90%",
+        bestFor: "Safety first",
+        minConfidence: 80,
+        maxCapital: 5000,
+        maxContracts: 1,
+        maxPositions: 3,
+        leverageLimit: 1.0,
+    },
+    MEDIUM: {
+        label: "Balanced",
+        icon: "⚖️",
+        expectedROI: "35%",
+        maxDrawdown: "-20%",
+        winRate: "85%",
+        bestFor: "Growth",
+        minConfidence: 70,
+        maxCapital: 10000,
+        maxContracts: 2,
+        maxPositions: 5,
+        leverageLimit: 1.5,
+    },
+    HIGH: {
+        label: "Aggressive",
+        icon: "⚠️",
+        expectedROI: "50%",
+        maxDrawdown: "-35%",
+        winRate: "80%",
+        bestFor: "Max Alpha",
+        minConfidence: 60,
+        maxCapital: 20000,
+        maxContracts: 3,
+        maxPositions: 8,
+        leverageLimit: 2.0,
+    },
+};
+
 type RiskLevel = "LOW" | "MEDIUM" | "HIGH";
 
 interface StrategySettings {
@@ -125,6 +212,8 @@ interface AutoApproveSettingsData {
     enabled: boolean;
     theta: StrategySettings;
     diagonal: StrategySettings;
+    zebra: StrategySettings;
+    dvo: StrategySettings;
 }
 
 export function AutoApproveSettings() {
@@ -132,6 +221,8 @@ export function AutoApproveSettings() {
         enabled: false,
         theta: { enabled: true, riskLevel: "MEDIUM", customOverrides: {} },
         diagonal: { enabled: false, riskLevel: "MEDIUM", customOverrides: {} },
+        zebra: { enabled: false, riskLevel: "MEDIUM", customOverrides: {} },
+        dvo: { enabled: false, riskLevel: "MEDIUM", customOverrides: {} },
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -182,7 +273,7 @@ export function AutoApproveSettings() {
         saveSettings(newSettings);
     };
 
-    const handleStrategyToggle = (strategy: "theta" | "diagonal") => {
+    const handleStrategyToggle = (strategy: "theta" | "diagonal" | "zebra" | "dvo") => {
         const newSettings = {
             ...settings,
             [strategy]: {
@@ -195,7 +286,7 @@ export function AutoApproveSettings() {
     };
 
     const handleRiskLevelChange = (
-        strategy: "theta" | "diagonal",
+        strategy: "theta" | "diagonal" | "zebra" | "dvo",
         level: RiskLevel
     ) => {
         const newSettings = {
@@ -306,6 +397,46 @@ export function AutoApproveSettings() {
                         }
                     />
 
+                    {/* ZEBRA Strat Card */}
+                    <StrategyCard
+                        name="ZEBRA Strategy"
+                        description="Zero Extrinsic Back Ratio - Stock Replacement"
+                        strategy="zebra"
+                        enabled={settings.zebra.enabled}
+                        riskLevel={settings.zebra.riskLevel}
+                        profiles={ZEBRA_RISK_PROFILES}
+                        expanded={expandedStrategy === "zebra"}
+                        riskIcons={riskIcons}
+                        riskColors={riskColors}
+                        onToggle={() => handleStrategyToggle("zebra")}
+                        onRiskChange={(level) => handleRiskLevelChange("zebra", level)}
+                        onExpand={() =>
+                            setExpandedStrategy(
+                                expandedStrategy === "zebra" ? null : "zebra"
+                            )
+                        }
+                    />
+
+                    {/* DVO Strategy Card */}
+                    <StrategyCard
+                        name="Deep Value Overlay (DVO)"
+                        description="Portfolio-Secured Puts on Undervalued Assets"
+                        strategy="dvo"
+                        enabled={settings.dvo.enabled}
+                        riskLevel={settings.dvo.riskLevel}
+                        profiles={DVO_RISK_PROFILES}
+                        expanded={expandedStrategy === "dvo"}
+                        riskIcons={riskIcons}
+                        riskColors={riskColors}
+                        onToggle={() => handleStrategyToggle("dvo")}
+                        onRiskChange={(level) => handleRiskLevelChange("dvo", level)}
+                        onExpand={() =>
+                            setExpandedStrategy(
+                                expandedStrategy === "dvo" ? null : "dvo"
+                            )
+                        }
+                    />
+
                     {/* Warning */}
                     <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
                         <div className="flex items-start gap-2">
@@ -378,8 +509,8 @@ function StrategyCard({
     return (
         <div
             className={`rounded-xl border transition-all ${enabled
-                    ? "bg-tm-surface/50 border-tm-purple/30"
-                    : "bg-tm-surface/20 border-white/5"
+                ? "bg-tm-surface/50 border-tm-purple/30"
+                : "bg-tm-surface/20 border-white/5"
                 }`}
         >
             {/* Strategy Header */}
@@ -430,15 +561,15 @@ function StrategyCard({
                                         key={level}
                                         onClick={() => onRiskChange(level)}
                                         className={`p-3 rounded-xl border text-center transition-all ${riskLevel === level
-                                                ? "bg-tm-purple/20 border-tm-purple/50"
-                                                : "bg-tm-surface/50 border-white/10 hover:border-white/20"
+                                            ? "bg-tm-purple/20 border-tm-purple/50"
+                                            : "bg-tm-surface/50 border-white/10 hover:border-white/20"
                                             }`}
                                     >
                                         <div className="text-lg mb-1">{profile.icon}</div>
                                         <p
                                             className={`text-xs font-semibold ${riskLevel === level
-                                                    ? riskColors[level]
-                                                    : "text-white/70"
+                                                ? riskColors[level]
+                                                : "text-white/70"
                                                 }`}
                                         >
                                             {level}

@@ -11,9 +11,10 @@ export default function ZebraPage() {
     const { isConnected } = useSignalContext();
     const { settings } = useSettings();
 
-    const [activeTab, setActiveTab] = useState<'signals' | 'builder'>('signals');
+    const [activeTab, setActiveTab] = useState<'signals' | 'builder' | 'positions'>('signals');
     const [candidates, setCandidates] = useState<any[]>([]);
     const [builtStructures, setBuiltStructures] = useState<any[]>([]);
+    const [positions, setPositions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isexecuting, setIsExecuting] = useState<string | null>(null);
 
@@ -33,9 +34,26 @@ export default function ZebraPage() {
         }
     };
 
+    // Fetch Positions
+    const fetchPositions = async () => {
+        try {
+            const res = await fetch('/api/zebra/positions');
+            const data = await res.json();
+            if (data.positions) {
+                setPositions(data.positions);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
     useEffect(() => {
-        fetchCandidates();
-    }, []);
+        if (activeTab === 'positions') {
+            fetchPositions();
+        } else {
+            fetchCandidates();
+        }
+    }, [activeTab]);
 
     // Handle Execution
     const handleExecute = async (signal: any) => {
@@ -100,8 +118,8 @@ export default function ZebraPage() {
                         <button
                             onClick={() => setActiveTab('signals')}
                             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'signals'
-                                    ? 'bg-tm-purple text-white shadow-lg'
-                                    : 'text-tm-muted hover:text-white'
+                                ? 'bg-tm-purple text-white shadow-lg'
+                                : 'text-tm-muted hover:text-white'
                                 }`}
                         >
                             Active Signals ({candidates.length})
@@ -109,8 +127,8 @@ export default function ZebraPage() {
                         <button
                             onClick={() => setActiveTab('builder')}
                             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'builder'
-                                    ? 'bg-tm-purple text-white shadow-lg'
-                                    : 'text-tm-muted hover:text-white'
+                                ? 'bg-tm-purple text-white shadow-lg'
+                                : 'text-tm-muted hover:text-white'
                                 }`}
                         >
                             Manual Builder
@@ -148,6 +166,55 @@ export default function ZebraPage() {
                             <button onClick={() => setActiveTab('builder')} className="text-tm-purple hover:underline mt-2">
                                 Try the Manual Builder
                             </button>
+                        </div>
+                    )}
+                </div>
+            ) : activeTab === 'positions' ? (
+                <div className="space-y-6">
+                    {positions.length === 0 ? (
+                        <div className="py-12 text-center text-tm-muted bg-tm-surface/30 rounded-2xl border border-dashed border-white/10">
+                            <p>No open ZEBRA positions tracking.</p>
+                            <button onClick={() => setActiveTab('signals')} className="text-tm-purple hover:underline mt-2">
+                                Find signals
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 gap-4">
+                            {positions.map((pos) => (
+                                <div key={pos.id} className="glass-card p-6 flex items-center justify-between">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="font-bold text-lg">{pos.symbol}</span>
+                                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${pos.direction === 'LONG' ? 'bg-tm-green/20 text-tm-green' : 'bg-red-400/20 text-red-400'
+                                                }`}>
+                                                {pos.direction}
+                                            </span>
+                                            <span className="text-xs text-tm-muted bg-tm-surface px-2 py-0.5 rounded">
+                                                Qty: {pos.quantity}
+                                            </span>
+                                        </div>
+                                        <div className="flex gap-4 text-sm text-tm-muted">
+                                            <span>Entry: <b className="text-white">${pos.entry_price?.toFixed(2)}</b></span>
+                                            <span>Current: <b className="text-white">${pos.current_price?.toFixed(2)}</b></span>
+                                            <span>Expiry: {pos.expiry?.split('T')[0]}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="text-right">
+                                        <p className="text-xs text-tm-muted mb-1">Unrealized P&L</p>
+                                        <p className={`text-xl font-bold ${(pos.unrealized_pnl || 0) >= 0 ? 'text-tm-green' : 'text-red-400'
+                                            }`}>
+                                            {(pos.unrealized_pnl || 0) >= 0 ? '+' : ''}
+                                            {pos.unrealized_pnl?.toFixed(2)}
+                                        </p>
+                                        <p className={`text-xs ${(pos.unrealized_pnl_pct || 0) >= 0 ? 'text-tm-green' : 'text-red-400'
+                                            }`}>
+                                            {(pos.unrealized_pnl_pct || 0) >= 0 ? '+' : ''}
+                                            {pos.unrealized_pnl_pct?.toFixed(2)}%
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     )}
                 </div>

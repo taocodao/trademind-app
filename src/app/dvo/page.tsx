@@ -81,7 +81,7 @@ export default function DVODashboard() {
             </div>
 
             {/* Risk Disclosures */}
-            <Alert variant="warning" className="bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800">
+            <Alert className="bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800">
                 <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
                 <AlertTitle className="text-yellow-800 dark:text-yellow-300">Strategy Risk: Portfolio Margin Required</AlertTitle>
                 <AlertDescription className="text-yellow-700 dark:text-yellow-400">

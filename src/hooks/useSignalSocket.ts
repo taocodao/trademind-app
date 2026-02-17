@@ -14,9 +14,14 @@ interface Signal {
     potentialReturn: number;
     returnPercent: number;
     winRate: number;
+    confidence?: number;
     riskLevel: string;
     status: string;
     rationale?: string;
+    // Backward compatibility fields
+    entry_price?: number;
+    capital_required?: number;
+    probability_otm?: number;
 }
 
 /**
@@ -24,6 +29,10 @@ interface Signal {
  * Backend may send snake_case or camelCase depending on strategy.
  */
 function normalizeSignal(raw: Record<string, unknown>): Signal {
+    // Extract core values
+    const winRate = (raw.winRate || raw.win_rate || raw.confidence || raw.probability_otm) as number || 0;
+    const cost = (raw.cost || raw.entry_price || raw.capital_required) as number || 0;
+
     return {
         id: (raw.id as string) || `signal_${Date.now()}`,
         symbol: (raw.symbol as string) || '',
@@ -32,13 +41,18 @@ function normalizeSignal(raw: Record<string, unknown>): Signal {
         strike: (raw.strike as number) || 0,
         frontExpiry: (raw.frontExpiry || raw.front_expiry || raw.expiration) as string || '',
         backExpiry: (raw.backExpiry || raw.back_expiry) as string || '',
-        cost: (raw.cost || raw.entry_price || raw.capital_required) as number || 0,
+        cost: cost,
         potentialReturn: (raw.potentialReturn || raw.potential_return || raw.total_premium || raw.expected_premium) as number || 0,
         returnPercent: (raw.returnPercent || raw.return_percent) as number || 0,
-        winRate: (raw.winRate || raw.win_rate || raw.confidence || raw.probability_otm) as number || 0,
+        winRate: winRate,
+        confidence: winRate, // Alias for backward compatibility
         riskLevel: (raw.riskLevel || raw.risk_level) as string || 'medium',
         status: (raw.status as string) || 'pending',
         rationale: (raw.rationale || raw.reasoning) as string || '',
+        // Alias fields
+        entry_price: cost,
+        capital_required: cost,
+        probability_otm: winRate,
     };
 }
 

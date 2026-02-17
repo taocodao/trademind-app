@@ -19,6 +19,29 @@ interface Signal {
     rationale?: string;
 }
 
+/**
+ * Normalize signal data from various backend formats.
+ * Backend may send snake_case or camelCase depending on strategy.
+ */
+function normalizeSignal(raw: Record<string, unknown>): Signal {
+    return {
+        id: (raw.id as string) || `signal_${Date.now()}`,
+        symbol: (raw.symbol as string) || '',
+        strategy: (raw.strategy as string) || '',
+        direction: (raw.direction as string) || '',
+        strike: (raw.strike as number) || 0,
+        frontExpiry: (raw.frontExpiry || raw.front_expiry || raw.expiration) as string || '',
+        backExpiry: (raw.backExpiry || raw.back_expiry) as string || '',
+        cost: (raw.cost || raw.entry_price || raw.capital_required) as number || 0,
+        potentialReturn: (raw.potentialReturn || raw.potential_return || raw.total_premium || raw.expected_premium) as number || 0,
+        returnPercent: (raw.returnPercent || raw.return_percent) as number || 0,
+        winRate: (raw.winRate || raw.win_rate || raw.confidence || raw.probability_otm) as number || 0,
+        riskLevel: (raw.riskLevel || raw.risk_level) as string || 'medium',
+        status: (raw.status as string) || 'pending',
+        rationale: (raw.rationale || raw.reasoning) as string || '',
+    };
+}
+
 interface SignalMessage {
     type: 'signal' | 'account_update' | 'connected' | 'subscribed' | 'pong';
     channel?: string;
@@ -97,7 +120,8 @@ export function useSignalSocket({
                             if (message.data && message.channel) {
                                 // Handle both wrapped {"signal": {...}} and direct signal data
                                 const rawData = message.data as Record<string, unknown>;
-                                const signal = (rawData.signal || rawData) as Signal;
+                                const innerData = (rawData.signal || rawData) as Record<string, unknown>;
+                                const signal = normalizeSignal(innerData);
                                 console.log('📥 Signal received:', signal.symbol, signal.strategy);
                                 setLastSignal(signal);
                                 onSignalRef.current?.(signal, message.channel);

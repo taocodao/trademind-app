@@ -18,6 +18,17 @@ interface AutoApproveSettings {
         riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
         customOverrides: Record<string, number>;
     };
+    zebra?: {
+        enabled: boolean;
+        riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+        customOverrides: Record<string, number>;
+    };
+    dvo?: {
+        enabled: boolean;
+        riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+        customOverrides: Record<string, number>;
+    };
+    [key: string]: unknown;
 }
 
 interface Signal {
@@ -185,8 +196,24 @@ export function SignalProvider({ children }: SignalProviderProps) {
         processedSignalIds.current.add(signal.id);
 
         // Determine strategy configuration
-        const strategyKey = signal.strategy === 'theta' ? 'theta' : 'diagonal';
-        const config = autoSettings[strategyKey];
+        const strategy = (signal.strategy || '').toLowerCase();
+        let strategyKey: string;
+        if (strategy.includes('theta') || strategy.includes('put')) {
+            strategyKey = 'theta';
+        } else if (strategy.includes('zebra')) {
+            strategyKey = 'zebra';
+        } else if (strategy.includes('dvo') || strategy.includes('value')) {
+            strategyKey = 'dvo';
+        } else {
+            strategyKey = 'diagonal';
+        }
+
+        // Cast to ensure TS knows the shape of the config object
+        const config = autoSettings[strategyKey] as {
+            enabled: boolean;
+            riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+            customOverrides: Record<string, number>;
+        } | undefined;
 
         if (!config?.enabled) return;
 
@@ -319,7 +346,12 @@ export function SignalProvider({ children }: SignalProviderProps) {
     const handleDisconnect = useCallback(() => console.log('❌ Signal socket disconnected'), []);
 
     // Stable channel configuration
-    const CHANNEL_SUBSCRIPTIONS = useRef(['theta_entry', 'theta_puts', 'calendar_spread', 'diagonal_spread', 'zebra', 'zebra_entry']).current;
+    const CHANNEL_SUBSCRIPTIONS = useRef([
+        'theta_entry', 'theta_puts', 'theta_exit',
+        'calendar_spread', 'diagonal_spread',
+        'zebra', 'zebra_entry',
+        'dvo_entry', 'dvo_exit'
+    ]).current;
 
     const { isConnected, lastSignal } = useSignalSocket({
         channels: CHANNEL_SUBSCRIPTIONS,

@@ -159,25 +159,21 @@ export function SignalProvider({ children }: SignalProviderProps) {
 
     const fetchAccountData = useCallback(async () => {
         try {
-            // Get Balance
-            const balanceRes = await fetch('/api/tastytrade/account');
+            // Use Python backend which returns actual buying power from Tastytrade SDK
+            const balanceRes = await fetch('/api/account');
             if (balanceRes.ok) {
                 const data = await balanceRes.json();
-                const account = data.data?.items?.[0];
-                if (account) {
-                    setBuyingPower(parseFloat(account['buying-power'] || '0'));
-                }
-            }
-
-            // Get Open Positions Count
-            const posRes = await fetch('/api/positions?status=open');
-            if (posRes.ok) {
-                const data = await posRes.json();
-                setOpenPositionCount(data.positions?.length || 0);
+                const bp = parseFloat(data.buyingPower || data.buying_power || '0');
+                setBuyingPower(bp);
+                setOpenPositionCount(data.positionCount || data.positions?.length || 0);
+                console.log(`💰 Account data: BP=$${bp.toFixed(2)}, Positions=${data.positionCount || 0}`);
+            } else {
+                console.warn('Failed to fetch account data:', balanceRes.status);
             }
         } catch (e) {
             console.warn('Failed to fetch account data for auto-approve checks', e);
         }
+
     }, []);
 
     useEffect(() => {
@@ -219,6 +215,12 @@ export function SignalProvider({ children }: SignalProviderProps) {
 
         console.log(`🤖 Checking auto-approve for ${signal.symbol} (${strategyKey})...`);
 
+        // Check 0: Account must have buying power
+        if (buyingPower <= 0) {
+            console.log(`❌ Auto-approve skipped: No buying power available ($${buyingPower.toFixed(2)})`);
+            return;
+        }
+
         // Check 1: Risk Limits
         const limits = RISK_LIMITS[config.riskLevel] || RISK_LIMITS.MEDIUM;
         const confidence = signal.confidence || 0;
@@ -235,8 +237,8 @@ export function SignalProvider({ children }: SignalProviderProps) {
             return;
         }
 
-        if (capitalReq > buyingPower) {
-            console.log(`❌ Auto-approve skipped: Insufficient buying power ($${buyingPower} available vs $${capitalReq} needed)`);
+        if (capitalReq > 0 && capitalReq > buyingPower) {
+            console.log(`❌ Auto-approve skipped: Insufficient buying power ($${buyingPower.toFixed(2)} available vs $${capitalReq} needed)`);
             return;
         }
 

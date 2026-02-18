@@ -37,6 +37,10 @@ interface Signal {
     riskLevel?: string;
     status: string;
     rationale?: string;
+    created_at?: string;
+    receivedAt?: number;
+    createdAt?: string;
+    submittedAt?: string;
 }
 
 export default function SignalsPage() {
@@ -47,8 +51,18 @@ export default function SignalsPage() {
     const [confirmModal, setConfirmModal] = useState<Signal | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    // Filter to show only pending signals
-    const signals = allSignals.filter(s => s.status === 'pending') as Signal[];
+    // Filter signals: 
+    // 1. Pending status only (remove executed/rejected)
+    // 2. Not expired (created < 30 mins ago)
+    const signals = allSignals.filter((s: any) => {
+        if (s.status !== 'pending') return false;
+
+        const timeStr = s.createdAt || s.created_at;
+        const timestamp = timeStr ? new Date(timeStr).getTime() : (s.receivedAt || Date.now());
+        const thirtyMinsAgo = Date.now() - (30 * 60 * 1000);
+
+        return timestamp > thirtyMinsAgo;
+    }) as Signal[];
 
     useEffect(() => {
         if (ready && !authenticated) {

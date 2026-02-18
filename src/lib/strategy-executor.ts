@@ -117,8 +117,10 @@ const STRATEGY_EXECUTORS: Record<string, StrategyExecutor> = {
     'calendar-spread': executeDiagonalStrategy,
     'Calendar Spread': executeDiagonalStrategy,
 
-    // Add new strategies here:
-    // 'iron-condor': executeIronCondorStrategy,
+    // DVO strategies (put selling = same execution as theta)
+    'dvo': executeThetaStrategy,
+    'SHORT_PUT': executeThetaStrategy,
+    'deep-value': executeThetaStrategy,
 };
 
 /**

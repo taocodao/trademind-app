@@ -42,14 +42,17 @@ interface AccountBalance {
 
 // Helper to format strategy name for display
 function formatStrategy(strategy: string): string {
-    const lower = strategy?.toLowerCase() || '';
-    if (lower.includes('theta') || lower === 'cash-secured put') {
-        return 'Theta Sprint';
-    }
-    if (lower.includes('calendar')) {
-        return 'Calendar Spread';
-    }
-    return strategy || 'Unknown';
+    const map: Record<string, string> = {
+        'theta': 'Theta Sprint',
+        'theta_put': 'Theta Sprint',
+        'calendar': 'Diagonal Spread',
+        'diagonal': 'Diagonal Spread',
+        'zebra': 'ZEBRA',
+        'dvo': 'DVO',
+        'deep-value': 'DVO',
+        'SHORT_PUT': 'DVO',
+    };
+    return map[strategy] || strategy;
 }
 
 // Helper to calculate expiry time remaining

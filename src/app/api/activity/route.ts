@@ -36,6 +36,9 @@ export async function GET(request: NextRequest) {
                 use.status, 
                 use.order_id, 
                 use.created_at,
+                use.approved_at,
+                use.executed_at,
+                use.error_message,
                 p.symbol,
                 p.strategy
              FROM user_signal_executions use

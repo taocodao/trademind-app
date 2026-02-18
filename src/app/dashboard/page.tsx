@@ -323,7 +323,7 @@ function DashboardContent() {
                             <p className="text-xs text-tm-muted">{data?.positionCount || 0} open</p>
                         </div>
                     </Link>
-                    <Link href="/dvo" className="glass-card p-3 flex items-center gap-2 col-span-2">
+                    <Link href="/signals?strategy=dvo" className="glass-card p-3 flex items-center gap-2 col-span-2">
                         <div className="w-9 h-9 rounded-lg bg-blue-500/20 flex items-center justify-center">
                             <DollarSign className="w-4 h-4 text-blue-400" />
                         </div>
@@ -338,7 +338,9 @@ function DashboardContent() {
 
             {/* Recent Activity Log */}
             <div className="px-4 mb-4">
-                <ActivityLog limit={3} />
+                <Link href="/activity">
+                    <ActivityLog limit={3} />
+                </Link>
             </div>
 
             {/* Gamification Stats - Compact */}

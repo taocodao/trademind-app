@@ -173,23 +173,7 @@ export default function SignalsPage() {
             {/* Signals List */}
             <div className="px-6 space-y-4">
                 {signals.map((signal) => (
-                    isThetaSignal(signal) ? (
-                        <ThetaSignalCard
-                            key={signal.id}
-                            signal={signal as any}
-                            onApprove={() => handleApproveClick(signal)}
-                            onSkip={() => handleSkip(signal.id)}
-                            isApproving={approving === signal.id}
-                        />
-                    ) : isCalendarSignal(signal) ? (
-                        <CalendarSignalCard
-                            key={signal.id}
-                            signal={signal as any}
-                            onApprove={() => handleApproveClick(signal)}
-                            onSkip={() => handleSkip(signal.id)}
-                            isApproving={approving === signal.id}
-                        />
-                    ) : isZebraSignal(signal) ? (
+                    isZebraSignal(signal) ? (
                         <ZebraSignalCard
                             key={signal.id}
                             signal={signal as any}
@@ -199,6 +183,22 @@ export default function SignalsPage() {
                         />
                     ) : isDVOSignal(signal) ? (
                         <DVOSignalCard
+                            key={signal.id}
+                            signal={signal as any}
+                            onApprove={() => handleApproveClick(signal)}
+                            onSkip={() => handleSkip(signal.id)}
+                            isApproving={approving === signal.id}
+                        />
+                    ) : isThetaSignal(signal) ? (
+                        <ThetaSignalCard
+                            key={signal.id}
+                            signal={signal as any}
+                            onApprove={() => handleApproveClick(signal)}
+                            onSkip={() => handleSkip(signal.id)}
+                            isApproving={approving === signal.id}
+                        />
+                    ) : isCalendarSignal(signal) ? (
+                        <CalendarSignalCard
                             key={signal.id}
                             signal={signal as any}
                             onApprove={() => handleApproveClick(signal)}

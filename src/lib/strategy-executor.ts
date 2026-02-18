@@ -96,6 +96,16 @@ const executeDiagonalStrategy: StrategyExecutor = async (
 };
 
 /**
+ * Guard for ZEBRA strategies which require 3-leg execution
+ */
+const executeZebraGuard: StrategyExecutor = async () => {
+    throw new Error(
+        'ZEBRA trades require 3-leg execution and are auto-managed by the server. ' +
+        'Please enable auto-approve for ZEBRA in Settings.'
+    );
+};
+
+/**
  * Strategy Execution Map
  * Add new strategies here - key is the strategy name from backend
  */
@@ -121,6 +131,10 @@ const STRATEGY_EXECUTORS: Record<string, StrategyExecutor> = {
     'dvo': executeThetaStrategy,
     'SHORT_PUT': executeThetaStrategy,
     'deep-value': executeThetaStrategy,
+
+    // ZEBRA — 3-leg back ratio, only executable via EC2 auto-approve
+    'zebra': executeZebraGuard,
+    'ZEBRA': executeZebraGuard,
 };
 
 /**

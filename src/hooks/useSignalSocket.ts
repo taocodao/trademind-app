@@ -6,6 +6,7 @@ interface Signal {
     id: string;
     symbol: string;
     strategy: string;
+    strategy_type?: string;
     direction: string;
     strike: number;
     frontExpiry: string;
@@ -33,10 +34,15 @@ function normalizeSignal(raw: Record<string, unknown>): Signal {
     const winRate = (raw.winRate || raw.win_rate || raw.confidence || raw.probability_otm) as number || 0;
     const cost = (raw.cost || raw.entry_price || raw.capital_required) as number || 0;
 
+    const strategyType = (raw.strategy_type as string) || '';
+    // If strategy is missing but strategy_type exists, derive it for DVO
+    const strategy = (raw.strategy as string) || (strategyType.includes('PUT') ? 'dvo' : '');
+
     return {
         id: (raw.id as string) || `signal_${Date.now()}`,
         symbol: (raw.symbol as string) || '',
-        strategy: (raw.strategy as string) || '',
+        strategy: strategy,
+        strategy_type: strategyType,
         direction: (raw.direction as string) || '',
         strike: (raw.strike as number) || 0,
         frontExpiry: (raw.frontExpiry || raw.front_expiry || raw.expiration) as string || '',

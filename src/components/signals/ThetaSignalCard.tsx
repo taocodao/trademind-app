@@ -255,6 +255,5 @@ export function ThetaSignalCard({ signal, onApprove, onSkip, isApproving }: Thet
 // Type guard to identify theta signals
 export function isThetaSignal(signal: { strategy?: string; signal_type?: string }): boolean {
     return signal.strategy === 'theta' ||
-        signal.signal_type === 'entry' ||
-        signal.signal_type === 'exit';
+        signal.strategy === 'Theta Cash-Secured Put';
 }

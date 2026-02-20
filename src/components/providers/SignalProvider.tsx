@@ -62,23 +62,15 @@ interface Signal {
 const MARKET_CLOSE_HOUR_ET = 16;
 const EXPIRY_CHECK_INTERVAL_MS = 60 * 1000;
 
-function getMarketCloseTime(date: Date): number {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const day = date.getDate();
-    const marketClose = new Date(year, month, day, MARKET_CLOSE_HOUR_ET, 0, 0, 0);
-    const etOffset = 5 * 60 * 60 * 1000;
-    const localOffset = marketClose.getTimezoneOffset() * 60 * 1000;
-    return marketClose.getTime() - localOffset - etOffset;
-}
-
-function isSignalExpired(createdAt: string | number | undefined): boolean {
-    if (!createdAt) return true;
-    const createdTime = typeof createdAt === 'string' ? new Date(createdAt).getTime() : createdAt;
-    const createdDate = new Date(createdTime);
-    const marketClose = getMarketCloseTime(createdDate);
-    const now = Date.now();
-    return now > marketClose;
+function isSignalExpired(signal: { expires_at?: string; expiresAt?: string; createdAt?: string }): boolean {
+    const expiresAt = signal.expires_at || signal.expiresAt;
+    if (expiresAt) {
+        // Treat as UTC if no timezone indicator
+        const expStr = expiresAt.endsWith('Z') || expiresAt.includes('+') ? expiresAt : expiresAt + 'Z';
+        return Date.now() > new Date(expStr).getTime();
+    }
+    // Fallback if no expires_at exists
+    return false;
 }
 
 interface SignalContextValue {
@@ -327,7 +319,7 @@ export function SignalProvider({ children }: SignalProviderProps) {
                             }))
                             .filter((s: Signal) => {
                                 if (s.status && s.status !== 'pending') return true;
-                                return !isSignalExpired(s.createdAt || s.receivedAt);
+                                return !isSignalExpired(s as any);
                             });
                         setAllSignals(prev => {
                             const existingIds = new Set(prev.map(s => s.id));
@@ -375,7 +367,7 @@ export function SignalProvider({ children }: SignalProviderProps) {
         const interval = setInterval(() => {
             setAllSignals(prev => prev.filter(s => {
                 if (s.status !== 'pending') return true;
-                return !isSignalExpired(s.createdAt || s.receivedAt);
+                return !isSignalExpired(s as any);
             }));
         }, EXPIRY_CHECK_INTERVAL_MS);
         return () => clearInterval(interval);

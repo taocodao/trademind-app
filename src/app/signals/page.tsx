@@ -53,23 +53,26 @@ export default function SignalsPage() {
 
     // Filter signals: 
     // 1. Pending status only (remove executed/rejected)
-    // 2. Not expired (created within today's trading session)
+    // 2. Not expired (check expires_at from backend)
     const signals = allSignals.filter((s: any) => {
         if (s.status !== 'pending') return false;
 
-        // Use receivedAt (when frontend got it) as primary freshness check
-        // Fall back to created_at/createdAt from DB (UTC timestamps)
+        // Check expires_at from backend (market close)
+        const expiresAt = s.expiresAt || s.expires_at;
+        if (expiresAt) {
+            // Treat as UTC if no timezone indicator
+            const expStr = expiresAt.endsWith('Z') || expiresAt.includes('+') ? expiresAt : expiresAt + 'Z';
+            return new Date(expStr).getTime() > Date.now();
+        }
+
+        // Fallback: keep signals from the last 4 hours (full trading session)
         const receivedAt = s.receivedAt || Date.now();
         const timeStr = s.createdAt || s.created_at;
-        // DB timestamps are UTC - append Z if no timezone indicator
         const dbTimestamp = timeStr
             ? new Date(timeStr.endsWith('Z') || timeStr.includes('+') ? timeStr : timeStr + 'Z').getTime()
             : receivedAt;
 
-        // Use the MORE RECENT of receivedAt and dbTimestamp
         const timestamp = Math.max(receivedAt, dbTimestamp);
-
-        // Keep signals from the last 4 hours (full trading session)
         const fourHoursAgo = Date.now() - (4 * 60 * 60 * 1000);
         return timestamp > fourHoursAgo;
     }) as Signal[];

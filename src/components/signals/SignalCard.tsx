@@ -102,9 +102,16 @@ export function SignalCard({ signal, onApprove, onReject, loading }: SignalCardP
                 )}
             </div>
 
-            {/* Timestamp */}
-            <div className="mt-3 text-xs text-gray-400 text-center">
-                Received: {new Date(signal.created_at).toLocaleString()}
+            {/* Timestamp & Auto-Approve */}
+            <div className="mt-4 pt-3 flex justify-between items-center text-xs text-gray-500 border-t">
+                <div>
+                    Generated: {new Date(signal.created_at || (signal as any).createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ET
+                </div>
+                {(signal as any).autoApproved && (
+                    <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded border border-purple-200 font-medium">
+                        🤖 Auto-Approved
+                    </span>
+                )}
             </div>
         </div>
     );

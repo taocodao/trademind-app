@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
 
         const response = await fetch(`${PYTHON_API}/api/account`, {
             signal: controller.signal,

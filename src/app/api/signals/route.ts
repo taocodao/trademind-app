@@ -9,9 +9,15 @@ const PYTHON_API = process.env.EC2_API_URL || process.env.TASTYTRADE_API_URL || 
 
 export async function GET() {
     try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
         const response = await fetch(`${PYTHON_API}/api/signals`, {
             headers: { 'Accept': 'application/json' },
+            signal: controller.signal,
         });
+
+        clearTimeout(timeout);
 
         if (!response.ok) {
             return NextResponse.json(
@@ -22,49 +28,24 @@ export async function GET() {
 
         const data = await response.json();
 
-        // Filter signals: expire at market close (4:00 PM ET) on creation day
-        const MARKET_CLOSE_HOUR_ET = 16;
-
-        const getMarketCloseTime = (date: Date): number => {
-            const year = date.getFullYear();
-            const month = date.getMonth();
-            const day = date.getDate();
-            const marketClose = new Date(year, month, day, MARKET_CLOSE_HOUR_ET, 0, 0, 0);
-            const etOffset = 5 * 60 * 60 * 1000;
-            const localOffset = marketClose.getTimezoneOffset() * 60 * 1000;
-            return marketClose.getTime() - localOffset - etOffset;
-        };
-
-        const isExpired = (createdStr: string | undefined): boolean => {
-            if (!createdStr) return true; // No timestamp = expired
-            const createdTime = new Date(createdStr).getTime();
-            const marketClose = getMarketCloseTime(new Date(createdTime));
-            return Date.now() > marketClose;
-        };
-
-        const filterFresh = (signals: Array<{ created_at?: string; createdAt?: string; status?: string }>) => {
-            return signals.filter(s => {
-                if (s.status && s.status !== 'pending') return true; // Keep executed/rejected
-                const createdStr = s.created_at || s.createdAt;
-                return !isExpired(createdStr);
-            });
-        };
-
+        // Pass through signals directly - client-side handles freshness filtering
         if (Array.isArray(data)) {
-            return NextResponse.json({ signals: filterFresh(data) });
+            return NextResponse.json({ signals: data });
         }
 
         if (data.signals && Array.isArray(data.signals)) {
-            return NextResponse.json({ signals: filterFresh(data.signals) });
+            return NextResponse.json({ signals: data.signals, total: data.total, source: data.source });
         }
 
         return NextResponse.json(data);
 
-    } catch (error) {
-        console.error('Signals API error:', error);
+    } catch (error: any) {
+        console.error('Signals API error:', error?.message || error);
+
+        // Return empty signals instead of error so UI doesn't crash
         return NextResponse.json(
-            { error: 'Python backend not running. Start: python tasty_api_server.py' },
-            { status: 503 }
+            { signals: [], error: 'Backend timeout or unavailable', source: 'fallback' },
+            { status: 200 }
         );
     }
 }

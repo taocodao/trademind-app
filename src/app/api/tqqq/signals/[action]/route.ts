@@ -8,7 +8,9 @@
  * Body: { signalId: string }
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { getTastytradeTokens } from '@/lib/redis';
 import { cookies } from 'next/headers';
 
 const PYTHON_API = process.env.EC2_API_URL || 'http://34.235.119.67:8002';
@@ -27,14 +29,14 @@ async function getPrivyUserId(): Promise<string> {
     return 'default-user';
 }
 
-// ─── POST /api/tqqq/signals/execute ──────────────────────────────────────────
+// ─── POST /api/tqqq/signals/[action] ─────────────────────────────────────────
 export async function POST(request: NextRequest) {
     const { pathname } = new URL(request.url);
     const action = pathname.endsWith('/track') ? 'track' : 'execute';
 
     try {
         const body = await request.json().catch(() => ({}));
-        const { signalId } = body as { signalId?: string };
+        const { signalId, quantity = 1 } = body;
 
         if (!signalId) {
             return NextResponse.json({ error: 'signalId required' }, { status: 400 });
@@ -42,17 +44,30 @@ export async function POST(request: NextRequest) {
 
         const userId = await getPrivyUserId();
 
+        // Prepare the payload for Python
+        const backendPayload: any = { signalId, userId };
+
+        // For execution, we need OAuth tokens
+        if (action === 'execute') {
+            const tokens = await getTastytradeTokens(userId);
+            if (!tokens || !tokens.refreshToken) {
+                return NextResponse.json({ error: 'Tastytrade not linked or missing refresh token' }, { status: 401 });
+            }
+
+            backendPayload.quantity = quantity;
+            backendPayload.refreshToken = tokens.refreshToken;
+            backendPayload.accountNumber = tokens.accountNumber;
+        }
+
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 15000);
 
-        const backendPath = action === 'execute'
-            ? `/api/tqqq/signals/execute`
-            : `/api/tqqq/signals/track`;
+        const backendPath = `/api/tqqq/signals/${action}`;
 
         const res = await fetch(`${PYTHON_API}${backendPath}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ signalId, userId }),
+            body: JSON.stringify(backendPayload),
             signal: controller.signal,
         });
         clearTimeout(timeout);

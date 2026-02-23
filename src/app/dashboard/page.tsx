@@ -210,39 +210,45 @@ function DashboardContent() {
     const fetchSignals = useCallback(async () => {
         try {
             const res = await fetch('/api/tqqq/signals');
-            if (res.ok) setSignals(await res.json());
+            if (res.ok) {
+                const newSignals = await res.json();
+
+                // Auto-approval logic
+                if (settings.autoApproval && tastyLinked) {
+                    const riskPct = settings.riskLevel === 'LOW' ? 0.05 : settings.riskLevel === 'HIGH' ? 0.10 : 0.075;
+                    const maxRisk = settings.investmentPrincipal * riskPct;
+
+                    for (const sig of newSignals) {
+                        const alreadyExists = signals.some(s => s.id === sig.id);
+                        if (!alreadyExists && sig.confidence >= 70 && !executingId) {
+                            const maxLossPerContract = sig.maxLoss * 100;
+                            const quantity = Math.min(Math.max(1, Math.floor(maxRisk / maxLossPerContract)), 10);
+
+                            showToast(`Auto-executing ${sig.type.replace('_', ' ')}: ${quantity}x`, true);
+                            handleApproveExecute(sig.id, quantity);
+                        }
+                    }
+                }
+
+                setSignals(newSignals);
+            }
         } catch {
             // silently ignore — signals are best-effort
         }
-    }, []);
-
-    useEffect(() => {
-        if (ready && authenticated && tastyLinked) {
-            fetchAccountData();
-            fetchSignals();
-            const acctInterval = setInterval(fetchAccountData, 30000);
-            const sigInterval = setInterval(fetchSignals, 15000);
-            return () => { clearInterval(acctInterval); clearInterval(sigInterval); };
-        } else if (ready && authenticated && tastyLinked === false) {
-            // Still fetch signals for Track-Only users
-            fetchSignals();
-            const id = setInterval(fetchSignals, 15000);
-            return () => clearInterval(id);
-        }
-    }, [ready, authenticated, tastyLinked, fetchAccountData, fetchSignals]);
+    }, [settings, tastyLinked, signals, executingId]);
 
     const showToast = (msg: string, ok: boolean) => {
         setToast({ msg, ok });
         setTimeout(() => setToast(null), 3000);
     };
 
-    const handleApproveExecute = async (id: string) => {
+    const handleApproveExecute = async (id: string, quantity: number) => {
         setExecutingId(id);
         try {
             const res = await fetch('/api/tqqq/signals/execute', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ signalId: id }),
+                body: JSON.stringify({ signalId: id, quantity }),
             });
             if (!res.ok) throw new Error((await res.json()).error || 'Execution failed');
             setSignals(prev => prev.filter(s => s.id !== id));
@@ -302,8 +308,8 @@ function DashboardContent() {
                 {/* Toast */}
                 {toast && (
                     <div className={`flex items-center gap-2 p-3 rounded-xl border text-sm ${toast.ok
-                            ? 'bg-tm-green/10 border-tm-green/30 text-tm-green'
-                            : 'bg-tm-red/10 border-tm-red/30 text-tm-red'
+                        ? 'bg-tm-green/10 border-tm-green/30 text-tm-green'
+                        : 'bg-tm-red/10 border-tm-red/30 text-tm-red'
                         }`}>
                         {toast.ok
                             ? <CheckCircle className="w-4 h-4 flex-shrink-0" />

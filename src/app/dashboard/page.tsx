@@ -274,16 +274,7 @@ function DashboardContent() {
         }
     };
 
-    // ── Loading state ──
-    if (!ready || !authenticated || tastyLinked === null) {
-        return (
-            <main className="min-h-screen flex items-center justify-center">
-                <div className="w-12 h-12 rounded-full bg-tm-purple/30 animate-pulse" />
-            </main>
-        );
-    }
-
-    // ── Auto-fetch and polling ──
+    // ── Auto-fetch and polling (must be before any early returns — Rules of Hooks) ──
     useEffect(() => {
         if (ready && authenticated && tastyLinked !== null) {
             // Initial fetch
@@ -295,6 +286,15 @@ function DashboardContent() {
             return () => clearInterval(pollId);
         }
     }, [ready, authenticated, tastyLinked, fetchAccountData, fetchSignals]);
+
+    // ── Loading state ──
+    if (!ready || !authenticated || tastyLinked === null) {
+        return (
+            <main className="min-h-screen flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-tm-purple/30 animate-pulse" />
+            </main>
+        );
+    }
 
     // ── Not linked → show link screen ──
     if (tastyLinked === false && signals.length === 0) {

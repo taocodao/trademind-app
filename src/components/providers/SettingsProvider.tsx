@@ -2,26 +2,44 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
+type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+
 interface TastytradeSettings {
     refreshToken: string;
     accounts: any[];
     username?: string;
 }
 
+interface AppSettings {
+    tastytrade: TastytradeSettings;
+    investmentPrincipal: number;
+    riskLevel: RiskLevel;
+    autoApproval: boolean;
+}
+
 interface SettingsContextValue {
-    settings: {
-        tastytrade: TastytradeSettings;
-    };
+    settings: AppSettings;
     updateTastytradeSettings: (settings: Partial<TastytradeSettings>) => void;
+    setInvestmentPrincipal: (amount: number) => void;
+    setRiskLevel: (level: RiskLevel) => void;
+    setAutoApproval: (enabled: boolean) => void;
     clearSettings: () => void;
 }
 
+const DEFAULT_SETTINGS: AppSettings = {
+    tastytrade: { refreshToken: '', accounts: [] },
+    investmentPrincipal: 25000,
+    riskLevel: 'MEDIUM',
+    autoApproval: false,
+};
+
 const SettingsContext = createContext<SettingsContextValue>({
-    settings: {
-        tastytrade: { refreshToken: '', accounts: [] }
-    },
+    settings: DEFAULT_SETTINGS,
     updateTastytradeSettings: () => { },
-    clearSettings: () => { }
+    setInvestmentPrincipal: () => { },
+    setRiskLevel: () => { },
+    setAutoApproval: () => { },
+    clearSettings: () => { },
 });
 
 export function useSettings() {
@@ -29,40 +47,59 @@ export function useSettings() {
 }
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-    const [settings, setSettings] = useState<{ tastytrade: TastytradeSettings }>({
-        tastytrade: { refreshToken: '', accounts: [] }
-    });
+    const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
 
     // Load from localStorage on mount
     useEffect(() => {
         const stored = localStorage.getItem('tm_settings');
         if (stored) {
             try {
-                setSettings(JSON.parse(stored));
+                const parsed = JSON.parse(stored);
+                setSettings({ ...DEFAULT_SETTINGS, ...parsed });
             } catch (e) {
                 console.error('Failed to parse settings', e);
             }
         }
     }, []);
 
+    const persist = (updated: AppSettings) => {
+        localStorage.setItem('tm_settings', JSON.stringify(updated));
+        setSettings(updated);
+    };
+
     const updateTastytradeSettings = (newSettings: Partial<TastytradeSettings>) => {
-        setSettings(prev => {
-            const updated = {
-                ...prev,
-                tastytrade: { ...prev.tastytrade, ...newSettings }
-            };
-            localStorage.setItem('tm_settings', JSON.stringify(updated));
-            return updated;
+        persist({
+            ...settings,
+            tastytrade: { ...settings.tastytrade, ...newSettings },
         });
     };
 
+    const setInvestmentPrincipal = (amount: number) => {
+        persist({ ...settings, investmentPrincipal: amount });
+    };
+
+    const setRiskLevel = (level: RiskLevel) => {
+        persist({ ...settings, riskLevel: level });
+    };
+
+    const setAutoApproval = (enabled: boolean) => {
+        persist({ ...settings, autoApproval: enabled });
+    };
+
     const clearSettings = () => {
-        setSettings({ tastytrade: { refreshToken: '', accounts: [] } });
+        setSettings(DEFAULT_SETTINGS);
         localStorage.removeItem('tm_settings');
     };
 
     return (
-        <SettingsContext.Provider value={{ settings, updateTastytradeSettings, clearSettings }}>
+        <SettingsContext.Provider value={{
+            settings,
+            updateTastytradeSettings,
+            setInvestmentPrincipal,
+            setRiskLevel,
+            setAutoApproval,
+            clearSettings,
+        }}>
             {children}
         </SettingsContext.Provider>
     );

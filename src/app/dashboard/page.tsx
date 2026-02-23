@@ -283,6 +283,19 @@ function DashboardContent() {
         );
     }
 
+    // ── Auto-fetch and polling ──
+    useEffect(() => {
+        if (ready && authenticated && tastyLinked !== null) {
+            // Initial fetch
+            fetchAccountData();
+            fetchSignals();
+
+            // Setup polling for signals every 30 seconds
+            const pollId = setInterval(fetchSignals, 30_000);
+            return () => clearInterval(pollId);
+        }
+    }, [ready, authenticated, tastyLinked, fetchAccountData, fetchSignals]);
+
     // ── Not linked → show link screen ──
     if (tastyLinked === false && signals.length === 0) {
         return <TastytradeLink onLinked={() => setTastyLinked(true)} />;

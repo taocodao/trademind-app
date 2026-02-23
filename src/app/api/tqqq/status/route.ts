@@ -6,7 +6,7 @@
 
 import { NextResponse } from 'next/server';
 
-const PYTHON_API = process.env.EC2_API_URL || 'http://34.235.119.67:8002';
+const PYTHON_API = process.env.EC2_API_URL || process.env.TASTYTRADE_API_URL || 'http://34.235.119.67:8002';
 
 export async function GET() {
     try {

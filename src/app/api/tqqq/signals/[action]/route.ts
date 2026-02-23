@@ -13,7 +13,7 @@ import type { NextRequest } from 'next/server';
 import { getTastytradeTokens } from '@/lib/redis';
 import { cookies } from 'next/headers';
 
-const PYTHON_API = process.env.EC2_API_URL || 'http://34.235.119.67:8002';
+const PYTHON_API = process.env.EC2_API_URL || process.env.TASTYTRADE_API_URL || 'http://34.235.119.67:8002';
 
 // ─── Helper: extract Privy userId ────────────────────────────────────────────
 async function getPrivyUserId(): Promise<string> {

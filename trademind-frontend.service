@@ -1,0 +1,20 @@
+[Unit]
+Description=TradeMind Frontend (Next.js)
+Documentation=https://www.trademind.bot
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/trademind-app
+Environment="NODE_ENV=production"
+Environment="PORT=3000"
+EnvironmentFile=/home/ubuntu/trademind-app/.env.local
+ExecStart=/usr/bin/node /home/ubuntu/trademind-app/node_modules/.bin/next start -p 3000
+Restart=always
+RestartSec=10
+StandardOutput=append:/var/log/trademind-frontend.log
+StandardError=append:/var/log/trademind-frontend-error.log
+
+[Install]
+WantedBy=multi-user.target

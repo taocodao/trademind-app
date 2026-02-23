@@ -1,0 +1,96 @@
+name: Deploy Frontend to EC2
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'next.config.mjs'
+      - 'tailwind.config.ts'
+      - 'tsconfig.json'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js app
+        run: npm run build
+        env:
+          NEXT_PUBLIC_PRIVY_APP_ID: ${{ secrets.NEXT_PUBLIC_PRIVY_APP_ID }}
+
+      - name: Deploy to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$EC2_KEY" > ~/.ssh/ec2_key.pem
+          chmod 600 ~/.ssh/ec2_key.pem
+          ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
+
+          # Sync built app to EC2 (exclude node_modules, .git, .env)
+          rsync -avz --delete \
+            --exclude='.git' \
+            --exclude='.env*' \
+            --exclude='node_modules' \
+            --exclude='.next/cache' \
+            ./ $EC2_USER@$EC2_HOST:~/trademind-app/
+
+          # Install production deps and restart the Next.js service
+          ssh -i ~/.ssh/ec2_key.pem $EC2_USER@$EC2_HOST << 'EOF'
+            set -e
+            cd ~/trademind-app
+            echo "Installing production dependencies..."
+            npm ci --production
+
+            echo "Restarting trademind-frontend service..."
+            sudo systemctl restart trademind-frontend.service
+            sleep 3
+
+            if sudo systemctl is-active --quiet trademind-frontend.service; then
+              echo "✅ Frontend service is running"
+            else
+              echo "❌ Frontend service failed to start"
+              sudo journalctl -u trademind-frontend.service -n 30
+              exit 1
+            fi
+          EOF
+
+      - name: Verify deployment
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          sleep 5
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://www.trademind.bot || echo "000")
+          if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "307" ]; then
+            echo "✅ www.trademind.bot is responding (HTTP $HTTP_STATUS)"
+          else
+            echo "⚠️  www.trademind.bot returned HTTP $HTTP_STATUS"
+          fi
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Frontend deployment to www.trademind.bot succeeded"
+          else
+            echo "❌ Frontend deployment failed"
+          fi

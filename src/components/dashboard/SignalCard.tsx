@@ -38,12 +38,12 @@ export function SignalCard({
     // Position sizing calculation
     const riskPct = settings.riskLevel === 'LOW' ? 0.05 : settings.riskLevel === 'HIGH' ? 0.10 : 0.075;
     const maxRisk = settings.investmentPrincipal * riskPct;
-    const maxLossPerContract = signal.maxLoss * 100;
+    const maxLossPerContract = (signal.maxLoss || 5.0) * 100;
     // Cap at 10 contracts, floor at 1
     const quantity = Math.min(Math.max(1, Math.floor(maxRisk / maxLossPerContract)), 10);
 
-    const totalCredit = signal.credit * quantity * 100;
-    const totalMaxLoss = signal.maxLoss * quantity * 100;
+    const totalCredit = (signal.credit || 0) * quantity * 100;
+    const totalMaxLoss = (signal.maxLoss || 0) * quantity * 100;
 
     const isBullish = signal.type === 'PUT_CREDIT';
     const VixIcon = signal.vixDirection === 'FALLING'
@@ -117,7 +117,7 @@ export function SignalCard({
                 </span>
                 <span className={`flex items-center gap-1 ${vixColor}`}>
                     <VixIcon className="w-3 h-3" />
-                    VIX {signal.vixLevel.toFixed(1)}
+                    VIX {(signal.vixLevel ?? 0).toFixed(1)}
                 </span>
             </div>
 

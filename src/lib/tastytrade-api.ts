@@ -654,3 +654,87 @@ export async function executeCalendarSpread(
 
     return submitOrder(accessToken, accountNumber, order);
 }
+
+/**
+ * Execute a TQQQ vertical credit spread (put credit or call credit)
+ * Calls Tastytrade REST API directly — no EC2 Python backend needed.
+ */
+export async function executeTQQQSpread(
+    accessToken: string,
+    accountNumber: string,
+    signal: {
+        short_strike: number;   // e.g., 45.0 (sell this)
+        long_strike: number;    // e.g., 40.0 (buy this)
+        expiration: string;     // YYYY-MM-DD
+        credit: number;         // net credit per contract
+        type: string;           // "PUT_CREDIT" or "CALL_CREDIT"
+        quantity: number;       // number of contracts
+    }
+): Promise<OrderResponse> {
+    const { short_strike, long_strike, expiration, credit, type, quantity } = signal;
+
+    const optionType = type.includes('PUT') ? 'P' : 'C';
+
+    // Format OCC option symbols
+    const formatOCC = (strike: number) => {
+        const date = expiration.replace(/-/g, '').slice(2); // YYMMDD
+        const strikeFormatted = (strike * 1000).toString().padStart(8, '0');
+        return `${'TQQQ'.padEnd(6)}${date}${optionType}${strikeFormatted}`;
+    };
+
+    const shortSymbol = formatOCC(short_strike);
+    const longSymbol = formatOCC(long_strike);
+
+    console.log(`📋 TQQQ Vertical Spread: ${type}`);
+    console.log(`   SHORT: SELL ${shortSymbol} @ ${short_strike}`);
+    console.log(`   LONG:  BUY  ${longSymbol} @ ${long_strike}`);
+    console.log(`   Signal credit: $${credit}`);
+    console.log(`   Quantity: ${quantity}x`);
+
+    // Fetch live quotes for both legs
+    const [shortQuote, longQuote] = await Promise.all([
+        getOptionQuote(accessToken, shortSymbol),
+        getOptionQuote(accessToken, longSymbol),
+    ]);
+
+    let orderPrice: number;
+
+    if (shortQuote && longQuote && shortQuote.bid > 0 && longQuote.ask > 0) {
+        // Credit spread: SELL short (get bid), BUY long (pay ask)
+        // Net credit = short bid - long ask
+        const netCredit = shortQuote.bid - longQuote.ask;
+        orderPrice = Math.max(Math.round(netCredit * 100) / 100, 0.01);
+        console.log(`✅ Using LIVE prices: Sell @ ${shortQuote.bid} / Buy @ ${longQuote.ask}`);
+        console.log(`   Net credit: $${orderPrice}`);
+    } else if (credit > 0) {
+        orderPrice = credit;
+        console.log(`⚠️ Quotes unavailable, using signal credit: $${orderPrice}`);
+    } else {
+        throw new Error(
+            `Cannot place TQQQ spread: no market quotes available and no signal credit provided.`
+        );
+    }
+
+    const order: OrderRequest = {
+        timeInForce: 'Day',
+        orderType: 'Limit' as const,
+        price: orderPrice,
+        priceEffect: 'Credit',  // Credit spread
+        legs: [
+            {
+                instrumentType: 'Equity Option',
+                symbol: shortSymbol,  // DO NOT TRIM - OCC format requires exact spacing!
+                quantity,
+                action: 'Sell to Open',
+            },
+            {
+                instrumentType: 'Equity Option',
+                symbol: longSymbol,
+                quantity,
+                action: 'Buy to Open',
+            },
+        ],
+    };
+
+    return submitOrder(accessToken, accountNumber, order);
+}

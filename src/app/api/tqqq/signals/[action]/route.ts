@@ -1,7 +1,8 @@
 /**
  * POST /api/tqqq/signals/execute
- * Approve & execute a TQQQ signal on Tastytrade.
- * Body: { signalId: string }
+ * Approve & execute a TQQQ signal on Tastytrade — calls Tastytrade REST API
+ * directly from Vercel, no EC2 backend needed.
+ * Body: { signalId: string, quantity?: number }
  *
  * POST /api/tqqq/signals/track
  * Mark a signal as Track-Only (no broker execution).
@@ -11,6 +12,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getTastytradeTokens } from '@/lib/redis';
+import { executeTQQQSpread } from '@/lib/tastytrade-api';
 import { cookies } from 'next/headers';
 
 const PYTHON_API = process.env.EC2_API_URL || process.env.TASTYTRADE_API_URL || 'http://34.235.119.67:8002';
@@ -29,6 +31,34 @@ async function getPrivyUserId(): Promise<string> {
     return 'default-user';
 }
 
+// ─── Fetch signal from EC2 by ID ─────────────────────────────────────────────
+async function getSignalById(signalId: string): Promise<Record<string, any> | null> {
+    try {
+        const res = await fetch(`${PYTHON_API}/api/tqqq/signals`, {
+            headers: { Accept: 'application/json' },
+            signal: AbortSignal.timeout(5000),
+        });
+        if (!res.ok) return null;
+        const data = await res.json();
+        const signals = Array.isArray(data) ? data : (data.signals ?? []);
+        return signals.find((s: any) => s.id === signalId) ?? null;
+    } catch {
+        return null;
+    }
+}
+
+// ─── Update signal status on EC2 ─────────────────────────────────────────────
+async function updateSignalStatus(signalId: string, status: string): Promise<void> {
+    try {
+        await fetch(`${PYTHON_API}/api/tqqq/signals/${status}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ signalId }),
+            signal: AbortSignal.timeout(5000),
+        });
+    } catch { /* non-critical — signal display update */ }
+}
+
 // ─── POST /api/tqqq/signals/[action] ─────────────────────────────────────────
 export async function POST(request: NextRequest) {
     const { pathname } = new URL(request.url);
@@ -43,69 +73,62 @@ export async function POST(request: NextRequest) {
         }
 
         const userId = await getPrivyUserId();
-        console.log(`[${action}] userId resolved to: ${userId}`);
+        console.log(`[${action}] userId: ${userId}`);
 
-        // Prepare the payload for Python
-        const backendPayload: any = { signalId, userId };
-
-        // For execution, we need OAuth tokens
-        if (action === 'execute') {
-            let tokens = null;
-            try {
-                tokens = await getTastytradeTokens(userId);
-            } catch (redisErr: any) {
-                console.error('[execute] Redis error fetching tokens:', redisErr?.message);
-                return NextResponse.json({ error: `Redis error: ${redisErr?.message}` }, { status: 500 });
-            }
-
-            if (!tokens || !tokens.refreshToken) {
-                console.log(`[execute] No tokens for userId=${userId}`);
-                return NextResponse.json({ error: 'Tastytrade not linked or missing refresh token' }, { status: 401 });
-            }
-
-            console.log(`[execute] Tokens found. accountNumber=${tokens.accountNumber}`);
-            backendPayload.quantity = quantity;
-            backendPayload.refreshToken = tokens.refreshToken;
-            backendPayload.accountNumber = tokens.accountNumber;
+        // ─── TRACK ONLY — just update status on EC2 ──────────────────────
+        if (action === 'track') {
+            await updateSignalStatus(signalId, 'track');
+            return NextResponse.json({ status: 'tracked', signalId });
         }
 
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 30000);
-
-        const backendPath = `/api/tqqq/signals/${action}`;
-        console.log(`[${action}] Calling EC2: POST ${PYTHON_API}${backendPath}`);
-
-        let res: Response;
-        try {
-            res = await fetch(`${PYTHON_API}${backendPath}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(backendPayload),
-                signal: controller.signal,
-            });
-        } catch (fetchErr: any) {
-            clearTimeout(timeout);
-            const isTimeout = fetchErr?.name === 'AbortError';
-            console.error(`[${action}] EC2 fetch failed (timeout=${isTimeout}):`, fetchErr?.message);
+        // ─── EXECUTE — call Tastytrade REST API directly ─────────────────
+        const tokens = await getTastytradeTokens(userId);
+        if (!tokens || !tokens.accessToken || !tokens.accountNumber) {
+            console.log(`[execute] No tokens for userId=${userId}`);
             return NextResponse.json(
-                { error: isTimeout ? 'Trade execution timed out — Tastytrade session creation is slow. Try again.' : `EC2 unreachable: ${fetchErr?.message}` },
-                { status: 504 }
+                { error: 'Tastytrade not linked. Go to Settings → Link Tastytrade.' },
+                { status: 401 }
             );
         }
-        clearTimeout(timeout);
 
-        console.log(`[${action}] EC2 responded: ${res.status}`);
-        const data = await res.json().catch(() => ({}));
+        console.log(`[execute] Tokens found. account=${tokens.accountNumber}`);
 
-        if (!res.ok) {
-            return NextResponse.json(
-                { error: data.error || `Backend error: ${res.status}` },
-                { status: res.status }
-            );
+        // Fetch the signal data from EC2
+        const signal = await getSignalById(signalId);
+        if (!signal) {
+            return NextResponse.json({ error: 'Signal not found' }, { status: 404 });
         }
-        return NextResponse.json(data);
+
+        console.log(`[execute] Signal: ${signal.type} ${signal.short_strike}/${signal.long_strike} exp ${signal.expiration}`);
+
+        // Execute directly via Tastytrade REST API
+        const result = await executeTQQQSpread(
+            tokens.accessToken,
+            tokens.accountNumber,
+            {
+                short_strike: Number(signal.short_strike),
+                long_strike: Number(signal.long_strike),
+                expiration: String(signal.expiration),
+                credit: Number(signal.credit),
+                type: String(signal.type || 'PUT_CREDIT'),
+                quantity: Number(quantity),
+            }
+        );
+
+        console.log(`[execute] ✅ Order result:`, result);
+
+        // Update signal status on EC2 (fire-and-forget)
+        updateSignalStatus(signalId, 'execute');
+
+        return NextResponse.json({
+            status: 'executed',
+            order: result,
+            signalId,
+            message: `Trade executed: ${quantity}x ${signal.type} on TQQQ`,
+        });
+
     } catch (err: any) {
-        console.error(`[${action}] Unexpected error:`, err?.message, err?.stack?.slice(0, 300));
+        console.error(`[${action}] Error:`, err?.message);
         return NextResponse.json(
             { error: err?.message || 'Failed to process signal' },
             { status: 500 }

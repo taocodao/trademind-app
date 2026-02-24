@@ -164,6 +164,7 @@ function DashboardContent() {
     const [tastyLinked, setTastyLinked] = useState<boolean | null>(null);
     const [tastyUsername, setTastyUsername] = useState<string | null>(null);
     const [signals, setSignals] = useState<TQQQSignal[]>([]);
+    const [recentOrders, setRecentOrders] = useState<any[]>([]);
     const [executingId, setExecutingId] = useState<string | null>(null);
     const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
@@ -188,6 +189,22 @@ function DashboardContent() {
         }
     }, [ready, authenticated, tastyLinked]);
 
+    // ── Fetch recent orders ──
+    const fetchOrders = useCallback(async (accountNum?: string) => {
+        const targetAccount = accountNum || data?.accountNumber;
+        if (!targetAccount) return;
+        try {
+            // Fetch both live and filled orders from today
+            const res = await fetch(`/api/tastytrade/orders/status?accountNumber=${targetAccount}&liveOnly=false`);
+            if (res.ok) {
+                const pd = await res.json();
+                setRecentOrders(pd.data?.items || []);
+            }
+        } catch (err) {
+            console.error('Failed to fetch orders:', err);
+        }
+    }, [data?.accountNumber]);
+
     // ── Fetch account data ──
     const fetchAccountData = useCallback(async () => {
         try {
@@ -198,7 +215,18 @@ function DashboardContent() {
                 const e = await res.json();
                 throw new Error(e.error || 'Failed to fetch account data');
             }
-            setData(await res.json());
+            const json = await res.json();
+            const account = json?.data?.items?.[0];
+            if (account) {
+                setData({
+                    accountNumber: account['account-number'],
+                    netLiquidatingValue: parseFloat(account['net-liquidating-value'] || '0'),
+                    buyingPower: parseFloat(account['buying-power'] || '0'),
+                    todayPnL: 0, // Not provided directly in account summary, requires history API
+                    todayPnLPercent: 0,
+                    positionCount: 0
+                });
+            }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load account data');
         } finally {
@@ -217,20 +245,54 @@ function DashboardContent() {
                 if (settings.autoApproval && tastyLinked) {
                     const riskPct = settings.riskLevel === 'LOW' ? 0.05 : settings.riskLevel === 'HIGH' ? 0.10 : 0.075;
                     const maxRisk = settings.investmentPrincipal * riskPct;
+                    const maxConcurrentSpreads = Math.max(1, Math.floor(0.70 / riskPct)); // Leave 30% BP reserve
 
-                    for (const sig of newSignals) {
-                        const alreadyExists = signals.some(s => s.id === sig.id);
-                        if (!alreadyExists && sig.confidence >= 70 && !executingId) {
-                            const maxLossPerContract = sig.maxLoss * 100;
-                            const quantity = Math.min(Math.max(1, Math.floor(maxRisk / maxLossPerContract)), 10);
+                    // Only do expensive Tastytrade fetching if there's actually a pending signal we might execute
+                    const hasPendingEligible = newSignals.some((sig: TQQQSignal) => {
+                        return (!sig.status || sig.status === 'PENDING') && sig.confidence >= 70 && !signals.some(s => s.id === sig.id);
+                    });
 
-                            showToast(`Auto-executing ${sig.type.replace('_', ' ')}: ${quantity}x`, true);
-                            handleApproveExecute(sig.id, quantity);
+                    if (hasPendingEligible && !executingId && data?.accountNumber) {
+                        try {
+                            const acctNum = data.accountNumber;
+                            const posRes = await fetch(`/api/tqqq/positions?accountNumber=${acctNum}`);
+                            if (posRes.ok) {
+                                const pd = await posRes.json();
+                                let openSpreadsCount = pd.count || 0;
+
+                                for (const sig of newSignals) {
+                                    const alreadyExists = signals.some(s => s.id === sig.id);
+                                    const isPending = !sig.status || sig.status === 'PENDING';
+
+                                    if (!alreadyExists && isPending && sig.confidence >= 70 && !executingId) {
+                                        if (openSpreadsCount >= maxConcurrentSpreads) {
+                                            console.log(`[Auto-Approve] Concurrent cap reached (${openSpreadsCount}/${maxConcurrentSpreads}). Skipping automatic execution.`);
+                                            continue; // Leave as PENDING in UI for manual tracking
+                                        }
+
+                                        const maxLossPerContract = sig.maxLoss * 100;
+                                        const quantity = Math.min(Math.max(1, Math.floor(maxRisk / maxLossPerContract)), 10);
+
+                                        showToast(`Auto-executing ${sig.type.replace('_', ' ')}: ${quantity}x`, true);
+                                        handleApproveExecute(sig.id, quantity);
+                                        openSpreadsCount++; // Increment immediately to prevent next signal from over-allocation
+                                    }
+                                }
+                            }
+                        } catch (err) {
+                            console.error('Failed to verify positions for auto-approve', err);
                         }
                     }
                 }
 
-                setSignals(newSignals);
+                // Filter out signals older than 12 hours to avoid clutter
+                const twelveHoursAgo = Date.now() - 12 * 60 * 60 * 1000;
+                const recentSignals = newSignals.filter((s: TQQQSignal) => {
+                    const age = s.createdAt ? new Date(s.createdAt).getTime() : Date.now();
+                    return age > twelveHoursAgo;
+                });
+
+                setSignals(recentSignals);
             }
         } catch {
             // silently ignore — signals are best-effort
@@ -251,7 +313,7 @@ function DashboardContent() {
                 body: JSON.stringify({ signalId: id, quantity }),
             });
             if (!res.ok) throw new Error((await res.json()).error || 'Execution failed');
-            setSignals(prev => prev.filter(s => s.id !== id));
+            setSignals(prev => prev.map(s => s.id === id ? { ...s, status: 'EXECUTED', fill_price: undefined } : s));
             showToast('Order submitted to Tastytrade ✓', true);
         } catch (err) {
             showToast(err instanceof Error ? err.message : 'Execution failed', false);
@@ -267,25 +329,41 @@ function DashboardContent() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ signalId: id }),
             });
-            setSignals(prev => prev.filter(s => s.id !== id));
+            setSignals(prev => prev.map(s => s.id === id ? { ...s, status: 'TRACKED' } : s));
             showToast('Position added to tracker ✓', true);
         } catch {
             showToast('Failed to track position', false);
         }
     };
 
-    // ── Auto-fetch and polling (must be before any early returns — Rules of Hooks) ──
+    // ── Polling loops ──
     useEffect(() => {
-        if (ready && authenticated && tastyLinked !== null) {
-            // Initial fetch
-            fetchAccountData();
-            fetchSignals();
+        if (!ready || !authenticated) return;
 
-            // Setup polling for signals every 30 seconds
-            const pollId = setInterval(fetchSignals, 30_000);
-            return () => clearInterval(pollId);
+        // Initial fetch
+        fetchAccountData().then(acctData => {
+            // Since fetchAccountData doesn't return data, we rely on the state update
+            // However, the next effect hook triggers fetchSignals on `data` change anyway
+        });
+
+        const signalInterval = setInterval(fetchSignals, 5000 * 60); // 5 min
+        const dataInterval = setInterval(fetchAccountData, 60000); // 1 min
+
+        return () => {
+            clearInterval(signalInterval);
+            clearInterval(dataInterval);
+        };
+    }, [ready, authenticated, fetchSignals, fetchAccountData]);
+
+    // Fetch dependent data once we have the account number
+    useEffect(() => {
+        if (data?.accountNumber) {
+            fetchSignals(); // Initial fast signal fetch
+            fetchOrders(data.accountNumber);
+            const orderInterval = setInterval(() => fetchOrders(data.accountNumber), 5000); // poll orders fast when active
+            return () => clearInterval(orderInterval);
         }
-    }, [ready, authenticated, tastyLinked, fetchAccountData, fetchSignals]);
+    }, [data?.accountNumber, fetchSignals, fetchOrders]);
 
     // ── Loading state ──
     if (!ready || !authenticated || tastyLinked === null) {
@@ -405,35 +483,51 @@ function DashboardContent() {
                         )}
                     </div>
 
-                    {signals.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-6 gap-2">
-                            <CheckCircle className="w-10 h-10 text-tm-green opacity-60" />
-                            <p className="font-semibold text-sm">All caught up!</p>
-                            <p className="text-xs text-tm-muted">No pending signals</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {signals.map(signal => (
-                                <SignalCard
-                                    key={signal.id}
-                                    signal={signal}
-                                    tastyLinked={!!tastyLinked}
-                                    onApproveExecute={handleApproveExecute}
-                                    onTrackOnly={handleTrackOnly}
-                                    executing={executingId === signal.id}
-                                />
-                            ))}
-                            {!tastyLinked && (
-                                <p className="text-xs text-tm-muted text-center pt-1">
-                                    Not using Tastytrade?{' '}
-                                    <span className="text-tm-purple">Track Only</span>
-                                    {' '}monitors P&L without executing orders.
-                                </p>
+                    {/* Signals Pending Approval */}
+                    <div className="md:col-span-8">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-bold font-mono text-tm-purple tracking-tight">ACTION REQUIRED</h2>
+                            {signals.length > 0 && (
+                                <div className="flex items-center gap-2">
+                                    <span className="flex w-2.5 h-2.5 relative">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-tm-purple opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full w-2.5 h-2.5 bg-tm-purple"></span>
+                                    </span>
+                                    <span className="text-xs font-semibold text-tm-purple bg-tm-purple/10 px-2 py-1 rounded-full">{signals.length} Pending</span>
+                                </div>
                             )}
                         </div>
-                    )}
-                </div>
 
+                        {signals.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-6 gap-2">
+                                <CheckCircle className="w-10 h-10 text-tm-green opacity-60" />
+                                <p className="font-semibold text-sm">All caught up!</p>
+                                <p className="text-xs text-tm-muted">No pending signals</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {signals.map(signal => (
+                                    <SignalCard
+                                        key={signal.id}
+                                        signal={signal}
+                                        tastyLinked={!!tastyLinked}
+                                        onApproveExecute={handleApproveExecute}
+                                        onTrackOnly={handleTrackOnly}
+                                        executing={executingId === signal.id}
+                                        recentOrders={recentOrders}
+                                    />
+                                ))}
+                                {!tastyLinked && (
+                                    <p className="text-xs text-tm-muted text-center pt-1">
+                                        Not using Tastytrade?{' '}
+                                        <span className="text-tm-purple">Track Only</span>
+                                        {' '}monitors P&L without executing orders.
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         </main>
     );

@@ -22,14 +22,15 @@ interface Position {
     id: string;
     symbol: string;
     strategy: string;
-    strike: number;
-    front_expiry: string;
-    back_expiry?: string;
+    type?: string;
+    short_strike?: number;
+    long_strike?: number;
+    strike?: number;
+    expiry: string;
     quantity: number;
     entry_debit: number;
     current_value?: number;
     unrealized_pnl?: number;
-    direction?: string;
     status: string;
     created_at: string;
 }
@@ -73,6 +74,7 @@ export default function PositionsPage() {
     const [positions, setPositions] = useState<Position[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [accountNum, setAccountNum] = useState<string | null>(null);
     const [balance, setBalance] = useState<AccountBalance | null>(null);
 
     // Fetch account balance from Tastytrade
@@ -83,26 +85,31 @@ export default function PositionsPage() {
                 const data = await response.json();
                 const account = data.data?.items?.[0];
                 if (account) {
+                    setAccountNum(account['account-number']);
                     setBalance({
                         cashAvailable: parseFloat(account['cash-available'] || '0'),
                         buyingPower: parseFloat(account['buying-power'] || '0'),
                         netLiquidation: parseFloat(account['net-liquidating-value'] || '0')
                     });
+                    return account['account-number'];
                 }
             }
         } catch (err) {
             console.error('Error fetching balance:', err);
         }
+        return null;
     }, []);
 
-    const fetchPositions = useCallback(async () => {
+    const fetchPositions = useCallback(async (acctOverride?: string) => {
+        const acct = acctOverride || accountNum;
+        if (!acct) return;
         try {
-            const response = await fetch('/api/positions?status=open');
+            const response = await fetch(`/api/tqqq/positions?accountNumber=${acct}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch positions');
             }
             const data = await response.json();
-            setPositions(data.positions || []);
+            setPositions(data.spreads || []);
             setError(null);
         } catch (err) {
             console.error('Error fetching positions:', err);
@@ -110,7 +117,7 @@ export default function PositionsPage() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [accountNum]);
 
     useEffect(() => {
         if (ready && !authenticated) {
@@ -121,9 +128,12 @@ export default function PositionsPage() {
     // Fetch positions on mount and refresh every 5 seconds
     useEffect(() => {
         if (ready && authenticated) {
-            fetchPositions();
-            fetchBalance();
-            const interval = setInterval(fetchPositions, 5000);
+            // Initial fetch
+            fetchBalance().then(acct => {
+                if (acct) fetchPositions(acct);
+            });
+
+            const interval = setInterval(() => fetchPositions(), 5000);
             const balanceInterval = setInterval(fetchBalance, 30000); // Balance every 30s
             return () => {
                 clearInterval(interval);
@@ -132,9 +142,27 @@ export default function PositionsPage() {
         }
     }, [ready, authenticated, fetchPositions, fetchBalance]);
 
-    const handleClose = async (id: string) => {
-        // TODO: Call API to close position
-        setPositions(positions.filter(p => p.id !== id));
+    const handleClose = async (position: Position) => {
+        try {
+            // Optimistically UI update: mark as closing (could add state for this later)
+            // Send request to close
+            const res = await fetch('/api/tastytrade/orders/close', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ position, accountNum })
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Failed to close position');
+            }
+
+            // Remove from local state
+            setPositions(positions.filter(p => p.id !== position.id));
+        } catch (err: any) {
+            console.error('Failed to close position:', err);
+            setError(`Close failed: ${err.message}`);
+        }
     };
 
     if (!ready || !authenticated) {
@@ -225,7 +253,7 @@ export default function PositionsPage() {
                     <PositionCard
                         key={position.id}
                         position={position}
-                        onClose={() => handleClose(position.id)}
+                        onClose={() => handleClose(position)}
                     />
                 ))}
 
@@ -322,17 +350,23 @@ function PositionCard({
                     <p className="text-xs text-tm-muted">Expiry</p>
                     <p className="font-semibold flex items-center justify-end gap-1">
                         <Clock className="w-3 h-3" />
-                        {getExpiryTime(position.front_expiry)}
+                        {getExpiryTime(position.expiry)}
                     </p>
                 </div>
             </div>
 
             {/* Strike and Quantity Info */}
             <div className="flex items-center justify-between mb-4 text-sm">
-                <span className="text-tm-muted">
-                    Strike: <span className="text-white font-mono">${position.strike}</span>
+                <span className="text-tm-muted truncate">
+                    Strikes: <span className="text-white font-mono break-words">
+                        {position.type?.includes('SPREAD') || position.short_strike ? (
+                            `S: $${position.short_strike} / L: $${position.long_strike || '-'}`
+                        ) : (
+                            `$${position.strike || position.short_strike}`
+                        )}
+                    </span>
                 </span>
-                <span className="text-tm-muted">
+                <span className="text-tm-muted flex-shrink-0 ml-2">
                     Qty: <span className="text-white font-mono">{position.quantity}</span>
                 </span>
             </div>
@@ -340,17 +374,14 @@ function PositionCard({
             {/* Applied Filters Badge */}
             <div className="bg-tm-surface/50 rounded-lg p-3 mb-4">
                 <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs text-tm-muted">⚙️ Applied Filters</span>
+                    <span className="text-xs text-tm-muted">⚙️ Trade Params</span>
                 </div>
                 <div className="flex flex-wrap gap-2 text-xs">
                     <span className="bg-tm-purple/20 text-tm-purple px-2 py-1 rounded-full">
-                        Conf: 75%+
+                        {position.type?.replace('_', ' ')}
                     </span>
                     <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full">
-                        DTE: {Math.ceil((new Date(position.front_expiry).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}d
-                    </span>
-                    <span className="bg-red-500/20 text-red-400 px-2 py-1 rounded-full">
-                        Stop: -45%
+                        DTE: {Math.max(0, Math.ceil((new Date(position.expiry).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))}d
                     </span>
                 </div>
             </div>

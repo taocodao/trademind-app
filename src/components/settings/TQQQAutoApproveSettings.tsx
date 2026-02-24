@@ -1,6 +1,6 @@
 'use client';
 
-import { Shield, Scale, Flame } from 'lucide-react';
+import { Shield, Scale, Flame, AlertTriangle } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 
 type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
@@ -69,8 +69,8 @@ export function TQQQAutoApproveSettings() {
                                 key={level}
                                 onClick={() => setRiskLevel(level)}
                                 className={`flex flex-col items-center p-3 rounded-xl border-2 transition-all ${isActive
-                                        ? `${colors.border} ${colors.bg}`
-                                        : 'border-white/10 bg-tm-bg/50 hover:border-white/20'
+                                    ? `${colors.border} ${colors.bg}`
+                                    : 'border-white/10 bg-tm-bg/50 hover:border-white/20'
                                     }`}
                             >
                                 <span className={isActive ? colors.icon : 'text-tm-muted'}>
@@ -117,8 +117,14 @@ export function TQQQAutoApproveSettings() {
                     </div>
                     {/* Toggle switch */}
                     <button
-                        onClick={() => setAutoApproval(!settings.autoApproval)}
-                        className={`relative w-12 h-6 rounded-full transition-colors duration-200 flex-shrink-0 ${settings.autoApproval ? 'bg-tm-purple' : 'bg-tm-surface'
+                        onClick={() => {
+                            if (settings.tastytrade?.refreshToken) {
+                                setAutoApproval(!settings.autoApproval);
+                            }
+                        }}
+                        disabled={!settings.tastytrade?.refreshToken}
+                        className={`relative w-12 h-6 rounded-full transition-colors duration-200 flex-shrink-0 ${!settings.tastytrade?.refreshToken ? 'bg-tm-surface opacity-50 cursor-not-allowed' :
+                            settings.autoApproval ? 'bg-tm-purple' : 'bg-tm-surface'
                             }`}
                         aria-label="Toggle auto-approval"
                     >
@@ -127,13 +133,20 @@ export function TQQQAutoApproveSettings() {
                     </button>
                 </div>
 
-                {settings.autoApproval && (
+                {!settings.tastytrade?.refreshToken ? (
+                    <div className="mt-3 pt-3 border-t border-white/5">
+                        <p className="text-[11px] text-tm-muted flex items-start gap-1">
+                            <AlertTriangle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                            <span>Link Tastytrade in settings below to enable auto-execute. You can still track signals manually.</span>
+                        </p>
+                    </div>
+                ) : settings.autoApproval ? (
                     <div className="mt-3 pt-3 border-t border-white/5">
                         <p className="text-[11px] text-yellow-400/80">
                             ⚠️ Auto-approval requires a linked Tastytrade account. Signals will be submitted as limit orders at mid-price.
                         </p>
                     </div>
-                )}
+                ) : null}
             </div>
         </div>
     );

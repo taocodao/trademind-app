@@ -4,14 +4,15 @@ interface Position {
     id: string;
     symbol: string;
     strategy: string;
-    strike: number;
-    front_expiry: string;
-    back_expiry?: string;
+    type?: string;
+    short_strike?: number;
+    long_strike?: number;
+    strike?: number;
+    expiry: string;
     quantity: number;
     entry_debit: number;
     current_value?: number;
     unrealized_pnl?: number;
-    direction?: string;
     status: string;
     created_at: string;
 }
@@ -39,9 +40,9 @@ export function CapitalOptimizer({ balance, positions }: CapitalOptimizerProps) 
         p.strategy?.toLowerCase().includes('calendar')
     );
 
-    // Theta capital = strike × 100 × quantity (collateral required)
+    // Theta capital = short_strike/strike × 100 × quantity (collateral required)
     const thetaCapitalUsed = thetaPositions.reduce((sum, p) =>
-        sum + (p.strike * 100 * (p.quantity || 1)), 0
+        sum + ((p.strike || p.short_strike || 0) * 100 * (Math.abs(p.quantity) || 1)), 0
     );
 
     // Calendar capital = entry debit × 100 × quantity

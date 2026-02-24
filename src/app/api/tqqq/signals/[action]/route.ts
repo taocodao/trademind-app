@@ -48,12 +48,12 @@ async function getSignalById(signalId: string): Promise<Record<string, any> | nu
 }
 
 // ─── Update signal status on EC2 ─────────────────────────────────────────────
-async function updateSignalStatus(signalId: string, status: string): Promise<void> {
+async function updateSignalStatus(signalId: string, status: string, extraData: any = {}): Promise<void> {
     try {
-        await fetch(`${PYTHON_API}/api/tqqq/signals/${status}`, {
+        await fetch(`${PYTHON_API}/api/tqqq/signals/update_status`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ signalId }),
+            body: JSON.stringify({ signalId, status, ...extraData }),
             signal: AbortSignal.timeout(5000),
         });
     } catch { /* non-critical — signal display update */ }
@@ -118,7 +118,10 @@ export async function POST(request: NextRequest) {
         console.log(`[execute] ✅ Order result:`, result);
 
         // Update signal status on EC2 (fire-and-forget)
-        updateSignalStatus(signalId, 'execute');
+        updateSignalStatus(signalId, 'execute', {
+            quantity: Number(quantity),
+            fillPrice: Number(signal.credit) // fallback to signal credit since exact execution price is in the order response
+        });
 
         return NextResponse.json({
             status: 'executed',

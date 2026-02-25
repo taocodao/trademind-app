@@ -210,29 +210,44 @@ function DashboardContent() {
         try {
             setLoading(true);
             setError(null);
-            const res = await fetch('/api/tastytrade/account');
-            if (!res.ok) {
-                const e = await res.json();
-                throw new Error(e.error || 'Failed to fetch account data');
+
+            // Step 1: Get account number from the accounts endpoint
+            const acctRes = await fetch('/api/tastytrade/account');
+            if (!acctRes.ok) {
+                const e = await acctRes.json();
+                throw new Error(e.error || 'Failed to fetch account');
             }
-            const json = await res.json();
-            const account = json?.data?.items?.[0];
-            if (account) {
-                setData({
-                    accountNumber: account['account-number'],
-                    netLiquidatingValue: parseFloat(account['net-liquidating-value'] || '0'),
-                    buyingPower: parseFloat(account['buying-power'] || '0'),
-                    todayPnL: 0, // Not provided directly in account summary, requires history API
-                    todayPnLPercent: 0,
-                    positionCount: 0
-                });
+            const acctJson = await acctRes.json();
+            const accountNumber =
+                acctJson?.data?.items?.[0]?.account?.['account-number'];
+
+            if (!accountNumber) {
+                throw new Error('No account found in Tastytrade response');
             }
+
+            // Step 2: Get real balance from /accounts/{number}/balances
+            const balRes = await fetch(`/api/tastytrade/balance?accountNumber=${accountNumber}`);
+            if (!balRes.ok) {
+                const e = await balRes.json();
+                throw new Error(e.error || 'Failed to fetch balance');
+            }
+            const balJson = await balRes.json();
+
+            setData({
+                accountNumber,
+                netLiquidatingValue: balJson.netLiquidatingValue ?? 0,
+                buyingPower: balJson.buyingPower ?? 0,
+                todayPnL: balJson.todayPnL ?? 0,
+                todayPnLPercent: 0,
+                positionCount: 0,
+            });
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load account data');
         } finally {
             setLoading(false);
         }
     }, []);
+
 
     // ── Fetch pending signals ──
     const fetchSignals = useCallback(async () => {

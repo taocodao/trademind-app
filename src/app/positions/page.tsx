@@ -80,25 +80,32 @@ export default function PositionsPage() {
     // Fetch account balance from Tastytrade
     const fetchBalance = useCallback(async () => {
         try {
-            const response = await fetch('/api/tastytrade/account');
-            if (response.ok) {
-                const data = await response.json();
-                const account = data.data?.items?.[0];
-                if (account) {
-                    setAccountNum(account['account-number']);
-                    setBalance({
-                        cashAvailable: parseFloat(account['cash-available'] || '0'),
-                        buyingPower: parseFloat(account['buying-power'] || '0'),
-                        netLiquidation: parseFloat(account['net-liquidating-value'] || '0')
-                    });
-                    return account['account-number'];
-                }
+            // Step 1: Get the account number from accounts list
+            const acctRes = await fetch('/api/tastytrade/account');
+            if (!acctRes.ok) return null;
+            const acctData = await acctRes.json();
+            const acct = acctData.data?.items?.[0]?.account?.['account-number'];
+            if (!acct) return null;
+            setAccountNum(acct);
+
+            // Step 2: Fetch real balance from /accounts/{number}/balances
+            const balRes = await fetch(`/api/tastytrade/balance?accountNumber=${acct}`);
+            if (balRes.ok) {
+                const bal = await balRes.json();
+                setBalance({
+                    cashAvailable: bal.cashAvailable ?? 0,
+                    buyingPower: bal.buyingPower ?? 0,
+                    netLiquidation: bal.netLiquidatingValue ?? 0,
+                });
             }
+            return acct;
         } catch (err) {
             console.error('Error fetching balance:', err);
         }
         return null;
     }, []);
+
+
 
     const fetchPositions = useCallback(async (acctOverride?: string) => {
         const acct = acctOverride || accountNum;

@@ -108,11 +108,23 @@ export async function POST(request: Request) {
                     price: signalData.price || signalData.cost,
                     direction: signalData.direction,
                 });
+            } else if (strategy === 'diagonal' || strategy === 'tqqq' || strategy === 'tqqq_diagonal') {
+                // Active Diagonal: put vertical spread (Sell anchor + Buy hedge)
+                const { executeTQQQSpread } = await import('@/lib/tastytrade-api');
+                result = await executeTQQQSpread(accessToken, accountNumber, {
+                    short_strike: signalData.anchor_strike || signalData.short_strike,
+                    long_strike: signalData.hedge_strike || signalData.long_strike,
+                    expiration: signalData.expiration || signalData.anchor_expiry,
+                    credit: signalData.credit || 0,
+                    type: 'PUT_CREDIT',
+                    quantity: signalData.contracts || signalData.quantity || 1,
+                });
             } else {
                 return NextResponse.json({
-                    error: `Unknown strategy: ${strategy}`,
+                    error: `Unknown strategy: ${strategy}. Supported: theta, calendar, diagonal, tqqq`,
                 }, { status: 400 });
             }
+
 
             console.log(`✅ ${strategy} trade executed: Order ID ${result.orderId}`);
 

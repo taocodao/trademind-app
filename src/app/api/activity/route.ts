@@ -23,12 +23,9 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const limit = parseInt(request.nextUrl.searchParams.get('limit') || '5', 10);
+        const limit = parseInt(request.nextUrl.searchParams.get('limit') || '20', 10);
 
-        // Fetch user executions, joined with signals to simulate enriched data
-        // Currently DB signals table might not be fully populated with symbol if we rely on WS...
-        // But let's check positions table too, as positions store execution details.
-
+        // Only fetch recent entries (last 30 days), skip old/failed UNKNOWN entries
         const result = await query(
             `SELECT 
                 use.id, 
@@ -39,31 +36,60 @@ export async function GET(request: NextRequest) {
                 use.approved_at,
                 use.executed_at,
                 use.error_message,
-                p.symbol,
-                p.strategy
+                s.symbol,
+                s.strategy
              FROM user_signal_executions use
-             LEFT JOIN positions p ON use.order_id = p.id
+             LEFT JOIN signals s ON use.signal_id = s.id
              WHERE use.user_id = $1
+               AND use.created_at >= NOW() - INTERVAL '30 days'
              ORDER BY use.created_at DESC
              LIMIT $2`,
             [userId, limit]
         );
 
-        // Add 'source' based on logic (if we add source column later, we can use it directly)
-        // For now assume manual if not tagged.
-        // We'll add 'source' column to user_signal_executions in future migration, 
-        // currently relying on context or just showing generic execution.
-
-        // Enrich activity if possible
         const activities = result.rows.map(row => ({
             ...row,
-            source: 'manual', // Default for now until DB migration
-            symbol: row.symbol || 'UNKNOWN', // Fallback
+            source: 'trademind',
+            symbol: row.symbol || null,
+            strategy: row.strategy || null,
         }));
 
         return NextResponse.json({ activities });
     } catch (error) {
         console.error('Activity fetch error:', error);
         return NextResponse.json({ error: 'Failed to fetch activity' }, { status: 500 });
+    }
+}
+
+// DELETE: Clear old failed/unknown activity entries for the current user
+export async function DELETE(request: NextRequest) {
+    try {
+        const userId = await getUserId();
+        if (!userId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { searchParams } = request.nextUrl;
+        const mode = searchParams.get('mode') || 'failed'; // 'failed' | 'all'
+
+        let deleteQuery: string;
+        let params: any[];
+
+        if (mode === 'all') {
+            deleteQuery = `DELETE FROM user_signal_executions WHERE user_id = $1`;
+            params = [userId];
+        } else {
+            // Delete failed + entries older than 30 days
+            deleteQuery = `DELETE FROM user_signal_executions 
+                           WHERE user_id = $1 
+                           AND (status = 'failed' OR created_at < NOW() - INTERVAL '30 days')`;
+            params = [userId];
+        }
+
+        const result = await query(deleteQuery, params);
+        return NextResponse.json({ deleted: result.rowCount });
+    } catch (error) {
+        console.error('Activity delete error:', error);
+        return NextResponse.json({ error: 'Failed to delete activity' }, { status: 500 });
     }
 }

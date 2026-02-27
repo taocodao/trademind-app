@@ -15,6 +15,7 @@ export interface TQQQSignal {
     regime: string;               // "HIGH_VOL"
     vixDirection: 'RISING' | 'FALLING' | 'STABLE';
     vixLevel: number;
+    risk_level?: 'Low' | 'Medium' | 'High';
     createdAt: string;
     status?: string; // 'PENDING' | 'EXECUTED' | 'TRACKED' | 'EXPIRED'
     executed_at?: string;
@@ -109,6 +110,11 @@ export function SignalCard({
                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${typeBadgeBg}`}>
                         {typeLabel}
                     </span>
+                    {signal.risk_level && (
+                        <span className="ml-2 text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border border-white/20 text-tm-muted">
+                            {signal.risk_level} Risk
+                        </span>
+                    )}
                     <p className="text-tm-muted text-xs mt-1 flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         {signal.symbol} · {signal.expiry}

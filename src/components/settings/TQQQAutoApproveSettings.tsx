@@ -17,11 +17,11 @@ const TQQQ_RISK_PROFILES: Record<RiskLevel, {
     LOW: {
         label: 'Conservative',
         icon: <Shield className="w-5 h-5" />,
-        description: 'Put spreads only',
+        description: 'Multi-Threshold Swing',
         riskPct: 5,
-        backtestReturn: '+52%',
-        maxDrawdown: '-8%',
-        strategy: 'Put Credit only (Scenario A)',
+        backtestReturn: '+117%',
+        maxDrawdown: '-4.7%',
+        strategy: 'Put Credit & 1x2 Backspread',
     },
     MEDIUM: {
         label: 'Balanced',

@@ -3,17 +3,23 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import pool from "@/lib/db";
 
+export const dynamic = 'force-dynamic';
+
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
-
-const stripe = new Stripe(STRIPE_SECRET_KEY, {
-    apiVersion: "2025-01-27.acacia" as any,
-});
 
 export async function POST(req: Request) {
     if (!STRIPE_WEBHOOK_SECRET) {
         return new NextResponse("Webhook secret not configured", { status: 500 });
     }
+
+    if (!STRIPE_SECRET_KEY) {
+        return new NextResponse("Stripe secret not configured", { status: 500 });
+    }
+
+    const stripe = new Stripe(STRIPE_SECRET_KEY, {
+        apiVersion: "2025-01-27.acacia" as any,
+    });
 
     const body = await req.text();
     const headersList = await headers();

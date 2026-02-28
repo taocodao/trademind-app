@@ -3,11 +3,10 @@ import { cookies } from "next/headers";
 import Stripe from "stripe";
 import pool from "@/lib/db";
 
+export const dynamic = 'force-dynamic';
+
 // Ensure Stripe key is available
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
-const stripe = new Stripe(STRIPE_SECRET_KEY, {
-    apiVersion: "2025-01-27.acacia" as any,
-});
 
 export async function POST(req: NextRequest) {
     try {
@@ -15,6 +14,10 @@ export async function POST(req: NextRequest) {
             console.error("Missing STRIPE_SECRET_KEY");
             return NextResponse.json({ error: "Stripe configuration error" }, { status: 500 });
         }
+
+        const stripe = new Stripe(STRIPE_SECRET_KEY, {
+            apiVersion: "2025-01-27.acacia" as any,
+        });
 
         const cookieStore = await cookies();
         const userId = cookieStore.get("privy-user-id")?.value;

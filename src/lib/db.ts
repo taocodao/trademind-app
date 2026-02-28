@@ -308,13 +308,42 @@ export async function initializeUserTables(): Promise<void> {
                 user_id VARCHAR(128) PRIMARY KEY,
                 risk_level VARCHAR(20) DEFAULT 'moderate',
                 notifications_enabled BOOLEAN DEFAULT true,
+                subscription_tier VARCHAR(20) DEFAULT 'observer',
+                stripe_customer_id VARCHAR(128),
+                stripe_subscription_id VARCHAR(128),
+                first_name VARCHAR(64),
+                last_name VARCHAR(64),
                 created_at TIMESTAMP DEFAULT NOW(),
                 updated_at TIMESTAMP DEFAULT NOW()
             )
         `);
 
-        // Migrate user_id columns from UUID to TEXT for Privy DID support
-        // This handles cases where tables were created with UUID type
+        // Gamification: User Streaks
+        await query(`
+            CREATE TABLE IF NOT EXISTS user_streaks (
+                user_id VARCHAR(128) PRIMARY KEY,
+                current_streak INTEGER DEFAULT 0,
+                longest_streak INTEGER DEFAULT 0,
+                last_trade_date DATE,
+                total_trades INTEGER DEFAULT 0,
+                total_profit DECIMAL(12,2) DEFAULT 0.00,
+                win_rate DECIMAL(5,2) DEFAULT 0.00,
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+
+        // Gamification: User Badges
+        await query(`
+            CREATE TABLE IF NOT EXISTS user_badges (
+                id SERIAL PRIMARY KEY,
+                user_id VARCHAR(128) NOT NULL,
+                badge_id VARCHAR(50) NOT NULL,
+                unlocked_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(user_id, badge_id)
+            )
+        `);
+
+        // Migrate user_id columns from UUID to TEXT for Privy DID support, and add new Stripe columns if missing
         await query(`
             DO $$ 
             BEGIN
@@ -327,6 +356,13 @@ export async function initializeUserTables(): Promise<void> {
                 ) THEN
                     ALTER TABLE user_settings ALTER COLUMN user_id TYPE VARCHAR(128) USING user_id::VARCHAR;
                 END IF;
+
+                -- Add Stripe and Profile columns if they don't exist
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS subscription_tier VARCHAR(20) DEFAULT 'observer';
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(128);
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(128);
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS first_name VARCHAR(64);
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS last_name VARCHAR(64);
 
                 -- Migrate positions.user_id if it's UUID type
                 IF EXISTS (

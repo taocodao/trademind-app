@@ -4,6 +4,8 @@ import "./globals.css";
 import { PrivyProvider } from "@/components/providers/PrivyProvider";
 import { SignalProvider } from "@/components/providers/SignalProvider";
 import { SettingsProvider } from "@/components/providers/SettingsProvider";
+import { BottomNav } from "@/components/layout/BottomNav";
+import Script from "next/script";
 
 const inter = Inter({
     subsets: ["latin"],
@@ -36,11 +38,22 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en" className="dark">
+            <head>
+                <Script id="rewardful" strategy="afterInteractive">
+                    {`
+                        (function(w,r){w._rwq=r;w[r]=w[r]||function(){(w[r].q=w[r].q||[]).push(arguments)}})(window,'rewardful');
+                    `}
+                </Script>
+                <Script async src="https://r.wdfl.co/rw.js" data-rewardful={process.env.NEXT_PUBLIC_REWARDFUL_API_KEY || ""} strategy="afterInteractive" />
+            </head>
             <body className={`${inter.variable} ${jetbrainsMono.variable} antialiased min-h-screen bg-tm-bg`}>
                 <PrivyProvider>
                     <SettingsProvider>
                         <SignalProvider>
-                            {children}
+                            <div className="pb-16 md:pb-0">
+                                {children}
+                            </div>
+                            <BottomNav />
                         </SignalProvider>
                     </SettingsProvider>
                 </PrivyProvider>

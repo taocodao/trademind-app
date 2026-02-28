@@ -17,6 +17,7 @@
 | [10_COMPONENTS.md](./10_COMPONENTS.md) | UI components reference |
 | [11_PAGES.md](./11_PAGES.md) | Page structure and routes |
 | [90_DECISIONS_LOG.md](./90_DECISIONS_LOG.md) | All key decisions |
+| [README.md](./README.md) | Usage instructions & cross-workspace links |
 
 ## Related Workspaces
 - **Backend**: `d:\Projects\tastywork-trading-1\brain\`
@@ -36,3 +37,15 @@ Located in `snapshots/` - per-session summaries of work done.
 - `src/components/providers/SignalProvider.tsx` - WebSocket integration
 - `src/lib/tastytrade-api.ts` - Tastytrade API client
 - `src/lib/strategy-executor.ts` - Trade execution
+
+## Agent Instructions
+At start of each session:
+1. Read this file
+2. Skim document headings
+3. Ask user which module(s) to focus on
+4. Summarize current state before proceeding
+
+At end of each session:
+1. Create snapshot in `snapshots/YYYY-MM-DD-session-NN.md`
+2. Update relevant docs with any new decisions
+3. Append entries to `90_DECISIONS_LOG.md`

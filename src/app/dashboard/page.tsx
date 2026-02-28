@@ -26,6 +26,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { TastytradeLink } from '@/components/TastytradeLink';
 import { TQQQStatusBanner } from '@/components/dashboard/TQQQStatusBanner';
 import { SignalCard, type TQQQSignal } from '@/components/dashboard/SignalCard';
+import { TurboBounceSignalCard, type TurboBounceSignal } from '@/components/dashboard/TurboBounceSignalCard';
 import { Suspense } from 'react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -54,7 +55,7 @@ function TopNav({ onLogout, onRefresh, loading }: {
     loading: boolean;
 }) {
     return (
-        <nav className="sticky top-0 z-50 bg-tm-surface/95 backdrop-blur-md border-b border-white/5">
+        <nav className="sticky top-0 z-50 bg-tm-surface/95 backdrop-blur-md border-b border-white/5 hidden md:block">
             <div className="flex items-center justify-between px-4 py-2">
                 {/* Live indicator */}
                 <div className="flex items-center gap-1.5">
@@ -164,12 +165,12 @@ function DashboardContent() {
     const [tastyLinked, setTastyLinked] = useState<boolean | null>(null);
     const [tastyUsername, setTastyUsername] = useState<string | null>(null);
     const [signals, setSignals] = useState<TQQQSignal[]>([]);
+    const [turboSignals, setTurboSignals] = useState<TurboBounceSignal[]>([]);
     const [recentOrders, setRecentOrders] = useState<any[]>([]);
     const [executingId, setExecutingId] = useState<string | null>(null);
     const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
-    const winRate = 73;
-    const gamStats: GamStats = { streak: 0, winRate: 0, rank: null, totalProfit: 0 };
+    const [gamStats, setGamStats] = useState<GamStats>({ streak: 0, winRate: 0, rank: null, totalProfit: 0 });
 
     // ── Auth guard ──
     useEffect(() => {
@@ -314,6 +315,46 @@ function DashboardContent() {
         }
     }, [settings, tastyLinked, signals, executingId]);
 
+    // ── Fetch Gamification Stats ──
+    const fetchGamificationStats = useCallback(async () => {
+        if (!authenticated) return;
+        try {
+            const res = await fetch('/api/gamification/stats');
+            if (res.ok) {
+                const data = await res.json();
+                setGamStats({
+                    streak: data.currentStreak || 0,
+                    winRate: data.winRate || 0,
+                    rank: data.leaderboardRank || null,
+                    totalProfit: data.totalProfit || 0
+                });
+            }
+        } catch {
+            // gracefully degrade to 0s if gamification fetch fails
+        }
+    }, [authenticated]);
+
+    // ── Fetch turbobounce signals ──
+    const fetchTurboSignals = useCallback(async () => {
+        try {
+            const res = await fetch('/api/turbobounce/signals');
+            if (res.ok) {
+                const newSignals = await res.json();
+
+                // Filter out signals older than 12 hours
+                const twelveHoursAgo = Date.now() - 12 * 60 * 60 * 1000;
+                const recentSignals = newSignals.filter((s: TurboBounceSignal) => {
+                    const age = s.timestamp ? new Date(s.timestamp).getTime() : Date.now();
+                    return age > twelveHoursAgo;
+                });
+
+                setTurboSignals(recentSignals);
+            }
+        } catch {
+            // silently ignore
+        }
+    }, [settings, tastyLinked]);
+
     const showToast = (msg: string, ok: boolean) => {
         setToast({ msg, ok });
         setTimeout(() => setToast(null), 3000);
@@ -361,24 +402,25 @@ function DashboardContent() {
             // However, the next effect hook triggers fetchSignals on `data` change anyway
         });
 
-        const signalInterval = setInterval(fetchSignals, 5000 * 60); // 5 min
+        const signalInterval = setInterval(() => { fetchSignals(); fetchTurboSignals(); fetchGamificationStats(); }, 5000 * 60); // 5 min
         const dataInterval = setInterval(fetchAccountData, 60000); // 1 min
 
         return () => {
             clearInterval(signalInterval);
             clearInterval(dataInterval);
         };
-    }, [ready, authenticated, fetchSignals, fetchAccountData]);
+    }, [ready, authenticated, fetchSignals, fetchAccountData, fetchGamificationStats]);
 
     // Fetch dependent data once we have the account number
     useEffect(() => {
         if (data?.accountNumber) {
             fetchSignals(); // Initial fast signal fetch
+            fetchTurboSignals();
             fetchOrders(data.accountNumber);
             const orderInterval = setInterval(() => fetchOrders(data.accountNumber), 5000); // poll orders fast when active
             return () => clearInterval(orderInterval);
         }
-    }, [data?.accountNumber, fetchSignals, fetchOrders]);
+    }, [data?.accountNumber, fetchSignals, fetchTurboSignals, fetchOrders]);
 
     // ── Loading state ──
     if (!ready || !authenticated || tastyLinked === null) {
@@ -394,7 +436,7 @@ function DashboardContent() {
         return <TastytradeLink onLinked={() => setTastyLinked(true)} />;
     }
 
-    const refreshAll = () => { fetchAccountData(); fetchSignals(); };
+    const refreshAll = () => { fetchAccountData(); fetchSignals(); fetchTurboSignals(); };
 
     return (
         <main className="min-h-screen bg-tm-bg flex flex-col">
@@ -450,9 +492,9 @@ function DashboardContent() {
                             <div className="relative w-9 h-9">
                                 <svg className="w-9 h-9 -rotate-90">
                                     <circle className="text-tm-surface" strokeWidth="3" stroke="currentColor" fill="transparent" r="14" cx="18" cy="18" />
-                                    <circle className="text-tm-green" strokeWidth="3" strokeDasharray={`${winRate * 0.88} 100`} strokeLinecap="round" stroke="currentColor" fill="transparent" r="14" cx="18" cy="18" />
+                                    <circle className="text-tm-green" strokeWidth="3" strokeDasharray={`${gamStats.winRate * 0.88} 100`} strokeLinecap="round" stroke="currentColor" fill="transparent" r="14" cx="18" cy="18" />
                                 </svg>
-                                <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold">{winRate}%</span>
+                                <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold">{gamStats.winRate}%</span>
                             </div>
                         </div>
                         <p className="text-2xl font-bold font-mono">
@@ -513,7 +555,7 @@ function DashboardContent() {
                             )}
                         </div>
 
-                        {signals.length === 0 ? (
+                        {signals.length === 0 && turboSignals.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-6 gap-2">
                                 <CheckCircle className="w-10 h-10 text-tm-green opacity-60" />
                                 <p className="font-semibold text-sm">All caught up!</p>
@@ -532,6 +574,22 @@ function DashboardContent() {
                                         recentOrders={recentOrders}
                                     />
                                 ))}
+
+                                {turboSignals.length > 0 && (
+                                    <div className="mt-8">
+                                        <h3 className="text-sm font-bold text-tm-muted mb-3 uppercase tracking-wider pl-1">TurboBounce Multi-Ticker</h3>
+                                        <div className="space-y-3">
+                                            {turboSignals.map(signal => (
+                                                <TurboBounceSignalCard
+                                                    key={signal.id}
+                                                    signal={signal}
+                                                    tastyLinked={!!tastyLinked}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {!tastyLinked && (
                                     <p className="text-xs text-tm-muted text-center pt-1">
                                         Not using Tastytrade?{' '}

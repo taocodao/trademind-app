@@ -15,6 +15,7 @@ interface AppSettings {
     investmentPrincipal: number;
     riskLevel: RiskLevel;
     autoApproval: boolean;
+    turboBounceMode: 'MODE_A' | 'MODE_B';
 }
 
 interface SettingsContextValue {
@@ -23,6 +24,7 @@ interface SettingsContextValue {
     setInvestmentPrincipal: (amount: number) => void;
     setRiskLevel: (level: RiskLevel) => void;
     setAutoApproval: (enabled: boolean) => void;
+    setTurboBounceMode: (mode: 'MODE_A' | 'MODE_B') => void;
     clearSettings: () => void;
 }
 
@@ -31,6 +33,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     investmentPrincipal: 25000,
     riskLevel: 'MEDIUM',
     autoApproval: false,
+    turboBounceMode: 'MODE_B',
 };
 
 const SettingsContext = createContext<SettingsContextValue>({
@@ -39,6 +42,7 @@ const SettingsContext = createContext<SettingsContextValue>({
     setInvestmentPrincipal: () => { },
     setRiskLevel: () => { },
     setAutoApproval: () => { },
+    setTurboBounceMode: () => { },
     clearSettings: () => { },
 });
 
@@ -86,6 +90,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         persist({ ...settings, autoApproval: enabled });
     };
 
+    const setTurboBounceMode = (mode: 'MODE_A' | 'MODE_B') => {
+        persist({ ...settings, turboBounceMode: mode });
+    };
+
     const clearSettings = () => {
         setSettings(DEFAULT_SETTINGS);
         localStorage.removeItem('tm_settings');
@@ -98,6 +106,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             setInvestmentPrincipal,
             setRiskLevel,
             setAutoApproval,
+            setTurboBounceMode,
             clearSettings,
         }}>
             {children}

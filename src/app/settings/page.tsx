@@ -2,19 +2,31 @@
 
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft, Settings, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { TastytradeCredentials } from '@/components/settings/TastytradeCredentials';
 import { InvestmentPrincipal } from '@/components/dashboard/InvestmentPrincipal';
 import { TQQQAutoApproveSettings } from '@/components/settings/TQQQAutoApproveSettings';
+import { TurboBounceAllocationSettings } from '@/components/settings/TurboBounceAllocationSettings';
+import { SubscriptionManager } from '@/components/settings/SubscriptionManager';
 
 export default function SettingsPage() {
     const { ready, authenticated } = usePrivy();
     const router = useRouter();
+    const [currentTier, setCurrentTier] = useState<string>('observer');
 
     useEffect(() => {
-        if (ready && !authenticated) router.push('/');
+        if (ready && !authenticated) {
+            router.push('/');
+        } else if (ready && authenticated) {
+            fetch('/api/settings/tier')
+                .then(r => r.json())
+                .then(d => {
+                    if (d.tier) setCurrentTier(d.tier);
+                })
+                .catch(console.error);
+        }
     }, [ready, authenticated, router]);
 
     if (!ready || !authenticated) {
@@ -48,8 +60,14 @@ export default function SettingsPage() {
                 {/* Investment Principal */}
                 <InvestmentPrincipal />
 
+                {/* Subscription Tier Management */}
+                <SubscriptionManager currentTier={currentTier} />
+
                 {/* TQQQ Risk Level + Auto-Approval */}
                 <TQQQAutoApproveSettings />
+
+                {/* TurboBounce Multi-Ticker Setup */}
+                <TurboBounceAllocationSettings />
 
                 {/* Strategy Summary */}
                 <section className="glass-card p-4">

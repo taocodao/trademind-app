@@ -81,6 +81,20 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ status: 'tracked', signalId });
         }
 
+        // ─── BILLING AUTHORIZATION (Execute Only) ────────────────────────
+        // Import pool at the top of the file would be needed, but we can do it inline or add the import.
+        // I will need to add the import for pool at the top of the file in a separate replace_file_content call.
+        const pool = (await import('@/lib/db')).default;
+        const subRes = await pool.query(`SELECT subscription_tier FROM user_settings WHERE user_id = $1`, [userId]);
+        const tier = subRes.rows[0]?.subscription_tier || 'observer';
+
+        if (tier !== 'compounder' && tier !== 'compounder_family') {
+            return NextResponse.json(
+                { error: 'Live execution requires the Compounder tier. Please upgrade your subscription.' },
+                { status: 403 }
+            );
+        }
+
         // ─── EXECUTE — call Tastytrade REST API directly ─────────────────
         const tokens = await getTastytradeTokens(userId);
         if (!tokens || !tokens.accessToken || !tokens.accountNumber) {

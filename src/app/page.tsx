@@ -2,7 +2,8 @@
 
 import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import { InteractiveTimeline } from '@/components/marketing/InteractiveTimeline';
-import { useLanguage } from '@/components/marketing/LanguageContext';
+import { SynchronizedTradeFeed } from '@/components/marketing/trade-feed/SynchronizedTradeFeed';
+import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import { ArrowRight, TrendingUp } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
@@ -10,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import CompoundingCalculator from '@/components/ui/CompoundingCalculator';
 
 export default function SinglePageMarketing() {
-    const { t } = useLanguage();
+    const { t } = useTranslation();
     const { login, authenticated, ready } = usePrivy();
     const router = useRouter();
     const [curveData, setCurveData] = useState([]);
@@ -63,8 +64,9 @@ export default function SinglePageMarketing() {
                 </div>
 
                 {/* Interactive Backtest Player */}
-                <div className="w-full max-w-4xl z-10">
+                <div className="w-full max-w-4xl z-10 grid grid-cols-1 gap-8">
                     <InteractiveTimeline data={curveData} />
+                    <SynchronizedTradeFeed data={curveData} />
                 </div>
 
                 {/* Calculator Integration */}

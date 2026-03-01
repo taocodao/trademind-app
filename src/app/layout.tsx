@@ -5,7 +5,7 @@ import { PrivyProvider } from "@/components/providers/PrivyProvider";
 import { SignalProvider } from "@/components/providers/SignalProvider";
 import { SettingsProvider } from "@/components/providers/SettingsProvider";
 import { BottomNav } from "@/components/layout/BottomNav";
-import { LanguageProvider } from "@/components/marketing/LanguageContext";
+import { MarketingProviders } from "@/components/marketing/MarketingProviders";
 import Script from "next/script";
 
 const inter = Inter({
@@ -48,7 +48,7 @@ export default function RootLayout({
                 <Script async src="https://r.wdfl.co/rw.js" data-rewardful={process.env.NEXT_PUBLIC_REWARDFUL_API_KEY || ""} strategy="afterInteractive" />
             </head>
             <body className={`${inter.variable} ${jetbrainsMono.variable} antialiased min-h-screen bg-tm-bg`}>
-                <LanguageProvider>
+                <MarketingProviders>
                     <PrivyProvider>
                         <SettingsProvider>
                             <SignalProvider>
@@ -59,7 +59,7 @@ export default function RootLayout({
                             </SignalProvider>
                         </SettingsProvider>
                     </PrivyProvider>
-                </LanguageProvider>
+                </MarketingProviders>
             </body>
         </html>
     );

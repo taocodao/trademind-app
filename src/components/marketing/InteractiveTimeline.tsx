@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
 import { Play, Pause, RotateCcw, Volume2 } from 'lucide-react';
-import { useLanguage } from './LanguageContext';
+import { useTranslation } from 'react-i18next';
+import { useNarration, TOTAL_DURATION_SEC } from './NarrationContext';
 
 interface DataPoint {
     date: string;
@@ -11,61 +12,17 @@ interface DataPoint {
 }
 
 export function InteractiveTimeline({ data }: { data: DataPoint[] }) {
-    const { t } = useLanguage();
-    const [isPlaying, setIsPlaying] = useState(false);
+    const { t } = useTranslation();
+    const { isPlaying, progress, elapsedTime, togglePlay, seekTo, activeLanguage } = useNarration();
 
-    // Instead of a full 3 minutes, let's map the 84 months to a pleasant animation duration, e.g., 30 seconds for the web
-    // But the user requested a "3-minute voice narrative". So total duration = 180 seconds.
-    const TOTAL_DURATION_SEC = 180;
-    const [elapsedTime, setElapsedTime] = useState(0);
-
-    const animationRef = useRef<number | null>(null);
-    const lastTimeRef = useRef<number | null>(null);
-
-    const togglePlay = () => {
-        setIsPlaying(!isPlaying);
-    };
-
+    // Map global progress to data slice
     const reset = () => {
-        setIsPlaying(false);
-        setElapsedTime(0);
+        seekTo(0);
+        if (isPlaying) togglePlay();
     };
 
-    // Animation Loop
-    useEffect(() => {
-        const animate = (time: number) => {
-            if (lastTimeRef.current !== null) {
-                const delta = (time - lastTimeRef.current) / 1000; // in seconds
-                setElapsedTime((prev) => {
-                    const next = prev + delta;
-                    if (next >= TOTAL_DURATION_SEC) {
-                        setIsPlaying(false);
-                        return TOTAL_DURATION_SEC;
-                    }
-                    return next;
-                });
-            }
-            lastTimeRef.current = time;
-            if (isPlaying) {
-                animationRef.current = requestAnimationFrame(animate);
-            }
-        };
-
-        if (isPlaying) {
-            lastTimeRef.current = performance.now();
-            animationRef.current = requestAnimationFrame(animate);
-        } else {
-            lastTimeRef.current = null;
-            if (animationRef.current) cancelAnimationFrame(animationRef.current);
-        }
-
-        return () => {
-            if (animationRef.current) cancelAnimationFrame(animationRef.current);
-        };
-    }, [isPlaying]);
-
-    // Calculate how much of the data to show based on elapsed time
-    const progressPercentage = Math.min(elapsedTime / TOTAL_DURATION_SEC, 1);
+    // Calculate how much of the data to show based on elapsed time (context)
+    const progressPercentage = progress;
     const dataLength = data && data.length > 0 ? data.length : 1;
     const currentDataIndex = Math.min(
         Math.floor(progressPercentage * dataLength),
@@ -118,7 +75,14 @@ export function InteractiveTimeline({ data }: { data: DataPoint[] }) {
                     </div>
 
                     {/* Progress Bar */}
-                    <div className="w-full md:w-64 h-2 bg-tm-border rounded-full overflow-hidden">
+                    <div className="w-full md:w-64 h-2 bg-tm-border rounded-full overflow-hidden relative"
+                        onClick={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const x = e.clientX - rect.left;
+                            const width = rect.width;
+                            seekTo((x / width) * TOTAL_DURATION_SEC);
+                        }}
+                        style={{ cursor: 'pointer' }}>
                         <div
                             className="h-full bg-gradient-to-r from-tm-purple to-[#9d63f5]"
                             style={{ width: `${progressPercentage * 100}%` }}
@@ -141,6 +105,16 @@ export function InteractiveTimeline({ data }: { data: DataPoint[] }) {
                             </div>
                             <span className="text-white font-bold tracking-widest text-sm">LISTEN TO THE DATA</span>
                         </button>
+                    </div>
+                )}
+
+                {progress > 0 && progress < 1.0 && (
+                    <div className="absolute bottom-8 left-0 right-0 z-20 flex justify-center pointer-events-none">
+                        <div className="bg-black/80 backdrop-blur-md px-6 py-3 rounded-lg border border-white/10 text-white font-mono text-sm max-w-[80%] text-center shadow-xl">
+                            {progress < 0.10 ? t('hero.headline') :
+                                progress > 0.40 && progress < 0.5 ? t('crash.filter_active') :
+                                    "TurboBounce Engine Analyzing..."}
+                        </div>
                     </div>
                 )}
 

@@ -3,17 +3,19 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
-import { useLanguage, Language } from './LanguageContext';
+import { useTranslation } from 'react-i18next';
 import { Languages, Users } from 'lucide-react';
 
 export function MarketingHeader() {
     const { login, authenticated } = usePrivy();
-    const { language, setLanguage, t } = useLanguage();
+    const { t, i18n } = useTranslation();
+
+    const activeLanguage = i18n.language ? i18n.language.split('-')[0] : 'en';
 
     const toggleLanguage = () => {
-        if (language === 'en') setLanguage('es');
-        else if (language === 'es') setLanguage('zh');
-        else setLanguage('en');
+        if (activeLanguage === 'en') i18n.changeLanguage('es');
+        else if (activeLanguage === 'es') i18n.changeLanguage('zh');
+        else i18n.changeLanguage('en');
     };
 
     return (
@@ -31,9 +33,9 @@ export function MarketingHeader() {
                     className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 px-3 py-1.5 rounded-full bg-tm-card border border-tm-border text-tm-muted hover:text-white transition-colors text-sm font-medium"
                 >
                     <Languages className="w-4 h-4 text-tm-purple" />
-                    {language === 'en' && 'English'}
-                    {language === 'es' && 'Español'}
-                    {language === 'zh' && '中文'}
+                    {activeLanguage === 'en' && 'English'}
+                    {activeLanguage === 'es' && 'Español'}
+                    {activeLanguage === 'zh' && '中文'}
                 </button>
 
                 {/* Right: Login */}

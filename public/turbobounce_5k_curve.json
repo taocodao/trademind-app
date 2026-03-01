@@ -1,0 +1,338 @@
+[
+  {
+    "date": "Jan 2019",
+    "value": 4741.12
+  },
+  {
+    "date": "Feb 2019",
+    "value": 5311.47
+  },
+  {
+    "date": "Mar 2019",
+    "value": 6212.78
+  },
+  {
+    "date": "Apr 2019",
+    "value": 6620.8
+  },
+  {
+    "date": "May 2019",
+    "value": 6511.67
+  },
+  {
+    "date": "Jun 2019",
+    "value": 6402.14
+  },
+  {
+    "date": "Jul 2019",
+    "value": 6140.18
+  },
+  {
+    "date": "Aug 2019",
+    "value": 6445.44
+  },
+  {
+    "date": "Sep 2019",
+    "value": 5707.83
+  },
+  {
+    "date": "Oct 2019",
+    "value": 6538.64
+  },
+  {
+    "date": "Nov 2019",
+    "value": 6677.62
+  },
+  {
+    "date": "Dec 2019",
+    "value": 7401.42
+  },
+  {
+    "date": "Jan 2020",
+    "value": 7527.32
+  },
+  {
+    "date": "Feb 2020",
+    "value": 7374.55
+  },
+  {
+    "date": "Mar 2020",
+    "value": 8266.78
+  },
+  {
+    "date": "Apr 2020",
+    "value": 6516.63
+  },
+  {
+    "date": "May 2020",
+    "value": 6802.86
+  },
+  {
+    "date": "Jun 2020",
+    "value": 8238.82
+  },
+  {
+    "date": "Jul 2020",
+    "value": 8030.11
+  },
+  {
+    "date": "Aug 2020",
+    "value": 8067.41
+  },
+  {
+    "date": "Sep 2020",
+    "value": 7874.58
+  },
+  {
+    "date": "Oct 2020",
+    "value": 7131.13
+  },
+  {
+    "date": "Nov 2020",
+    "value": 8734.07
+  },
+  {
+    "date": "Dec 2020",
+    "value": 8388.47
+  },
+  {
+    "date": "Jan 2021",
+    "value": 9692.83
+  },
+  {
+    "date": "Feb 2021",
+    "value": 11206.63
+  },
+  {
+    "date": "Mar 2021",
+    "value": 13087.75
+  },
+  {
+    "date": "Apr 2021",
+    "value": 11255.52
+  },
+  {
+    "date": "May 2021",
+    "value": 10975.96
+  },
+  {
+    "date": "Jun 2021",
+    "value": 11424.46
+  },
+  {
+    "date": "Jul 2021",
+    "value": 11261.18
+  },
+  {
+    "date": "Aug 2021",
+    "value": 11415.65
+  },
+  {
+    "date": "Sep 2021",
+    "value": 10621.05
+  },
+  {
+    "date": "Oct 2021",
+    "value": 12216.45
+  },
+  {
+    "date": "Nov 2021",
+    "value": 13138.37
+  },
+  {
+    "date": "Dec 2021",
+    "value": 14235.75
+  },
+  {
+    "date": "Jan 2022",
+    "value": 12251.13
+  },
+  {
+    "date": "Feb 2022",
+    "value": 10777.65
+  },
+  {
+    "date": "Mar 2022",
+    "value": 10452.27
+  },
+  {
+    "date": "Apr 2022",
+    "value": 12029.81
+  },
+  {
+    "date": "May 2022",
+    "value": 10547.56
+  },
+  {
+    "date": "Jun 2022",
+    "value": 10321.63
+  },
+  {
+    "date": "Jul 2022",
+    "value": 9739.1
+  },
+  {
+    "date": "Aug 2022",
+    "value": 9640.98
+  },
+  {
+    "date": "Sep 2022",
+    "value": 9290.35
+  },
+  {
+    "date": "Oct 2022",
+    "value": 9490.61
+  },
+  {
+    "date": "Nov 2022",
+    "value": 9487.7
+  },
+  {
+    "date": "Dec 2022",
+    "value": 9226.04
+  },
+  {
+    "date": "Jan 2023",
+    "value": 9817.79
+  },
+  {
+    "date": "Feb 2023",
+    "value": 9268.83
+  },
+  {
+    "date": "Mar 2023",
+    "value": 9796.11
+  },
+  {
+    "date": "Apr 2023",
+    "value": 8937.42
+  },
+  {
+    "date": "May 2023",
+    "value": 11816.11
+  },
+  {
+    "date": "Jun 2023",
+    "value": 10853.19
+  },
+  {
+    "date": "Jul 2023",
+    "value": 11706.93
+  },
+  {
+    "date": "Aug 2023",
+    "value": 10558.91
+  },
+  {
+    "date": "Sep 2023",
+    "value": 9929.1
+  },
+  {
+    "date": "Oct 2023",
+    "value": 11386.95
+  },
+  {
+    "date": "Nov 2023",
+    "value": 11209.57
+  },
+  {
+    "date": "Dec 2023",
+    "value": 13243.29
+  },
+  {
+    "date": "Jan 2024",
+    "value": 11677.79
+  },
+  {
+    "date": "Feb 2024",
+    "value": 14006.49
+  },
+  {
+    "date": "Mar 2024",
+    "value": 13797.12
+  },
+  {
+    "date": "Apr 2024",
+    "value": 13433.46
+  },
+  {
+    "date": "May 2024",
+    "value": 13285.65
+  },
+  {
+    "date": "Jun 2024",
+    "value": 15706.92
+  },
+  {
+    "date": "Jul 2024",
+    "value": 16778.97
+  },
+  {
+    "date": "Aug 2024",
+    "value": 13633.49
+  },
+  {
+    "date": "Sep 2024",
+    "value": 15897.65
+  },
+  {
+    "date": "Oct 2024",
+    "value": 16680.91
+  },
+  {
+    "date": "Nov 2024",
+    "value": 18191.5
+  },
+  {
+    "date": "Dec 2024",
+    "value": 19192.99
+  },
+  {
+    "date": "Jan 2025",
+    "value": 15424.71
+  },
+  {
+    "date": "Feb 2025",
+    "value": 14004.17
+  },
+  {
+    "date": "Mar 2025",
+    "value": 12274.75
+  },
+  {
+    "date": "Apr 2025",
+    "value": 14823.31
+  },
+  {
+    "date": "May 2025",
+    "value": 16598.63
+  },
+  {
+    "date": "Jun 2025",
+    "value": 16610.08
+  },
+  {
+    "date": "Jul 2025",
+    "value": 15661.05
+  },
+  {
+    "date": "Aug 2025",
+    "value": 16781.05
+  },
+  {
+    "date": "Sep 2025",
+    "value": 20567.12
+  },
+  {
+    "date": "Oct 2025",
+    "value": 22699.48
+  },
+  {
+    "date": "Nov 2025",
+    "value": 23014.84
+  },
+  {
+    "date": "Dec 2025",
+    "value": 21811.12
+  }
+]

@@ -2,17 +2,21 @@
 
 import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import { InteractiveTimeline } from '@/components/marketing/InteractiveTimeline';
-import { SynchronizedTradeFeed } from '@/components/marketing/trade-feed/SynchronizedTradeFeed';
+import { EducationCenter } from '@/components/marketing/EducationCenter';
 import { StatisticsPanel } from '@/components/marketing/StatisticsPanel';
+import { PricingSection } from '@/components/marketing/PricingSection';
+import { FamilySection } from '@/components/marketing/FamilySection';
+import { ReferralPromoSection } from '@/components/marketing/ReferralPromoSection';
+import { TrustBadges } from '@/components/marketing/TrustBadges';
+import { LegalFooter } from '@/components/marketing/LegalFooter';
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
-import { ArrowRight, TrendingUp } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
-import { CompoundingCalculator } from '@/components/marketing/CompoundingCalculator';
 
 export default function SinglePageMarketing() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { login, authenticated, ready } = usePrivy();
     const router = useRouter();
     const [curveData, setCurveData] = useState([]);
@@ -45,21 +49,21 @@ export default function SinglePageMarketing() {
             <MarketingHeader />
 
             {/* Main Interactive Stage */}
-            <section className="relative px-6 py-12 lg:py-24 flex flex-col items-center justify-center min-h-[90vh] max-w-7xl mx-auto w-full">
+            <section className="relative px-6 py-4 lg:py-8 flex flex-col items-center justify-center min-h-[90vh] max-w-7xl mx-auto w-full">
 
                 {/* Background Glows */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-tm-purple/10 blur-[120px] rounded-full pointer-events-none"></div>
 
                 {/* Hero Headers */}
-                <div className="text-center z-10 mb-12">
-                    <h1 className="text-5xl md:text-7xl font-bold text-white tracking-tight mb-6">
-                        {t('hero.title').split(' ').map((word, i, arr) => (
+                <div className="text-center z-10 mb-8">
+                    <h1 className="text-3xl md:text-5xl font-bold text-white tracking-tight mb-4">
+                        {t('hero.title').split(' ').map((word: string, i: number, arr: string[]) => (
                             i >= arr.length - 2 ?
                                 <span key={i} className="text-transparent bg-clip-text bg-gradient-to-r from-tm-purple to-[#9d63f5]"> {word} </span>
                                 : <span key={i}>{word} </span>
                         ))}
                     </h1>
-                    <p className="text-lg md:text-xl text-tm-muted max-w-2xl mx-auto">
+                    <p className="text-sm md:text-base text-tm-muted max-w-2xl mx-auto">
                         {t('hero.subtitle')}
                     </p>
                 </div>
@@ -71,30 +75,50 @@ export default function SinglePageMarketing() {
                     </div>
                     <div className="lg:col-span-2 flex flex-col gap-8">
                         <InteractiveTimeline data={curveData} />
-                        <SynchronizedTradeFeed data={curveData} />
+
+                        {/* Video Showcase Section */}
+                        <div className="w-full">
+                            <video
+                                key={i18n.language || 'en'}
+                                src={{
+                                    en: '/videos/clip1.mp4',
+                                    es: '/videos/clip2.mp4',
+                                    zh: '/videos/clip3.mp4'
+                                }[i18n.language || 'en'] || '/videos/clip1.mp4'}
+                                className="w-full rounded-xl border border-white/10 shadow-lg object-cover bg-tm-card/50"
+                                controls
+                                playsInline
+                            />
+                        </div>
+
+                        {/* Education Center Dropdown */}
+                        <div className="w-full z-10">
+                            <EducationCenter />
+                        </div>
                     </div>
                 </div>
 
-                {/* Calculator Integration */}
-                <div className="w-full max-w-4xl z-10 mt-24">
-                    <div className="text-center mb-8">
-                        <TrendingUp className="w-10 h-10 text-tm-purple mx-auto mb-4" />
-                        <h2 className="text-3xl font-bold text-white">{t('calculator.title')}</h2>
-                        <p className="text-tm-muted mt-2">The math of 20% annualized growth.</p>
-                    </div>
-                    <CompoundingCalculator />
+                {/* Conversion & Scaling Layouts */}
+                <div className="w-full flex flex-col items-center justify-center mt-20 z-10">
+                    <PricingSection />
+                    <FamilySection />
+                    <ReferralPromoSection />
                 </div>
 
-                {/* Bottom CTA */}
-                <div className="z-10 mt-32 mb-16">
+                {/* Bottom CTA & Trust Section */}
+                <div className="z-10 mt-20 mb-10 w-full flex flex-col items-center">
                     <button
                         onClick={login}
-                        className="btn-primary px-10 py-5 text-xl font-bold flex items-center gap-3 shadow-[0_0_30px_rgba(124,58,237,0.5)] hover:shadow-[0_0_50px_rgba(124,58,237,0.7)] transition-all mx-auto"
+                        className="btn-primary px-10 py-5 text-xl font-bold flex items-center gap-3 shadow-[0_0_30px_rgba(124,58,237,0.5)] hover:shadow-[0_0_50px_rgba(124,58,237,0.7)] hover:scale-[1.02] transition-all mx-auto"
                     >
                         {t('hero.cta')} <ArrowRight className="w-6 h-6" />
                     </button>
+                    <TrustBadges />
                 </div>
             </section>
+
+            {/* Regulatory Disclaimers */}
+            <LegalFooter />
         </main>
     );
 }

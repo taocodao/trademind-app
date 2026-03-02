@@ -34,6 +34,11 @@ export function StatisticsPanel() {
 
     return (
         <div className="w-full flex flex-col gap-6">
+            {/* Legal Disclaimer Label */}
+            <div className="w-full text-center text-[10px] text-tm-muted uppercase tracking-widest font-mono bg-tm-card/30 p-2 rounded-lg border border-white/5 shadow-inner">
+                HYPOTHETICAL BACKTESTED RESULTS — NOT ACTUAL TRADING
+            </div>
+
             <div className="glass-card p-6 border-l-4 border-tm-purple bg-tm-card/60">
                 <h3 className="text-xl font-bold text-white mb-4">Vital Statistics</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -42,8 +47,8 @@ export function StatisticsPanel() {
                         <p className="font-mono text-white text-lg">{BASE_STATS.totalTrades.toLocaleString()}</p>
                     </div>
                     <div>
-                        <p className="text-tm-muted">Average Win Rate</p>
-                        <p className="font-mono text-tm-green text-lg">{BASE_STATS.winRate}%</p>
+                        <p className="text-tm-muted">CAGR</p>
+                        <p className="font-mono text-tm-green text-lg">23.4%</p>
                     </div>
                     <div>
                         <p className="text-tm-muted">Total Net PnL</p>

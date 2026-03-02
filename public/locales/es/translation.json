@@ -1,9 +1,12 @@
 {
     "hero": {
-        "headline": "Convierte Opciones en una Máquina de Capitalización"
+        "title": "Convierte Opciones en una Máquina de Capitalización",
+        "subtitle": "Únete a los traders minoristas más inteligentes que utilizan aprendizaje automático para generar alfa constante.",
+        "cta": "Empieza Gratis"
     },
-    "cta": {
-        "start": "Empieza Gratis → Observador"
+    "nav": {
+        "login": "Acceso",
+        "refer": "Invita a un Amigo"
     },
     "calculator": {
         "title": "Calculadora de Capitalización Interactiva",
@@ -13,10 +16,10 @@
         "cagr": "TCAC"
     },
     "timeline": {
-        "total": "Valor Total de la Cuenta"
-    },
-    "refer": {
-        "title": "Invita a un Amigo"
+        "total": "Valor Total de la Cuenta",
+        "principal": "Principal del Simulador",
+        "verified": "Salida Verificada",
+        "listen": "ESCUCHA LOS DATOS"
     },
     "crash": {
         "filter_active": "Filtro de Caída Activo"

@@ -1,9 +1,12 @@
 {
     "hero": {
-        "headline": "Turn Options Into a Compounding Machine"
+        "title": "Turn Options Into a Compounding Machine",
+        "subtitle": "Join the smartest retail traders using machine learning to generate consistent alpha.",
+        "cta": "Start Free"
     },
-    "cta": {
-        "start": "Start Free → Observer"
+    "nav": {
+        "login": "Login",
+        "refer": "Refer a Friend"
     },
     "calculator": {
         "title": "Interactive Compounding Calculator",
@@ -13,10 +16,10 @@
         "cagr": "CAGR"
     },
     "timeline": {
-        "total": "Total Account Value"
-    },
-    "refer": {
-        "title": "Refer a Friend"
+        "total": "Total Account Value",
+        "principal": "Simulator Principal",
+        "verified": "Verified Output",
+        "listen": "LISTEN TO THE DATA"
     },
     "crash": {
         "filter_active": "Crash Filter Active"

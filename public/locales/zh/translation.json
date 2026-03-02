@@ -1,9 +1,12 @@
 {
     "hero": {
-        "headline": "将期权变为复利增长引擎"
+        "title": "将期权变为复利增长引擎",
+        "subtitle": "加入最聪明的散户交易者群体，利用机器学习产生稳定的超额收益。",
+        "cta": "免费开始"
     },
-    "cta": {
-        "start": "免费开始 → 观察者"
+    "nav": {
+        "login": "登录",
+        "refer": "推荐朋友"
     },
     "calculator": {
         "title": "交互式复利计算器",
@@ -13,10 +16,10 @@
         "cagr": "年复合增长率"
     },
     "timeline": {
-        "total": "账户总价值"
-    },
-    "refer": {
-        "title": "推荐朋友"
+        "total": "账户总价值",
+        "principal": "模拟本金",
+        "verified": "验证输出",
+        "listen": "聆听数据"
     },
     "crash": {
         "filter_active": "暴跌保护开启"

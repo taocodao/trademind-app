@@ -12,10 +12,8 @@ export function MarketingHeader() {
 
     const activeLanguage = i18n.language ? i18n.language.split('-')[0] : 'en';
 
-    const toggleLanguage = () => {
-        if (activeLanguage === 'en') i18n.changeLanguage('es');
-        else if (activeLanguage === 'es') i18n.changeLanguage('zh');
-        else i18n.changeLanguage('en');
+    const setLang = (lang: string) => {
+        i18n.changeLanguage(lang);
     };
 
     return (
@@ -28,15 +26,26 @@ export function MarketingHeader() {
                 </Link>
 
                 {/* Center: Language Selector */}
-                <button
-                    onClick={toggleLanguage}
-                    className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 px-3 py-1.5 rounded-full bg-tm-card border border-tm-border text-tm-muted hover:text-white transition-colors text-sm font-medium"
-                >
-                    <Languages className="w-4 h-4 text-tm-purple" />
-                    {activeLanguage === 'en' && 'English'}
-                    {activeLanguage === 'es' && 'Español'}
-                    {activeLanguage === 'zh' && '中文'}
-                </button>
+                <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 p-1 rounded-full bg-tm-card border border-tm-border/50 shadow-inner">
+                    <button
+                        onClick={() => setLang('en')}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${activeLanguage === 'en' ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
+                    >
+                        EN
+                    </button>
+                    <button
+                        onClick={() => setLang('es')}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${activeLanguage === 'es' ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
+                    >
+                        ES
+                    </button>
+                    <button
+                        onClick={() => setLang('zh')}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${activeLanguage === 'zh' ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
+                    >
+                        中文
+                    </button>
+                </div>
 
                 {/* Right: Login */}
                 {!authenticated ? (

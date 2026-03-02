@@ -1,0 +1,24 @@
+{
+    "hero": {
+        "headline": "将期权变为复利增长引擎"
+    },
+    "cta": {
+        "start": "免费开始 → 观察者"
+    },
+    "calculator": {
+        "title": "交互式复利计算器",
+        "starting_capital": "初始资金",
+        "monthly_additions": "每月追加",
+        "time_horizon": "投资年限",
+        "cagr": "年复合增长率"
+    },
+    "timeline": {
+        "total": "账户总价值"
+    },
+    "refer": {
+        "title": "推荐朋友"
+    },
+    "crash": {
+        "filter_active": "暴跌保护开启"
+    }
+}

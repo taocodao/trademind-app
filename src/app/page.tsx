@@ -3,12 +3,13 @@
 import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import { InteractiveTimeline } from '@/components/marketing/InteractiveTimeline';
 import { SynchronizedTradeFeed } from '@/components/marketing/trade-feed/SynchronizedTradeFeed';
+import { StatisticsPanel } from '@/components/marketing/StatisticsPanel';
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import { ArrowRight, TrendingUp } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
-import CompoundingCalculator from '@/components/ui/CompoundingCalculator';
+import { CompoundingCalculator } from '@/components/marketing/CompoundingCalculator';
 
 export default function SinglePageMarketing() {
     const { t } = useTranslation();
@@ -64,9 +65,14 @@ export default function SinglePageMarketing() {
                 </div>
 
                 {/* Interactive Backtest Player */}
-                <div className="w-full max-w-4xl z-10 grid grid-cols-1 gap-8">
-                    <InteractiveTimeline data={curveData} />
-                    <SynchronizedTradeFeed data={curveData} />
+                <div className="w-full max-w-7xl z-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-1">
+                        <StatisticsPanel />
+                    </div>
+                    <div className="lg:col-span-2 flex flex-col gap-8">
+                        <InteractiveTimeline data={curveData} />
+                        <SynchronizedTradeFeed data={curveData} />
+                    </div>
                 </div>
 
                 {/* Calculator Integration */}

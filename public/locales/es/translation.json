@@ -1,0 +1,24 @@
+{
+    "hero": {
+        "headline": "Convierte Opciones en una Máquina de Capitalización"
+    },
+    "cta": {
+        "start": "Empieza Gratis → Observador"
+    },
+    "calculator": {
+        "title": "Calculadora de Capitalización Interactiva",
+        "starting_capital": "Capital Inicial",
+        "monthly_additions": "Adición Mensual",
+        "time_horizon": "Horizonte de Tiempo",
+        "cagr": "TCAC"
+    },
+    "timeline": {
+        "total": "Valor Total de la Cuenta"
+    },
+    "refer": {
+        "title": "Invita a un Amigo"
+    },
+    "crash": {
+        "filter_active": "Filtro de Caída Activo"
+    }
+}

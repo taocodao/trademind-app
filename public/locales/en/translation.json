@@ -1,0 +1,24 @@
+{
+    "hero": {
+        "headline": "Turn Options Into a Compounding Machine"
+    },
+    "cta": {
+        "start": "Start Free → Observer"
+    },
+    "calculator": {
+        "title": "Interactive Compounding Calculator",
+        "starting_capital": "Starting Capital",
+        "monthly_additions": "Monthly Additions",
+        "time_horizon": "Time Horizon",
+        "cagr": "CAGR"
+    },
+    "timeline": {
+        "total": "Total Account Value"
+    },
+    "refer": {
+        "title": "Refer a Friend"
+    },
+    "crash": {
+        "filter_active": "Crash Filter Active"
+    }
+}

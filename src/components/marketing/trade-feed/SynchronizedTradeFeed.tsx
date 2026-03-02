@@ -16,12 +16,20 @@ interface TradeData {
 }
 
 export function SynchronizedTradeFeed({ data }: { data: any[] }) {
-    const { progress } = useNarration();
+    const { progress, initialInvestment } = useNarration();
     const { t } = useTranslation();
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-    // Only trades that have occurred so far
-    const visibleData = data.filter(d => d.progress <= progress && d.trade != null);
+    const multiplier = initialInvestment / 5000.0;
+
+    // Only trades that have occurred so far (ensure trade is fully populated)
+    const visibleData = data.filter(d =>
+        d.progress <= progress &&
+        d.trade != null &&
+        typeof d.trade === 'object' &&
+        'pnl' in d.trade &&
+        'pnlPercent' in d.trade
+    );
 
     // Auto-scroll to bottom of feed smoothly when new trades are "recorded" into history
     useEffect(() => {
@@ -51,6 +59,7 @@ export function SynchronizedTradeFeed({ data }: { data: any[] }) {
                 {visibleData.map((point, i) => {
                     const trade: TradeData = point.trade;
                     const isWin = trade.pnl > 0;
+                    const scaledPnl = trade.pnl * multiplier;
 
                     return (
                         <div key={i} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-tm-card/60 border border-white/5 rounded-xl gap-4 hover:border-white/10 transition-colors">
@@ -74,7 +83,7 @@ export function SynchronizedTradeFeed({ data }: { data: any[] }) {
 
                             <div className="flex flex-col items-end shrink-0 pl-16 md:pl-0">
                                 <span className={`font-mono font-bold text-lg ${isWin ? 'text-tm-green' : 'text-red-500'}`}>
-                                    {isWin ? '+' : ''}${trade.pnl.toFixed(2)}
+                                    {isWin ? '+' : ''}${Math.abs(scaledPnl).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                                 <span className={`text-xs font-mono px-2 py-0.5 rounded-full mt-1 ${isWin ? 'bg-tm-green/10 text-tm-green' : 'bg-red-500/10 text-red-500'}`}>
                                     {trade.pnlPercent.toFixed(1)}%

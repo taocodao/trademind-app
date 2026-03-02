@@ -5,7 +5,6 @@ import { InteractiveTimeline } from '@/components/marketing/InteractiveTimeline'
 import { EducationCenter } from '@/components/marketing/EducationCenter';
 import { StatisticsPanel } from '@/components/marketing/StatisticsPanel';
 import { PricingSection } from '@/components/marketing/PricingSection';
-import { FamilySection } from '@/components/marketing/FamilySection';
 import { ReferralPromoSection } from '@/components/marketing/ReferralPromoSection';
 import { TrustBadges } from '@/components/marketing/TrustBadges';
 import { LegalFooter } from '@/components/marketing/LegalFooter';
@@ -101,7 +100,6 @@ export default function SinglePageMarketing() {
                 {/* Conversion & Scaling Layouts */}
                 <div className="w-full flex flex-col items-center justify-center mt-20 z-10">
                     <PricingSection />
-                    <FamilySection />
                     <ReferralPromoSection />
                 </div>
 

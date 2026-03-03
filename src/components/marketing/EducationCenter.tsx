@@ -25,9 +25,9 @@ const DOCUMENTS = [
         id: 'analysis',
         title: 'Strategy Deep-Dive & Architecture',
         description: 'Read the foundational document detailing the machine-learning VIX predictor, IV-crush mitigation, and our 3-layer unified trading logic.',
-        url: '/files/turbobounce_strategy_report.pdf',
+        url: '/files/turbobounce_strategy_report.md',
         icon: <BookOpen className="w-5 h-5 text-tm-blue" />,
-        type: 'Research PDF'
+        type: 'Research Report'
     }
 ];
 

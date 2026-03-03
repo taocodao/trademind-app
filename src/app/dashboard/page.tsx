@@ -378,7 +378,7 @@ function DashboardContent() {
         if (liveTqqq.length > 0) {
             setSignals(prev => {
                 const existingIds = new Set(prev.map((p: any) => p.id));
-                const newSigs = liveTqqq.filter((s: any) => !existingIds.has(s.id)) as TQQQSignal[];
+                const newSigs = liveTqqq.filter((s: any) => !existingIds.has(s.id)) as unknown as TQQQSignal[];
                 if (newSigs.length === 0) return prev;
                 return [...newSigs, ...prev];
             });

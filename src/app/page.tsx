@@ -68,11 +68,11 @@ export default function SinglePageMarketing() {
                 </div>
 
                 {/* Interactive Backtest Player */}
-                <div className="w-full max-w-7xl z-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-1">
+                <div className="w-full max-w-5xl z-10 flex flex-col gap-8 mx-auto">
+                    <div className="w-full">
                         <StatisticsPanel />
                     </div>
-                    <div className="lg:col-span-2 flex flex-col gap-8">
+                    <div className="w-full flex flex-col gap-8">
                         <InteractiveTimeline data={curveData} />
 
                         {/* Video Showcase Section */}

@@ -54,17 +54,34 @@ export default function SinglePageMarketing() {
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-tm-purple/10 blur-[120px] rounded-full pointer-events-none"></div>
 
                 {/* Hero Headers */}
-                <div className="text-center z-10 mb-8">
-                    <h1 className="text-3xl md:text-5xl font-bold text-white tracking-tight mb-4">
+                <div className="text-center z-10 mb-12 transform transition-all duration-1000 hover:scale-[1.01]">
+                    <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight mb-4">
                         {t('hero.title').split(' ').map((word: string, i: number, arr: string[]) => (
                             i >= arr.length - 2 ?
-                                <span key={i} className="text-transparent bg-clip-text bg-gradient-to-r from-tm-purple to-[#9d63f5]"> {word} </span>
+                                <span key={i} className="text-transparent bg-clip-text bg-gradient-to-r from-tm-purple to-[#9d63f5] animate-pulse"> {word} </span>
                                 : <span key={i}>{word} </span>
                         ))}
                     </h1>
-                    <p className="text-sm md:text-base text-tm-muted max-w-2xl mx-auto">
+                    <p className="text-sm md:text-lg text-tm-muted max-w-2xl mx-auto">
                         {t('hero.subtitle')}
                     </p>
+                </div>
+
+                {/* Video Showcase Section */}
+                <div className="w-full max-w-4xl z-10 mb-16 mx-auto group">
+                    <div className="relative rounded-2xl p-1 bg-gradient-to-b from-tm-purple/20 to-transparent shadow-[0_0_50px_rgba(124,58,237,0.15)] group-hover:shadow-[0_0_70px_rgba(124,58,237,0.3)] transition-all duration-500">
+                        <video
+                            key={i18n.language || 'en'}
+                            src={{
+                                en: '/videos/clip1.mp4',
+                                es: '/videos/clip2.mp4',
+                                zh: '/videos/clip3.mp4'
+                            }[i18n.language || 'en'] || '/videos/clip1.mp4'}
+                            className="w-full rounded-xl border border-white/10 object-cover bg-tm-card/80"
+                            controls
+                            playsInline
+                        />
+                    </div>
                 </div>
 
                 {/* Interactive Backtest Player */}
@@ -75,20 +92,6 @@ export default function SinglePageMarketing() {
                     <div className="w-full flex flex-col gap-8">
                         <InteractiveTimeline data={curveData} />
 
-                        {/* Video Showcase Section */}
-                        <div className="w-full">
-                            <video
-                                key={i18n.language || 'en'}
-                                src={{
-                                    en: '/videos/clip1.mp4',
-                                    es: '/videos/clip2.mp4',
-                                    zh: '/videos/clip3.mp4'
-                                }[i18n.language || 'en'] || '/videos/clip1.mp4'}
-                                className="w-full rounded-xl border border-white/10 shadow-lg object-cover bg-tm-card/50"
-                                controls
-                                playsInline
-                            />
-                        </div>
 
                         {/* Education Center Dropdown */}
                         <div className="w-full z-10">

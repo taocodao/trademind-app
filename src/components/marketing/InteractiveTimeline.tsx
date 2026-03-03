@@ -80,6 +80,7 @@ export function InteractiveTimeline({ data }: { data: DataPoint[] }) {
                             dataKey="date"
                             stroke="#334155"
                             tick={{ fill: '#94a3b8', fontSize: 12 }}
+                            tickFormatter={(val) => val.split('-')[0]}
                             minTickGap={30}
                         />
                         <YAxis
@@ -87,7 +88,7 @@ export function InteractiveTimeline({ data }: { data: DataPoint[] }) {
                             tick={{ fill: '#94a3b8', fontSize: 12 }}
                             tickFormatter={(val) => `$${val.toLocaleString()}`}
                             domain={['dataMin - 1000', 'dataMax + 2000']}
-                            hide={false}
+                            hide={true}
                             width={80}
                             orientation="right"
                         />

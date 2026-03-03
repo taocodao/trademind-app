@@ -108,7 +108,8 @@ const CHANNELS = [
     'theta_entry',
     'theta_exit',
     'zebra',
-    'zebra_entry'
+    'zebra_entry',
+    'turbobounce'
 ];
 
 // Risk Limits (Hardcoded safeguards for auto-approve)

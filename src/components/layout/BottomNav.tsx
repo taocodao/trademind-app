@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 
 export function BottomNav() {
     const pathname = usePathname();
-    const { authenticated, ready } = usePrivy();
+    const { authenticated, ready, logout } = usePrivy();
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -22,7 +22,6 @@ export function BottomNav() {
     if (publicRoutes.includes(pathname)) return null;
 
     const navItems = [
-        { name: 'Home', href: '/dashboard', icon: Home },
         { name: 'Signals', href: '/signals', icon: TrendingUp },
         { name: 'Positions', href: '/positions', icon: Activity },
         { name: 'Activity', href: '/activity', icon: Bell },
@@ -47,6 +46,13 @@ export function BottomNav() {
                         </Link>
                     );
                 })}
+                <button
+                    onClick={() => logout()}
+                    className="flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-colors text-tm-red/80 hover:text-tm-red"
+                >
+                    <Home className="w-5 h-5 mb-1" />
+                    <span className="text-[10px] font-medium">Exit</span>
+                </button>
             </div>
         </nav>
     );

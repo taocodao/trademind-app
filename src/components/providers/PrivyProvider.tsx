@@ -13,9 +13,6 @@ export function PrivyProvider({ children }: { children: React.ReactNode }) {
                     logo: "/logo.png",
                 },
                 loginMethods: ["email", "google", "apple"],
-                embeddedWallets: {
-                    createOnLogin: "off",
-                },
             }}
         >
             {children}

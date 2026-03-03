@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { CreditCard, CheckCircle, ArrowRight } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
+const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
+const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
 
 export function SubscriptionManager({ currentTier }: { currentTier: string }) {
     const [loading, setLoading] = useState<string | null>(null);

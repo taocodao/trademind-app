@@ -38,3 +38,10 @@ next-env.d.ts
 
 # Vercel
 .vercel
+
+# Large media files (use Vercel Blob instead)
+*.mp4
+*.mov
+*.webm
+*.avi
+public/videos/

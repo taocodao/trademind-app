@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useCallback, useState, useEffect, ReactNode, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePrivy } from '@privy-io/react-auth';
 import { useSignalSocket } from '@/hooks/useSignalSocket';
 import { SignalNotification, ConnectionStatus } from '@/components/SignalNotification';
 
@@ -127,6 +128,7 @@ interface SignalProviderProps {
 
 export function SignalProvider({ children }: SignalProviderProps) {
     const router = useRouter();
+    const { authenticated } = usePrivy();
     const [isMounted, setIsMounted] = useState(false);
     const [notificationSignal, setNotificationSignal] = useState<Signal | null>(null);
     const [allSignals, setAllSignals] = useState<Signal[]>([]);
@@ -293,17 +295,18 @@ export function SignalProvider({ children }: SignalProviderProps) {
             return [signalWithId, ...prev];
         });
 
-        // Try auto-approve
+        // Try auto-approve for authenticated users
         attemptAutoApprove(signalWithId);
 
-        if (!isAutoApproving) {
+        // Only show notification to authenticated users
+        if (!isAutoApproving && authenticated) {
             setNotificationSignal(signalWithId);
         }
-    }, [attemptAutoApprove, isAutoApproving]);
+    }, [attemptAutoApprove, isAutoApproving, authenticated]);
 
-    // Initial fetch of existing signals
+    // Initial fetch of existing signals — only for authenticated users
     useEffect(() => {
-        if (!isMounted) return;
+        if (!isMounted || !authenticated) return;
         const fetchExistingSignals = async () => {
             try {
                 const response = await fetch('/api/signals');
@@ -344,7 +347,8 @@ export function SignalProvider({ children }: SignalProviderProps) {
         'theta_entry', 'theta_puts', 'theta_exit',
         'calendar_spread', 'diagonal_spread',
         'zebra', 'zebra_entry',
-        'dvo_entry', 'dvo_exit'
+        'dvo_entry', 'dvo_exit',
+        'turbobounce'
     ]).current;
 
     const { isConnected, lastSignal } = useSignalSocket({
@@ -356,7 +360,7 @@ export function SignalProvider({ children }: SignalProviderProps) {
     });
 
     const handleCloseNotification = useCallback(() => setNotificationSignal(null), []);
-    const handleViewSignal = useCallback(() => router.push('/signals'), [router]);
+    const handleViewSignal = useCallback(() => router.push('/dashboard'), [router]);
     const removeSignal = useCallback((id: string) => setAllSignals(prev => prev.filter(s => s.id !== id)), []);
     const updateSignalStatus = useCallback((id: string, status: string) => setAllSignals(prev => prev.map(s => s.id === id ? { ...s, status } : s)), []);
     const clearSignals = useCallback(() => setAllSignals([]), []);

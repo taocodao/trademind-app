@@ -129,5 +129,44 @@
         "brokerage": "Los servicios de corretaje son proporcionados por corredores de bolsa externos. TurboBounce nunca retiene los fondos de los clientes ni ejecuta operaciones fuera de las configuraciones API del corredor autorizadas por el usuario.",
         "rights": "TurboBounce LLC. Todos los derechos reservados.",
         "tagline": "Ingeniería Automatizada de Opciones."
+    },
+    "dashboard": {
+        "nav": {
+            "home": "Inicio",
+            "signals": "Señales",
+            "positions": "Posiciones",
+            "activity": "Actividad",
+            "settings": "Ajustes",
+            "exit": "Salir"
+        },
+        "welcome": "Bienvenido de nuevo",
+        "trader": "Trader",
+        "net_liq": "Valor Liquidativo Neto",
+        "today": "hoy",
+        "progress": {
+            "title": "Tu Progreso",
+            "leaderboard": "Clasificación ›",
+            "streak": "Racha Semanal",
+            "win_rate": "Tasa de Victoria",
+            "rank": "Rango",
+            "total_profit": "Beneficio Total"
+        },
+        "auto_approve": {
+            "title": "Aprobar Autos Operaciones",
+            "enabled": "Las señales se ejecutan automáticamente en Tastytrade",
+            "disabled": "Aprueba manualmente cada señal antes de la ejecución"
+        },
+        "signals": {
+            "title": "Señales de Trading",
+            "pending": "Pendientes",
+            "action_required": "ACCIÓN REQUERIDA",
+            "caught_up": "¡Todo al día!",
+            "no_pending": "No hay señales pendientes",
+            "multi_ticker": "TurboBounce Multi-Activo"
+        },
+        "toast": {
+            "retry": "Reintentar",
+            "loading": "Cargando…"
+        }
     }
 }

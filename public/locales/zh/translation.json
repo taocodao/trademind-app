@@ -129,5 +129,44 @@
         "brokerage": "经纪服务由第三方经纪交易商提供。TurboBounce 绝不会持有客户资金，也不会在用户授权的经纪 API 配置之外执行交易。",
         "rights": "TurboBounce LLC。保留所有权利。",
         "tagline": "自动化期权工程。"
+    },
+    "dashboard": {
+        "nav": {
+            "home": "主页",
+            "signals": "信号",
+            "positions": "仓位",
+            "activity": "活动",
+            "settings": "设置",
+            "exit": "退出"
+        },
+        "welcome": "欢迎回来",
+        "trader": "交易员",
+        "net_liq": "净资产价值",
+        "today": "今天",
+        "progress": {
+            "title": "您的进度",
+            "leaderboard": "排行榜 ›",
+            "streak": "连胜周数",
+            "win_rate": "胜率",
+            "rank": "排名",
+            "total_profit": "总利润"
+        },
+        "auto_approve": {
+            "title": "自动批准交易",
+            "enabled": "信号在 Tastytrade 上自动执行",
+            "disabled": "执行前手动批准每个信号"
+        },
+        "signals": {
+            "title": "交易信号",
+            "pending": "待处理",
+            "action_required": "需要操作",
+            "caught_up": "全部处理完毕！",
+            "no_pending": "没有待处理的信号",
+            "multi_ticker": "TurboBounce 多代码"
+        },
+        "toast": {
+            "retry": "重试",
+            "loading": "加载中…"
+        }
     }
 }

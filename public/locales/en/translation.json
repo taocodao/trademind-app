@@ -129,5 +129,44 @@
         "brokerage": "Brokerage services are provided by third-party broker-dealers. TurboBounce never holds customer funds or executes trades outside of user-authorized broker API configurations.",
         "rights": "TurboBounce LLC. All rights reserved.",
         "tagline": "Automated Options Engineering."
+    },
+    "dashboard": {
+        "nav": {
+            "home": "Home",
+            "signals": "Signals",
+            "positions": "Positions",
+            "activity": "Activity",
+            "settings": "Settings",
+            "exit": "Exit"
+        },
+        "welcome": "Welcome back",
+        "trader": "Trader",
+        "net_liq": "Net Liquidating Value",
+        "today": "today",
+        "progress": {
+            "title": "Your Progress",
+            "leaderboard": "Leaderboard ›",
+            "streak": "Week Streak",
+            "win_rate": "Win Rate",
+            "rank": "Rank",
+            "total_profit": "Total Profit"
+        },
+        "auto_approve": {
+            "title": "Auto-Approve Trades",
+            "enabled": "Signals execute automatically on Tastytrade",
+            "disabled": "Manually approve each signal before execution"
+        },
+        "signals": {
+            "title": "Trade Signals",
+            "pending": "Pending",
+            "action_required": "ACTION REQUIRED",
+            "caught_up": "All caught up!",
+            "no_pending": "No pending signals",
+            "multi_ticker": "TurboBounce Multi-Ticker"
+        },
+        "toast": {
+            "retry": "Retry",
+            "loading": "Loading…"
+        }
     }
 }

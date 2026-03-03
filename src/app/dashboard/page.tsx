@@ -28,6 +28,7 @@ import { TQQQStatusBanner } from '@/components/dashboard/TQQQStatusBanner';
 import { SignalCard, type TQQQSignal } from '@/components/dashboard/SignalCard';
 import { TurboBounceSignalCard, type TurboBounceSignal } from '@/components/dashboard/TurboBounceSignalCard';
 import { Suspense } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -54,6 +55,7 @@ function TopNav({ onLogout, onRefresh, loading }: {
     onRefresh: () => void;
     loading: boolean;
 }) {
+    const { t } = useTranslation();
     return (
         <nav className="sticky top-0 z-50 bg-tm-surface/95 backdrop-blur-md border-b border-white/5 hidden md:block">
             <div className="flex items-center justify-between px-4 py-2">
@@ -68,23 +70,23 @@ function TopNav({ onLogout, onRefresh, loading }: {
                     {/* Home — active */}
                     <span className="flex flex-col items-center px-3 py-1 text-tm-purple">
                         <Home className="w-4 h-4" />
-                        <span className="text-[9px] mt-0.5">Home</span>
+                        <span className="text-[9px] mt-0.5">{t('dashboard.nav.home')}</span>
                     </span>
                     <Link href="/signals" className="flex flex-col items-center px-3 py-1 text-tm-muted hover:text-tm-text transition-colors">
                         <TrendingUp className="w-4 h-4" />
-                        <span className="text-[9px] mt-0.5">Signals</span>
+                        <span className="text-[9px] mt-0.5">{t('dashboard.nav.signals')}</span>
                     </Link>
                     <Link href="/positions" className="flex flex-col items-center px-3 py-1 text-tm-muted hover:text-tm-text transition-colors">
                         <Activity className="w-4 h-4" />
-                        <span className="text-[9px] mt-0.5">Positions</span>
+                        <span className="text-[9px] mt-0.5">{t('dashboard.nav.positions')}</span>
                     </Link>
                     <Link href="/activity" className="flex flex-col items-center px-3 py-1 text-tm-muted hover:text-tm-text transition-colors">
                         <Bell className="w-4 h-4" />
-                        <span className="text-[9px] mt-0.5">Activity</span>
+                        <span className="text-[9px] mt-0.5">{t('dashboard.nav.activity')}</span>
                     </Link>
                     <Link href="/settings" className="flex flex-col items-center px-3 py-1 text-tm-muted hover:text-tm-text transition-colors">
                         <Settings className="w-4 h-4" />
-                        <span className="text-[9px] mt-0.5">Settings</span>
+                        <span className="text-[9px] mt-0.5">{t('dashboard.nav.settings')}</span>
                     </Link>
                 </div>
 
@@ -114,36 +116,37 @@ function TopNav({ onLogout, onRefresh, loading }: {
 // ─── Progress Card ────────────────────────────────────────────────────────────
 
 function ProgressCard({ stats }: { stats: GamStats }) {
+    const { t } = useTranslation();
     return (
         <div className="glass-card p-4">
             <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                     <Trophy className="w-4 h-4 text-yellow-400" />
-                    <span className="font-semibold text-sm">Your Progress</span>
+                    <span className="font-semibold text-sm">{t('dashboard.progress.title')}</span>
                 </div>
                 <Link href="/leaderboard" className="text-tm-purple text-xs font-semibold">
-                    Leaderboard &rsaquo;
+                    {t('dashboard.progress.leaderboard')}
                 </Link>
             </div>
             <div className="grid grid-cols-3 gap-2 mb-3">
                 <div className="bg-orange-900/30 border border-orange-700/30 rounded-xl p-3 text-center">
                     <Flame className="w-5 h-5 text-orange-400 mx-auto mb-1" />
                     <p className="text-lg font-bold">{stats.streak}</p>
-                    <p className="text-[10px] text-tm-muted">Week Streak</p>
+                    <p className="text-[10px] text-tm-muted">{t('dashboard.progress.streak')}</p>
                 </div>
                 <div className="bg-tm-green/10 border border-tm-green/20 rounded-xl p-3 text-center">
                     <Target className="w-5 h-5 text-tm-green mx-auto mb-1" />
                     <p className="text-lg font-bold text-tm-green">{stats.winRate}%</p>
-                    <p className="text-[10px] text-tm-muted">Win Rate</p>
+                    <p className="text-[10px] text-tm-muted">{t('dashboard.progress.win_rate')}</p>
                 </div>
                 <div className="bg-tm-purple/10 border border-tm-purple/20 rounded-xl p-3 text-center">
                     <Medal className="w-5 h-5 text-tm-purple mx-auto mb-1" />
                     <p className="text-lg font-bold text-tm-purple">{stats.rank ?? '—'}</p>
-                    <p className="text-[10px] text-tm-muted">Rank</p>
+                    <p className="text-[10px] text-tm-muted">{t('dashboard.progress.rank')}</p>
                 </div>
             </div>
             <div className="flex items-center justify-between text-sm border-t border-white/5 pt-2">
-                <span className="text-tm-muted">Total Profit</span>
+                <span className="text-tm-muted">{t('dashboard.progress.total_profit')}</span>
                 <span className={`font-mono font-bold ${stats.totalProfit >= 0 ? 'text-tm-green' : 'text-tm-red'}`}>
                     {stats.totalProfit >= 0 ? '+' : ''}${stats.totalProfit.toFixed(2)}
                 </span>
@@ -158,6 +161,7 @@ function DashboardContent() {
     const { ready, authenticated, logout, user } = usePrivy();
     const router = useRouter();
     const { settings, setAutoApproval } = useSettings();
+    const { t, i18n } = useTranslation();
 
     const [data, setData] = useState<AccountData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -446,11 +450,34 @@ function DashboardContent() {
             <div className="flex-1 px-4 py-3 space-y-3">
 
                 {/* Welcome header */}
-                <div>
-                    <p className="text-tm-muted text-xs">Welcome back</p>
-                    <h1 className="text-base font-bold truncate">
-                        {tastyUsername || user?.email?.address || 'Trader'}
-                    </h1>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="text-tm-muted text-xs">{t('dashboard.welcome')}</p>
+                        <h1 className="text-base font-bold truncate">
+                            {tastyUsername || user?.email?.address || t('dashboard.trader')}
+                        </h1>
+                    </div>
+                    {/* Language Selector */}
+                    <div className="flex items-center gap-1.5 p-1 rounded-full bg-tm-card border border-tm-border/50 shadow-inner">
+                        <button
+                            onClick={() => i18n.changeLanguage('en')}
+                            className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all ${i18n.language?.startsWith('en') ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
+                        >
+                            EN
+                        </button>
+                        <button
+                            onClick={() => i18n.changeLanguage('es')}
+                            className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all ${i18n.language?.startsWith('es') ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
+                        >
+                            ES
+                        </button>
+                        <button
+                            onClick={() => i18n.changeLanguage('zh')}
+                            className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all ${i18n.language?.startsWith('zh') ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
+                        >
+                            中
+                        </button>
+                    </div>
                 </div>
 
                 {/* Toast */}
@@ -473,12 +500,9 @@ function DashboardContent() {
                         <div className="flex-1 min-w-0">
                             <p className="text-tm-red text-xs font-medium truncate">{error}</p>
                         </div>
-                        <button onClick={fetchAccountData} className="text-tm-purple text-xs flex-shrink-0">Retry</button>
+                        <button onClick={fetchAccountData} className="text-tm-purple text-xs flex-shrink-0">{t('dashboard.toast.retry')}</button>
                     </div>
                 )}
-
-                {/* TQQQ Status Banner */}
-                <TQQQStatusBanner />
 
                 {/* Balance Card */}
                 {tastyLinked && (
@@ -486,7 +510,7 @@ function DashboardContent() {
                         <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2 text-tm-muted">
                                 <Wallet className="w-4 h-4" />
-                                <span className="text-xs">Net Liquidating Value</span>
+                                <span className="text-xs">{t('dashboard.net_liq')}</span>
                             </div>
                             {/* Win rate donut */}
                             <div className="relative w-9 h-9">
@@ -499,11 +523,11 @@ function DashboardContent() {
                         </div>
                         <p className="text-2xl font-bold font-mono">
                             {loading && !data
-                                ? <span className="animate-pulse text-tm-muted">Loading…</span>
+                                ? <span className="animate-pulse text-tm-muted">{t('dashboard.toast.loading')}</span>
                                 : `$${(data?.netLiquidatingValue ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                         </p>
                         <p className={`text-sm font-mono font-semibold ${(data?.todayPnL ?? 0) >= 0 ? 'text-tm-green' : 'text-tm-red'}`}>
-                            {(data?.todayPnL ?? 0) >= 0 ? '+' : ''}${(data?.todayPnL ?? 0).toFixed(2)} today
+                            {(data?.todayPnL ?? 0) >= 0 ? '+' : ''}${(data?.todayPnL ?? 0).toFixed(2)} {t('dashboard.today')}
                         </p>
                     </div>
                 )}
@@ -520,11 +544,11 @@ function DashboardContent() {
                         ? <CheckSquare className="w-5 h-5 text-tm-purple flex-shrink-0" />
                         : <Square className="w-5 h-5 text-tm-muted flex-shrink-0" />}
                     <div className="text-left">
-                        <p className="font-semibold text-sm">Auto-Approve Trades</p>
+                        <p className="font-semibold text-sm">{t('dashboard.auto_approve.title')}</p>
                         <p className="text-xs text-tm-muted">
                             {settings.autoApproval
-                                ? 'Signals execute automatically on Tastytrade'
-                                : 'Manually approve each signal before execution'}
+                                ? t('dashboard.auto_approve.enabled')
+                                : t('dashboard.auto_approve.disabled')}
                         </p>
                     </div>
                 </button>
@@ -532,10 +556,10 @@ function DashboardContent() {
                 {/* Trade Signals */}
                 <div className="glass-card p-4">
                     <div className="flex items-center justify-between mb-3">
-                        <h2 className="font-semibold text-sm">Trade Signals</h2>
+                        <h2 className="font-semibold text-sm">{t('dashboard.signals.title')}</h2>
                         {signals.length > 0 && (
                             <span className="text-xs bg-tm-purple/20 text-tm-purple px-2 py-0.5 rounded-full">
-                                {signals.length} pending
+                                {signals.length} {t('dashboard.signals.pending')}
                             </span>
                         )}
                     </div>
@@ -543,14 +567,14 @@ function DashboardContent() {
                     {/* Signals Pending Approval */}
                     <div className="md:col-span-8">
                         <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-xl font-bold font-mono text-tm-purple tracking-tight">ACTION REQUIRED</h2>
+                            <h2 className="text-xl font-bold font-mono text-tm-purple tracking-tight">{t('dashboard.signals.action_required')}</h2>
                             {signals.length > 0 && (
                                 <div className="flex items-center gap-2">
                                     <span className="flex w-2.5 h-2.5 relative">
                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-tm-purple opacity-75"></span>
                                         <span className="relative inline-flex rounded-full w-2.5 h-2.5 bg-tm-purple"></span>
                                     </span>
-                                    <span className="text-xs font-semibold text-tm-purple bg-tm-purple/10 px-2 py-1 rounded-full">{signals.length} Pending</span>
+                                    <span className="text-xs font-semibold text-tm-purple bg-tm-purple/10 px-2 py-1 rounded-full">{signals.length} {t('dashboard.signals.pending')}</span>
                                 </div>
                             )}
                         </div>
@@ -558,8 +582,8 @@ function DashboardContent() {
                         {signals.length === 0 && turboSignals.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-6 gap-2">
                                 <CheckCircle className="w-10 h-10 text-tm-green opacity-60" />
-                                <p className="font-semibold text-sm">All caught up!</p>
-                                <p className="text-xs text-tm-muted">No pending signals</p>
+                                <p className="font-semibold text-sm">{t('dashboard.signals.caught_up')}</p>
+                                <p className="text-xs text-tm-muted">{t('dashboard.signals.no_pending')}</p>
                             </div>
                         ) : (
                             <div className="space-y-3">
@@ -577,7 +601,7 @@ function DashboardContent() {
 
                                 {turboSignals.length > 0 && (
                                     <div className="mt-8">
-                                        <h3 className="text-sm font-bold text-tm-muted mb-3 uppercase tracking-wider pl-1">TurboBounce Multi-Ticker</h3>
+                                        <h3 className="text-sm font-bold text-tm-muted mb-3 uppercase tracking-wider pl-1">{t('dashboard.signals.multi_ticker')}</h3>
                                         <div className="space-y-3">
                                             {turboSignals.map(signal => (
                                                 <TurboBounceSignalCard

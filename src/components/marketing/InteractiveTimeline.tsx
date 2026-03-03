@@ -35,7 +35,7 @@ export function InteractiveTimeline({ data }: { data: DataPoint[] }) {
 
             {/* Top Stat Row */}
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 glass-card p-6">
-                <div className="flex items-center gap-8">
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-6 md:gap-8 w-full">
                     <div>
                         <h2 className="text-tm-muted text-sm font-semibold uppercase tracking-wider">{t('timeline.total')}</h2>
                         <div className="text-4xl font-mono font-bold text-white mt-1">
@@ -44,7 +44,7 @@ export function InteractiveTimeline({ data }: { data: DataPoint[] }) {
                     </div>
 
                     {/* Interactive Simulator Slider */}
-                    <div className="hidden md:flex flex-col gap-1 border-l border-white/10 pl-8">
+                    <div className="flex flex-col gap-2 pt-4 md:pt-0 border-t md:border-t-0 md:border-l border-white/10 md:pl-8 w-full md:w-auto">
                         <label className="text-xs text-tm-muted uppercase tracking-wider font-semibold">{t('timeline.principal')}</label>
                         <div className="flex items-center gap-3">
                             <input

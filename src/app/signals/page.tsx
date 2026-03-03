@@ -66,6 +66,7 @@ export default function SignalsPage() {
     // 1. Pending status only (remove executed/rejected)
     // 2. Not expired (check expires_at from backend)
     const signals = allSignals.filter((s: any) => {
+        console.log('🔍 Filtering signal:', { id: s.id, symbol: s.symbol, status: s.status, expiresAt: s.expiresAt, expires_at: s.expires_at, strategy: s.strategy });
         if (s.status !== 'pending') return false;
 
         // Check expires_at from backend (market close)

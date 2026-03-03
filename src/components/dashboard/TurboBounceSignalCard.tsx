@@ -68,7 +68,7 @@ export function TurboBounceSignalCard({
                         </span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${typeBadgeBg} flex items-center gap-1`}>
                             {renderStrategyIcon()}
-                            {signal.type.replace('_', ' ')}
+                            {signal.type ? signal.type.replace('_', ' ') : 'STRATEGY'}
                         </span>
                     </div>
 

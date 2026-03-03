@@ -72,7 +72,7 @@ export function TurboBounceSignalCard({ signal, onApprove, onSkip, isApproving }
                         </div>
                         <p className="text-sm text-tm-muted flex items-center gap-1">
                             <Activity className="w-3 h-3" />
-                            {signal.type.replace(/_/g, ' ')}
+                            {signal.type ? signal.type.replace(/_/g, ' ') : 'Strategy Signal'}
                         </p>
                     </div>
                 </div>

@@ -42,6 +42,7 @@ export async function GET(request: Request) {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
                     'Accept': 'application/json',
+                    'User-Agent': 'trademind/1.0',
                 }
             });
         };
@@ -51,15 +52,23 @@ export async function GET(request: Request) {
         if (response.status === 401 && tokens.refreshToken) {
             try {
                 const newTokens = await refreshAccessToken(tokens.refreshToken);
+                console.log('[Orders API] Refresh Token Response Keys:', Object.keys(newTokens));
+
+                const newAccess = newTokens.access_token || (newTokens as any).session_token || (newTokens as any)['session-token'];
+                if (!newAccess) {
+                    throw new Error(`Parse failed: no access_token in refresh response: ${JSON.stringify(newTokens).substring(0, 100)}`);
+                }
+
                 await storeTastytradeTokens(userId, {
                     ...tokens,
-                    accessToken: newTokens.access_token,
+                    accessToken: newAccess,
                     refreshToken: newTokens.refresh_token || tokens.refreshToken,
                     expiresAt: Date.now() + (newTokens.expires_in * 1000),
                 });
-                response = await fetchOrders(newTokens.access_token);
-            } catch (err) {
-                return NextResponse.json({ error: 'Session expired' }, { status: 401 });
+                response = await fetchOrders(newAccess);
+            } catch (err: any) {
+                console.error('[Orders API] Token refresh process failed:', err);
+                return NextResponse.json({ error: 'Session expired', details: err.message }, { status: 401 });
             }
         }
 

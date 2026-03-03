@@ -17,18 +17,19 @@ export function BottomNav() {
         setMounted(true);
     }, []);
 
-    if (!mounted || !ready || !authenticated) return null;
-
-    // Do not show on public marketing pages
-    const publicRoutes = ['/', '/how-it-works', '/results', '/refer', '/family'];
-    if (publicRoutes.includes(pathname)) return null;
-
+    // useMemo MUST be called before any early returns (Rules of Hooks)
     const navItems = useMemo(() => [
         { name: t('dashboard.nav.signals'), href: '/signals', icon: TrendingUp },
         { name: t('dashboard.nav.positions'), href: '/positions', icon: Activity },
         { name: t('dashboard.nav.activity'), href: '/activity', icon: Bell },
         { name: t('dashboard.nav.settings'), href: '/settings', icon: Settings },
     ], [t]);
+
+    if (!mounted || !ready || !authenticated) return null;
+
+    // Do not show on public marketing pages
+    const publicRoutes = ['/', '/how-it-works', '/results', '/refer', '/family'];
+    if (publicRoutes.includes(pathname)) return null;
 
     return (
         <nav className="fixed bottom-0 left-0 right-0 z-50 bg-tm-surface/90 backdrop-blur-md border-t border-tm-border pb-safe md:hidden">

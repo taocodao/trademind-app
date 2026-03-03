@@ -84,7 +84,7 @@ export function TurboBounceSignalCard({
                 <div className={`flex flex-col items-end`}>
                     <span className={`text-lg font-bold ${scoreColor} flex items-center gap-1`}>
                         <ScoreIcon className="w-4 h-4" />
-                        {signal.total_score.toFixed(0)}
+                        {signal.total_score?.toFixed(0) || 'N/A'}
                     </span>
                     <span className="text-[9px] uppercase text-tm-muted tracking-wide mt-[-2px]">Score</span>
                 </div>
@@ -100,13 +100,13 @@ export function TurboBounceSignalCard({
                 <div className="bg-white/5 border border-white/10 rounded-lg px-3 py-2">
                     <p className="text-[10px] text-tm-muted uppercase tracking-wide">RSI-2</p>
                     <p className={`font-mono font-bold ${isBullish ? 'text-tm-green' : 'text-tm-red'}`}>
-                        {signal.rsi_2.toFixed(1)}
+                        {signal.rsi_2?.toFixed(1) || 'N/A'}
                     </p>
                 </div>
                 <div className="bg-white/5 border border-white/10 rounded-lg px-3 py-2">
                     <p className="text-[10px] text-tm-muted uppercase tracking-wide">IV Rank</p>
                     <p className="font-mono font-bold text-amber-400">
-                        {signal.iv_rank.toFixed(1)}%
+                        {signal.iv_rank?.toFixed(1) || 'N/A'}%
                     </p>
                 </div>
                 <div className="bg-white/5 border border-white/10 rounded-lg px-3 py-2">

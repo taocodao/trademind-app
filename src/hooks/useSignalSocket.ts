@@ -39,6 +39,7 @@ function normalizeSignal(raw: Record<string, unknown>): Signal {
     const strategy = (raw.strategy as string) || (strategyType.includes('PUT') ? 'dvo' : '');
 
     return {
+        ...raw, // keep strategy-specific fields
         id: (raw.id as string) || `signal_${Date.now()}`,
         symbol: (raw.symbol as string) || '',
         strategy: strategy,

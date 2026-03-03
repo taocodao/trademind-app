@@ -21,6 +21,7 @@ import { ThetaSignalCard, isThetaSignal } from "@/components/signals/ThetaSignal
 import { CalendarSignalCard, isCalendarSignal } from "@/components/signals/CalendarSignalCard";
 import { ZebraSignalCard, isZebraSignal } from "@/components/zebra/ZebraSignalCard";
 import { DVOSignalCard, isDVOSignal } from "@/components/dvo/DVOSignalCard";
+import { TurboBounceSignalCard, isTurboBounceSignal } from "@/components/signals/TurboBounceSignalCard";
 
 interface Signal {
     id: string;
@@ -41,6 +42,16 @@ interface Signal {
     receivedAt?: number;
     createdAt?: string;
     submittedAt?: string;
+    // TurboBounce specific
+    type?: string;
+    pool?: string;
+    scanner_rank?: number;
+    total_score?: number;
+    rsi_2?: number;
+    iv_rank?: number;
+    target_anchor_dte?: number;
+    target_hedge_dte?: number;
+    target_delta?: number;
 }
 
 export default function SignalsPage() {
@@ -212,6 +223,14 @@ export default function SignalsPage() {
                         />
                     ) : isCalendarSignal(signal) ? (
                         <CalendarSignalCard
+                            key={signal.id}
+                            signal={signal as any}
+                            onApprove={() => handleApproveClick(signal)}
+                            onSkip={() => handleSkip(signal.id)}
+                            isApproving={approving === signal.id}
+                        />
+                    ) : isTurboBounceSignal(signal) ? (
+                        <TurboBounceSignalCard
                             key={signal.id}
                             signal={signal as any}
                             onApprove={() => handleApproveClick(signal)}

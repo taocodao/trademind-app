@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { useSignalContext } from '@/components/providers/SignalProvider';
 import { TastytradeLink } from '@/components/TastytradeLink';
 import { TQQQStatusBanner } from '@/components/dashboard/TQQQStatusBanner';
 import { SignalCard, type TQQQSignal } from '@/components/dashboard/SignalCard';
@@ -161,6 +162,7 @@ function DashboardContent() {
     const { ready, authenticated, logout, user } = usePrivy();
     const router = useRouter();
     const { settings, setAutoApproval } = useSettings();
+    const { allSignals } = useSignalContext();
     const { t, i18n } = useTranslation();
 
     const [data, setData] = useState<AccountData | null>(null);
@@ -358,6 +360,40 @@ function DashboardContent() {
             // silently ignore
         }
     }, [settings, tastyLinked]);
+
+    // ── Merge live WebSocket signals ──
+    useEffect(() => {
+        if (!allSignals || allSignals.length === 0) return;
+
+        // Separate live signals by type
+        const liveTqqq = allSignals.filter(s => s.strategy === 'tqqq' || s.strategy === 'diagonal');
+        const liveTurbo = allSignals.filter(s =>
+            s.strategy === 'turbobounce' ||
+            (s as any).pool === 'MULTI_TICKER' ||
+            (s as any).type === 'DIAGONAL' ||
+            (s as any).type === 'CREDIT_SPREAD'
+        );
+
+        // Merge into TQQQ signals
+        if (liveTqqq.length > 0) {
+            setSignals(prev => {
+                const existingIds = new Set(prev.map((p: any) => p.id));
+                const newSigs = liveTqqq.filter((s: any) => !existingIds.has(s.id)) as TQQQSignal[];
+                if (newSigs.length === 0) return prev;
+                return [...newSigs, ...prev];
+            });
+        }
+
+        // Merge into TurboBounce signals
+        if (liveTurbo.length > 0) {
+            setTurboSignals(prev => {
+                const existingIds = new Set(prev.map((p: any) => p.id));
+                const newSigs = liveTurbo.filter((s: any) => !existingIds.has(s.id)) as unknown as TurboBounceSignal[];
+                if (newSigs.length === 0) return prev;
+                return [...newSigs, ...prev];
+            });
+        }
+    }, [allSignals]);
 
     const showToast = (msg: string, ok: boolean) => {
         setToast({ msg, ok });

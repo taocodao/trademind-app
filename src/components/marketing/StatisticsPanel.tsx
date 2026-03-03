@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNarration } from './NarrationContext';
 
 const BASE_STATS = {
@@ -20,6 +21,7 @@ const BASE_YEARLY = [
 ];
 
 export function StatisticsPanel() {
+    const { t } = useTranslation();
     const { initialInvestment } = useNarration();
     const multiplier = initialInvestment / 5000.0;
 
@@ -36,26 +38,26 @@ export function StatisticsPanel() {
         <div className="w-full flex flex-col gap-6">
             {/* Legal Disclaimer Label */}
             <div className="w-full text-center text-[10px] text-tm-muted uppercase tracking-widest font-mono bg-tm-card/30 p-2 rounded-lg border border-white/5 shadow-inner">
-                HYPOTHETICAL BACKTESTED RESULTS — NOT ACTUAL TRADING
+                {t('timeline.disclaimer')}
             </div>
 
             <div className="glass-card p-6 border-l-4 border-tm-purple bg-tm-card/60">
-                <h3 className="text-xl font-bold text-white mb-4">Vital Statistics</h3>
+                <h3 className="text-xl font-bold text-white mb-4">{t('stats.title')}</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                        <p className="text-tm-muted">Total Trades</p>
+                        <p className="text-tm-muted">{t('stats.total_trades')}</p>
                         <p className="font-mono text-white text-lg">{BASE_STATS.totalTrades.toLocaleString()}</p>
                     </div>
                     <div>
-                        <p className="text-tm-muted">CAGR</p>
+                        <p className="text-tm-muted">{t('stats.cagr')}</p>
                         <p className="font-mono text-tm-green text-lg">23.4%</p>
                     </div>
                     <div>
-                        <p className="text-tm-muted">Total Net PnL</p>
+                        <p className="text-tm-muted">{t('stats.net_pnl')}</p>
                         <p className="font-mono text-tm-green text-lg">{formatSignedCurrency(BASE_STATS.netPnl * multiplier)}</p>
                     </div>
                     <div>
-                        <p className="text-tm-muted">Strategy Distribution</p>
+                        <p className="text-tm-muted">{t('stats.strategy_dist')}</p>
                         <p className="text-white text-xs mt-1">
                             <span className="text-tm-purple font-mono">NAKED_LONG</span> (LEAPS/Puts)<br />
                             <span className="text-tm-purple font-mono border-l border-white/20 pl-2 ml-1">DIAGONAL</span> (PMCCs)<br />
@@ -67,18 +69,18 @@ export function StatisticsPanel() {
 
             <div className="glass-card p-6 overflow-x-auto bg-tm-card/60">
                 <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                    <span>📅</span> Year-by-Year Breakdown
+                    <span>📅</span> {t('stats.breakdown')}
                 </h3>
                 <table className="w-full text-sm text-left align-middle border-collapse table-auto mt-2 text-nowrap">
                     <thead>
                         <tr className="border-b border-tm-border text-tm-muted uppercase text-xs">
-                            <th className="py-2 pr-4">Year</th>
-                            <th className="py-2 pr-4 text-right">Start Capital</th>
-                            <th className="py-2 pr-4 text-center">Trades</th>
-                            <th className="py-2 pr-4 text-right">Win %</th>
-                            <th className="py-2 pr-4 text-right">Net PnL</th>
-                            <th className="py-2 pr-4 text-right">End Capital</th>
-                            <th className="py-2 text-right">Return %</th>
+                            <th className="py-2 pr-4">{t('stats.th_year')}</th>
+                            <th className="py-2 pr-4 text-right">{t('stats.th_start')}</th>
+                            <th className="py-2 pr-4 text-center">{t('stats.th_trades')}</th>
+                            <th className="py-2 pr-4 text-right">{t('stats.th_win')}</th>
+                            <th className="py-2 pr-4 text-right">{t('stats.th_net')}</th>
+                            <th className="py-2 pr-4 text-right">{t('stats.th_end')}</th>
+                            <th className="py-2 text-right">{t('stats.th_ret')}</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-tm-border/50 text-white font-mono">

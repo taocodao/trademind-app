@@ -4,42 +4,42 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, FileText, ChevronDown, Check, BookOpen } from 'lucide-react';
 
-const DOCUMENTS = [
-    {
-        id: 'csv-5k',
-        title: '$5,000 Portfolio - All Simulation Trades (CSV)',
-        description: 'Download the comprehensive CSV containing 1,078 raw backtested signals, position sizing, and profit/loss data from 2019 to 2025 scaled to a $5,000 base.',
-        url: '/files/turbobounce_options_5k_all_trades.csv',
-        icon: <FileText className="w-5 h-5 text-tm-purple" />,
-        type: 'CSV Data'
-    },
-    {
-        id: 'csv-25k',
-        title: '$25,000 Portfolio - All Simulation Trades (CSV)',
-        description: 'Download the comprehensive CSV containing the raw execution details, position sizing, and profit/loss data scaled to a larger $25,000 base portfolio.',
-        url: '/files/turbobounce_options_25k_all_trades.csv',
-        icon: <FileText className="w-5 h-5 text-tm-purple" />,
-        type: 'CSV Data'
-    },
-    {
-        id: 'analysis',
-        title: 'Strategy Deep-Dive & Architecture',
-        description: 'Read the foundational document detailing the machine-learning VIX predictor, IV-crush mitigation, and our 3-layer unified trading logic.',
-        url: '/files/turbobounce_strategy_report.md',
-        icon: <BookOpen className="w-5 h-5 text-tm-blue" />,
-        type: 'Research Report'
-    }
-];
-
 export function EducationCenter() {
     const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
-    const [selectedId, setSelectedId] = useState(DOCUMENTS[0].id);
 
+    // Memoized to prevent infinite re-renders while allowing dynamic translation
+    const DOCUMENTS = React.useMemo(() => [
+        {
+            id: 'csv-5k',
+            title: t('education.doc1.title'),
+            description: t('education.doc1.desc'),
+            url: '/files/turbobounce_options_5k_all_trades.csv',
+            icon: <FileText className="w-5 h-5 text-tm-purple" />,
+            type: t('education.doc1.type')
+        },
+        {
+            id: 'csv-25k',
+            title: t('education.doc2.title'),
+            description: t('education.doc2.desc'),
+            url: '/files/turbobounce_options_25k_all_trades.csv',
+            icon: <FileText className="w-5 h-5 text-tm-purple" />,
+            type: t('education.doc2.type')
+        },
+        {
+            id: 'analysis',
+            title: t('education.doc3.title'),
+            description: t('education.doc3.desc'),
+            url: '/files/turbobounce_strategy_report.md',
+            icon: <BookOpen className="w-5 h-5 text-tm-blue" />,
+            type: t('education.doc3.type')
+        }
+    ], [t]);
+
+    const [selectedId, setSelectedId] = useState(DOCUMENTS[0].id);
     const selectedDoc = DOCUMENTS.find(d => d.id === selectedId) || DOCUMENTS[0];
 
     const handleDownload = () => {
-        // In reality this might be a router.push() or an <a> download trigger.
         window.open(selectedDoc.url, '_blank');
     };
 
@@ -48,9 +48,9 @@ export function EducationCenter() {
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
                 <div>
                     <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                        Education Center & Verifiable Data
+                        {t('education.title')}
                     </h2>
-                    <p className="text-sm text-tm-muted mt-1">Review our foundational architecture and raw simulation data.</p>
+                    <p className="text-sm text-tm-muted mt-1">{t('education.subtitle')}</p>
                 </div>
             </div>
 
@@ -58,7 +58,7 @@ export function EducationCenter() {
 
                 {/* Custom Selective Dropdown */}
                 <div className="relative w-full">
-                    <label className="text-xs uppercase tracking-widest text-tm-muted font-bold mb-2 block">Select Resource</label>
+                    <label className="text-xs uppercase tracking-widest text-tm-muted font-bold mb-2 block">{t('education.select')}</label>
                     <button
                         onClick={() => setIsOpen(!isOpen)}
                         className="w-full flex items-center justify-between bg-tm-bg/50 border border-white/10 hover:border-white/20 p-4 rounded-xl text-left transition-all group"
@@ -115,7 +115,7 @@ export function EducationCenter() {
                         className="btn-secondary w-full justify-center flex items-center gap-2 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white font-bold transition-all shadow-sm shadow-black/50 hover:shadow-tm-blue/20"
                     >
                         <Download className="w-5 h-5 text-tm-blue" />
-                        Download / View File
+                        {t('education.download')}
                     </button>
                 </div>
             </div>

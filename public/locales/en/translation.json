@@ -19,9 +19,115 @@
         "total": "Total Account Value",
         "principal": "Simulator Principal",
         "verified": "Verified Output",
-        "listen": "LISTEN TO THE DATA"
+        "listen": "LISTEN TO THE DATA",
+        "disclaimer": "HYPOTHETICAL BACKTESTED RESULTS — NOT ACTUAL TRADING"
     },
     "crash": {
         "filter_active": "Crash Filter Active"
+    },
+    "stats": {
+        "title": "Vital Statistics",
+        "total_trades": "Total Trades",
+        "cagr": "CAGR",
+        "net_pnl": "Total Net PnL",
+        "strategy_dist": "Strategy Distribution",
+        "breakdown": "Year-by-Year Breakdown",
+        "th_year": "Year",
+        "th_start": "Start Capital",
+        "th_trades": "Trades",
+        "th_win": "Win %",
+        "th_net": "Net PnL",
+        "th_end": "End Capital",
+        "th_ret": "Return %"
+    },
+    "pricing": {
+        "title": "Transparent Pricing.",
+        "subtitle": "Zero AUM Fees.",
+        "description": "We are a software platform, not a hedge fund. We don't take a percentage of your wealth. Keep 100% of your compounding gains.",
+        "popular": "Most Popular",
+        "billed": "Billed annually or monthly. Cancel anytime online.",
+        "observer": {
+            "name": "The Observer",
+            "price": "Free",
+            "period": "",
+            "description": "Watch the signals and verify the performance.",
+            "features": [
+                "Delayed Signal Feed",
+                "View Live Strategy Stats",
+                "Options Education Course",
+                "Community Access"
+            ],
+            "button": "Start Observing"
+        },
+        "builder": {
+            "name": "The Builder",
+            "price": "$29",
+            "period": "/mo",
+            "description": "For growing accounts under $15,000.",
+            "features": [
+                "Real-Time Signal Alerts",
+                "1-Click Trade Approval",
+                "Position Sizing Calculator",
+                "Live Portfolio Sync"
+            ],
+            "button": "Start Building"
+        },
+        "compounder": {
+            "name": "The Compounder",
+            "price": "$49",
+            "period": "/mo",
+            "description": "Maximum automation for hands-free wealth generation.",
+            "features": [
+                "Full Auto-Approve API Routing",
+                "Advanced IV-Crush Filters",
+                "Priority Support 24/7",
+                "Early Access to New Algos"
+            ],
+            "button": "Automate Now"
+        }
+    },
+    "education": {
+        "title": "Education Center & Verifiable Data",
+        "subtitle": "Review our foundational architecture and raw simulation data.",
+        "select": "Select Resource",
+        "download": "Download / View File",
+        "doc1": {
+            "title": "$5,000 Portfolio - All Simulation Trades (CSV)",
+            "desc": "Download the comprehensive CSV containing 1,078 raw backtested signals, position sizing, and profit/loss data from 2019 to 2025 scaled to a $5,000 base.",
+            "type": "CSV Data"
+        },
+        "doc2": {
+            "title": "$25,000 Portfolio - All Simulation Trades (CSV)",
+            "desc": "Download the comprehensive CSV containing the raw execution details, position sizing, and profit/loss data scaled to a larger $25,000 base portfolio.",
+            "type": "CSV Data"
+        },
+        "doc3": {
+            "title": "Strategy Deep-Dive & Architecture",
+            "desc": "Read the foundational document detailing the machine-learning VIX predictor, IV-crush mitigation, and our 3-layer unified trading logic.",
+            "type": "Research Report"
+        }
+    },
+    "referral": {
+        "title": "Give $15, Get $15",
+        "desc": "Know someone tired of staring at charts? Invite them to TurboBounce. They get $15 off their first month, and you receive a $15 account credit when they sign up.",
+        "btn": "Activate Referral Code"
+    },
+    "trust": {
+        "title": "Secure Integrations & Bank-Level Encryption"
+    },
+    "footer": {
+        "company": "Company",
+        "about": "About Us",
+        "education": "Education Center",
+        "pricing": "Pricing",
+        "legal": "Legal",
+        "terms": "Terms of Service",
+        "privacy": "Privacy Policy",
+        "risk": "Risk Disclosure",
+        "disclaimer": "IMPORTANT DISCLAIMER: TurboBounce is a software technology platform, not a registered investment advisor, broker-dealer, or financial planner. We do not provide personalized investment advice. All trade signals are algorithmically generated and delivered identically to all subscribers. Past performance, whether actual or indicated by backtests, is not indicative of future results. Trading options involves substantial risk of loss and is not appropriate for all investors. You could lose some or all of your invested capital. Consult a qualified financial professional before making investment decisions. See full Risk Disclosure for details.",
+        "cftc": "CFTC RULE 4.41: Hypothetical or simulated performance results have certain limitations. Unlike an actual performance record, simulated results do not represent actual trading. Also, since the trades have not been executed, the results may have under- or over-compensated for the impact, if any, of certain market factors, such as lack of liquidity. Simulated trading programs in general are also subject to the fact that they are designed with the benefit of hindsight. No representation is being made that any account will or is likely to achieve profit or losses similar to those shown.",
+        "brokerage": "Brokerage services are provided by third-party broker-dealers. TurboBounce never holds customer funds or executes trades outside of user-authorized broker API configurations.",
+        "rights": "TurboBounce LLC. All rights reserved.",
+        "tagline": "Automated Options Engineering."
     }
 }

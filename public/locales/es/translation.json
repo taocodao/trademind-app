@@ -19,9 +19,115 @@
         "total": "Valor Total de la Cuenta",
         "principal": "Principal del Simulador",
         "verified": "Salida Verificada",
-        "listen": "ESCUCHA LOS DATOS"
+        "listen": "ESCUCHA LOS DATOS",
+        "disclaimer": "RESULTADOS HIPOTÉTICOS RETROPROBADOS — NO ES TRADING REAL"
     },
     "crash": {
         "filter_active": "Filtro de Caída Activo"
+    },
+    "stats": {
+        "title": "Estadísticas Vitales",
+        "total_trades": "Total de Operaciones",
+        "cagr": "TCAC",
+        "net_pnl": "PnL Neto Total",
+        "strategy_dist": "Distribución de Estrategia",
+        "breakdown": "Desglose Año por Año",
+        "th_year": "Año",
+        "th_start": "Capital Inicial",
+        "th_trades": "Operaciones",
+        "th_win": "% Éxito",
+        "th_net": "PnL Neto",
+        "th_end": "Capital Final",
+        "th_ret": "% Retorno"
+    },
+    "pricing": {
+        "title": "Precios Transparentes.",
+        "subtitle": "Sin Comisiones por AUM.",
+        "description": "Somos una plataforma de software, no un fondo de cobertura. No tomamos un porcentaje de tu riqueza. Quédate con el 100% de tus ganancias compuestas.",
+        "popular": "Más Popular",
+        "billed": "Facturado anualmente o mensualmente. Cancela en cualquier momento en línea.",
+        "observer": {
+            "name": "El Observador",
+            "price": "Gratis",
+            "period": "",
+            "description": "Observa las señales y verifica el rendimiento.",
+            "features": [
+                "Señales Retrasadas",
+                "Ver Estadísticas en Vivo",
+                "Curso de Opciones",
+                "Acceso a la Comunidad"
+            ],
+            "button": "Empezar a Observar"
+        },
+        "builder": {
+            "name": "El Constructor",
+            "price": "$29",
+            "period": "/mes",
+            "description": "Para cuentas en crecimiento por debajo de $15,000.",
+            "features": [
+                "Alertas en Tiempo Real",
+                "Aprobación con 1 Clic",
+                "Calculadora de Posiciones",
+                "Sincronización en Vivo"
+            ],
+            "button": "Empezar a Construir"
+        },
+        "compounder": {
+            "name": "El Compuesto",
+            "price": "$49",
+            "period": "/mes",
+            "description": "Automatización máxima para generar riqueza sin intervención.",
+            "features": [
+                "Aprobación Automática vía API",
+                "Filtros Avanzados de VIX",
+                "Soporte Prioritario 24/7",
+                "Acceso Anticipado a Algos"
+            ],
+            "button": "Automatizar Ahora"
+        }
+    },
+    "education": {
+        "title": "Centro de Educación y Datos",
+        "subtitle": "Revisa nuestra arquitectura y datos de simulación brutos.",
+        "select": "Seleccionar Recurso",
+        "download": "Descargar / Ver Archivo",
+        "doc1": {
+            "title": "Portafolio de $5,000 - Todas las Operaciones (CSV)",
+            "desc": "Descarga el CSV con 1,078 señales retroprobadas crudas, tamaño de posición y PnL escalado a $5,000.",
+            "type": "Datos CSV"
+        },
+        "doc2": {
+            "title": "Portafolio de $25,000 - Todas las Operaciones (CSV)",
+            "desc": "Descarga el CSV completo con detalles de ejecución y datos escalados a $25,000.",
+            "type": "Datos CSV"
+        },
+        "doc3": {
+            "title": "Análisis Profundo y Arquitectura",
+            "desc": "Lee el documento fundacional detallando el predictor VIX con IA y lógica multinivel.",
+            "type": "Reporte de Investigación"
+        }
+    },
+    "referral": {
+        "title": "Da $15, Recibe $15",
+        "desc": "¿Conoces a alguien cansado de mirar gráficos? Invítalo a TurboBounce. Consiguen $15 de descuento y tú recibes $15 de crédito en tu cuenta.",
+        "btn": "Activar Código de Referido"
+    },
+    "trust": {
+        "title": "Integraciones Seguras y Encriptación Bancaria"
+    },
+    "footer": {
+        "company": "Compañía",
+        "about": "Sobre Nosotros",
+        "education": "Centro de Educación",
+        "pricing": "Precios",
+        "legal": "Legal",
+        "terms": "Términos de Servicio",
+        "privacy": "Política de Privacidad",
+        "risk": "Aviso de Riesgo",
+        "disclaimer": "AVISO IMPORTANTE: TurboBounce es una plataforma de tecnología de software, no un asesor de inversiones registrado, corredor de bolsa o planificador financiero. No proporcionamos asesoramiento de inversión personalizado. Todas las señales de operación se generan algorítmicamente y se entregan de manera idéntica a todos los suscriptores. El rendimiento pasado, ya sea real o indicado por pruebas retrospectivas, no es indicativo de resultados futuros. Operar con opciones implica un riesgo sustancial de pérdida y no es apropiado para todos los inversores. Podrías perder una parte o la totalidad de tu capital invertido. Consulta a un profesional financiero calificado antes de tomar decisiones de inversión. Consulta el Aviso de Riesgo completo para obtener más detalles.",
+        "cftc": "REGLA CFTC 4.41: Los resultados de rendimiento hipotéticos o simulados tienen ciertas limitaciones. A diferencia de un registro de rendimiento real, los resultados simulados no representan operaciones reales. Además, dado que las operaciones no se han ejecutado, los resultados pueden haber compensado en exceso o en defecto el impacto, si lo hubiera, de ciertos factores del mercado, como la falta de liquidez. Los programas de negociación simulados en general también están sujetos al hecho de que están diseñados con el beneficio de la retrospectiva. No se hace ninguna representación de que cualquier cuenta logrará o es probable que logre ganancias o pérdidas similares a las mostradas.",
+        "brokerage": "Los servicios de corretaje son proporcionados por corredores de bolsa externos. TurboBounce nunca retiene los fondos de los clientes ni ejecuta operaciones fuera de las configuraciones API del corredor autorizadas por el usuario.",
+        "rights": "TurboBounce LLC. Todos los derechos reservados.",
+        "tagline": "Ingeniería Automatizada de Opciones."
     }
 }

@@ -1,9 +1,11 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 export function TrustBadges() {
+    const { t } = useTranslation();
     return (
         <section className="w-full max-w-5xl mx-auto py-12 px-6 text-center border-t border-white/5 mt-10">
-            <p className="text-xs uppercase tracking-widest text-tm-muted font-bold mb-8">Secure Integrations & Bank-Level Encryption</p>
+            <p className="text-xs uppercase tracking-widest text-tm-muted font-bold mb-8">{t('trust.title')}</p>
             <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
                 {/* Simulated Logos using styled text */}
                 <div className="text-xl font-black tracking-tighter text-white font-sans flex items-center gap-1">

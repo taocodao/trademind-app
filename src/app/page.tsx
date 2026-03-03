@@ -85,7 +85,7 @@ export default function SinglePageMarketing() {
                 </div>
 
                 {/* Interactive Backtest Player */}
-                <div className="w-full max-w-5xl z-10 flex flex-col gap-8 mx-auto">
+                <div className="w-full max-w-5xl z-10 flex flex-col gap-8 mx-auto" id="about">
                     <div className="w-full">
                         <StatisticsPanel />
                     </div>
@@ -94,7 +94,7 @@ export default function SinglePageMarketing() {
 
 
                         {/* Education Center Dropdown */}
-                        <div className="w-full z-10">
+                        <div className="w-full z-10" id="education">
                             <EducationCenter />
                         </div>
                     </div>

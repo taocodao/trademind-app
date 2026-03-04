@@ -85,8 +85,8 @@ export default function SignalsPage() {
             : receivedAt;
 
         const timestamp = Math.max(receivedAt, dbTimestamp);
-        const fourHoursAgo = Date.now() - (4 * 60 * 60 * 1000);
-        return timestamp > fourHoursAgo;
+        const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
+        return timestamp > twentyFourHoursAgo;
     }) as Signal[];
 
     useEffect(() => {

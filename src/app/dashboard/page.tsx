@@ -27,7 +27,7 @@ import { useSignalContext } from '@/components/providers/SignalProvider';
 import { TastytradeLink } from '@/components/TastytradeLink';
 import { TQQQStatusBanner } from '@/components/dashboard/TQQQStatusBanner';
 import { SignalCard, type TQQQSignal } from '@/components/dashboard/SignalCard';
-import { TurboBounceSignalCard, type TurboBounceSignal } from '@/components/dashboard/TurboBounceSignalCard';
+import { TurboBounceSignalCard, type TurboBounceSignal } from '@/components/signals/TurboBounceSignalCard';
 import { Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -350,7 +350,8 @@ function DashboardContent() {
                 // Filter out signals older than 12 hours
                 const twelveHoursAgo = Date.now() - 12 * 60 * 60 * 1000;
                 const recentSignals = newSignals.filter((s: TurboBounceSignal) => {
-                    const age = s.timestamp ? new Date(s.timestamp).getTime() : Date.now();
+                    const timeStr = s.createdAt || s.created_at;
+                    const age = timeStr ? new Date(timeStr).getTime() : Date.now();
                     return age > twelveHoursAgo;
                 });
 
@@ -430,6 +431,34 @@ function DashboardContent() {
         } catch {
             showToast('Failed to track position', false);
         }
+    };
+
+    const handleTurboApprove = async (signal: TurboBounceSignal) => {
+        setExecutingId(signal.id);
+        try {
+            const response = await fetch(`/api/signals/${signal.id}/approve`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    execute: true,
+                    signal: signal,
+                }),
+            });
+
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Approval failed');
+
+            setTurboSignals(prev => prev.filter(s => s.id !== signal.id));
+            showToast('TurboBounce Signal Approved ✓', true);
+        } catch (err) {
+            showToast(err instanceof Error ? err.message : 'Approval failed', false);
+        } finally {
+            setExecutingId(null);
+        }
+    };
+
+    const handleTurboSkip = (id: string) => {
+        setTurboSignals(prev => prev.filter(s => s.id !== id));
     };
 
     // ── Polling loops ──
@@ -643,7 +672,9 @@ function DashboardContent() {
                                                 <TurboBounceSignalCard
                                                     key={signal.id}
                                                     signal={signal}
-                                                    tastyLinked={!!tastyLinked}
+                                                    onApprove={() => handleTurboApprove(signal)}
+                                                    onSkip={() => handleTurboSkip(signal.id)}
+                                                    isApproving={executingId === signal.id}
                                                 />
                                             ))}
                                         </div>

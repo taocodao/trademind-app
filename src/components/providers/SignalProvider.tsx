@@ -98,18 +98,6 @@ const SignalContext = createContext<SignalContextValue>({
 });
 
 const CHANNELS = [
-    'calendar_spread',
-    'diagonal_spread',
-    'diagonal',
-    'iron_condor',
-    'vertical',
-    'vertical_spread',
-    'earnings',
-    'theta_puts',
-    'theta_entry',
-    'theta_exit',
-    'zebra',
-    'zebra_entry',
     'turbobounce'
 ];
 
@@ -323,6 +311,7 @@ export function SignalProvider({ children }: SignalProviderProps) {
                                 receivedAt: s.createdAt ? new Date(s.createdAt).getTime() : now,
                             }))
                             .filter((s: Signal) => {
+                                if (s.strategy?.toLowerCase() !== 'turbobounce') return false;
                                 if (s.status && s.status !== 'pending') return true;
                                 return !isSignalExpired(s as any);
                             });

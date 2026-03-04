@@ -433,6 +433,9 @@ function DashboardContent() {
         }
     };
 
+    const MAX_SLOTS = 6;
+    const slotCapital = Math.round(settings.investmentPrincipal / MAX_SLOTS);
+
     const handleTurboApprove = async (signal: TurboBounceSignal) => {
         setExecutingId(signal.id);
         try {
@@ -442,6 +445,12 @@ function DashboardContent() {
                 body: JSON.stringify({
                     execute: true,
                     signal: signal,
+                    positioning: {
+                        investmentPrincipal: settings.investmentPrincipal,
+                        maxSlots: MAX_SLOTS,
+                        slotCapital: slotCapital,
+                        riskLevel: settings.riskLevel,
+                    },
                 }),
             });
 
@@ -594,6 +603,10 @@ function DashboardContent() {
                         <p className={`text-sm font-mono font-semibold ${(data?.todayPnL ?? 0) >= 0 ? 'text-tm-green' : 'text-tm-red'}`}>
                             {(data?.todayPnL ?? 0) >= 0 ? '+' : ''}${(data?.todayPnL ?? 0).toFixed(2)} {t('dashboard.today')}
                         </p>
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5 text-xs text-tm-muted">
+                            <span>Principal: <span className="text-tm-text font-semibold">${settings.investmentPrincipal.toLocaleString()}</span></span>
+                            <span>Slot: <span className="text-tm-text font-semibold">${Math.round(settings.investmentPrincipal / 6).toLocaleString()}</span> × 6</span>
+                        </div>
                     </div>
                 )}
 

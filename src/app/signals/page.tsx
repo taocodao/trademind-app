@@ -62,14 +62,10 @@ export default function SignalsPage() {
     const [confirmModal, setConfirmModal] = useState<Signal | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    // Filter signals: 
-    // 1. Pending status only (remove executed/rejected)
-    // 2. Not expired (check expires_at from backend)
     const signals = allSignals.filter((s: any) => {
-        console.log('🔍 Filtering signal:', { id: s.id, symbol: s.symbol, status: s.status, expiresAt: s.expiresAt, expires_at: s.expires_at, strategy: s.strategy });
         if (s.status !== 'pending') return false;
 
-        // Check expires_at from backend (market close)
+        // Check expires_at from backend (next market open)
         const expiresAt = s.expiresAt || s.expires_at;
         if (expiresAt) {
             // Strip microseconds (Python sends 6 digits, JS wants 3 or 0) and ensure UTC
@@ -78,14 +74,12 @@ export default function SignalsPage() {
             return new Date(expStr).getTime() > Date.now();
         }
 
-        // Fallback: keep signals from the last 4 hours (full trading session)
-        const receivedAt = s.receivedAt || Date.now();
+        // Fallback: keep signals from the last 24 hours
         const timeStr = s.createdAt || s.created_at;
-        const dbTimestamp = timeStr
+        const timestamp = timeStr
             ? new Date(timeStr.endsWith('Z') || timeStr.includes('+') ? timeStr : timeStr + 'Z').getTime()
-            : receivedAt;
+            : (s.receivedAt || Date.now());
 
-        const timestamp = Math.max(receivedAt, dbTimestamp);
         const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
         return timestamp > twentyFourHoursAgo;
     }) as Signal[];

@@ -84,7 +84,7 @@ interface UseSignalSocketOptions {
 
 export function useSignalSocket({
     url = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'wss://ws.trademind.bot',
-    channels = ['calendar_spread'],
+    channels = ['turbobounce'],
     onSignal,
     onAccountUpdate,
     onConnect,

@@ -66,8 +66,9 @@ const EXPIRY_CHECK_INTERVAL_MS = 60 * 1000;
 function isSignalExpired(signal: { expires_at?: string; expiresAt?: string; createdAt?: string }): boolean {
     const expiresAt = signal.expires_at || signal.expiresAt;
     if (expiresAt) {
-        // Treat as UTC if no timezone indicator
-        const expStr = expiresAt.endsWith('Z') || expiresAt.includes('+') ? expiresAt : expiresAt + 'Z';
+        // Strip microseconds (Python sends 6 digits, JS wants 3 or 0) and ensure UTC
+        const cleanExp = expiresAt.split('.')[0];
+        const expStr = cleanExp.endsWith('Z') || cleanExp.includes('+') ? cleanExp : cleanExp + 'Z';
         return Date.now() > new Date(expStr).getTime();
     }
     // Fallback if no expires_at exists

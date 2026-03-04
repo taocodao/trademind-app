@@ -72,8 +72,9 @@ export default function SignalsPage() {
         // Check expires_at from backend (market close)
         const expiresAt = s.expiresAt || s.expires_at;
         if (expiresAt) {
-            // Treat as UTC if no timezone indicator
-            const expStr = expiresAt.endsWith('Z') || expiresAt.includes('+') ? expiresAt : expiresAt + 'Z';
+            // Strip microseconds (Python sends 6 digits, JS wants 3 or 0) and ensure UTC
+            const cleanExp = expiresAt.split('.')[0];
+            const expStr = cleanExp.endsWith('Z') || cleanExp.includes('+') ? cleanExp : cleanExp + 'Z';
             return new Date(expStr).getTime() > Date.now();
         }
 

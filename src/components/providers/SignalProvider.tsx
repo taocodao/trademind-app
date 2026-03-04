@@ -270,6 +270,7 @@ export function SignalProvider({ children }: SignalProviderProps) {
     }, [autoSettings, buyingPower, openPositionCount]);
 
     const handleSignal = useCallback((signal: Signal, channel: string) => {
+        if (signal.strategy?.toLowerCase() !== 'turbobounce') return;
         console.log('🔔 New signal received:', signal.symbol, channel);
 
         const signalWithId: Signal = {
@@ -335,10 +336,6 @@ export function SignalProvider({ children }: SignalProviderProps) {
 
     // Stable channel configuration
     const CHANNEL_SUBSCRIPTIONS = useRef([
-        'theta_entry', 'theta_puts', 'theta_exit',
-        'calendar_spread', 'diagonal_spread',
-        'zebra', 'zebra_entry',
-        'dvo_entry', 'dvo_exit',
         'turbobounce'
     ]).current;
 

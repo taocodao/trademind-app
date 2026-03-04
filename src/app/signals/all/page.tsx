@@ -14,7 +14,7 @@ import { ArrowLeft } from 'lucide-react';
 export default function AllSignalsPage() {
     const { ready, authenticated } = usePrivy();
     const router = useRouter();
-    const [selectedStrategies, setSelectedStrategies] = useState<string[]>(['theta', 'calendar']);
+    const [selectedStrategies, setSelectedStrategies] = useState<string[]>(['turbobounce']);
     const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
 
     const {
@@ -105,13 +105,13 @@ export default function AllSignalsPage() {
                     {/* Strategy Filter */}
                     <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-gray-700">Strategies:</span>
-                        {['theta', 'calendar'].map(strategy => (
+                        {['turbobounce'].map(strategy => (
                             <button
                                 key={strategy}
                                 onClick={() => toggleStrategy(strategy)}
                                 className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${selectedStrategies.includes(strategy)
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                     }`}
                             >
                                 {strategy.charAt(0).toUpperCase() + strategy.slice(1)}
@@ -127,8 +127,8 @@ export default function AllSignalsPage() {
                                 key={status}
                                 onClick={() => setFilter(status)}
                                 className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${filter === status
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                     }`}
                             >
                                 {status.charAt(0).toUpperCase() + status.slice(1)}

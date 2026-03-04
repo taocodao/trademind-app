@@ -5,12 +5,12 @@ import { useSignalSocket } from './useSignalSocket';
 import { Signal } from '@/types/signals';
 
 interface UseSignalsOptions {
-    strategies?: string[];  // ['theta', 'calendar']
+    strategies?: string[];  // ['turbobounce']
     autoArchive?: boolean;  // Auto-archive expired signals
 }
 
 export function useSignals(options: UseSignalsOptions = {}) {
-    const { strategies = ['theta', 'calendar'], autoArchive = true } = options;
+    const { strategies = ['turbobounce'], autoArchive = true } = options;
 
     const [signals, setSignals] = useState<Signal[]>([]);
     const [archived, setArchived] = useState<Signal[]>([]);

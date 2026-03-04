@@ -491,14 +491,24 @@ function DashboardContent() {
 
     // Fetch dependent data once we have the account number
     useEffect(() => {
-        if (data?.accountNumber) {
-            fetchSignals(); // Initial fast signal fetch
-            fetchTurboSignals();
-            fetchOrders(data.accountNumber);
-            const orderInterval = setInterval(() => fetchOrders(data.accountNumber), 5000); // poll orders fast when active
-            return () => clearInterval(orderInterval);
+        if (!data?.accountNumber) return;
+
+        fetchSignals(); // Initial fast signal fetch
+        fetchTurboSignals();
+        fetchOrders(data.accountNumber);
+
+        // Only poll orders if actively executing a trade to avoid throttling/rate-limiting the UI
+        let orderInterval: NodeJS.Timeout | null = null;
+        if (executingId) {
+            orderInterval = setInterval(() => fetchOrders(data.accountNumber), 5000);
+        } else {
+            orderInterval = setInterval(() => fetchOrders(data.accountNumber), 60000); // 1 min fallback
         }
-    }, [data?.accountNumber, fetchSignals, fetchTurboSignals, fetchOrders]);
+
+        return () => {
+            if (orderInterval) clearInterval(orderInterval);
+        };
+    }, [data?.accountNumber, executingId, fetchSignals, fetchTurboSignals, fetchOrders]);
 
     // ── Loading state ──
     if (!ready || !authenticated || tastyLinked === null) {

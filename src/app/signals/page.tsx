@@ -71,7 +71,9 @@ export default function SignalsPage() {
             // Strip microseconds (Python sends 6 digits, JS wants 3 or 0) and ensure UTC
             const cleanExp = expiresAt.split('.')[0];
             const expStr = cleanExp.endsWith('Z') || cleanExp.includes('+') ? cleanExp : cleanExp + 'Z';
-            return new Date(expStr).getTime() > Date.now();
+            // ensure 'T' separates date and time for cross-browser parsing support
+            const safeExpStr = expStr.replace(' ', 'T');
+            return new Date(safeExpStr).getTime() > Date.now();
         }
 
         // Fallback: keep signals from the last 24 hours

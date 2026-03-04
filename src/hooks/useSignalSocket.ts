@@ -187,8 +187,9 @@ export function useSignalSocket({
         } catch (error) {
             console.error('Failed to create WebSocket:', error);
         }
-    }, [url, channels]); // Removed callbacks from dependencies
-
+        // Use JSON.stringify(channels) to prevent infinite reconnects caused by array literal reference changes on every render
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [url, JSON.stringify(channels)]);
     const disconnect = useCallback(() => {
         if (reconnectTimeoutRef.current) {
             clearTimeout(reconnectTimeoutRef.current);

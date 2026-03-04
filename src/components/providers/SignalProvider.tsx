@@ -144,21 +144,27 @@ export function SignalProvider({ children }: SignalProviderProps) {
 
     const fetchAccountData = useCallback(async () => {
         try {
-            // Use Python backend which returns actual buying power from Tastytrade SDK
-            const balanceRes = await fetch('/api/account');
-            if (balanceRes.ok) {
-                const data = await balanceRes.json();
-                const bp = parseFloat(data.buyingPower || data.buying_power || '0');
-                setBuyingPower(bp);
-                setOpenPositionCount(data.positionCount || data.positions?.length || 0);
-                console.log(`💰 Account data: BP=$${bp.toFixed(2)}, Positions=${data.positionCount || 0}`);
-            } else {
-                console.warn('Failed to fetch account data:', balanceRes.status);
+            // Use Vercel OAuth endpoints (matches dashboard logic)
+            const acctRes = await fetch('/api/tastytrade/account');
+            if (acctRes.ok) {
+                const acctJson = await acctRes.json();
+                const accountNumber = acctJson?.data?.items?.[0]?.account?.['account-number'];
+                if (accountNumber) {
+                    const balanceRes = await fetch(`/api/tastytrade/balance?accountNumber=${accountNumber}`);
+                    if (balanceRes.ok) {
+                        const data = await balanceRes.json();
+                        const bp = parseFloat(data.buyingPower || '0');
+                        setBuyingPower(bp);
+                        setOpenPositionCount(data.positionCount || 0);
+                        console.log(`💰 Account data: BP=$${bp.toFixed(2)}`);
+                        return;
+                    }
+                }
             }
+            console.warn('Failed to fetch account data from Vercel endpoints');
         } catch (e) {
             console.warn('Failed to fetch account data for auto-approve checks', e);
         }
-
     }, []);
 
     useEffect(() => {

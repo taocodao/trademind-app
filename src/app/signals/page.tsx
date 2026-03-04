@@ -63,7 +63,10 @@ export default function SignalsPage() {
     const [error, setError] = useState<string | null>(null);
 
     const signals = allSignals.filter((s: any) => {
-        if (s.status !== 'pending') return false;
+        if (s.status !== 'pending') {
+            console.log('🚫 Signal dropped (status):', s.symbol, s.status);
+            return false;
+        }
 
         // Check expires_at from backend (next market open)
         const expiresAt = s.expiresAt || s.expires_at;
@@ -73,7 +76,11 @@ export default function SignalsPage() {
             const expStr = cleanExp.endsWith('Z') || cleanExp.includes('+') ? cleanExp : cleanExp + 'Z';
             // ensure 'T' separates date and time for cross-browser parsing support
             const safeExpStr = expStr.replace(' ', 'T');
-            return new Date(safeExpStr).getTime() > Date.now();
+            const expTime = new Date(safeExpStr).getTime();
+            const now = Date.now();
+            const isValid = expTime > now;
+            console.log(`⏰ Signal ${s.symbol}: expiresAt=${safeExpStr}, valid=${isValid}, diff=${Math.round((expTime - now) / 60000)}min`);
+            return isValid;
         }
 
         // Fallback: keep signals from the last 24 hours
@@ -83,7 +90,9 @@ export default function SignalsPage() {
             : (s.receivedAt || Date.now());
 
         const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
-        return timestamp > twentyFourHoursAgo;
+        const fallbackValid = timestamp > twentyFourHoursAgo;
+        console.log(`📅 Signal ${s.symbol}: no expiresAt, createdAt fallback valid=${fallbackValid}`);
+        return fallbackValid;
     }) as Signal[];
 
     useEffect(() => {

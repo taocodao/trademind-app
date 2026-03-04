@@ -19,6 +19,8 @@ interface Signal {
     riskLevel: string;
     status: string;
     rationale?: string;
+    expiresAt?: string;
+    createdAt?: string;
     // Backward compatibility fields
     entry_price?: number;
     capital_required?: number;
@@ -56,6 +58,8 @@ function normalizeSignal(raw: Record<string, unknown>): Signal {
         riskLevel: (raw.riskLevel || raw.risk_level) as string || 'medium',
         status: (raw.status as string) || 'pending',
         rationale: (raw.rationale || raw.reasoning) as string || '',
+        expiresAt: (raw.expiresAt || raw.expires_at) as string || '',
+        createdAt: (raw.createdAt || raw.created_at) as string || '',
         // Alias fields
         entry_price: cost,
         capital_required: cost,

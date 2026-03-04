@@ -52,6 +52,28 @@ interface Signal {
     target_anchor_dte?: number;
     target_hedge_dte?: number;
     target_delta?: number;
+    strategy_type?: string;
+    contracts?: number; // Added for TQQQ dynamic sizing
+}
+
+// Format an ISO string or legacy timestamp string into the user's local timezone
+function formatTime(timeStr: string | undefined): string {
+    if (!timeStr) return 'N/A';
+    try {
+        // Strip microseconds and ensure Z suffix if missing
+        const cleanStr = timeStr.split('.')[0];
+        const hasTimechain = cleanStr.includes('T') || cleanStr.includes(' ');
+        if (!hasTimechain) return timeStr; // Not a valid ISO date
+
+        const expStr = cleanStr.endsWith('Z') || cleanStr.includes('+') ? cleanStr : cleanStr + 'Z';
+        const safeExpStr = expStr.replace(' ', 'T');
+        const date = new Date(safeExpStr);
+
+        // Display as e.g. "3:30 PM EST"
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
+    } catch (e) {
+        return timeStr;
+    }
 }
 
 export default function SignalsPage() {
@@ -71,10 +93,8 @@ export default function SignalsPage() {
         // Check expires_at from backend (next market open)
         const expiresAt = s.expiresAt || s.expires_at;
         if (expiresAt) {
-            // Strip microseconds (Python sends 6 digits, JS wants 3 or 0) and ensure UTC
             const cleanExp = expiresAt.split('.')[0];
             const expStr = cleanExp.endsWith('Z') || cleanExp.includes('+') ? cleanExp : cleanExp + 'Z';
-            // ensure 'T' separates date and time for cross-browser parsing support
             const safeExpStr = expStr.replace(' ', 'T');
             const expTime = new Date(safeExpStr).getTime();
             const now = Date.now();
@@ -83,7 +103,7 @@ export default function SignalsPage() {
             return isValid;
         }
 
-        // Fallback: keep signals from the last 24 hours
+        // Fallback: keep tracking signals from last 24 hours
         const timeStr = s.createdAt || s.created_at;
         const timestamp = timeStr
             ? new Date(timeStr.endsWith('Z') || timeStr.includes('+') ? timeStr : timeStr + 'Z').getTime()
@@ -91,7 +111,7 @@ export default function SignalsPage() {
 
         const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
         const fallbackValid = timestamp > twentyFourHoursAgo;
-        console.log(`📅 Signal ${s.symbol}: no expiresAt, createdAt fallback valid=${fallbackValid}`);
+        console.log(`📅 Signal ${s.symbol}: no expiresAt, fallback valid=${fallbackValid}`);
         return fallbackValid;
     }) as Signal[];
 
@@ -278,6 +298,17 @@ export default function SignalsPage() {
                                 <div>
                                     <h3 className="font-bold">{confirmModal.symbol}</h3>
                                     <p className="text-sm text-tm-muted">{confirmModal.strategy}</p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4 mt-2 mb-4 text-xs text-tm-muted">
+                                <div>
+                                    <span className="opacity-70">Generated:</span>{' '}
+                                    <span className="font-medium text-white/90">{formatTime((confirmModal as any).createdAt || (confirmModal as any).created_at as string)}</span>
+                                </div>
+                                <div>
+                                    <span className="opacity-70">Expires:</span>{' '}
+                                    <span className="font-medium text-white/90">{formatTime((confirmModal as any).expiresAt || (confirmModal as any).expires_at as string)}</span>
                                 </div>
                             </div>
 

@@ -115,6 +115,9 @@ export default function SignalsPage() {
         return fallbackValid;
     }) as Signal[];
 
+    // DIAGNOSTIC: Log at render time to catch stale/empty allSignals
+    console.log(`🔍 RENDER signals/page: allSignals.length=${allSignals.length}, filtered signals.length=${signals.length}`);
+
     useEffect(() => {
         if (ready && !authenticated) {
             router.push("/");

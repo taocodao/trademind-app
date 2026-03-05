@@ -289,7 +289,11 @@ export function SignalProvider({ children }: SignalProviderProps) {
 
         setAllSignals(prev => {
             const exists = prev.some(s => s.id === signalWithId.id);
-            if (exists) return prev.map(s => s.id === signalWithId.id ? { ...s, ...signalWithId } : s);
+            if (exists) {
+                console.log(`📥 handleSignal UPDATE: ${signalWithId.symbol}, total stays ${prev.length}`);
+                return prev.map(s => s.id === signalWithId.id ? { ...s, ...signalWithId } : s);
+            }
+            console.log(`📥 handleSignal ADD: ${signalWithId.symbol}, total becomes ${prev.length + 1}`);
             return [signalWithId, ...prev];
         });
 
@@ -364,10 +368,16 @@ export function SignalProvider({ children }: SignalProviderProps) {
     useEffect(() => {
         if (!isMounted) return;
         const interval = setInterval(() => {
-            setAllSignals(prev => prev.filter(s => {
-                if (s.status !== 'pending') return true;
-                return !isSignalExpired(s as any);
-            }));
+            setAllSignals(prev => {
+                const filtered = prev.filter(s => {
+                    if (s.status !== 'pending') return true;
+                    return !isSignalExpired(s as any);
+                });
+                if (filtered.length !== prev.length) {
+                    console.log(`🧹 Cleanup: removed ${prev.length - filtered.length} expired signals, ${filtered.length} remain`);
+                }
+                return filtered;
+            });
         }, EXPIRY_CHECK_INTERVAL_MS);
         return () => clearInterval(interval);
     }, [isMounted]);

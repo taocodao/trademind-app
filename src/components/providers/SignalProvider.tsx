@@ -122,7 +122,30 @@ export function SignalProvider({ children }: SignalProviderProps) {
     const { authenticated } = usePrivy();
     const [isMounted, setIsMounted] = useState(false);
     const [notificationSignal, setNotificationSignal] = useState<Signal | null>(null);
-    const [allSignals, setAllSignals] = useState<Signal[]>([]);
+    const [allSignalsState, _setAllSignals] = useState<Signal[]>([]);
+    const allSignals = allSignalsState;
+
+    const setAllSignals = useCallback((action: React.SetStateAction<Signal[]>) => {
+        if (typeof action === 'function') {
+            _setAllSignals((prev: Signal[]) => {
+                const next = (action as (prevState: Signal[]) => Signal[])(prev);
+                if (prev.length > 0 && next.length === 0) {
+                    console.error('🚨 STATE WIPED! prev.length=', prev.length, 'next.length=', next.length);
+                    console.error('Stack trace:', new Error().stack);
+                }
+                return next;
+            });
+        } else {
+            _setAllSignals((prev: Signal[]) => {
+                if (prev.length > 0 && action.length === 0) {
+                    console.error('🚨 STATE WIPED DIRECTLY! prev.length=', prev.length, 'next.length=', action.length);
+                    console.error('Stack trace:', new Error().stack);
+                }
+                return action;
+            });
+        }
+    }, []);
+
     const [autoSettings, setAutoSettings] = useState<AutoApproveSettings | null>(null);
     const [buyingPower, setBuyingPower] = useState<number>(0);
     const [openPositionCount, setOpenPositionCount] = useState<number>(0);

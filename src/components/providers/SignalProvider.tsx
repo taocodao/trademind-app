@@ -290,7 +290,7 @@ export function SignalProvider({ children }: SignalProviderProps) {
 
     // Polling fetch of signals
     useEffect(() => {
-        if (!isMounted || !authenticated) return;
+        if (!isMounted) return;
 
         let isFetching = false;
 
@@ -303,6 +303,7 @@ export function SignalProvider({ children }: SignalProviderProps) {
                     const data = await response.json();
                     if (data.signals && Array.isArray(data.signals)) {
                         const now = Date.now();
+                        console.log(`📡 Raw signals received: ${data.signals.length}`, data.signals.map((s: any) => `${s.symbol}|${s.strategy}|${s.status}|exp=${s.expiresAt}`));
                         const signalsWithIds = data.signals
                             .map((s: Signal, i: number) => ({
                                 ...s,
@@ -310,11 +311,17 @@ export function SignalProvider({ children }: SignalProviderProps) {
                                 receivedAt: s.createdAt ? new Date(s.createdAt).getTime() : now,
                             }))
                             .filter((s: Signal) => {
-                                if (s.strategy?.toLowerCase() !== 'turbobounce') return false;
+                                if (s.strategy?.toLowerCase() !== 'turbobounce') {
+                                    console.log(`⏭️ Skipping ${s.symbol}: strategy=${s.strategy}`);
+                                    return false;
+                                }
                                 if (s.status && s.status !== 'pending') return true;
-                                return !isSignalExpired(s as any);
+                                const expired = isSignalExpired(s as any);
+                                if (expired) console.log(`⏰ Expired ${s.symbol}: expiresAt=${(s as any).expiresAt}`);
+                                return !expired;
                             });
 
+                        console.log(`✅ Signals after filter: ${signalsWithIds.length}`);
                         // DB is truth - replace state
                         setAllSignals(signalsWithIds);
 
@@ -324,7 +331,11 @@ export function SignalProvider({ children }: SignalProviderProps) {
                         signalsWithIds.forEach((s: Signal) => {
                             if (s.status === 'pending') attemptAutoApprove(s);
                         });
+                    } else {
+                        console.warn('📡 Unexpected signals response shape:', data);
                     }
+                } else {
+                    console.warn(`📡 Signals fetch failed: ${response.status}`);
                 }
             } catch (error) {
                 console.warn('Could not fetch signals', error);
@@ -341,15 +352,15 @@ export function SignalProvider({ children }: SignalProviderProps) {
             const etDate = new Date(et);
             const h = etDate.getHours();
             const d = etDate.getDay();
-            // Weekdays 9:30 AM (9) to 4:00 PM (15:59) ET
-            return d >= 1 && d <= 5 && h >= 9 && h < 16;
+            // Weekdays 9 AM to 4:30 PM ET (extended to catch pre/post market signals)
+            return d >= 1 && d <= 5 && h >= 9 && h < 17;
         };
 
-        // Poll every 10s during market hours, 60s otherwise
-        const pollInterval = isMarketHours() ? 10_000 : 60_000;
+        // Poll every 15s during market hours, 60s otherwise
+        const pollInterval = isMarketHours() ? 15_000 : 60_000;
         const interval = setInterval(fetchExistingSignals, pollInterval);
         return () => clearInterval(interval);
-    }, [isMounted, authenticated, attemptAutoApprove, setAllSignals]);
+    }, [isMounted, attemptAutoApprove, setAllSignals]);
 
     const handleCloseNotification = useCallback(() => setNotificationSignal(null), []);
     const handleViewSignal = useCallback(() => router.push('/dashboard'), [router]);

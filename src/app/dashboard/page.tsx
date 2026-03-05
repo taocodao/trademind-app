@@ -750,7 +750,7 @@ function DashboardContent() {
 
         const liveTurbo = allSignals.filter(s =>
 
-            s.strategy === 'turbobounce' ||
+            s.strategy?.toLowerCase() === 'turbobounce' ||
 
             (s as any).pool === 'MULTI_TICKER' ||
 

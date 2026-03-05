@@ -126,24 +126,7 @@ export function SignalProvider({ children }: SignalProviderProps) {
     const allSignals = allSignalsState;
 
     const setAllSignals = useCallback((action: React.SetStateAction<Signal[]>) => {
-        if (typeof action === 'function') {
-            _setAllSignals((prev: Signal[]) => {
-                const next = (action as (prevState: Signal[]) => Signal[])(prev);
-                if (prev.length > 0 && next.length === 0) {
-                    console.error('🚨 STATE WIPED! prev.length=', prev.length, 'next.length=', next.length);
-                    console.error('Stack trace:', new Error().stack);
-                }
-                return next;
-            });
-        } else {
-            _setAllSignals((prev: Signal[]) => {
-                if (prev.length > 0 && action.length === 0) {
-                    console.error('🚨 STATE WIPED DIRECTLY! prev.length=', prev.length, 'next.length=', action.length);
-                    console.error('Stack trace:', new Error().stack);
-                }
-                return action;
-            });
-        }
+        _setAllSignals(action);
     }, []);
 
     const [autoSettings, setAutoSettings] = useState<AutoApproveSettings | null>(null);
@@ -301,7 +284,6 @@ export function SignalProvider({ children }: SignalProviderProps) {
 
     const handleSignal = useCallback((signal: Signal, channel: string) => {
         if (signal.strategy?.toLowerCase() !== 'turbobounce') return;
-        console.log('🔔 New signal received:', signal.symbol, channel);
 
         const signalWithId: Signal = {
             ...signal,
@@ -313,10 +295,8 @@ export function SignalProvider({ children }: SignalProviderProps) {
         setAllSignals(prev => {
             const exists = prev.some(s => s.id === signalWithId.id);
             if (exists) {
-                console.log(`📥 handleSignal UPDATE: ${signalWithId.symbol}, total stays ${prev.length}`);
                 return prev.map(s => s.id === signalWithId.id ? { ...s, ...signalWithId } : s);
             }
-            console.log(`📥 handleSignal ADD: ${signalWithId.symbol}, total becomes ${prev.length + 1}`);
             return [signalWithId, ...prev];
         });
 
@@ -362,7 +342,7 @@ export function SignalProvider({ children }: SignalProviderProps) {
             }
         };
         fetchExistingSignals();
-    }, [isMounted]);
+    }, [isMounted, authenticated]);
 
     // Socket connection
     const handleConnect = useCallback(() => console.log('✅ Signal socket connected'), []);
@@ -396,9 +376,6 @@ export function SignalProvider({ children }: SignalProviderProps) {
                     if (s.status !== 'pending') return true;
                     return !isSignalExpired(s as any);
                 });
-                if (filtered.length !== prev.length) {
-                    console.log(`🧹 Cleanup: removed ${prev.length - filtered.length} expired signals, ${filtered.length} remain`);
-                }
                 return filtered;
             });
         }, EXPIRY_CHECK_INTERVAL_MS);
@@ -406,8 +383,6 @@ export function SignalProvider({ children }: SignalProviderProps) {
     }, [isMounted]);
 
     const pendingCount = allSignals.filter(s => s.status === 'pending').length;
-
-    console.log(`📦 SignalProvider RENDER: allSignals.length=${allSignals.length}`);
 
     return (
         <SignalContext.Provider value={{

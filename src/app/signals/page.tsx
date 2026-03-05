@@ -86,7 +86,6 @@ export default function SignalsPage() {
 
     const signals = allSignals.filter((s: any) => {
         if (s.status !== 'pending') {
-            console.log('🚫 Signal dropped (status):', s.symbol, s.status);
             return false;
         }
 
@@ -98,9 +97,7 @@ export default function SignalsPage() {
             const safeExpStr = expStr.replace(' ', 'T');
             const expTime = new Date(safeExpStr).getTime();
             const now = Date.now();
-            const isValid = expTime > now;
-            console.log(`⏰ Signal ${s.symbol}: expiresAt=${safeExpStr}, valid=${isValid}, diff=${Math.round((expTime - now) / 60000)}min`);
-            return isValid;
+            return expTime > now;
         }
 
         // Fallback: keep tracking signals from last 24 hours
@@ -110,13 +107,8 @@ export default function SignalsPage() {
             : (s.receivedAt || Date.now());
 
         const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
-        const fallbackValid = timestamp > twentyFourHoursAgo;
-        console.log(`📅 Signal ${s.symbol}: no expiresAt, fallback valid=${fallbackValid}`);
-        return fallbackValid;
+        return timestamp > twentyFourHoursAgo;
     }) as Signal[];
-
-    // DIAGNOSTIC: Log at render time to catch stale/empty allSignals
-    console.log(`🔍 RENDER signals/page: allSignals.length=${allSignals.length}, filtered signals.length=${signals.length}`);
 
     useEffect(() => {
         if (ready && !authenticated) {

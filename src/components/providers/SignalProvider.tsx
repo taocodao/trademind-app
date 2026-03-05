@@ -384,6 +384,8 @@ export function SignalProvider({ children }: SignalProviderProps) {
 
     const pendingCount = allSignals.filter(s => s.status === 'pending').length;
 
+    console.log(`📦 SignalProvider RENDER: allSignals.length=${allSignals.length}`);
+
     return (
         <SignalContext.Provider value={{
             isConnected,

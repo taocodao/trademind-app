@@ -20,13 +20,15 @@
 
 ## Data Flow
 
+### Trade Execution
 ```
-Backend (EC2)
-  └─ WebSocket ─→ SignalProvider.tsx
-                    └─→ signals/page.tsx (display)
-                    └─→ strategy-executor.ts (execute)
-                          └─→ tastytrade-api.ts
-                                └─→ Tastytrade API
+1. Frontend calls Vercel /api/signals/[id]/approve
+2. Execution Path Selection:
+   - Local: Direct to Tastytrade API (Theta/Diagonal)
+   - Proxy: Route to EC2 Backend (TurboBounce/ZEBRA)
+3. EC2 Backend (Proxy Path):
+   - Connects to IB for Live Price
+   - Executes via Tastytrade SDK
 ```
 
 ## Authentication

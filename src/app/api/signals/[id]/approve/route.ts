@@ -149,18 +149,50 @@ export async function POST(
         const defaultBackExpiry = frontDate.toISOString().split('T')[0];
 
         try {
-            // Execute trade using modular strategy executor
-            const result = await executeSignal(
-                accessToken,
-                accountNumber,
-                signalData,
-                {
-                    front: defaultFrontExpiry,
-                    back: defaultBackExpiry,
-                }
-            );
+            // Check if strategy should be handled by EC2 backend
+            const strategy = (signalData.strategy || '').toLowerCase();
+            const isServerManaged = strategy === 'turbobounce' || strategy === 'zebra';
 
-            console.log(`✅ Trade executed: Order ID ${result.orderId}`);
+            let result;
+
+            if (isServerManaged) {
+                console.log(`📡 Proxying ${strategy} approval to EC2 backend...`);
+                const ec2Url = process.env.TASTYTRADE_API_URL || 'http://34.235.119.67:8002';
+
+                const proxyResp = await fetch(`${ec2Url}/api/signals/${id}/approve`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        refreshToken: tokens.refreshToken,
+                        accountNumber: tokens.accountNumber,
+                        userId: userId,
+                        execute: true,
+                        signal: signalData // Pass the full signal data
+                    })
+                });
+
+                if (!proxyResp.ok) {
+                    const errorText = await proxyResp.text();
+                    throw new Error(`EC2 Proxy failed (${proxyResp.status}): ${errorText}`);
+                }
+
+                result = await proxyResp.json();
+                console.log(`✅ EC2 Proxy successful: Order ID ${result.orderId || result.order_id}`);
+            } else {
+                // Execute trade using modular strategy executor (locally on Vercel)
+                result = await executeSignal(
+                    accessToken,
+                    accountNumber,
+                    signalData,
+                    {
+                        front: defaultFrontExpiry,
+                        back: defaultFrontExpiry, // Using same for default vertical/theta
+                    }
+                );
+            }
+
+            const orderId = result.orderId || result.order_id || 'unknown';
+            console.log(`✅ Trade processed: Order ID ${orderId}`);
 
             // ✅ Create position in database for persistence
             try {
@@ -168,36 +200,35 @@ export async function POST(
                 const riskLevel = userSettings?.risk_level || 'moderate';
 
                 await createPosition({
-                    id: result.orderId,
+                    id: orderId,
                     userId: userId,
                     signalId: id,
                     symbol: signalData.symbol || 'UNKNOWN',
-                    strategy: signalData.strategy || 'theta',  // Pass actual strategy
+                    strategy: signalData.strategy || 'theta',
                     strike: signalData.strike || 0,
                     expiration: signalData.frontExpiry || signalData.expiry || defaultFrontExpiry,
-                    backExpiry: signalData.backExpiry || defaultBackExpiry,  // For calendar spreads
+                    backExpiry: signalData.backExpiry || defaultBackExpiry,
                     contracts: signalData.contracts || 1,
                     entryPrice: signalData.entry_price || signalData.price || signalData.cost || 0,
                     capitalRequired: signalData.cost || (signalData.strike || 0) * 100 * (signalData.contracts || 1),
                     riskLevel: riskLevel,
-                    direction: signalData.direction,  // bullish/bearish for calendar
+                    direction: signalData.direction,
                 });
 
                 // Track user execution
-                await createUserExecution(userId, id, 'executed', result.orderId, body.source || 'manual');
+                await createUserExecution(userId, id, 'executed', orderId, body.source || 'manual');
 
-                console.log(`✅ Position saved to database: ${result.orderId}`);
+                console.log(`✅ Position saved to database: ${orderId}`);
             } catch (dbError) {
-                // Log but don't fail the request - trade was successful
                 console.error('⚠️ Failed to save position to database:', dbError);
             }
 
             return NextResponse.json({
                 status: 'success',
                 signal: { id, ...signalData, status: 'executed' },
-                orderId: result.orderId,
-                positionId: result.orderId,
-                message: `Trade executed successfully! Order ID: ${result.orderId}`,
+                orderId: orderId,
+                positionId: orderId,
+                message: `Trade processed successfully! Order ID: ${orderId}`,
             });
 
         } catch (error) {

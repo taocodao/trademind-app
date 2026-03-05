@@ -98,10 +98,10 @@ const executeDiagonalStrategy: StrategyExecutor = async (
 /**
  * Guard for ZEBRA strategies which require 3-leg execution
  */
-const executeZebraGuard: StrategyExecutor = async () => {
+const executeServerManagedStrategy: StrategyExecutor = async (accessToken, accountNumber, signal) => {
     throw new Error(
-        'ZEBRA trades require 3-leg execution and are auto-managed by the server. ' +
-        'Please enable auto-approve for ZEBRA in Settings.'
+        `${signal.strategy} trades require live pricing and multi-leg execution which are managed by the EC2 backend. ` +
+        'Please use the manual approve button which will proxy to the server, or enable auto-approve in Settings.'
     );
 };
 
@@ -132,9 +132,11 @@ const STRATEGY_EXECUTORS: Record<string, StrategyExecutor> = {
     'SHORT_PUT': executeThetaStrategy,
     'deep-value': executeThetaStrategy,
 
-    // ZEBRA — 3-leg back ratio, only executable via EC2 auto-approve
-    'zebra': executeZebraGuard,
-    'ZEBRA': executeZebraGuard,
+    // ZEBRA & TurboBounce — Managed by EC2 for live pricing/multi-leg
+    'zebra': executeServerManagedStrategy,
+    'ZEBRA': executeServerManagedStrategy,
+    'turbobounce': executeServerManagedStrategy,
+    'TurboBounce': executeServerManagedStrategy,
 };
 
 /**

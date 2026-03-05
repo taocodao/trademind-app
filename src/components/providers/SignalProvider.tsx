@@ -321,7 +321,7 @@ export function SignalProvider({ children }: SignalProviderProps) {
                         // Note: Auto-approve logic handles its own processed tracking via `processedSignalIds` ref,
                         // so replacing the array won't cause double-executions. We trigger attemptAutoApprove
                         // for any pending signals in the new batch.
-                        signalsWithIds.forEach(s => {
+                        signalsWithIds.forEach((s: Signal) => {
                             if (s.status === 'pending') attemptAutoApprove(s);
                         });
                     }

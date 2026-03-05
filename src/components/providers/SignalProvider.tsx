@@ -133,6 +133,7 @@ export function SignalProvider({ children }: SignalProviderProps) {
     const [buyingPower, setBuyingPower] = useState<number>(0);
     const [openPositionCount, setOpenPositionCount] = useState<number>(0);
     const [isAutoApproving, setIsAutoApproving] = useState(false);
+    const prevBuyingPower = useRef<number>(0);
 
     // Track client-side mount
     const fetchSettings = useCallback(async () => {
@@ -184,9 +185,8 @@ export function SignalProvider({ children }: SignalProviderProps) {
     const attemptAutoApprove = useCallback(async (signal: Signal) => {
         if (!autoSettings?.enabled) return;
         if (signal.status !== 'pending') return;
+        // Only skip if already submitted for execution (not just checked)
         if (processedSignalIds.current.has(signal.id)) return;
-
-        processedSignalIds.current.add(signal.id);
 
         // Determine strategy configuration
         const strategy = (signal.strategy || '').toLowerCase();
@@ -245,8 +245,9 @@ export function SignalProvider({ children }: SignalProviderProps) {
             return;
         }
 
-        // ✅ All checks passed - execute!
+        // ✅ All checks passed — mark as processed and execute
         try {
+            processedSignalIds.current.add(signal.id);
             console.log(`⚡ Auto-approving signal ${signal.id}...`);
             setIsAutoApproving(true);
 
@@ -343,6 +344,23 @@ export function SignalProvider({ children }: SignalProviderProps) {
         };
         fetchExistingSignals();
     }, [isMounted, authenticated]);
+
+    // When buying power first loads (0 → positive), retry auto-approve for any
+    // pending signals that arrived before account data was available.
+    useEffect(() => {
+        const wasZero = prevBuyingPower.current <= 0;
+        const isNowPositive = buyingPower > 0;
+        prevBuyingPower.current = buyingPower;
+
+        if (!wasZero || !isNowPositive || !autoSettings?.enabled) return;
+
+        const pending = allSignals.filter(s => s.status === 'pending');
+        if (pending.length > 0) {
+            console.log(`💡 BP now available ($${buyingPower.toFixed(2)}). Retrying auto-approve for ${pending.length} pending signal(s)...`);
+            pending.forEach(s => attemptAutoApprove(s));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [buyingPower]);
 
     // Socket connection
     const handleConnect = useCallback(() => console.log('✅ Signal socket connected'), []);

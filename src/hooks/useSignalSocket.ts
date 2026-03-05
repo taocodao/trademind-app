@@ -33,7 +33,7 @@ interface Signal {
  */
 function normalizeSignal(raw: Record<string, unknown>): Signal {
     // Extract core values
-    const winRate = (raw.winRate || raw.win_rate || raw.confidence || raw.probability_otm) as number || 0;
+    const winRate = (raw.winRate || raw.win_rate || raw.confidence || raw.probability_otm || raw.total_score) as number || 0;
     const cost = (raw.cost || raw.entry_price || raw.capital_required) as number || 0;
 
     const strategyType = (raw.strategy_type as string) || '';

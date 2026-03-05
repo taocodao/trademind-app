@@ -3,8 +3,7 @@
 import { createContext, useContext, useCallback, useState, useEffect, ReactNode, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { useSignalSocket } from '@/hooks/useSignalSocket';
-import { SignalNotification, ConnectionStatus } from '@/components/SignalNotification';
+import { SignalNotification } from '@/components/SignalNotification';
 
 // Types from DB schema
 interface AutoApproveSettings {
@@ -283,37 +282,21 @@ export function SignalProvider({ children }: SignalProviderProps) {
 
     }, [autoSettings, buyingPower, openPositionCount]);
 
-    const handleSignal = useCallback((signal: Signal, channel: string) => {
-        if (signal.strategy?.toLowerCase() !== 'turbobounce') return;
+    // We removed the WS connection, so isConnected is now technically always true 
+    // for compatibility with downstream components that might check it, 
+    // or we can just default it to true since polling is doing the work.
+    const isConnected = true;
+    const lastSignal = null; // Unused in polling model
 
-        const signalWithId: Signal = {
-            ...signal,
-            id: signal.id || `signal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            status: signal.status || 'pending',
-            receivedAt: Date.now(),
-        };
-
-        setAllSignals(prev => {
-            const exists = prev.some(s => s.id === signalWithId.id);
-            if (exists) {
-                return prev.map(s => s.id === signalWithId.id ? { ...s, ...signalWithId } : s);
-            }
-            return [signalWithId, ...prev];
-        });
-
-        // Try auto-approve for authenticated users
-        attemptAutoApprove(signalWithId);
-
-        // Only show notification to authenticated users
-        if (!isAutoApproving && authenticated) {
-            setNotificationSignal(signalWithId);
-        }
-    }, [attemptAutoApprove, isAutoApproving, authenticated]);
-
-    // Initial fetch of existing signals — only for authenticated users
+    // Polling fetch of signals
     useEffect(() => {
         if (!isMounted || !authenticated) return;
+
+        let isFetching = false;
+
         const fetchExistingSignals = async () => {
+            if (isFetching) return;
+            isFetching = true;
             try {
                 const response = await fetch('/api/signals');
                 if (response.ok) {
@@ -331,53 +314,42 @@ export function SignalProvider({ children }: SignalProviderProps) {
                                 if (s.status && s.status !== 'pending') return true;
                                 return !isSignalExpired(s as any);
                             });
-                        setAllSignals(prev => {
-                            const existingIds = new Set(prev.map(s => s.id));
-                            const newSignals = signalsWithIds.filter((s: Signal) => !existingIds.has(s.id));
-                            return [...prev, ...newSignals];
+
+                        // DB is truth - replace state
+                        setAllSignals(signalsWithIds);
+
+                        // Note: Auto-approve logic handles its own processed tracking via `processedSignalIds` ref,
+                        // so replacing the array won't cause double-executions. We trigger attemptAutoApprove
+                        // for any pending signals in the new batch.
+                        signalsWithIds.forEach(s => {
+                            if (s.status === 'pending') attemptAutoApprove(s);
                         });
                     }
                 }
             } catch (error) {
                 console.warn('Could not fetch signals', error);
+            } finally {
+                isFetching = false;
             }
         };
+
+        // Initial fetch
         fetchExistingSignals();
-    }, [isMounted, authenticated]);
 
-    // When buying power first loads (0 → positive), retry auto-approve for any
-    // pending signals that arrived before account data was available.
-    useEffect(() => {
-        const wasZero = prevBuyingPower.current <= 0;
-        const isNowPositive = buyingPower > 0;
-        prevBuyingPower.current = buyingPower;
+        const isMarketHours = () => {
+            const et = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+            const etDate = new Date(et);
+            const h = etDate.getHours();
+            const d = etDate.getDay();
+            // Weekdays 9:30 AM (9) to 4:00 PM (15:59) ET
+            return d >= 1 && d <= 5 && h >= 9 && h < 16;
+        };
 
-        if (!wasZero || !isNowPositive || !autoSettings?.enabled) return;
-
-        const pending = allSignals.filter(s => s.status === 'pending');
-        if (pending.length > 0) {
-            console.log(`💡 BP now available ($${buyingPower.toFixed(2)}). Retrying auto-approve for ${pending.length} pending signal(s)...`);
-            pending.forEach(s => attemptAutoApprove(s));
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [buyingPower]);
-
-    // Socket connection
-    const handleConnect = useCallback(() => console.log('✅ Signal socket connected'), []);
-    const handleDisconnect = useCallback(() => console.log('❌ Signal socket disconnected'), []);
-
-    // Stable channel configuration
-    const CHANNEL_SUBSCRIPTIONS = useRef([
-        'turbobounce'
-    ]).current;
-
-    const { isConnected, lastSignal } = useSignalSocket({
-        channels: CHANNEL_SUBSCRIPTIONS,
-        onSignal: handleSignal,
-        onConnect: handleConnect,
-        onDisconnect: handleDisconnect,
-        onAccountUpdate: fetchAccountData
-    });
+        // Poll every 10s during market hours, 60s otherwise
+        const pollInterval = isMarketHours() ? 10_000 : 60_000;
+        const interval = setInterval(fetchExistingSignals, pollInterval);
+        return () => clearInterval(interval);
+    }, [isMounted, authenticated, attemptAutoApprove, setAllSignals]);
 
     const handleCloseNotification = useCallback(() => setNotificationSignal(null), []);
     const handleViewSignal = useCallback(() => router.push('/dashboard'), [router]);
@@ -421,9 +393,6 @@ export function SignalProvider({ children }: SignalProviderProps) {
                         onClose={handleCloseNotification}
                         onView={handleViewSignal}
                     />
-                    <div className="fixed bottom-4 left-4 z-40">
-                        <ConnectionStatus isConnected={isConnected} />
-                    </div>
                 </>
             )}
         </SignalContext.Provider>

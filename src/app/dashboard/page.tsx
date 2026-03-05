@@ -326,7 +326,7 @@ function DashboardContent() {
 
     const { settings, setAutoApproval } = useSettings();
 
-    const { allSignals } = useSignalContext();
+    const { allSignals, removeSignal } = useSignalContext();
 
     const { t, i18n } = useTranslation();
 
@@ -344,7 +344,12 @@ function DashboardContent() {
 
     const [signals, setSignals] = useState<TQQQSignal[]>([]);
 
-    const [turboSignals, setTurboSignals] = useState<TurboBounceSignal[]>([]);
+    const turboSignals = allSignals.filter(s =>
+        s.strategy?.toLowerCase() === 'turbobounce' ||
+        (s as any).pool === 'MULTI_TICKER' ||
+        (s as any).type === 'DIAGONAL' ||
+        (s as any).type === 'CREDIT_SPREAD'
+    ) as unknown as TurboBounceSignal[];
 
     const [recentOrders, setRecentOrders] = useState<any[]>([]);
 
@@ -687,120 +692,11 @@ function DashboardContent() {
 
 
 
-    // ── Fetch turbobounce signals ──
-
-    const fetchTurboSignals = useCallback(async () => {
-
-        try {
-
-            const res = await fetch('/api/turbobounce/signals');
-
-            if (res.ok) {
-
-                const newSignals = await res.json();
+    // ── Fetch turbobounce signals removed (derived from context) ──
 
 
 
-                // Filter out signals older than 12 hours
-
-                const twelveHoursAgo = Date.now() - 12 * 60 * 60 * 1000;
-
-                const recentSignals = newSignals.filter((s: TurboBounceSignal) => {
-
-                    const timeStr = s.createdAt || s.created_at;
-
-                    const age = timeStr ? new Date(timeStr).getTime() : Date.now();
-
-                    return age > twelveHoursAgo;
-
-                });
-
-
-
-                setTurboSignals(prev => {
-                    const existingIds = new Set(prev.map(p => p.id));
-                    const newSigs = recentSignals.filter((s: TurboBounceSignal) => !existingIds.has(s.id));
-                    if (newSigs.length === 0) return prev;
-                    return [...newSigs, ...prev];
-                });
-
-            }
-
-        } catch {
-
-            // silently ignore
-
-        }
-
-    }, [settings, tastyLinked]);
-
-
-
-    // ── Merge live WebSocket signals ──
-
-    useEffect(() => {
-
-        if (!allSignals || allSignals.length === 0) return;
-
-
-
-        // Separate live signals by type
-
-        const liveTqqq = allSignals.filter(s => s.strategy === 'tqqq' || s.strategy === 'diagonal');
-
-        const liveTurbo = allSignals.filter(s =>
-
-            s.strategy?.toLowerCase() === 'turbobounce' ||
-
-            (s as any).pool === 'MULTI_TICKER' ||
-
-            (s as any).type === 'DIAGONAL' ||
-
-            (s as any).type === 'CREDIT_SPREAD'
-
-        );
-
-
-
-        // Merge into TQQQ signals
-
-        if (liveTqqq.length > 0) {
-
-            setSignals(prev => {
-
-                const existingIds = new Set(prev.map((p: any) => p.id));
-
-                const newSigs = liveTqqq.filter((s: any) => !existingIds.has(s.id)) as unknown as TQQQSignal[];
-
-                if (newSigs.length === 0) return prev;
-
-                return [...newSigs, ...prev];
-
-            });
-
-        }
-
-
-
-        // Merge into TurboBounce signals
-
-        if (liveTurbo.length > 0) {
-
-            setTurboSignals(prev => {
-
-                const existingIds = new Set(prev.map((p: any) => p.id));
-
-                const newSigs = liveTurbo.filter((s: any) => !existingIds.has(s.id)) as unknown as TurboBounceSignal[];
-
-                if (newSigs.length === 0) return prev;
-
-                return [...newSigs, ...prev];
-
-            });
-
-        }
-
-    }, [allSignals]);
+    // ── Merge live WebSocket signals removed (derived from context) ──
 
 
 
@@ -924,9 +820,7 @@ function DashboardContent() {
 
             if (!response.ok) throw new Error(data.error || 'Approval failed');
 
-
-
-            setTurboSignals(prev => prev.filter(s => s.id !== signal.id));
+            removeSignal(signal.id);
 
             showToast('TurboBounce Signal Approved ✓', true);
 
@@ -946,7 +840,7 @@ function DashboardContent() {
 
     const handleTurboSkip = (id: string) => {
 
-        setTurboSignals(prev => prev.filter(s => s.id !== id));
+        removeSignal(id);
 
     };
 
@@ -972,7 +866,7 @@ function DashboardContent() {
 
 
 
-        const signalInterval = setInterval(() => { fetchSignals(); fetchTurboSignals(); fetchGamificationStats(); }, 5000 * 60); // 5 min
+        const signalInterval = setInterval(() => { fetchSignals(); fetchGamificationStats(); }, 5000 * 60); // 5 min
 
         const dataInterval = setInterval(fetchAccountData, 60000); // 1 min
 
@@ -999,8 +893,6 @@ function DashboardContent() {
         if (!data?.accountNumber) return;
 
         fetchSignals();
-
-        fetchTurboSignals();
 
         fetchOrders(data.accountNumber);
 
@@ -1044,7 +936,7 @@ function DashboardContent() {
 
 
 
-    const refreshAll = () => { fetchAccountData(); fetchSignals(); fetchTurboSignals(); };
+    const refreshAll = () => { fetchAccountData(); fetchSignals(); };
 
 
 

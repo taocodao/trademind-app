@@ -301,6 +301,11 @@ export function SignalProvider({ children }: SignalProviderProps) {
                 const response = await fetch('/api/signals');
                 if (response.ok) {
                     const data = await response.json();
+                    // Skip update if backend returned an error (e.g., pool exhausted, timeout)
+                    if (data.error) {
+                        console.warn(`📡 Backend error, retaining current signals: ${data.error}`);
+                        return;
+                    }
                     if (data.signals && Array.isArray(data.signals)) {
                         const now = Date.now();
                         console.log(`📡 Raw signals received: ${data.signals.length}`, data.signals.map((s: any) => `${s.symbol}|${s.strategy}|${s.status}|exp=${s.expiresAt}`));
@@ -322,12 +327,10 @@ export function SignalProvider({ children }: SignalProviderProps) {
                             });
 
                         console.log(`✅ Signals after filter: ${signalsWithIds.length}`);
-                        // DB is truth - replace state
+                        // DB is truth - replace state (only if we got real data)
                         setAllSignals(signalsWithIds);
 
-                        // Note: Auto-approve logic handles its own processed tracking via `processedSignalIds` ref,
-                        // so replacing the array won't cause double-executions. We trigger attemptAutoApprove
-                        // for any pending signals in the new batch.
+                        // Trigger auto-approve for pending signals
                         signalsWithIds.forEach((s: Signal) => {
                             if (s.status === 'pending') attemptAutoApprove(s);
                         });

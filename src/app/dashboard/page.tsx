@@ -351,6 +351,9 @@ function DashboardContent() {
         (s as any).type === 'CREDIT_SPREAD'
     ) as unknown as TurboBounceSignal[];
 
+    // DIAGNOSTIC: confirm context is delivering signals to dashboard
+    console.log(`📊 DASH: allSignals=${allSignals.length}, turbo=${turboSignals.length}`);
+
     const [recentOrders, setRecentOrders] = useState<any[]>([]);
 
     const [executingId, setExecutingId] = useState<string | null>(null);

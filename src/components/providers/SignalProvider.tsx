@@ -65,13 +65,13 @@ const EXPIRY_CHECK_INTERVAL_MS = 60 * 1000;
 function isSignalExpired(signal: { expires_at?: string; expiresAt?: string; createdAt?: string }): boolean {
     const expiresAt = signal.expires_at || signal.expiresAt;
     if (expiresAt) {
-        // Strip microseconds (Python sends 6 digits, JS wants 3 or 0) and ensure UTC
-        const cleanExp = expiresAt.split('.')[0];
-        const expStr = cleanExp.endsWith('Z') || cleanExp.includes('+') ? cleanExp : cleanExp + 'Z';
-        const safeExpStr = expStr.replace(' ', 'T');
-        return Date.now() > new Date(safeExpStr).getTime();
+        // Hand-off: RDS returns UTC-like strings. Browser likes 'T' instead of space.
+        const safeStr = expiresAt.replace(' ', 'T');
+        // If it looks like '2026-03-05T16:00:00' (no Z), browser defaults to Local (NY).
+        // If it starts with 'Z' or '+', browser defaults to UTC.
+        // This is safer than forcing 'Z' which was expiring signals prematurely.
+        return Date.now() > new Date(safeStr).getTime();
     }
-    // Fallback if no expires_at exists
     return false;
 }
 
@@ -298,65 +298,91 @@ export function SignalProvider({ children }: SignalProviderProps) {
     const lastSignal = null; // Unused in polling model
 
     // Polling fetch of signals
+    const isFetchingRef = useRef(false);
+    const lastFetchIdRef = useRef(0);
+
+    const fetchExistingSignals = useCallback(async () => {
+        if (isFetchingRef.current) return;
+        isFetchingRef.current = true;
+        const fetchId = ++lastFetchIdRef.current;
+
+        try {
+            console.log(`[SignalProvider] Fetch #${fetchId} starting...`);
+            const response = await fetch('/api/signals');
+            if (response.ok) {
+                const data = await response.json();
+
+                // Race condition check: Only process if this is still the latest fetch
+                if (fetchId !== lastFetchIdRef.current) {
+                    console.warn(`[SignalProvider] Fetch #${fetchId} is stale, ignoring.`);
+                    return;
+                }
+
+                if (data.error) {
+                    console.warn(`[SignalProvider] Backend error for #${fetchId}: ${data.error}`);
+                    return;
+                }
+
+                if (data.signals && Array.isArray(data.signals)) {
+                    const now = Date.now();
+                    const signalsWithIds = data.signals
+                        .map((s: Signal, i: number) => ({
+                            ...s,
+                            id: s.id || `db_signal_${Date.now()}_${i}`,
+                            receivedAt: s.createdAt ? new Date(s.createdAt).getTime() : now,
+                        }))
+                        .filter((s: Signal) => {
+                            const strat = (s.strategy || '').toLowerCase();
+                            const type = ((s as any).type || '').toLowerCase();
+
+                            // Broaden filter to match what dashboard expects
+                            const isCoreStrategy =
+                                strat === 'turbobounce' ||
+                                strat === 'diagonal' ||
+                                strat === 'theta' ||
+                                strats.includes(strat) || // any pre-defined strats
+                                type === 'diagonal' ||
+                                (s as any).pool === 'MULTI_TICKER';
+
+                            if (!isCoreStrategy) {
+                                // console.log(`⏭️ Skipping ${s.symbol}: strategy=${strat} type=${type}`);
+                                return false;
+                            }
+
+                            if (s.status && s.status !== 'pending') return true;
+                            const expired = isSignalExpired(s as any);
+                            if (expired) {
+                                // console.log(`⏰ Expired ${s.symbol}: expiresAt=${(s as any).expiresAt}`);
+                                return false;
+                            }
+                            return true;
+                        });
+
+                    console.log(`[SignalProvider] Fetch #${fetchId} finished with ${signalsWithIds.length} signals out of ${data.signals.length} raw.`);
+
+                    // Critical Update: Use functional update to avoid stale closures
+                    _setAllSignals(signalsWithIds);
+
+                    signalsWithIds.forEach((s: Signal) => {
+                        if (s.status === 'pending') attemptAutoApprove(s);
+                    });
+                } else {
+                    console.warn(`[SignalProvider] Fetch #${fetchId} returned empty or invalid signals.`, data);
+                }
+            } else {
+                console.warn(`[SignalProvider] Fetch #${fetchId} failed with status ${response.status}`);
+            }
+        } catch (error) {
+            console.error(`[SignalProvider] Fetch #${fetchId} error:`, error);
+        } finally {
+            if (fetchId === lastFetchIdRef.current) {
+                isFetchingRef.current = false;
+            }
+        }
+    }, [isMounted, attemptAutoApprove]); // _setAllSignals is stable
+
     useEffect(() => {
         if (!isMounted) return;
-
-        let isFetching = false;
-
-        const fetchExistingSignals = async () => {
-            if (isFetching) return;
-            isFetching = true;
-            try {
-                const response = await fetch('/api/signals');
-                if (response.ok) {
-                    const data = await response.json();
-                    // Skip update if backend returned an error (e.g., pool exhausted, timeout)
-                    if (data.error) {
-                        console.warn(`📡 Backend error, retaining current signals: ${data.error}`);
-                        return;
-                    }
-                    if (data.signals && Array.isArray(data.signals)) {
-                        const now = Date.now();
-                        console.log(`📡 Raw signals received: ${data.signals.length}`, data.signals.map((s: any) => `${s.symbol}|${s.strategy}|${s.status}|exp=${s.expiresAt}`));
-                        const signalsWithIds = data.signals
-                            .map((s: Signal, i: number) => ({
-                                ...s,
-                                id: s.id || `db_signal_${Date.now()}_${i}`,
-                                receivedAt: s.createdAt ? new Date(s.createdAt).getTime() : now,
-                            }))
-                            .filter((s: Signal) => {
-                                if (s.strategy?.toLowerCase() !== 'turbobounce') {
-                                    console.log(`⏭️ Skipping ${s.symbol}: strategy=${s.strategy}`);
-                                    return false;
-                                }
-                                if (s.status && s.status !== 'pending') return true;
-                                const expired = isSignalExpired(s as any);
-                                if (expired) console.log(`⏰ Expired ${s.symbol}: expiresAt=${(s as any).expiresAt}`);
-                                return !expired;
-                            });
-
-                        console.log(`✅ Signals after filter: ${signalsWithIds.length}`);
-                        // DB is truth - replace state (only if we got real data)
-                        setAllSignals(signalsWithIds);
-
-                        // Trigger auto-approve for pending signals
-                        signalsWithIds.forEach((s: Signal) => {
-                            if (s.status === 'pending') attemptAutoApprove(s);
-                        });
-                    } else {
-                        console.warn('📡 Unexpected signals response shape:', data);
-                    }
-                } else {
-                    console.warn(`📡 Signals fetch failed: ${response.status}`);
-                }
-            } catch (error) {
-                console.warn('Could not fetch signals', error);
-            } finally {
-                isFetching = false;
-            }
-        };
-
-        // Initial fetch
         fetchExistingSignals();
 
         const isMarketHours = () => {
@@ -364,31 +390,49 @@ export function SignalProvider({ children }: SignalProviderProps) {
             const etDate = new Date(et);
             const h = etDate.getHours();
             const d = etDate.getDay();
-            // Weekdays 9 AM to 4:30 PM ET (extended to catch pre/post market signals)
             return d >= 1 && d <= 5 && h >= 9 && h < 17;
         };
 
-        // Poll every 15s during market hours, 60s otherwise
-        const pollInterval = isMarketHours() ? 15_000 : 60_000;
-        const interval = setInterval(fetchExistingSignals, pollInterval);
+        const pollInterval = isMarketHours() ? 15000 : 30000;
+        const interval = setInterval(() => {
+            console.log(`[SignalProvider] Polling trigger...`);
+            fetchExistingSignals();
+        }, pollInterval);
+
         return () => clearInterval(interval);
-    }, [isMounted, attemptAutoApprove, setAllSignals]);
+    }, [isMounted, fetchExistingSignals]);
 
     const handleCloseNotification = useCallback(() => setNotificationSignal(null), []);
     const handleViewSignal = useCallback(() => router.push('/dashboard'), [router]);
-    const removeSignal = useCallback((id: string) => setAllSignals(prev => prev.filter(s => s.id !== id)), []);
-    const updateSignalStatus = useCallback((id: string, status: string) => setAllSignals(prev => prev.map(s => s.id === id ? { ...s, status } : s)), []);
-    const clearSignals = useCallback(() => setAllSignals([]), []);
+    const removeSignal = useCallback((id: string) => {
+        _setAllSignals(prev => {
+            console.log(`[SignalProvider] removeSignal: Removing signal ${id} from state.`);
+            return prev.filter(s => s.id !== id);
+        });
+    }, []);
+    const updateSignalStatus = useCallback((id: string, status: string) => {
+        _setAllSignals(prev => {
+            console.log(`[SignalProvider] updateSignalStatus: Updating signal ${id} to status ${status}.`);
+            return prev.map(s => s.id === id ? { ...s, status } : s);
+        });
+    }, []);
+    const clearSignals = useCallback(() => {
+        console.log('[SignalProvider] clearSignals called: Clearing all signals.');
+        _setAllSignals([]);
+    }, []);
 
     // Cleanup expired
     useEffect(() => {
         if (!isMounted) return;
         const interval = setInterval(() => {
-            setAllSignals(prev => {
+            _setAllSignals(prev => {
                 const filtered = prev.filter(s => {
                     if (s.status !== 'pending') return true;
                     return !isSignalExpired(s as any);
                 });
+                if (filtered.length !== prev.length) {
+                    console.log(`[SignalProvider] Expiry cleanup removed ${prev.length - filtered.length} signals.`);
+                }
                 return filtered;
             });
         }, EXPIRY_CHECK_INTERVAL_MS);
@@ -421,3 +465,6 @@ export function SignalProvider({ children }: SignalProviderProps) {
         </SignalContext.Provider>
     );
 }
+
+// Helper for filtering
+const strats = ['turbobounce', 'diagonal', 'theta', 'test_strategy', 'calendar-spread'];

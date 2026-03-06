@@ -41,14 +41,21 @@ async function getUserId(): Promise<string | null> {
     const cookieStore = await cookies();
     const privyToken = cookieStore.get('privy-token');
 
-    if (!privyToken) return null;
+    if (!privyToken) {
+        console.warn('❌ [AutoApprove API] No privy-token cookie found.');
+        return null;
+    }
 
     const tokenParts = privyToken.value.split('.');
     if (tokenParts.length >= 2) {
         try {
-            const payload = JSON.parse(atob(tokenParts[1]));
-            return payload.sub || payload.userId || null;
-        } catch {
+            // Buffer is required for Node.js base64 decoding
+            const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
+            const sub = payload.sub || payload.userId;
+            if (sub) return sub;
+            return privyToken.value.slice(0, 32);
+        } catch (e) {
+            console.error('❌ [AutoApprove API] Token parsing failed:', e);
             return privyToken.value.slice(0, 32);
         }
     }
@@ -175,14 +182,14 @@ export async function PUT(request: NextRequest) {
         }
 
         // Sync to Python backend (fire-and-forget, best-effort)
-        const PYTHON_API = process.env.TASTYTRADE_API_URL || 'http://34.235.119.67:8002';
+        const PYTHON_API = process.env.TASTYTRADE_API_URL || process.env.EC2_API_URL || 'http://34.235.119.67:8002';
         try {
             await fetch(`${PYTHON_API}/api/settings/auto-approve`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
             });
-            console.log('✅ Auto-approve settings synced to Python backend');
+            console.log(`✅ Auto-approve settings synced to Python backend: ${PYTHON_API}`);
         } catch (syncError) {
             console.warn('⚠️ Could not sync auto-approve to Python backend (non-fatal):', syncError);
         }

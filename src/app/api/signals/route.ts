@@ -7,10 +7,15 @@ import { NextResponse } from 'next/server';
 
 const PYTHON_API = process.env.EC2_API_URL || process.env.TASTYTRADE_API_URL || 'http://34.235.119.67:8002';
 
+// Increase serverless function timeout to 35s (Vercel Hobby: 10s, Pro: 60s)
+export const maxDuration = 35;
+
+
 export async function GET() {
     try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
+        const timeout = setTimeout(() => controller.abort(), 28000); // 28s timeout (under maxDuration)
+
 
         const response = await fetch(`${PYTHON_API}/api/signals`, {
             headers: { 'Accept': 'application/json' },

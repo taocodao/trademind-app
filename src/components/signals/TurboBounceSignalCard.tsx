@@ -32,6 +32,10 @@ export interface TurboBounceSignal {
     target_hedge_dte: number;
     target_delta: number;
     status: string;
+    legs?: any[];
+    frontExpiry?: string;
+    backExpiry?: string;
+    strike?: number;
     createdAt?: string;
     created_at?: string;
     receivedAt?: number;
@@ -116,16 +120,61 @@ export function TurboBounceSignalCard({ signal, onApprove, onSkip, isApproving }
             </div>
 
             {/* Trade Strategy Parameters */}
-            <div className="flex items-center justify-between mb-4 px-2">
-                <div className="flex items-center gap-2">
-                    <Crosshair className="w-4 h-4 text-tm-muted" />
-                    <span className="text-sm text-tm-muted">Engine Targets:</span>
+            {signal.legs && signal.legs.length > 0 ? (
+                <div className="mb-4">
+                    <div className="flex items-center gap-2 mb-2 px-2">
+                        <Crosshair className="w-4 h-4 text-tm-muted" />
+                        <span className="text-sm font-medium">Optimal Legs Found:</span>
+                    </div>
+                    <div className="bg-black/20 rounded-xl p-3 border border-white/5 space-y-2">
+                        {signal.legs.map((leg, i) => {
+                            // OCC symbol format: AAPL  240119C00150000
+                            // Extract parts for UI
+                            const occ = leg.symbol.trim();
+                            const isCall = occ.includes('C');
+                            const typeStr = isCall ? 'CALL' : 'PUT';
+                            // Get expiry string from OCC (YYMMDD) - it's 6 characters before the C/P
+                            const typeIdx = isCall ? occ.indexOf('C') : occ.indexOf('P');
+                            const expStr = typeIdx > 6 ? occ.substring(typeIdx - 6, typeIdx) : 'N/A';
+                            // Format YYMMDD to MM/DD/YY
+                            const formattedExp = expStr.length === 6 ? `${expStr.substring(2, 4)}/${expStr.substring(4, 6)}/20${expStr.substring(0, 2)}` : expStr;
+
+                            // Get strike (last 8 characters, divided by 1000)
+                            const strikeStr = occ.substring(typeIdx + 1);
+                            const strikeVal = parseInt(strikeStr, 10) / 1000;
+
+                            return (
+                                <div key={i} className="flex items-center justify-between text-sm p-2 bg-white/5 rounded-lg">
+                                    <div className="flex items-center gap-2">
+                                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${leg.action === 'BUY' ? 'bg-tm-green/20 text-tm-green' : 'bg-tm-red/20 text-tm-red'}`}>
+                                            {leg.action}
+                                        </span>
+                                        <span className="font-mono">{formattedExp}</span>
+                                    </div>
+                                    <div className="font-mono font-bold">
+                                        ${strikeVal} {typeStr}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        <div className="flex justify-between items-center pt-2 mt-2 border-t border-white/10 px-1 text-sm">
+                            <span className="text-tm-muted">Est. Trade Cost:</span>
+                            <span className="font-mono font-bold">${signal.cost ? signal.cost.toFixed(2) : 'N/A'}</span>
+                        </div>
+                    </div>
                 </div>
-                <div className="flex gap-3 text-sm font-mono">
-                    <span className="bg-white/5 px-2 py-1 rounded">Δ {signal.target_delta}</span>
-                    <span className="bg-white/5 px-2 py-1 rounded">{signal.target_anchor_dte} / {signal.target_hedge_dte} DTE</span>
+            ) : (
+                <div className="flex items-center justify-between mb-4 px-2">
+                    <div className="flex items-center gap-2">
+                        <Crosshair className="w-4 h-4 text-tm-muted" />
+                        <span className="text-sm text-tm-muted">Engine Targets:</span>
+                    </div>
+                    <div className="flex gap-3 text-sm font-mono">
+                        <span className="bg-white/5 px-2 py-1 rounded">Δ {signal.target_delta}</span>
+                        <span className="bg-white/5 px-2 py-1 rounded">{signal.target_anchor_dte} / {signal.target_hedge_dte} DTE</span>
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Why AI Picked This Modal */}
             <button

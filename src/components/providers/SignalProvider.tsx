@@ -335,17 +335,12 @@ export function SignalProvider({ children }: SignalProviderProps) {
                             const strat = (s.strategy || '').toLowerCase();
                             const type = ((s as any).type || '').toLowerCase();
 
-                            // Broaden filter to match what dashboard expects
-                            const isCoreStrategy =
+                            // User only wants Turbobounce/Multi-Ticker signals
+                            const isTurbo =
                                 strat === 'turbobounce' ||
-                                strat === 'diagonal' ||
-                                strat === 'theta' ||
-                                strats.includes(strat) || // any pre-defined strats
-                                type === 'diagonal' ||
                                 (s as any).pool === 'MULTI_TICKER';
 
-                            if (!isCoreStrategy) {
-                                // console.log(`⏭️ Skipping ${s.symbol}: strategy=${strat} type=${type}`);
+                            if (!isTurbo) {
                                 return false;
                             }
 

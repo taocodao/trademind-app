@@ -211,36 +211,45 @@ export function SignalProvider({ children }: SignalProviderProps) {
 
         console.log(`🤖 Checking auto-approve for ${signal.symbol} (${strategyKey})...`);
 
-        // Check 0: Account must have buying power
-        if (buyingPower <= 0) {
-            console.log(`❌ Auto-approve skipped: No buying power available ($${buyingPower.toFixed(2)})`);
-            return;
-        }
+        // Check 0: Account must have buying power (Only if connected to a brokerage)
+        // If the user hasn't successfully fetched account data (buyingPower is 0),
+        // we assume they are on a signal-only plan or their account is disconnected.
+        const isBrokerageLinked = buyingPower > 0 || openPositionCount > 0;
 
-        // Check 1: Risk Limits
-        const limits = RISK_LIMITS[config.riskLevel] || RISK_LIMITS.MEDIUM;
-        const confidence = signal.confidence || 0;
-        const capitalReq = signal.capital_required || signal.cost || 0;
+        if (isBrokerageLinked) {
+            if (buyingPower <= 0) {
+                console.log(`❌ Auto-approve skipped: No buying power available ($${buyingPower.toFixed(2)})`);
+                return;
+            }
 
-        if (confidence < limits.minConfidence) {
-            console.log(`❌ Auto-approve skipped: Confidence ${confidence}% < ${limits.minConfidence}%`);
-            return;
-        }
+            // Check 1: Risk Limits
+            const limits = RISK_LIMITS[config.riskLevel] || RISK_LIMITS.MEDIUM;
+            const confidence = signal.confidence || 0;
+            const capitalReq = signal.capital_required || signal.cost || 0;
 
-        // Check 2: Capital Requirements
-        if (capitalReq > limits.maxCapital) {
-            console.log(`❌ Auto-approve skipped: Capital $${capitalReq} > limit $${limits.maxCapital}`);
-            return;
-        }
+            if (confidence < limits.minConfidence) {
+                console.log(`❌ Auto-approve skipped: Confidence ${confidence}% < ${limits.minConfidence}%`);
+                return;
+            }
 
-        if (capitalReq > 0 && capitalReq > buyingPower) {
-            console.log(`❌ Auto-approve skipped: Insufficient buying power ($${buyingPower.toFixed(2)} available vs $${capitalReq} needed)`);
-            return;
-        }
+            // Check 2: Capital Requirements
+            if (capitalReq > limits.maxCapital) {
+                console.log(`❌ Auto-approve skipped: Capital $${capitalReq} > limit $${limits.maxCapital}`);
+                return;
+            }
 
-        // Check 3: Position Limits
-        if (openPositionCount >= limits.maxPositions) {
-            console.log(`❌ Auto-approve skipped: Max positions reached (${openPositionCount} >= ${limits.maxPositions})`);
+            if (capitalReq > 0 && capitalReq > buyingPower) {
+                console.log(`❌ Auto-approve skipped: Insufficient buying power ($${buyingPower.toFixed(2)} available vs $${capitalReq} needed)`);
+                return;
+            }
+
+            // Check 3: Position Limits
+            if (openPositionCount >= limits.maxPositions) {
+                console.log(`❌ Auto-approve skipped: Max positions reached (${openPositionCount} >= ${limits.maxPositions})`);
+                return;
+            }
+        } else {
+            console.log(`ℹ️ Auto-approve skipped: No brokerage linked (Signal-only mode)`);
             return;
         }
 

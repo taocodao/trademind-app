@@ -80,7 +80,6 @@ export function TurboBounceSignalCard({ signal, onApprove, onSkip, isApproving }
                     <ExpirationBadge
                         receivedAt={signal.receivedAt}
                         createdAt={signal.createdAt || signal.created_at}
-                        onExpired={onSkip}
                     />
                     <span className="text-xs bg-tm-surface px-2 py-1 rounded-full text-tm-muted border border-white/5 font-mono">
                         Rank #{signal.scanner_rank}

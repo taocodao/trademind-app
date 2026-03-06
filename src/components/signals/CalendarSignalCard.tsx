@@ -82,7 +82,6 @@ export function CalendarSignalCard({ signal, onApprove, onSkip, isApproving }: C
                     <ExpirationBadge
                         receivedAt={signal.receivedAt}
                         createdAt={signal.createdAt}
-                        onExpired={onSkip}
                     />
                     <span className={`text-xs font-medium px-2 py-1 rounded-full ${riskColors[signal.riskLevel || 'Medium']}`}>
                         {signal.riskLevel || 'Medium'}

@@ -41,6 +41,7 @@ export interface TurboBounceSignal {
     receivedAt?: number;
     expiresAt?: string;
     expires_at?: string;
+    cost?: number;
 }
 
 interface TurboBounceSignalCardProps {

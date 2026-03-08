@@ -54,9 +54,7 @@ import { TastytradeLink } from '@/components/TastytradeLink';
 
 import { TQQQStatusBanner } from '@/components/dashboard/TQQQStatusBanner';
 
-import { SignalCard, type TQQQSignal } from '@/components/dashboard/SignalCard';
-
-import { TurboBounceSignalCard, type TurboBounceSignal } from '@/components/signals/TurboBounceSignalCard';
+import { TurboCoreSignalCard, type TurboCoreSignal } from '@/components/signals/TurboCoreSignalCard';
 
 import { Suspense } from 'react';
 
@@ -342,17 +340,11 @@ function DashboardContent() {
 
     const [tastyUsername, setTastyUsername] = useState<string | null>(null);
 
-    const [signals, setSignals] = useState<TQQQSignal[]>([]);
-
-    const turboSignals = allSignals.filter(s =>
-        s.strategy?.toLowerCase() === 'turbobounce' ||
-        (s as any).pool === 'MULTI_TICKER' ||
-        (s as any).type === 'DIAGONAL' ||
-        (s as any).type === 'CREDIT_SPREAD'
-    ) as unknown as TurboBounceSignal[];
-
-    // DIAGNOSTIC: confirm context is delivering signals to dashboard
-    console.log(`📊 DASH: allSignals=${allSignals.length}, turbo=${turboSignals.length}`);
+    // TurboCore Strategy Filtering
+    const coreSignals = allSignals.filter(s =>
+        s.strategy?.toUpperCase() === 'TQQQ_TURBOCORE' ||
+        (s as any).type === 'REBALANCE'
+    ) as unknown as TurboCoreSignal[];
 
     const [recentOrders, setRecentOrders] = useState<any[]>([]);
 
@@ -522,391 +514,77 @@ function DashboardContent() {
 
 
 
-    // ── Fetch pending signals ──
-
-    const fetchSignals = useCallback(async () => {
-
-        try {
-
-            const res = await fetch('/api/tqqq/signals');
-
-            if (res.ok) {
-
-                const newSignals = await res.json();
-
-
-
-                // Auto-approval logic
-
-                if (settings.autoApproval && tastyLinked) {
-
-                    const riskPct = settings.riskLevel === 'LOW' ? 0.05 : settings.riskLevel === 'HIGH' ? 0.10 : 0.075;
-
-                    const maxRisk = settings.investmentPrincipal * riskPct;
-
-                    const maxConcurrentSpreads = Math.max(1, Math.floor(0.70 / riskPct)); // Leave 30% BP reserve
-
-
-
-                    // Only do expensive Tastytrade fetching if there's actually a pending signal we might execute
-
-                    const hasPendingEligible = newSignals.some((sig: TQQQSignal) => {
-
-                        return (!sig.status || sig.status === 'PENDING') && sig.confidence >= 70 && !signals.some(s => s.id === sig.id);
-
-                    });
-
-
-
-                    if (hasPendingEligible && !executingId && data?.accountNumber) {
-
-                        try {
-
-                            const acctNum = data.accountNumber;
-
-                            const posRes = await fetch(`/api/tqqq/positions?accountNumber=${acctNum}`);
-
-                            if (posRes.ok) {
-
-                                const pd = await posRes.json();
-
-                                let openSpreadsCount = pd.count || 0;
-
-
-
-                                for (const sig of newSignals) {
-
-                                    const alreadyExists = signals.some(s => s.id === sig.id);
-
-                                    const isPending = !sig.status || sig.status === 'PENDING';
-
-
-
-                                    if (!alreadyExists && isPending && sig.confidence >= 70 && !executingId) {
-
-                                        if (openSpreadsCount >= maxConcurrentSpreads) {
-
-                                            console.log(`[Auto-Approve] Concurrent cap reached (${openSpreadsCount}/${maxConcurrentSpreads}). Skipping automatic execution.`);
-
-                                            continue; // Leave as PENDING in UI for manual tracking
-
-                                        }
-
-
-
-                                        const maxLossPerContract = sig.maxLoss * 100;
-
-                                        const quantity = Math.min(Math.max(1, Math.floor(maxRisk / maxLossPerContract)), 10);
-
-
-
-                                        showToast(`Auto-executing ${sig.type.replace('_', ' ')}: ${quantity}x`, true);
-
-                                        handleApproveExecute(sig.id, quantity);
-
-                                        openSpreadsCount++; // Increment immediately to prevent next signal from over-allocation
-
-                                    }
-
-                                }
-
-                            }
-
-                        } catch (err) {
-
-                            console.error('Failed to verify positions for auto-approve', err);
-
-                        }
-
-                    }
-
-                }
-
-
-
-                // Filter out signals older than 12 hours to avoid clutter
-
-                const twelveHoursAgo = Date.now() - 12 * 60 * 60 * 1000;
-
-                const recentSignals = newSignals.filter((s: TQQQSignal) => {
-
-                    const age = s.createdAt ? new Date(s.createdAt).getTime() : Date.now();
-
-                    return age > twelveHoursAgo;
-
-                });
-
-
-
-                setSignals(prev => {
-                    const existingIds = new Set(prev.map(p => p.id));
-                    const newSigs = recentSignals.filter((s: TQQQSignal) => !existingIds.has(s.id));
-                    if (newSigs.length === 0) return prev;
-                    return [...newSigs, ...prev];
-                });
-
-            }
-
-        } catch {
-
-            // silently ignore — signals are best-effort
-
-        }
-
-    }, [settings, tastyLinked, signals, executingId]);
-
-
-
-    // ── Fetch Gamification Stats ──
-
-    const fetchGamificationStats = useCallback(async () => {
-
-        if (!authenticated) return;
-
-        try {
-
-            const res = await fetch('/api/gamification/stats');
-
-            if (res.ok) {
-
-                const data = await res.json();
-
-                setGamStats({
-
-                    streak: data.currentStreak || 0,
-
-                    winRate: data.winRate || 0,
-
-                    rank: data.leaderboardRank || null,
-
-                    totalProfit: data.totalProfit || 0
-
-                });
-
-            }
-
-        } catch {
-
-            // gracefully degrade to 0s if gamification fetch fails
-
-        }
-
-    }, [authenticated]);
-
-
-
-    // ── Fetch turbobounce signals removed (derived from context) ──
-
-
-
-    // ── Merge live WebSocket signals removed (derived from context) ──
-
-
-
     const showToast = (msg: string, ok: boolean) => {
-
         setToast({ msg, ok });
-
         setTimeout(() => setToast(null), 3000);
-
     };
 
 
 
-    const handleApproveExecute = async (id: string, quantity: number) => {
 
-        setExecutingId(id);
+
+    // ── Execute TurboCore Rebalance ──
+    const handleTurboCoreExecute = async (signal: TurboCoreSignal) => {
+        if (!data?.accountNumber) {
+            setToast({ msg: 'Link Tastytrade account first', ok: false });
+            return;
+        }
+
+        setExecutingId(String(signal.id));
+        setToast(null);
 
         try {
+            const endpoint = `/api/signals/${signal.id}/execute`;
+            const payload = {
+                accountNumber: data.accountNumber,
+                // Passing the full signal so the backend auto_approve router can pick up the legs
+                signalDetails: signal
+            };
 
-            const res = await fetch('/api/tqqq/signals/execute', {
-
+            const response = await fetch(endpoint, {
                 method: 'POST',
-
                 headers: { 'Content-Type': 'application/json' },
-
-                body: JSON.stringify({ signalId: id, quantity }),
-
+                body: JSON.stringify(payload)
             });
 
-            if (!res.ok) throw new Error((await res.json()).error || 'Execution failed');
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.message || 'Execution failed');
+            }
 
-            setSignals(prev => prev.map(s => s.id === id ? { ...s, status: 'EXECUTED', fill_price: undefined } : s));
-
-            showToast('Order submitted to Tastytrade ✓', true);
-
-        } catch (err) {
-
-            showToast(err instanceof Error ? err.message : 'Execution failed', false);
-
+            setToast({ msg: 'TurboCore Atomic Rebalance queued successfully', ok: true });
+            await removeSignal(String(signal.id));
+            fetchOrders();
+        } catch (err: any) {
+            console.error('Core Exec error:', err);
+            setToast({ msg: err.message, ok: false });
         } finally {
-
             setExecutingId(null);
-
         }
-
     };
 
 
 
-    const handleTrackOnly = async (id: string) => {
 
-        try {
-
-            await fetch('/api/tqqq/signals/track', {
-
-                method: 'POST',
-
-                headers: { 'Content-Type': 'application/json' },
-
-                body: JSON.stringify({ signalId: id }),
-
-            });
-
-            setSignals(prev => prev.map(s => s.id === id ? { ...s, status: 'TRACKED' } : s));
-
-            showToast('Position added to tracker ✓', true);
-
-        } catch {
-
-            showToast('Failed to track position', false);
-
-        }
-
-    };
-
-
-
-    const MAX_SLOTS = 6;
-
-    const slotCapital = Math.round(settings.investmentPrincipal / MAX_SLOTS);
-
-
-
-    const handleTurboApprove = async (signal: TurboBounceSignal) => {
-
-        setExecutingId(signal.id);
-
-        try {
-
-            const response = await fetch(`/api/signals/${signal.id}/approve`, {
-
-                method: 'POST',
-
-                headers: { 'Content-Type': 'application/json' },
-
-                body: JSON.stringify({
-
-                    execute: true,
-
-                    signal: signal,
-
-                    positioning: {
-
-                        investmentPrincipal: settings.investmentPrincipal,
-
-                        maxSlots: MAX_SLOTS,
-
-                        slotCapital: slotCapital,
-
-                        riskLevel: settings.riskLevel,
-
-                    },
-
-                }),
-
-            });
-
-
-
-            const data = await response.json();
-
-            if (!response.ok) throw new Error(data.error || 'Approval failed');
-
-            removeSignal(signal.id);
-
-            showToast('TurboBounce Signal Approved ✓', true);
-
-        } catch (err) {
-
-            showToast(err instanceof Error ? err.message : 'Approval failed', false);
-
-        } finally {
-
-            setExecutingId(null);
-
-        }
-
-    };
-
-
-
-    const handleTurboSkip = (id: string) => {
-
-        removeSignal(id);
-
-    };
 
 
 
     // ── Polling loops ──
-
     useEffect(() => {
-
         if (!ready || !authenticated) return;
-
-
-
-        // Initial fetch
-
-        fetchAccountData().then(acctData => {
-
-            // Since fetchAccountData doesn't return data, we rely on the state update
-
-            // However, the next effect hook triggers fetchSignals on `data` change anyway
-
-        });
-
-
-
-        const signalInterval = setInterval(() => { fetchSignals(); fetchGamificationStats(); }, 5000 * 60); // 5 min
-
+        fetchAccountData().then(acctData => { });
         const dataInterval = setInterval(fetchAccountData, 60000); // 1 min
 
-
-
         return () => {
-
-            clearInterval(signalInterval);
-
             clearInterval(dataInterval);
-
         };
-
-    }, [ready, authenticated, fetchSignals, fetchAccountData, fetchGamificationStats]);
-
-
-
-    // Fetch dependent data once we have the account number
-
-    // IMPORTANT: Do NOT include executingId in deps - causes interval multiplication
+    }, [ready, authenticated, fetchAccountData]);
 
     useEffect(() => {
-
         if (!data?.accountNumber) return;
-
-        fetchSignals();
-
         fetchOrders(data.accountNumber);
-
-        // Single stable 2-min interval to avoid ERR_INSUFFICIENT_RESOURCES
-
         const orderInterval = setInterval(() => fetchOrders(data.accountNumber), 120000);
-
         return () => clearInterval(orderInterval);
-
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-
     }, [data?.accountNumber]);
 
 
@@ -931,15 +609,11 @@ function DashboardContent() {
 
     // ── Not linked → show link screen ──
 
-    if (tastyLinked === false && signals.length === 0) {
-
+    if (tastyLinked === false && coreSignals.length === 0) {
         return <TastytradeLink onLinked={() => setTastyLinked(true)} />;
-
     }
 
-
-
-    const refreshAll = () => { fetchAccountData(); fetchSignals(); };
+    const refreshAll = () => { fetchAccountData(); };
 
 
 
@@ -1111,17 +785,9 @@ function DashboardContent() {
 
                         </p>
 
-                        <p className={`text-sm font-mono font-semibold ${(data?.todayPnL ?? 0) >= 0 ? 'text-tm-green' : 'text-tm-red'}`}>
-
-                            {(data?.todayPnL ?? 0) >= 0 ? '+' : ''}${(data?.todayPnL ?? 0).toFixed(2)} {t('dashboard.today')}
-
-                        </p>
-
                         <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5 text-xs text-tm-muted">
 
                             <span>Principal: <span className="text-tm-text font-semibold">${settings.investmentPrincipal.toLocaleString()}</span></span>
-
-                            <span>Slot: <span className="text-tm-text font-semibold">${Math.round(settings.investmentPrincipal / 6).toLocaleString()}</span> × 6</span>
 
                         </div>
 
@@ -1178,147 +844,43 @@ function DashboardContent() {
                 <div className="glass-card p-4">
 
                     <div className="flex items-center justify-between mb-3">
-
-                        <h2 className="font-semibold text-sm">{t('dashboard.signals.title')}</h2>
-
-                        {signals.length > 0 && (
-
+                        <h2 className="font-semibold text-sm">TurboCore Strategy Signals</h2>
+                        {coreSignals.length > 0 && (
                             <span className="text-xs bg-tm-purple/20 text-tm-purple px-2 py-0.5 rounded-full">
-
-                                {signals.length} {t('dashboard.signals.pending')}
-
+                                {coreSignals.length} Active Target Change
                             </span>
-
                         )}
-
                     </div>
-
-
 
                     {/* Signals Pending Approval */}
-
                     <div className="md:col-span-8">
 
-                        <div className="flex items-center justify-between mb-4">
-
-                            <h2 className="text-xl font-bold font-mono text-tm-purple tracking-tight">{t('dashboard.signals.action_required')}</h2>
-
-                            {signals.length > 0 && (
-
-                                <div className="flex items-center gap-2">
-
-                                    <span className="flex w-2.5 h-2.5 relative">
-
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-tm-purple opacity-75"></span>
-
-                                        <span className="relative inline-flex rounded-full w-2.5 h-2.5 bg-tm-purple"></span>
-
-                                    </span>
-
-                                    <span className="text-xs font-semibold text-tm-purple bg-tm-purple/10 px-2 py-1 rounded-full">{signals.length} {t('dashboard.signals.pending')}</span>
-
-                                </div>
-
-                            )}
-
-                        </div>
-
-
-
-                        {signals.length === 0 && turboSignals.length === 0 ? (
-
-                            <div className="flex flex-col items-center justify-center py-6 gap-2">
-
+                        {coreSignals.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-6 gap-2 border border-white/5 rounded-xl bg-black/20">
                                 <CheckCircle className="w-10 h-10 text-tm-green opacity-60" />
-
-                                <p className="font-semibold text-sm">{t('dashboard.signals.caught_up')}</p>
-
-                                <p className="text-xs text-tm-muted">{t('dashboard.signals.no_pending')}</p>
-
+                                <p className="font-semibold text-sm">Portfolio Target Aligned</p>
+                                <p className="text-xs text-tm-muted">No pending ML target rebalances requested.</p>
                             </div>
-
                         ) : (
-
                             <div className="space-y-3">
-
-                                {signals.map(signal => (
-
-                                    <SignalCard
-
+                                {coreSignals.map(signal => (
+                                    <TurboCoreSignalCard
                                         key={signal.id}
-
                                         signal={signal}
-
-                                        tastyLinked={!!tastyLinked}
-
-                                        onApproveExecute={handleApproveExecute}
-
-                                        onTrackOnly={handleTrackOnly}
-
-                                        executing={executingId === signal.id}
-
-                                        recentOrders={recentOrders}
-
+                                        onExecute={handleTurboCoreExecute}
+                                        executingId={executingId}
+                                        accountData={data}
                                     />
-
                                 ))}
 
-
-
-                                {turboSignals.length > 0 && (
-
-                                    <div className="mt-8">
-
-                                        <h3 className="text-sm font-bold text-tm-muted mb-3 uppercase tracking-wider pl-1">{t('dashboard.signals.multi_ticker')}</h3>
-
-                                        <div className="space-y-3">
-
-                                            {turboSignals.map(signal => (
-
-                                                <TurboBounceSignalCard
-
-                                                    key={signal.id}
-
-                                                    signal={signal}
-
-                                                    onApprove={() => handleTurboApprove(signal)}
-
-                                                    onSkip={() => handleTurboSkip(signal.id)}
-
-                                                    isApproving={executingId === signal.id}
-
-                                                />
-
-                                            ))}
-
-                                        </div>
-
-                                    </div>
-
-                                )}
-
-
-
                                 {!tastyLinked && (
-
                                     <p className="text-xs text-tm-muted text-center pt-1">
-
-                                        Not using Tastytrade?{' '}
-
-                                        <span className="text-tm-purple">Track Only</span>
-
-                                        {' '}monitors P&L without executing orders.
-
+                                        Not using Tastytrade? <span className="text-tm-purple">Track Only</span> monitors P&L without executing orders.
                                     </p>
-
                                 )}
-
                             </div>
-
                         )}
-
                     </div>
-
                 </div>
 
             </div>

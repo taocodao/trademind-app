@@ -5,19 +5,19 @@ import { useTranslation } from 'react-i18next';
 import { useNarration } from './NarrationContext';
 
 const BASE_STATS = {
-    totalTrades: 1078,
-    winRate: 50.5,
-    netPnl: 16811.20, // At 5k base
+    totalTrades: 210,
+    cagr: 27.8,
+    netPnl: 22821.89, // At 5k base
 };
 
 const BASE_YEARLY = [
-    { year: 2019, start: 5000.00, trades: 183, winPct: 52.5, pnl: 2401.42, end: 7401.48, retPct: 48.0 },
-    { year: 2020, start: 7401.48, trades: 173, winPct: 46.8, pnl: 987.05, end: 8388.56, retPct: 13.3 },
-    { year: 2021, start: 8388.56, trades: 178, winPct: 51.1, pnl: 5847.28, end: 14235.79, retPct: 69.7 },
-    { year: 2022, start: 14235.79, trades: 87, winPct: 46.0, pnl: -5009.71, end: 9226.07, retPct: -35.1 },
-    { year: 2023, start: 9226.07, trades: 178, winPct: 48.3, pnl: 4017.25, end: 13243.28, retPct: 43.5 },
-    { year: 2024, start: 13243.28, trades: 147, winPct: 51.7, pnl: 5949.70, end: 19193.04, retPct: 44.9 },
-    { year: 2025, start: 19193.04, trades: 132, winPct: 56.8, pnl: 2618.13, end: 21811.20, retPct: 13.6 }
+    { year: 2019, start: 5000.00, trades: 32, pnl: 2074.05, end: 7074.05, retPct: 41.5 },
+    { year: 2020, start: 7342.67, trades: 3, pnl: 319.73, end: 7662.40, retPct: 4.4 },
+    { year: 2021, start: 7662.40, trades: 31, pnl: 3137.24, end: 10799.64, retPct: 40.9 },
+    { year: 2022, start: 11028.41, trades: 7, pnl: -1230.49, end: 9797.91, retPct: -11.2 },
+    { year: 2023, start: 9799.87, trades: 37, pnl: 7210.41, end: 17010.28, retPct: 73.6 },
+    { year: 2024, start: 16352.58, trades: 56, pnl: 5901.14, end: 22253.72, retPct: 36.1 },
+    { year: 2025, start: 22208.40, trades: 44, pnl: 5613.49, end: 27821.89, retPct: 25.3 }
 ];
 
 export function StatisticsPanel() {
@@ -50,7 +50,7 @@ export function StatisticsPanel() {
                     </div>
                     <div>
                         <p className="text-tm-muted">{t('stats.cagr')}</p>
-                        <p className="font-mono text-tm-green text-lg">23.4%</p>
+                        <p className="font-mono text-tm-green text-lg">{BASE_STATS.cagr}%</p>
                     </div>
                     <div>
                         <p className="text-tm-muted">{t('stats.net_pnl')}</p>
@@ -59,9 +59,8 @@ export function StatisticsPanel() {
                     <div>
                         <p className="text-tm-muted">{t('stats.strategy_dist')}</p>
                         <p className="text-white text-xs mt-1">
-                            <span className="text-tm-purple font-mono">NAKED_LONG</span> (LEAPS/Puts)<br />
-                            <span className="text-tm-purple font-mono border-l border-white/20 pl-2 ml-1">DIAGONAL</span> (PMCCs)<br />
-                            <span className="text-tm-purple font-mono border-l border-white/20 pl-2 ml-1">CREDIT_SPREAD</span>
+                            <span className="text-tm-purple font-mono">AGGRESSIVE</span> (TQQQ Focus)<br />
+                            <span className="text-tm-purple font-mono border-l border-white/20 pl-2 ml-1">DEFENSIVE</span> (SGOV/Cash)<br />
                         </p>
                     </div>
                 </div>
@@ -77,7 +76,6 @@ export function StatisticsPanel() {
                             <th className="py-2 pr-4">{t('stats.th_year')}</th>
                             <th className="py-2 pr-4 text-right">{t('stats.th_start')}</th>
                             <th className="py-2 pr-4 text-center">{t('stats.th_trades')}</th>
-                            <th className="py-2 pr-4 text-right">{t('stats.th_win')}</th>
                             <th className="py-2 pr-4 text-right">{t('stats.th_net')}</th>
                             <th className="py-2 pr-4 text-right">{t('stats.th_end')}</th>
                             <th className="py-2 text-right">{t('stats.th_ret')}</th>
@@ -89,7 +87,6 @@ export function StatisticsPanel() {
                                 <td className="py-3 pr-4 font-bold text-tm-purple group-hover:text-tm-purple/80">{row.year}</td>
                                 <td className="py-3 pr-4 text-right">{formatCurrency(row.start * multiplier)}</td>
                                 <td className="py-3 pr-4 text-center text-tm-muted">{row.trades}</td>
-                                <td className="py-3 pr-4 text-right">{row.winPct.toFixed(1)}%</td>
                                 <td className={`py-3 pr-4 text-right ${row.pnl >= 0 ? 'text-tm-green' : 'text-tm-red'}`}>
                                     {formatSignedCurrency(row.pnl * multiplier)}
                                 </td>

@@ -233,8 +233,8 @@ export function EducationCenter() {
 
             {/* Fullscreen Document Viewer Modal */}
             {isViewerOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-[#13131A] w-full h-full flex flex-col overflow-hidden shadow-2xl relative opacity-100 scale-100">
+                <div className="fixed top-0 left-0 w-screen h-screen z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-[#0D0D12] w-full h-full flex flex-col overflow-hidden shadow-2xl relative opacity-100 scale-100 m-0 p-0 max-w-none max-h-none rounded-none">
                         {/* Header */}
                         <div className="flex items-center justify-between p-4 md:p-6 border-b border-white/10 bg-white/5">
                             <div className="flex items-center gap-3">

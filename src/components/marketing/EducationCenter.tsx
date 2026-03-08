@@ -5,42 +5,119 @@ import { useTranslation } from 'react-i18next';
 import { Download, FileText, ChevronDown, Check, BookOpen } from 'lucide-react';
 
 export function EducationCenter() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
 
-    // Memoized to prevent infinite re-renders while allowing dynamic translation
-    const DOCUMENTS = React.useMemo(() => [
-        {
-            id: 'csv-5k',
-            title: t('education.doc1.title'),
-            description: t('education.doc1.desc'),
-            url: '/files/turbobounce_options_5k_all_trades.csv',
-            icon: <FileText className="w-5 h-5 text-tm-purple" />,
-            type: t('education.doc1.type')
-        },
-        {
-            id: 'csv-25k',
-            title: t('education.doc2.title'),
-            description: t('education.doc2.desc'),
-            url: '/files/turbobounce_options_25k_all_trades.csv',
-            icon: <FileText className="w-5 h-5 text-tm-purple" />,
-            type: t('education.doc2.type')
-        },
-        {
-            id: 'analysis',
-            title: t('education.doc3.title'),
-            description: t('education.doc3.desc'),
-            url: '/files/turbobounce_strategy_report.md',
-            icon: <BookOpen className="w-5 h-5 text-tm-blue" />,
-            type: t('education.doc3.type')
-        }
-    ], [t]);
+    const activeLanguage = i18n.language ? i18n.language.split('-')[0] : 'en';
 
-    const [selectedId, setSelectedId] = useState(DOCUMENTS[0].id);
+    const ALL_DOCUMENTS = React.useMemo(() => [
+        // English
+        {
+            id: '5k-en',
+            title: 'TurboCore 5K Report',
+            description: 'Comprehensive 5K account report for the TurboCore strategy.',
+            url: '/files/TurboCore_5K_Report_English.md',
+            icon: <FileText className="w-5 h-5 text-tm-purple" />,
+            type: 'Report',
+            lang: 'en'
+        },
+        {
+            id: 'report-en',
+            title: 'TurboCore Report',
+            description: 'Main research report for the TurboCore strategy covering core metrics.',
+            url: '/files/TurboCore_Report_English.md',
+            icon: <BookOpen className="w-5 h-5 text-tm-blue" />,
+            type: 'Analysis',
+            lang: 'en'
+        },
+        {
+            id: 'comp-en',
+            title: 'Competitive Analysis 2026',
+            description: 'In-depth market and competitor analysis highlighting TurboCore advantages.',
+            url: '/files/TurboCore_Competitive_Report_2026-English.md',
+            icon: <FileText className="w-5 h-5 text-tm-purple" />,
+            type: 'Analysis',
+            lang: 'en'
+        },
+        // Spanish
+        {
+            id: '5k-es',
+            title: 'Informe TurboCore 5K',
+            description: 'Informe exhaustivo de cuenta 5K para la estrategia TurboCore.',
+            url: '/files/TurboCore_5K_Report_Spanish.md',
+            icon: <FileText className="w-5 h-5 text-tm-purple" />,
+            type: 'Informe',
+            lang: 'es'
+        },
+        {
+            id: 'report-es',
+            title: 'Informe TurboCore',
+            description: 'Informe principal de investigación para la estrategia TurboCore.',
+            url: '/files/TurboCore_Report_Spanish.md',
+            icon: <BookOpen className="w-5 h-5 text-tm-blue" />,
+            type: 'Análisis',
+            lang: 'es'
+        },
+        {
+            id: 'comp-es',
+            title: 'Análisis Competitivo 2026',
+            description: 'Análisis profundo del mercado y competidores destacando ventajas de TurboCore.',
+            url: '/files/TurboCore_Informe_Competitivo_2026_ES.md',
+            icon: <FileText className="w-5 h-5 text-tm-purple" />,
+            type: 'Análisis',
+            lang: 'es'
+        },
+        // Chinese
+        {
+            id: '5k-zh',
+            title: 'TurboCore 5K 报告',
+            description: 'TurboCore 策略的全面 5K 账户报告。',
+            url: '/files/TurboCore_5K_Report_Chinese.md',
+            icon: <FileText className="w-5 h-5 text-tm-purple" />,
+            type: '报告',
+            lang: 'zh'
+        },
+        {
+            id: 'report-zh',
+            title: 'TurboCore 主要报告',
+            description: '涵盖核心指标的 TurboCore 策略主要研究报告。',
+            url: '/files/TurboCore_Report_Chinese.md',
+            icon: <BookOpen className="w-5 h-5 text-tm-blue" />,
+            type: '分析',
+            lang: 'zh'
+        },
+        {
+            id: 'comp-zh',
+            title: '2026 竞争分析报告',
+            description: '深入的市场和竞争对手分析，突出 TurboCore 的优势。',
+            url: '/files/TurboCore_竞争分析报告_2026_CN.md',
+            icon: <FileText className="w-5 h-5 text-tm-purple" />,
+            type: '分析',
+            lang: 'zh'
+        }
+    ], []);
+
+    const filteredDocs = React.useMemo(() => {
+        return ALL_DOCUMENTS.filter(doc => doc.lang === activeLanguage);
+    }, [ALL_DOCUMENTS, activeLanguage]);
+
+    const DOCUMENTS = filteredDocs.length > 0 ? filteredDocs : ALL_DOCUMENTS.filter(doc => doc.lang === 'en');
+
+    const [selectedId, setSelectedId] = useState(DOCUMENTS[0]?.id);
+
+    // Ensure selectedId is valid when language changes
+    React.useEffect(() => {
+        if (!DOCUMENTS.find(d => d.id === selectedId) && DOCUMENTS.length > 0) {
+            setSelectedId(DOCUMENTS[0].id);
+        }
+    }, [DOCUMENTS, selectedId]);
+
     const selectedDoc = DOCUMENTS.find(d => d.id === selectedId) || DOCUMENTS[0];
 
     const handleDownload = () => {
-        window.open(selectedDoc.url, '_blank');
+        if (selectedDoc) {
+            window.open(selectedDoc.url, '_blank');
+        }
     };
 
     return (

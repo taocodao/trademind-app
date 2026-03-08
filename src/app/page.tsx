@@ -73,10 +73,10 @@ export default function SinglePageMarketing() {
                         <video
                             key={i18n.language || 'en'}
                             src={{
-                                en: 'https://2axcssbne03i2gdo.public.blob.vercel-storage.com/clip1.mp4',
-                                es: 'https://2axcssbne03i2gdo.public.blob.vercel-storage.com/clip2.mp4',
-                                zh: 'https://2axcssbne03i2gdo.public.blob.vercel-storage.com/clip3.mp4',
-                            }[i18n.language || 'en'] || 'https://2axcssbne03i2gdo.public.blob.vercel-storage.com/clip1.mp4'}
+                                en: 'https://2axcssbne03i2gdo.public.blob.vercel-storage.com/TQQQ_TurboCore-English.mp4',
+                                es: 'https://2axcssbne03i2gdo.public.blob.vercel-storage.com/TuboCore__Estrategia_IA-spanish.mp4',
+                                zh: 'https://2axcssbne03i2gdo.public.blob.vercel-storage.com/TurboCore__AI%E9%A9%B1%E5%8A%A8%E7%9A%84TQQQ%E7%AD%96%E7%95%A5.mp4',
+                            }[i18n.language || 'en'] || 'https://2axcssbne03i2gdo.public.blob.vercel-storage.com/TQQQ_TurboCore-English.mp4'}
                             className="w-full rounded-xl border border-white/10 object-cover bg-tm-card/80"
                             controls
                             playsInline

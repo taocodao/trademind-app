@@ -257,17 +257,6 @@ export function EducationCenter() {
                                 </ReactMarkdown>
                             </div>
                         </div>
-
-                        {/* Footer */}
-                        <div className="p-4 md:p-6 border-t border-white/10 bg-white/5 flex justify-end">
-                            <button
-                                onClick={() => window.open(selectedDoc?.url, '_blank')}
-                                className="flex items-center gap-2 px-4 py-2 bg-tm-blue/10 border border-tm-blue/20 text-tm-blue hover:bg-tm-blue/20 rounded-lg font-bold transition-colors"
-                            >
-                                <Download className="w-4 h-4" />
-                                Download File
-                            </button>
-                        </div>
                     </div>
                 </div>
             )}

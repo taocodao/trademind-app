@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, FileText, ChevronDown, Check, BookOpen, X, Loader2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export function EducationCenter() {
     const { t, i18n } = useTranslation();
@@ -231,8 +233,8 @@ export function EducationCenter() {
 
             {/* Fullscreen Document Viewer Modal */}
             {isViewerOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-8 animate-in fade-in duration-200">
-                    <div className="bg-[#13131A] border border-white/10 w-full max-w-4xl max-h-[90vh] rounded-2xl flex flex-col overflow-hidden shadow-2xl relative opacity-100 scale-100">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-[#13131A] w-full h-full flex flex-col overflow-hidden shadow-2xl relative opacity-100 scale-100">
                         {/* Header */}
                         <div className="flex items-center justify-between p-4 md:p-6 border-b border-white/10 bg-white/5">
                             <div className="flex items-center gap-3">
@@ -249,10 +251,10 @@ export function EducationCenter() {
 
                         {/* Body - Document Text */}
                         <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-[#0D0D12]">
-                            <div className="max-w-3xl mx-auto">
-                                <pre className="font-sans whitespace-pre-wrap text-sm md:text-base text-gray-300 leading-relaxed overflow-x-hidden w-full" style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
+                            <div className="max-w-3xl mx-auto prose prose-invert prose-p:text-gray-300 prose-headings:text-white prose-a:text-tm-blue prose-strong:text-white prose-code:text-tm-purple prose-th:text-white prose-td:text-gray-300 prose-blockquote:border-l-tm-purple prose-blockquote:text-gray-400 max-w-none">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                     {fileContent}
-                                </pre>
+                                </ReactMarkdown>
                             </div>
                         </div>
 

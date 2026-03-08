@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Download, FileText, ChevronDown, Check, BookOpen } from 'lucide-react';
+import { Download, FileText, ChevronDown, Check, BookOpen, X, Loader2 } from 'lucide-react';
 
 export function EducationCenter() {
     const { t, i18n } = useTranslation();
@@ -114,9 +114,40 @@ export function EducationCenter() {
 
     const selectedDoc = DOCUMENTS.find(d => d.id === selectedId) || DOCUMENTS[0];
 
-    const handleDownload = () => {
-        if (selectedDoc) {
+    const [isViewerOpen, setIsViewerOpen] = useState(false);
+    const [fileContent, setFileContent] = useState<string>('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Lock body scroll when modal is open
+    React.useEffect(() => {
+        if (isViewerOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [isViewerOpen]);
+
+    const handleViewFile = async () => {
+        if (!selectedDoc) return;
+        setIsLoading(true);
+        try {
+            const res = await fetch(selectedDoc.url);
+            if (res.ok) {
+                const text = await res.text();
+                setFileContent(text);
+                setIsViewerOpen(true);
+            } else {
+                console.error("Failed to fetch file");
+                window.open(selectedDoc.url, '_blank');
+            }
+        } catch (error) {
+            console.error("Error reading file", error);
             window.open(selectedDoc.url, '_blank');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -188,14 +219,56 @@ export function EducationCenter() {
                     </p>
 
                     <button
-                        onClick={handleDownload}
-                        className="btn-secondary w-full justify-center flex items-center gap-2 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white font-bold transition-all shadow-sm shadow-black/50 hover:shadow-tm-blue/20"
+                        onClick={handleViewFile}
+                        disabled={isLoading}
+                        className="btn-secondary w-full justify-center flex items-center gap-2 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white font-bold transition-all shadow-sm shadow-black/50 hover:shadow-tm-blue/20 disabled:opacity-50"
                     >
-                        <Download className="w-5 h-5 text-tm-blue" />
-                        {t('education.download')}
+                        {isLoading ? <Loader2 className="w-5 h-5 text-tm-blue animate-spin" /> : <Download className="w-5 h-5 text-tm-blue" />}
+                        Download / View File
                     </button>
                 </div>
             </div>
+
+            {/* Fullscreen Document Viewer Modal */}
+            {isViewerOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-8 animate-in fade-in duration-200">
+                    <div className="bg-[#13131A] border border-white/10 w-full max-w-4xl max-h-[90vh] rounded-2xl flex flex-col overflow-hidden shadow-2xl relative opacity-100 scale-100">
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-4 md:p-6 border-b border-white/10 bg-white/5">
+                            <div className="flex items-center gap-3">
+                                {selectedDoc?.icon}
+                                <h3 className="font-bold text-white text-lg">{selectedDoc?.title}</h3>
+                            </div>
+                            <button
+                                onClick={() => setIsViewerOpen(false)}
+                                className="p-2 bg-black/20 hover:bg-white/10 rounded-lg transition-colors text-tm-muted hover:text-white"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        {/* Body - Document Text */}
+                        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-[#0D0D12]">
+                            <div className="max-w-3xl mx-auto">
+                                <pre className="font-sans whitespace-pre-wrap text-sm md:text-base text-gray-300 leading-relaxed overflow-x-hidden w-full" style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
+                                    {fileContent}
+                                </pre>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 md:p-6 border-t border-white/10 bg-white/5 flex justify-end">
+                            <button
+                                onClick={() => window.open(selectedDoc?.url, '_blank')}
+                                className="flex items-center gap-2 px-4 py-2 bg-tm-blue/10 border border-tm-blue/20 text-tm-blue hover:bg-tm-blue/20 rounded-lg font-bold transition-colors"
+                            >
+                                <Download className="w-4 h-4" />
+                                Download File
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

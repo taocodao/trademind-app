@@ -153,6 +153,35 @@ export function EducationCenter() {
         }
     };
 
+    if (isViewerOpen) {
+        return (
+            <div className="w-full glass-card p-6 border-l-4 border-tm-blue bg-tm-card/40 animate-in fade-in duration-200">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 md:p-6 mb-4 border-b border-white/10 bg-black/20 rounded-t-xl">
+                    <div className="flex items-center gap-3">
+                        {selectedDoc?.icon}
+                        <h3 className="font-bold text-white text-xl">{selectedDoc?.title}</h3>
+                    </div>
+                    <button
+                        onClick={() => setIsViewerOpen(false)}
+                        className="px-4 py-2 border border-white/20 bg-white/5 hover:bg-white/10 rounded-lg transition-colors text-white hover:text-white flex gap-2 items-center font-semibold"
+                    >
+                        <X className="w-5 h-5" /> Close and Go Back
+                    </button>
+                </div>
+
+                {/* Body - Document Text */}
+                <div className="w-full overflow-y-auto p-4 md:p-8 bg-[#0D0D12]/50 rounded-b-xl max-h-[70vh]">
+                    <div className="max-w-4xl mx-auto prose prose-invert prose-p:text-gray-300 prose-headings:text-white prose-a:text-tm-blue prose-strong:text-white prose-code:text-tm-purple prose-th:text-white prose-td:text-gray-300 prose-blockquote:border-l-tm-purple prose-blockquote:text-gray-400 max-w-none">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {fileContent}
+                        </ReactMarkdown>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="w-full glass-card p-6 border-l-4 border-tm-blue bg-tm-card/40">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
@@ -230,36 +259,6 @@ export function EducationCenter() {
                     </button>
                 </div>
             </div>
-
-            {/* Fullscreen Document Viewer Modal */}
-            {isViewerOpen && (
-                <div className="fixed top-0 left-0 w-screen h-screen z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-[#0D0D12] w-full h-full flex flex-col overflow-hidden shadow-2xl relative opacity-100 scale-100 m-0 p-0 max-w-none max-h-none rounded-none">
-                        {/* Header */}
-                        <div className="flex items-center justify-between p-4 md:p-6 border-b border-white/10 bg-white/5">
-                            <div className="flex items-center gap-3">
-                                {selectedDoc?.icon}
-                                <h3 className="font-bold text-white text-lg">{selectedDoc?.title}</h3>
-                            </div>
-                            <button
-                                onClick={() => setIsViewerOpen(false)}
-                                className="p-2 bg-black/20 hover:bg-white/10 rounded-lg transition-colors text-tm-muted hover:text-white"
-                            >
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
-
-                        {/* Body - Document Text */}
-                        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-[#0D0D12]">
-                            <div className="max-w-3xl mx-auto prose prose-invert prose-p:text-gray-300 prose-headings:text-white prose-a:text-tm-blue prose-strong:text-white prose-code:text-tm-purple prose-th:text-white prose-td:text-gray-300 prose-blockquote:border-l-tm-purple prose-blockquote:text-gray-400 max-w-none">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                    {fileContent}
-                                </ReactMarkdown>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

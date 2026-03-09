@@ -335,9 +335,11 @@ export function SignalProvider({ children }: SignalProviderProps) {
                             const strat = (s.strategy || '').toLowerCase();
                             const type = ((s as any).type || '').toLowerCase();
 
-                            // User only wants Turbobounce/Multi-Ticker signals
+                            // User only wants Turbobounce/Multi-Ticker/TurboCore signals
                             const isTurbo =
                                 strat === 'turbobounce' ||
+                                strat === 'tqqq_turbocore' ||
+                                type === 'rebalance' ||
                                 (s as any).pool === 'MULTI_TICKER';
 
                             if (!isTurbo) {

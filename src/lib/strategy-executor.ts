@@ -132,11 +132,15 @@ const STRATEGY_EXECUTORS: Record<string, StrategyExecutor> = {
     'SHORT_PUT': executeThetaStrategy,
     'deep-value': executeThetaStrategy,
 
-    // ZEBRA & TurboBounce — Managed by EC2 for live pricing/multi-leg
+    // ZEBRA & TurboBounce & TurboCore — Managed by EC2 for live pricing/multi-leg/equities
     'zebra': executeServerManagedStrategy,
     'ZEBRA': executeServerManagedStrategy,
     'turbobounce': executeServerManagedStrategy,
     'TurboBounce': executeServerManagedStrategy,
+    'tqqq_turbocore': executeServerManagedStrategy,
+    'TQQQ_TURBOCORE': executeServerManagedStrategy,
+    'rebalance': executeServerManagedStrategy,
+    'REBALANCE': executeServerManagedStrategy,
 };
 
 /**

@@ -525,36 +525,67 @@ function DashboardContent() {
 
     // ── Execute TurboCore Rebalance ──
     const handleTurboCoreExecute = async (signal: TurboCoreSignal) => {
-        if (!data?.accountNumber) {
-            setToast({ msg: 'Link Tastytrade account first', ok: false });
-            return;
-        }
-
         setExecutingId(String(signal.id));
         setToast(null);
 
         try {
-            const endpoint = `/api/signals/${signal.id}/execute`;
-            const payload = {
-                accountNumber: data.accountNumber,
-                // Passing the full signal so the backend auto_approve router can pick up the legs
-                signalDetails: signal
-            };
+            if (data?.accountNumber) {
+                // Tier 2a: Live Sync
+                const endpoint = `/api/signals/${signal.id}/execute`;
+                const payload = {
+                    accountNumber: data.accountNumber,
+                    signalDetails: signal
+                };
 
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
 
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.message || 'Execution failed');
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.message || 'Execution failed');
+                }
+
+                setToast({ msg: 'TurboCore Atomic Rebalance queued successfully', ok: true });
+                await removeSignal(String(signal.id));
+                fetchOrders();
+            } else {
+                // Tier 2b: Shadow Sync Calculation
+                if (!settings?.shadowLedger) {
+                    throw new Error("No shadow ledger found. Please configure it in settings.");
+                }
+
+                const targetMatrix: Record<string, number> = {};
+                signal.legs?.forEach(leg => {
+                    targetMatrix[leg.symbol] = leg.target_pct;
+                });
+
+                const endpoint = '/api/calculate_delta_trade';
+                const payload = {
+                    targetMatrix,
+                    shadowBalance: settings.shadowLedger.balance || 0,
+                    shadowPositions: settings.shadowLedger.positions || {}
+                };
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.error || errData.message || 'Shadow calculation failed');
+                }
+
+                const result = await response.json();
+                console.log("Calculated Shadow Orders: ", result.orders);
+                // For a polished experience, we'd open a modal here. For now, we resolve the signal and toast.
+                setToast({ msg: `Shadow Sync: Calculated ${result.orders?.length || 0} manual trades. Check console logs.`, ok: true });
+                await removeSignal(String(signal.id));
             }
-
-            setToast({ msg: 'TurboCore Atomic Rebalance queued successfully', ok: true });
-            await removeSignal(String(signal.id));
-            fetchOrders();
         } catch (err: any) {
             console.error('Core Exec error:', err);
             setToast({ msg: err.message, ok: false });

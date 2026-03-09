@@ -7,6 +7,7 @@ import { ArrowLeft, Settings, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { TastytradeCredentials } from '@/components/settings/TastytradeCredentials';
 import { InvestmentPrincipal } from '@/components/dashboard/InvestmentPrincipal';
+import { ShadowLedgerPanel } from '@/components/dashboard/ShadowLedgerPanel';
 import { TQQQAutoApproveSettings } from '@/components/settings/TQQQAutoApproveSettings';
 import { TurboBounceAllocationSettings } from '@/components/settings/TurboBounceAllocationSettings';
 import { SubscriptionManager } from '@/components/settings/SubscriptionManager';
@@ -59,6 +60,9 @@ export default function SettingsPage() {
             <div className="px-4 space-y-4">
                 {/* Investment Principal */}
                 <InvestmentPrincipal />
+
+                {/* Shadow Ledger for Tier 2b */}
+                <ShadowLedgerPanel />
 
                 {/* Subscription Tier Management */}
                 <SubscriptionManager currentTier={currentTier} />

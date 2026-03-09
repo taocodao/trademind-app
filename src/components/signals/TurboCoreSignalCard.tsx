@@ -30,6 +30,7 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
     const { t } = useTranslation();
     const isExecuting = executingId === String(signal.id);
     const [expanded, setExpanded] = useState(false);
+    const isLinked = !!accountData?.accountNumber;
 
     // Capital Allocation Calculator State
     // Defaults to the user's Tastytrade Net Liq, or $5000 if not linked
@@ -160,10 +161,15 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
                             <span className="flex items-center gap-1"><AlertTriangle className="w-4 h-4" /> RISK OFF</span>
                             <span className="text-[10px] font-normal opacity-70">SMA200 Exited</span>
                         </>
+                    ) : isLinked ? (
+                        <>
+                            <span className="flex items-center gap-1"><Zap className="w-4 h-4" /> EXECUTE LIVE SYNC</span>
+                            <span className="text-[10px] font-normal opacity-70">Auto-routes to Tastytrade</span>
+                        </>
                     ) : (
                         <>
-                            <span className="flex items-center gap-1"><Zap className="w-4 h-4" /> EXECUTE ATOMIC SYNC</span>
-                            <span className="text-[10px] font-normal opacity-70">Auto-routes to Tastytrade</span>
+                            <span className="flex items-center gap-1"><Shield className="w-4 h-4" /> CALCULATE SHADOW SYNC</span>
+                            <span className="text-[10px] font-normal opacity-70">Manual execution guide</span>
                         </>
                     )}
                 </button>

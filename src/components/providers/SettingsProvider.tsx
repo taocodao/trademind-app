@@ -10,12 +10,18 @@ interface TastytradeSettings {
     username?: string;
 }
 
+interface ShadowLedger {
+    balance: number;
+    positions: Record<string, number>;
+}
+
 interface AppSettings {
     tastytrade: TastytradeSettings;
     investmentPrincipal: number;
     riskLevel: RiskLevel;
     autoApproval: boolean;
     turboBounceMode: 'MODE_A' | 'MODE_B';
+    shadowLedger: ShadowLedger;
 }
 
 interface SettingsContextValue {
@@ -25,6 +31,7 @@ interface SettingsContextValue {
     setRiskLevel: (level: RiskLevel) => void;
     setAutoApproval: (enabled: boolean) => void;
     setTurboBounceMode: (mode: 'MODE_A' | 'MODE_B') => void;
+    updateShadowLedger: (updates: Partial<ShadowLedger>) => void;
     clearSettings: () => void;
 }
 
@@ -34,6 +41,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     riskLevel: 'MEDIUM',
     autoApproval: false,
     turboBounceMode: 'MODE_B',
+    shadowLedger: { balance: 0, positions: {} },
 };
 
 const SettingsContext = createContext<SettingsContextValue>({
@@ -43,6 +51,7 @@ const SettingsContext = createContext<SettingsContextValue>({
     setRiskLevel: () => { },
     setAutoApproval: () => { },
     setTurboBounceMode: () => { },
+    updateShadowLedger: () => { },
     clearSettings: () => { },
 });
 
@@ -94,6 +103,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         persist({ ...settings, turboBounceMode: mode });
     };
 
+    const updateShadowLedger = (updates: Partial<ShadowLedger>) => {
+        persist({
+            ...settings,
+            shadowLedger: { ...settings.shadowLedger, ...updates }
+        });
+    };
+
     const clearSettings = () => {
         setSettings(DEFAULT_SETTINGS);
         localStorage.removeItem('tm_settings');
@@ -107,6 +123,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             setRiskLevel,
             setAutoApproval,
             setTurboBounceMode,
+            updateShadowLedger,
             clearSettings,
         }}>
             {children}

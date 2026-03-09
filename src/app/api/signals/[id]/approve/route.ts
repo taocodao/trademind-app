@@ -173,7 +173,12 @@ export async function POST(
 
                 if (!proxyResp.ok) {
                     const errorText = await proxyResp.text();
-                    throw new Error(`EC2 Proxy failed (${proxyResp.status}): ${errorText}`);
+                    let parsedError = errorText;
+                    try {
+                        const errJson = JSON.parse(errorText);
+                        parsedError = errJson.error || errJson.message || errorText;
+                    } catch (e) { /* ignore */ }
+                    throw new Error(`EC2 Proxy failed: ${parsedError}`);
                 }
 
                 result = await proxyResp.json();

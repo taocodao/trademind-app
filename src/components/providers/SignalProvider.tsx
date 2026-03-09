@@ -382,21 +382,38 @@ export function SignalProvider({ children }: SignalProviderProps) {
         if (!isMounted) return;
         fetchExistingSignals();
 
-        const isMarketHours = () => {
+        let timeoutId: NodeJS.Timeout;
+
+        const scheduleNextPoll = () => {
             const et = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
             const etDate = new Date(et);
             const h = etDate.getHours();
             const d = etDate.getDay();
-            return d >= 1 && d <= 5 && h >= 9 && h < 17;
+
+            // Default: Poll every 30 minutes outside market hours to save resources
+            let delay = 30 * 60 * 1000;
+
+            if (d >= 1 && d <= 5) {
+                if (h === 15) {
+                    // During 3:00 PM - 3:59 PM ET (1 hour before market close)
+                    // The signal comes out at 15:00 ET, so we poll every 30 seconds
+                    delay = 30 * 1000;
+                } else if (h >= 9 && h < 16) {
+                    // During rest of market hours, poll every 5 minutes
+                    delay = 5 * 60 * 1000;
+                }
+            }
+
+            timeoutId = setTimeout(() => {
+                console.log(`[SignalProvider] Polling trigger...`);
+                fetchExistingSignals();
+                scheduleNextPoll();
+            }, delay);
         };
 
-        const pollInterval = isMarketHours() ? 15000 : 30000;
-        const interval = setInterval(() => {
-            console.log(`[SignalProvider] Polling trigger...`);
-            fetchExistingSignals();
-        }, pollInterval);
+        scheduleNextPoll();
 
-        return () => clearInterval(interval);
+        return () => clearTimeout(timeoutId);
     }, [isMounted, fetchExistingSignals]);
 
     const handleCloseNotification = useCallback(() => setNotificationSignal(null), []);

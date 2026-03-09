@@ -340,11 +340,11 @@ function DashboardContent() {
 
     const [tastyUsername, setTastyUsername] = useState<string | null>(null);
 
-    // TurboCore Strategy Filtering
+    // TurboCore Strategy Filtering (Only show the latest target state)
     const coreSignals = allSignals.filter(s =>
         s.strategy?.toUpperCase() === 'TQQQ_TURBOCORE' ||
         (s as any).type === 'REBALANCE'
-    ) as unknown as TurboCoreSignal[];
+    ).slice(0, 1) as unknown as TurboCoreSignal[];
 
     const [recentOrders, setRecentOrders] = useState<any[]>([]);
 

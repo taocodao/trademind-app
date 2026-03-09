@@ -531,7 +531,7 @@ function DashboardContent() {
         try {
             if (data?.accountNumber) {
                 // Tier 2a: Live Sync
-                const endpoint = `/api/signals/${signal.id}/execute`;
+                const endpoint = `/api/signals/${signal.id}/approve`;
                 const payload = {
                     accountNumber: data.accountNumber,
                     signalDetails: signal
@@ -901,6 +901,7 @@ function DashboardContent() {
                                         onExecute={handleTurboCoreExecute}
                                         executingId={executingId}
                                         accountData={data}
+                                        principalSetting={settings?.investmentPrincipal}
                                     />
                                 ))}
 

@@ -24,17 +24,18 @@ interface Props {
     onExecute: (signal: TurboCoreSignal) => void;
     executingId: string | null;
     accountData: any;
+    principalSetting?: number;
 }
 
-export function TurboCoreSignalCard({ signal, onExecute, executingId, accountData }: Props) {
+export function TurboCoreSignalCard({ signal, onExecute, executingId, accountData, principalSetting }: Props) {
     const { t } = useTranslation();
     const isExecuting = executingId === String(signal.id);
     const [expanded, setExpanded] = useState(false);
     const isLinked = !!accountData?.accountNumber;
 
     // Capital Allocation Calculator State
-    // Defaults to the user's Tastytrade Net Liq, or $5000 if not linked
-    const defaultCapital = accountData?.netLiquidatingValue ? Math.floor(accountData.netLiquidatingValue) : 5000;
+    // Defaults to the user's Settings, then Net Liq, or 5000 if not linked
+    const defaultCapital = principalSetting || (accountData?.netLiquidatingValue ? Math.floor(accountData.netLiquidatingValue) : 5000);
     const [investmentCapital, setInvestmentCapital] = useState<number>(defaultCapital);
 
 

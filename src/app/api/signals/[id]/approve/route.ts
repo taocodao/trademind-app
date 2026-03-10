@@ -201,7 +201,7 @@ export async function POST(
                 );
             }
 
-            const orderId = result.orderId || result.order_id || 'unknown';
+            const orderId = result.orderId || (result as any).order_id || 'unknown';
             console.log(`✅ Trade processed: Order ID ${orderId}`);
 
             // ✅ Create position in database for persistence

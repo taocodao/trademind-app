@@ -96,18 +96,19 @@ export async function POST(
         }
 
         // Get account number
-        const accountNumber = tokens.accountNumber;
+        const accountNumber = tokens.accountNumber || body.accountNumber;
         if (!accountNumber) {
             return NextResponse.json({
                 status: 'failed',
-                signal: { id, ...body },
+                signal: { id, ...(body.signal || body.signalDetails || body) },
                 error: 'No account number found',
                 message: 'Please reconnect your Tastytrade account.',
             }, { status: 400 });
         }
 
         // Execute the trade based on signal type
-        const signalData = body.signal || body;
+        // page.tsx sends either { signal } or { signalDetails }
+        const signalData = body.signal || body.signalDetails || body;
 
         // 🛡️ SAFETY CHECK: Verify Buying Power
         try {
@@ -183,6 +184,10 @@ export async function POST(
 
                 result = await proxyResp.json();
                 console.log(`✅ EC2 Proxy successful: Order ID ${result.orderId || result.order_id}`);
+
+                // Return immediately so we don't fall through to local execution!
+                return NextResponse.json(result);
+
             } else {
                 // Execute trade using modular strategy executor (locally on Vercel)
                 result = await executeSignal(

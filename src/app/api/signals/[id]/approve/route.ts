@@ -152,7 +152,7 @@ export async function POST(
         try {
             // Check if strategy should be handled by EC2 backend
             const strategy = String(signalData.strategy || '').toUpperCase();
-            const isServerManaged = ['TURBOBOUNCE', 'ZEBRA', 'TQQQ_TURBOCORE', 'TURBOCORE', 'REBALANCE'].includes(strategy);
+            const isServerManaged = ['TURBOBOUNCE', 'ZEBRA'].includes(strategy);
 
             let result;
 

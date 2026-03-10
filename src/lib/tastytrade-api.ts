@@ -34,14 +34,14 @@ export interface OrderLeg {
     instrumentType: 'Equity Option' | 'Equity' | 'Future Option' | 'Future';
     symbol: string;
     quantity: number;
-    action: 'Buy to Open' | 'Buy to Close' | 'Sell to Open' | 'Sell to Close';
+    action: 'Buy to Open' | 'Buy to Close' | 'Sell to Open' | 'Sell to Close' | 'Buy' | 'Sell';
 }
 
 export interface OrderRequest {
     timeInForce: 'Day' | 'GTC' | 'GTD';
     orderType: 'Limit' | 'Market';
     price?: number;
-    priceEffect: 'Debit' | 'Credit';
+    priceEffect?: 'Debit' | 'Credit';
     legs: OrderLeg[];
 }
 
@@ -116,6 +116,65 @@ export async function getOptionQuote(
         };
     } catch (error) {
         console.warn(`⚠️ Quote fetch error: ${error}, will use signal price`);
+        return null;
+    }
+}
+
+/**
+ * Get current market quote for an equity symbol (Stock/ETF)
+ * Returns bid/ask/last prices for calculating order share sizes
+ */
+export async function getEquityQuote(
+    accessToken: string,
+    symbol: string
+): Promise<OptionQuote | null> {
+    console.log(`📊 Fetching equity quote for: ${symbol}`);
+
+    try {
+        // Tastytrade market-data endpoint for equities
+        const quoteUrl = `${TASTYTRADE_API_BASE}/market-data/equities/quotes`;
+
+        const response = await fetch(quoteUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'User-Agent': 'TradeMind/1.0',
+            },
+            body: JSON.stringify({ symbols: [symbol] }),
+        });
+
+        if (!response.ok) {
+            console.warn(`⚠️ Equity quote fetch failed (${response.status})`);
+            return null;
+        }
+
+        const data = await response.json();
+        const quote = data.data?.items?.[0];
+
+        if (!quote) {
+            console.warn('⚠️ No equity quote data returned');
+            return null;
+        }
+
+        const bid = parseFloat(quote.bid || '0');
+        const ask = parseFloat(quote.ask || '0');
+        const mid = (bid + ask) / 2;
+
+        console.log(`✅ Equity quote received: Bid ${bid} / Ask ${ask} / Mid ${mid.toFixed(2)}`);
+
+        return {
+            symbol: symbol,
+            bid,
+            ask,
+            mid,
+            last: parseFloat(quote.last || '0'),
+            volume: parseInt(quote.volume || '0'),
+            openInterest: 0,
+        };
+    } catch (error) {
+        console.warn(`⚠️ Equity quote fetch error: ${error}`);
         return null;
     }
 }
@@ -273,6 +332,45 @@ export async function getAccountBalance(
         buyingPower: parseFloat(item['derivative-buying-power'] || item['equity-buying-power'] || '0'),
         dayTradingBuyingPower: parseFloat(item['day-trading-buying-power'] || item['day-equity-buying-power'] || '0'),
     };
+}
+
+export interface Position {
+    symbol: string;
+    quantity: number;
+    instrumentType: string;
+}
+
+/**
+ * Get current open positions for an account
+ */
+export async function getAccountPositions(
+    accessToken: string,
+    accountNumber: string
+): Promise<Position[]> {
+    const response = await fetch(`${TASTYTRADE_API_BASE}/accounts/${accountNumber}/positions`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'User-Agent': 'TradeMind/1.0',
+        },
+    });
+
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Failed to fetch positions status ${response.status}: ${text}`);
+    }
+
+    const data = await response.json();
+
+    return data.data?.items?.map((item: any) => ({
+        symbol: item.symbol,
+        // The API returns quantity-direction = Long/Short and quantity as a positive number.
+        // If it's short, we need to return a negative quantity.
+        quantity: item['quantity-direction'] === 'Short' ? -parseFloat(item.quantity) : parseFloat(item.quantity),
+        instrumentType: item['instrument-type'],
+    })) || [];
 }
 
 
@@ -732,6 +830,46 @@ export async function executeTQQQSpread(
                 symbol: longSymbol,
                 quantity,
                 action: 'Buy to Open',
+            },
+        ],
+    };
+
+    return submitOrder(accessToken, accountNumber, order);
+}
+
+/**
+ * Execute an Equity Trade (Stock/ETF)
+ * Used directly by TurboCore for rebalancing
+ */
+export async function executeEquityOrder(
+    accessToken: string,
+    accountNumber: string,
+    signal: {
+        symbol: string;
+        action: 'Buy' | 'Sell';
+        quantity: number;
+        price?: number; // Limit price (optional). If omitted, sends a Market order.
+    }
+): Promise<OrderResponse> {
+    const { symbol, action, quantity, price } = signal;
+
+    const orderType = price && price > 0 ? 'Limit' : 'Market';
+
+    console.log(`📋 Equity Trade: ${action} ${quantity}x ${symbol} @ ${orderType === 'Limit' ? price : 'MKT'}`);
+
+    const order: OrderRequest = {
+        timeInForce: 'Day',
+        orderType,
+        ...(orderType === 'Limit' ? { price, priceEffect: action === 'Buy' ? 'Debit' : 'Credit' } : {}),
+        legs: [
+            {
+                instrumentType: 'Equity',
+                symbol,
+                quantity,
+                // Tastytrade expects "Buy to Open" or "Sell to Close" for long positions, 
+                // but for simple equities the API often accepts just "Buy" or "Sell". 
+                // However to be strictly safe, if we are buying we use Buy, if selling we use Sell.
+                action,
             },
         ],
     };

@@ -167,14 +167,23 @@ const executeTurboCoreStrategy: StrategyExecutor = async (
         // Truncate toward zero (floor for buys, ceil for sells) to ensure we don't over-leverage
         const orderShares = diffShares > 0 ? Math.floor(diffShares) : Math.ceil(diffShares);
 
+        // Convert to a MARKETABLE LIMIT order to avoid 5% buying power penalties on Market orders
+        let limitPrice = currentPrice;
+        if (quote && quote.ask > 0 && quote.bid > 0) {
+            // Pay slightly above ask to ensure instant fill, sell slightly below bid
+            limitPrice = orderShares > 0 ? quote.ask + 0.02 : quote.bid - 0.02;
+        }
+        limitPrice = Math.round(limitPrice * 100) / 100; // Force 2 decimal places
+
         if (orderShares !== 0) {
             ordersToSubmit.push({
                 symbol,
                 action: orderShares > 0 ? 'Buy' : 'Sell',
                 quantity: Math.abs(orderShares),
+                price: limitPrice,
                 diffValue
             });
-            console.log(`   🔄 ${symbol}: Target ${(targetPct * 100).toFixed(1)}% ($${targetValue.toFixed(0)}), Curr ${currentShares}sh ($${currentValue.toFixed(0)}) -> ${orderShares > 0 ? 'BUY' : 'SELL'} ${Math.abs(orderShares)}sh`);
+            console.log(`   🔄 ${symbol}: Target ${(targetPct * 100).toFixed(1)}% ($${targetValue.toFixed(0)}), Curr ${currentShares}sh ($${currentValue.toFixed(0)}) -> ${orderShares > 0 ? 'BUY' : 'SELL'} ${Math.abs(orderShares)}sh @ LMT $${limitPrice}`);
         } else {
             console.log(`   ✅ ${symbol}: Target ${(targetPct * 100).toFixed(1)}% ($${targetValue.toFixed(0)}), Curr ${currentShares}sh ($${currentValue.toFixed(0)}) -> OK (No trade)`);
         }

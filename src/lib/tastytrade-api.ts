@@ -492,9 +492,13 @@ export async function submitOrder(
                     .map((e: { code: string; message: string }) => `${e.code}: ${e.message}`)
                     .join('; ');
                 console.error(`❌ Dry-run FAILED for [${failedSymbols}]: ${reasons}`);
+
+                // Only append option-specific help text if the order contains options
+                const isOption = order.legs.some(l => l.instrumentType === 'Equity Option' || l.instrumentType === 'Future Option');
+                const suffix = isOption ? ` The option contract may not exist at this strike/expiry.` : ``;
+
                 throw new Error(
-                    `Trade failed: ${reasons}. ` +
-                    `Symbols: ${failedSymbols}. The option contract may not exist at this strike/expiry.`
+                    `Trade failed: ${reasons}. Symbols: ${failedSymbols}.${suffix}`
                 );
             }
             console.warn(`⚠️ Dry-run returned ${dryRunResponse.status}, proceeding cautiously...`);
@@ -866,10 +870,11 @@ export async function executeEquityOrder(
                 instrumentType: 'Equity',
                 symbol,
                 quantity,
-                // Tastytrade expects "Buy to Open" or "Sell to Close" for long positions, 
-                // but for simple equities the API often accepts just "Buy" or "Sell". 
-                // However to be strictly safe, if we are buying we use Buy, if selling we use Sell.
-                action,
+                // Tastytrade expects four-value actions.
+                // For long equity rebalancing:
+                // Buying shares we don't hold or adding to existing longs -> Buy to Open
+                // Selling existing long shares -> Sell to Close
+                action: action === 'Buy' ? 'Buy to Open' : 'Sell to Close',
             },
         ],
     };

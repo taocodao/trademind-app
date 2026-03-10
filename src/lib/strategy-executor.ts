@@ -144,7 +144,7 @@ const executeTurboCoreStrategy: StrategyExecutor = async (
     const posMap = new Map(positions.map(p => [p.symbol, p.quantity]));
 
     // 3. Process each leg and calculate orders
-    const ordersToSubmit: Array<{ symbol: string; action: 'Buy' | 'Sell'; quantity: number; diffValue: number }> = [];
+    const ordersToSubmit: Array<{ symbol: string; action: 'Buy' | 'Sell'; quantity: number; price?: number; diffValue: number }> = [];
 
     for (const leg of legs) {
         const symbol = leg.symbol;

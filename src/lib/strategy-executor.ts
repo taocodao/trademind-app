@@ -156,9 +156,11 @@ const executeTurboCoreStrategy: StrategyExecutor = async (
 
         // Fetch live price
         const quote = await getEquityQuote(accessToken, symbol);
-        // Fallback to a hardcoded rough estimate if quote fails so we don't totally crash during testing, 
-        // though in prod we'd want to fail. The signal 'cost' might be a fallback.
-        const currentPrice = quote?.last || quote?.mid || signal.cost || 100; // Warning: 100 is a blind fallback!
+        const currentPrice = quote?.last || quote?.mid || signal.cost || 0;
+
+        if (currentPrice === 0) {
+            throw new Error(`Failed to resolve a live market price or fallback cost for ${symbol}. Discarding order to prevent dangerous executions.`);
+        }
 
         const currentValue = currentShares * currentPrice;
         const diffValue = targetValue - currentValue;

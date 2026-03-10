@@ -131,46 +131,73 @@ export async function getEquityQuote(
     console.log(`📊 Fetching equity quote for: ${symbol}`);
 
     try {
-        // Tastytrade market-data endpoint for equities
-        const quoteUrl = `${TASTYTRADE_API_BASE}/market-data/equities/quotes`;
+        // Fix: Tastytrade uses a GET endpoint for quotes, not POST.
+        const quoteUrl = `${TASTYTRADE_API_BASE}/market-data/quotes?symbols=${symbol}`;
 
-        const response = await fetch(quoteUrl, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'User-Agent': 'TradeMind/1.0',
-            },
-            body: JSON.stringify({ symbols: [symbol] }),
-        });
+        let bid = 0;
+        let ask = 0;
+        let last = 0;
 
-        if (!response.ok) {
-            console.warn(`⚠️ Equity quote fetch failed (${response.status})`);
+        try {
+            const response = await fetch(quoteUrl, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Accept': 'application/json',
+                    'User-Agent': 'TradeMind/1.0',
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const quote = data.data?.items?.[0];
+                if (quote) {
+                    bid = parseFloat(quote.bid || quote.last || '0');
+                    ask = parseFloat(quote.ask || quote.last || '0');
+                    last = parseFloat(quote.last || '0');
+                }
+            } else {
+                console.warn(`⚠️ Tastytrade equity quote fetch failed (${response.status})`);
+            }
+        } catch (e) {
+            console.warn(`⚠️ Tastytrade equity quote fetch error:`, e);
+        }
+
+        // Fallback to Yahoo Finance Free API for basic equities if Tastytrade fails or rejects market data
+        if (last === 0) {
+            console.log(`📡 Falling back to Yahoo Finance for ${symbol} quote...`);
+            try {
+                const yahooResponse = await fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbol}`, { cache: 'no-store' });
+                if (yahooResponse.ok) {
+                    const yahooData = await yahooResponse.json();
+                    const yQuote = yahooData.quoteResponse?.result?.[0];
+                    if (yQuote && yQuote.regularMarketPrice) {
+                        bid = yQuote.bid || yQuote.regularMarketPrice;
+                        ask = yQuote.ask || yQuote.regularMarketPrice;
+                        last = yQuote.regularMarketPrice;
+                        console.log(`✅ Yahoo Finance quote for ${symbol}: Bid ${bid} / Ask ${ask} / Last ${last}`);
+                    }
+                }
+            } catch (yErr) {
+                console.warn(`⚠️ Yahoo Finance fallback failed for ${symbol}:`, yErr);
+            }
+        }
+
+        if (last === 0) {
+            console.warn(`⚠️ All quote fetch attempts failed for ${symbol}.`);
             return null;
         }
 
-        const data = await response.json();
-        const quote = data.data?.items?.[0];
-
-        if (!quote) {
-            console.warn('⚠️ No equity quote data returned');
-            return null;
-        }
-
-        const bid = parseFloat(quote.bid || '0');
-        const ask = parseFloat(quote.ask || '0');
         const mid = (bid + ask) / 2;
-
-        console.log(`✅ Equity quote received: Bid ${bid} / Ask ${ask} / Mid ${mid.toFixed(2)}`);
+        console.log(`✅ Equity quote for ${symbol}: Bid ${bid} / Ask ${ask} / Mid ${mid}`);
 
         return {
-            symbol: symbol,
+            symbol,
             bid,
             ask,
             mid,
-            last: parseFloat(quote.last || '0'),
-            volume: parseInt(quote.volume || '0'),
+            last,
+            volume: 0,
             openInterest: 0,
         };
     } catch (error) {

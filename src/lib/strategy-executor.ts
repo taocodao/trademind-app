@@ -213,7 +213,8 @@ const executeTurboCoreStrategy: StrategyExecutor = async (
             const resp = await executeEquityOrder(accessToken, accountNumber, {
                 symbol: order.symbol,
                 action: order.action,
-                quantity: order.quantity
+                quantity: order.quantity,
+                price: order.price
             });
             lastOrderId = resp.orderId;
             console.log(`   ✅ ${order.action} ${order.quantity} ${order.symbol} submitted: ${resp.orderId}`);

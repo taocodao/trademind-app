@@ -537,6 +537,9 @@ function DashboardContent() {
                     signalDetails: signal
                 };
 
+                console.log("🚀 [DEBUG] Executing TurboCore Signal. ID:", signal.id);
+                console.log("📦 [DEBUG] Payload Signal Details:", JSON.stringify(signal, null, 2));
+
                 const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -545,7 +548,13 @@ function DashboardContent() {
 
                 if (!response.ok) {
                     const errData = await response.json();
-                    throw new Error(errData.message || 'Execution failed');
+                    const errMsg = errData.message || errData.error || '';
+                    if (errMsg.includes('already executed')) {
+                        setToast({ msg: 'Signal was already executed. Removing from dashboard.', ok: true });
+                        await removeSignal(String(signal.id));
+                        return;
+                    }
+                    throw new Error(errMsg || 'Execution failed');
                 }
 
                 setToast({ msg: 'TurboCore Atomic Rebalance queued successfully', ok: true });

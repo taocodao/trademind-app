@@ -281,7 +281,12 @@ export function SignalProvider({ children }: SignalProviderProps) {
                 // Refresh account data (BP changed)
                 fetchAccountData();
             } else {
-                console.error('❌ Auto-approve execution failed:', result.error);
+                if (result.error && result.error.includes('already executed')) {
+                    console.log(`ℹ️ Signal ${signal.id} already executed elsewhere. Removing from queue.`);
+                    setAllSignals(prev => prev.filter(s => s.id !== signal.id));
+                } else {
+                    console.error('❌ Auto-approve execution failed:', result.error);
+                }
             }
         } catch (err) {
             console.error('❌ Auto-approve error:', err);

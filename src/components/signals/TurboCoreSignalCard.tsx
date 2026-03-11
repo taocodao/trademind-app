@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shield, Zap, TrendingUp, AlertTriangle, ChevronDown, CheckCircle, Brain, Target, Activity } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -43,6 +43,35 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
     const regime = signal.regime || "SIDEWAYS";
     const confidence = signal.confidence || 0;
     const isCrisis = regime.includes("BEAR");
+
+    const [previewOrders, setPreviewOrders] = useState<any[]>([]);
+    const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+
+    useEffect(() => {
+        if (!isLinked) return;
+        setIsPreviewLoading(true);
+        const timeout = setTimeout(async () => {
+            try {
+                const res = await fetch(`/api/signals/${signal.id}/preview`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        signalDetails: { ...signal, capital_required: investmentCapital },
+                        accountNumber: accountData?.accountNumber
+                    })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setPreviewOrders(data.orders || []);
+                }
+            } catch (e) {
+                console.error("Failed to fetch preview orders", e);
+            } finally {
+                setIsPreviewLoading(false);
+            }
+        }, 600);
+        return () => clearTimeout(timeout);
+    }, [investmentCapital, isLinked, signal, accountData?.accountNumber]);
 
     // Extract multi-ticker target weights
     const allocations = signal.legs || [];
@@ -140,6 +169,32 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
                     <span>$100k</span>
                 </div>
             </div>
+
+            {/* Preview Orders */}
+            {isLinked && (
+                <div className="mb-4 bg-purple-900/10 p-3 rounded-lg border border-purple-500/20 relative overflow-hidden">
+                    <div className="text-xs text-purple-400 font-semibold mb-2 flex justify-between items-center">
+                        <span className="flex items-center gap-1"><Zap className="w-3.5 h-3.5" /> Live Order Preview</span>
+                        {isPreviewLoading && <div className="w-3 h-3 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin" />}
+                    </div>
+
+                    {previewOrders.length === 0 && !isPreviewLoading ? (
+                        <div className="text-xs text-white/40 italic text-center py-2">No rebalance needed</div>
+                    ) : (
+                        <div className={`space-y-1.5 transition-opacity ${isPreviewLoading ? 'opacity-50' : 'opacity-100'}`}>
+                            {previewOrders.map((o, i) => (
+                                <div key={i} className="flex justify-between items-center text-xs font-mono bg-black/40 p-2 rounded border border-white/5">
+                                    <span className={`font-bold ${o.action === 'Buy' ? 'text-green-400' : 'text-red-400'}`}>
+                                        {o.action.toUpperCase()} {o.quantity}
+                                    </span>
+                                    <span className="text-white/90 font-bold">{o.symbol}</span>
+                                    <span className="text-white/40">MKT {o.diffValue ? `($${Math.abs(o.diffValue).toLocaleString(undefined, { maximumFractionDigits: 0 })})` : ''}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Footer Controls & Execution */}
             <div className="flex gap-2">

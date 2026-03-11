@@ -106,22 +106,15 @@ const executeServerManagedStrategy: StrategyExecutor = async (accessToken, accou
 };
 
 /**
- * Execute TurboCore Sizer Strategy (Equity Rebalance)
- * Calculates delta between target % and current holdings, then submits Market orders.
+ * Calculate TurboCore Sizer Strategy (Equity Rebalance) Orders
+ * Calculates delta between target % and current holdings, then returns the orders to execute.
  */
-const executeTurboCoreStrategy: StrategyExecutor = async (
-    accessToken,
-    accountNumber,
-    signal,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    defaultExpiry
+export const calculateTurboCoreOrders = async (
+    accessToken: string,
+    accountNumber: string,
+    signal: SignalData
 ) => {
-    console.log(`📋 Executing TurboCore Rebalance for ${signal.symbol}`);
-
-    // We need the getAccountBalance, getAccountPositions, getEquityQuote, and executeEquityOrder 
-    // functions which are exported from tastytrade-api.ts, but wait, those aren't imported here yet.
-    // I should import them first. Let me just add the logic and then fix the imports.
-    const { getAccountBalance, getAccountPositions, getEquityQuote, executeEquityOrder } = await import('./tastytrade-api');
+    const { getAccountBalance, getAccountPositions, getEquityQuote } = await import('./tastytrade-api');
 
     // 1. Fetch live Net Liq
     const balance = await getAccountBalance(accessToken, accountNumber);
@@ -193,6 +186,24 @@ const executeTurboCoreStrategy: StrategyExecutor = async (
         return 0;
     });
 
+    return ordersToSubmit;
+};
+
+/**
+ * Execute TurboCore Sizer Strategy (Equity Rebalance)
+ * Calculates delta between target % and current holdings, then submits Market orders.
+ */
+const executeTurboCoreStrategy: StrategyExecutor = async (
+    accessToken,
+    accountNumber,
+    signal,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    defaultExpiry
+) => {
+    console.log(`📋 Executing TurboCore Rebalance for signal ${signal.id}`);
+
+    const ordersToSubmit = await calculateTurboCoreOrders(accessToken, accountNumber, signal);
+
     if (ordersToSubmit.length === 0) {
         return {
             orderId: 'no_action_needed',
@@ -202,6 +213,8 @@ const executeTurboCoreStrategy: StrategyExecutor = async (
     }
 
     console.log(`🚀 Submitting ${ordersToSubmit.length} rebalance orders...`);
+
+    const { executeEquityOrder } = await import('./tastytrade-api');
 
     // Execute orders sequentially
     let lastOrderId = 'unknown';

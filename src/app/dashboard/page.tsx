@@ -560,6 +560,7 @@ function DashboardContent() {
                 setToast({ msg: 'TurboCore Atomic Rebalance queued successfully', ok: true });
                 await removeSignal(String(signal.id));
                 fetchOrders();
+                fetchAccountData(); // Immediately refresh positions matching user request
             } else {
                 // Tier 2b: Shadow Sync Calculation
                 if (!settings?.shadowLedger) {

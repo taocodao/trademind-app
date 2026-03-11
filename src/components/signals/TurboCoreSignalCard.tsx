@@ -144,7 +144,7 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
             {/* Footer Controls & Execution */}
             <div className="flex gap-2">
                 <button
-                    onClick={() => onExecute(signal)}
+                    onClick={() => onExecute({ ...signal, capital_required: investmentCapital })}
                     disabled={isExecuting || isCrisis}
                     className={`
                             flex-1 py-3 px-4 rounded-lg font-bold flex flex-col items-center justify-center transition-all

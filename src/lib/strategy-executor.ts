@@ -125,8 +125,9 @@ const executeTurboCoreStrategy: StrategyExecutor = async (
 
     // 1. Fetch live Net Liq
     const balance = await getAccountBalance(accessToken, accountNumber);
-    const netLiq = balance.netLiquidatingValue;
-    console.log(`   💰 Live Net Liq: $${netLiq}`);
+    // Use Target Investment Capital from UI if provided, otherwise fallback to account net liq
+    const netLiq = signal.capital_required ? Number(signal.capital_required) : balance.netLiquidatingValue;
+    console.log(`   💰 Live Net Liq to allocate against: $${netLiq} (Account Net Liq: $${balance.netLiquidatingValue})`);
 
     // If signal.legs exists, this is a portfolio rebalance. Otherwise, it might be a single ticker.
     let legs = signal.legs as Array<{ symbol: string; target_pct: number }> | undefined;
@@ -169,23 +170,17 @@ const executeTurboCoreStrategy: StrategyExecutor = async (
         // Truncate toward zero (floor for buys, ceil for sells) to ensure we don't over-leverage
         const orderShares = diffShares > 0 ? Math.floor(diffShares) : Math.ceil(diffShares);
 
-        // Convert to a MARKETABLE LIMIT order to avoid 5% buying power penalties on Market orders
-        let limitPrice = currentPrice;
-        if (quote && quote.ask > 0 && quote.bid > 0) {
-            // Pay slightly above ask to ensure instant fill, sell slightly below bid
-            limitPrice = orderShares > 0 ? quote.ask + 0.02 : quote.bid - 0.02;
-        }
-        limitPrice = Math.round(limitPrice * 100) / 100; // Force 2 decimal places
-
+        // 📈 MARKET ORDER EXECUTION
+        // User requested Market orders explicitly since we only trade highly liquid ETFs during market hours.
         if (orderShares !== 0) {
             ordersToSubmit.push({
                 symbol,
                 action: orderShares > 0 ? 'Buy' : 'Sell',
                 quantity: Math.abs(orderShares),
-                price: limitPrice,
+                price: undefined, // Market order doesn't need a price
                 diffValue
             });
-            console.log(`   🔄 ${symbol}: Target ${(targetPct * 100).toFixed(1)}% ($${targetValue.toFixed(0)}), Curr ${currentShares}sh ($${currentValue.toFixed(0)}) -> ${orderShares > 0 ? 'BUY' : 'SELL'} ${Math.abs(orderShares)}sh @ LMT $${limitPrice}`);
+            console.log(`   🔄 ${symbol}: Target ${(targetPct * 100).toFixed(1)}% ($${targetValue.toFixed(0)}), Curr ${currentShares}sh ($${currentValue.toFixed(0)}) -> ${orderShares > 0 ? 'BUY' : 'SELL'} ${Math.abs(orderShares)}sh @ MARKET`);
         } else {
             console.log(`   ✅ ${symbol}: Target ${(targetPct * 100).toFixed(1)}% ($${targetValue.toFixed(0)}), Curr ${currentShares}sh ($${currentValue.toFixed(0)}) -> OK (No trade)`);
         }

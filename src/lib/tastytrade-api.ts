@@ -163,23 +163,27 @@ export async function getEquityQuote(
             console.warn(`⚠️ Tastytrade equity quote fetch error:`, e);
         }
 
-        // Fallback to Yahoo Finance Free API for basic equities if Tastytrade fails or rejects market data
+        // Fallback to our EC2 backend to fetch live Interactive Brokers Gateway quotes
         if (last === 0) {
-            console.log(`📡 Falling back to Yahoo Finance for ${symbol} quote...`);
+            console.log(`📡 Falling back to EC2 IB Gateway for ${symbol} quote...`);
             try {
-                const yahooResponse = await fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbol}`, { cache: 'no-store' });
-                if (yahooResponse.ok) {
-                    const yahooData = await yahooResponse.json();
-                    const yQuote = yahooData.quoteResponse?.result?.[0];
-                    if (yQuote && yQuote.regularMarketPrice) {
-                        bid = yQuote.bid || yQuote.regularMarketPrice;
-                        ask = yQuote.ask || yQuote.regularMarketPrice;
-                        last = yQuote.regularMarketPrice;
-                        console.log(`✅ Yahoo Finance quote for ${symbol}: Bid ${bid} / Ask ${ask} / Last ${last}`);
+                // Get the EC2 URL from env, default to the known elastic IP
+                const ec2Url = process.env.TASTYTRADE_API_URL || 'http://34.235.119.67:8002';
+
+                const ec2Response = await fetch(`${ec2Url}/api/quote/equity?symbol=${symbol}`, { cache: 'no-store' });
+                if (ec2Response.ok) {
+                    const ec2Data = await ec2Response.json();
+                    if (ec2Data && ec2Data.last) {
+                        bid = ec2Data.bid || ec2Data.last;
+                        ask = ec2Data.ask || ec2Data.last;
+                        last = ec2Data.last;
+                        console.log(`✅ IB Gateway EC2 quote for ${symbol}: Bid ${bid} / Ask ${ask} / Last ${last}`);
                     }
+                } else {
+                    console.warn(`⚠️ EC2 proxy quote fetch failed (${ec2Response.status})`);
                 }
-            } catch (yErr) {
-                console.warn(`⚠️ Yahoo Finance fallback failed for ${symbol}:`, yErr);
+            } catch (proxyErr) {
+                console.warn(`⚠️ EC2 proxy fallback failed for ${symbol}:`, proxyErr);
             }
         }
 

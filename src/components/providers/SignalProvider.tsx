@@ -65,13 +65,31 @@ const EXPIRY_CHECK_INTERVAL_MS = 60 * 1000;
 function isSignalExpired(signal: { expires_at?: string; expiresAt?: string; createdAt?: string }): boolean {
     const expiresAt = signal.expires_at || signal.expiresAt;
     if (expiresAt) {
-        // Hand-off: RDS returns UTC-like strings. Browser likes 'T' instead of space.
         const safeStr = expiresAt.replace(' ', 'T');
-        // If it looks like '2026-03-05T16:00:00' (no Z), browser defaults to Local (NY).
-        // If it starts with 'Z' or '+', browser defaults to UTC.
-        // This is safer than forcing 'Z' which was expiring signals prematurely.
         return Date.now() > new Date(safeStr).getTime();
     }
+
+    // No explicit expiry — infer from creation date.
+    // Treat as expired if created before today's market close (4PM ET).
+    if (signal.createdAt) {
+        const created = new Date(signal.createdAt);
+        const nowUtc = new Date();
+
+        // Convert "now" to ET by subtracting offset (ET = UTC-4 in EDT, UTC-5 in EST)
+        const etOffset = 4; // Using EDT (summer). Adjust if needed.
+        const nowEt = new Date(nowUtc.getTime() - etOffset * 60 * 60 * 1000);
+
+        // Market close ET for the creation date
+        const createdEt = new Date(created.getTime() - etOffset * 60 * 60 * 1000);
+        const marketClose = new Date(createdEt);
+        marketClose.setUTCHours(MARKET_CLOSE_HOUR_ET + etOffset, 0, 0, 0); // 4PM ET = 20:00 UTC
+
+        // If now is past market close on the signal's creation day, it's expired
+        if (nowUtc > marketClose) {
+            return true;
+        }
+    }
+
     return false;
 }
 

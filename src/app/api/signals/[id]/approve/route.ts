@@ -243,11 +243,21 @@ export async function POST(
 
         } catch (error) {
             console.error('Trade execution failed:', error);
+            const errMsg = error instanceof Error ? error.message : 'Trade execution failed';
+
+            // ⚠️ Mark signal as 'failed' in DB so it won't loop on next refresh
+            try {
+                await createUserExecution(userId, id, 'failed', undefined, body.source || 'manual');
+                console.log(`📝 Signal ${id} marked as 'failed' in DB to prevent zombie loops.`);
+            } catch (dbErr) {
+                console.error('⚠️ Failed to write failure status to DB:', dbErr);
+            }
+
             return NextResponse.json({
                 status: 'failed',
                 signal: { id, ...signalData },
-                error: error instanceof Error ? error.message : 'Trade execution failed',
-                message: `Trade failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                error: errMsg,
+                message: `Trade failed: ${errMsg}`,
             }, { status: 400 });
         }
 

@@ -5,34 +5,22 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import {
     ArrowLeft,
-    Clock,
-    AlertTriangle,
     TrendingUp,
-    XCircle,
     RefreshCw,
-    Settings,
-    Wallet
+    Wallet,
+    BarChart3
 } from "lucide-react";
 import Link from "next/link";
-import { ShareButton } from "@/components/share/ShareButton";
-import { CapitalOptimizer } from "@/components/positions/CapitalOptimizer";
-import { TrailingStopConfig } from "@/components/positions/TrailingStopConfig";
 
-interface Position {
-    id: string;
+interface EquityPosition {
     symbol: string;
-    strategy: string;
-    type?: string;
-    short_strike?: number;
-    long_strike?: number;
-    strike?: number;
-    expiry: string;
     quantity: number;
-    entry_debit: number;
-    current_value?: number;
-    unrealized_pnl?: number;
-    status: string;
-    created_at: string;
+    averageOpenPrice: number;
+    currentPrice: number;
+    marketValue: number;
+    unrealizedPnl: number;
+    unrealizedPnlPct: number;
+    instrumentType: string;
 }
 
 interface AccountBalance {
@@ -41,54 +29,28 @@ interface AccountBalance {
     netLiquidation: number;
 }
 
-// Helper to format strategy name for display
-function formatStrategy(strategy: string): string {
-    const map: Record<string, string> = {
-        'theta': 'Theta Sprint',
-        'theta_put': 'Theta Sprint',
-        'calendar': 'Diagonal Spread',
-        'diagonal': 'Diagonal Spread',
-        'zebra': 'ZEBRA',
-        'dvo': 'DVO',
-        'deep-value': 'DVO',
-        'SHORT_PUT': 'DVO',
-    };
-    return map[strategy] || strategy;
-}
-
-// Helper to calculate expiry time remaining
-function getExpiryTime(expiryDate: string): string {
-    const expiry = new Date(expiryDate);
-    const now = new Date();
-    const diffMs = expiry.getTime() - now.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    if (diffDays < 0) return 'Expired';
-    if (diffDays === 0) return `${diffHours}h`;
-    return `${diffDays}d ${diffHours}h`;
-}
+// Only TurboCore managed symbols
+const TURBOCORE_SYMBOLS = ['QQQ', 'QLD', 'TQQQ', 'SGOV'];
 
 export default function PositionsPage() {
     const { ready, authenticated } = usePrivy();
     const router = useRouter();
-    const [positions, setPositions] = useState<Position[]>([]);
+    const [positions, setPositions] = useState<EquityPosition[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [accountNum, setAccountNum] = useState<string | null>(null);
     const [balance, setBalance] = useState<AccountBalance | null>(null);
 
-    // Fetch account balance from Tastytrade
-    const fetchBalance = useCallback(async () => {
+    const fetchAccountAndPositions = useCallback(async () => {
         try {
-            // Step 1: Get the account number from accounts list
+            // 1. Get account number
             const acctRes = await fetch('/api/tastytrade/account');
-            if (!acctRes.ok) return null;
+            if (!acctRes.ok) { setLoading(false); return; }
             const acctData = await acctRes.json();
             const acct = acctData.data?.items?.[0]?.account?.['account-number'];
-            if (!acct) return null;
+            if (!acct) { setLoading(false); return; }
             setAccountNum(acct);
 
-            // Step 2: Fetch real balance from /accounts/{number}/balances
+            // 2. Fetch balance
             const balRes = await fetch(`/api/tastytrade/balance?accountNumber=${acct}`);
             if (balRes.ok) {
                 const bal = await balRes.json();
@@ -98,33 +60,46 @@ export default function PositionsPage() {
                     netLiquidation: bal.netLiquidatingValue ?? 0,
                 });
             }
-            return acct;
-        } catch (err) {
-            console.error('Error fetching balance:', err);
-        }
-        return null;
-    }, []);
 
+            // 3. Fetch positions from Tastytrade
+            const posRes = await fetch(`/api/tastytrade/positions?accountNumber=${acct}`);
+            if (posRes.ok) {
+                const posData = await posRes.json();
+                const items = posData?.data?.items || [];
 
+                // Filter for equity positions in TurboCore universe
+                const equityPositions: EquityPosition[] = items
+                    .filter((p: any) => p['instrument-type'] === 'Equity')
+                    .filter((p: any) => TURBOCORE_SYMBOLS.includes(p.symbol))
+                    .map((p: any) => {
+                        const qty = Number(p.quantity) || 0;
+                        const avgPrice = Number(p['average-open-price']) || 0;
+                        const closePrice = Number(p['close-price']) || avgPrice;
+                        const marketVal = qty * closePrice;
+                        const costBasis = qty * avgPrice;
+                        const pnl = marketVal - costBasis;
+                        const pnlPct = costBasis > 0 ? (pnl / costBasis) * 100 : 0;
 
-    const fetchPositions = useCallback(async (acctOverride?: string) => {
-        const acct = acctOverride || accountNum;
-        if (!acct) return;
-        try {
-            const response = await fetch(`/api/tqqq/positions?accountNumber=${acct}`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch positions');
+                        return {
+                            symbol: p.symbol,
+                            quantity: qty,
+                            averageOpenPrice: avgPrice,
+                            currentPrice: closePrice,
+                            marketValue: marketVal,
+                            unrealizedPnl: pnl,
+                            unrealizedPnlPct: pnlPct,
+                            instrumentType: p['instrument-type'],
+                        };
+                    });
+
+                setPositions(equityPositions);
             }
-            const data = await response.json();
-            setPositions(data.spreads || []);
-            setError(null);
         } catch (err) {
             console.error('Error fetching positions:', err);
-            setError(err instanceof Error ? err.message : 'Failed to load positions');
         } finally {
             setLoading(false);
         }
-    }, [accountNum]);
+    }, []);
 
     useEffect(() => {
         if (ready && !authenticated) {
@@ -132,45 +107,13 @@ export default function PositionsPage() {
         }
     }, [ready, authenticated, router]);
 
-    // Fetch positions on mount and refresh every 5 seconds
     useEffect(() => {
         if (ready && authenticated) {
-            // Initial fetch
-            fetchBalance().then(acct => {
-                if (acct) fetchPositions(acct);
-            });
-
-            const interval = setInterval(() => fetchPositions(), 5000);
-            const balanceInterval = setInterval(fetchBalance, 30000); // Balance every 30s
-            return () => {
-                clearInterval(interval);
-                clearInterval(balanceInterval);
-            };
+            fetchAccountAndPositions();
+            const interval = setInterval(fetchAccountAndPositions, 15000);
+            return () => clearInterval(interval);
         }
-    }, [ready, authenticated, fetchPositions, fetchBalance]);
-
-    const handleClose = async (position: Position) => {
-        try {
-            // Optimistically UI update: mark as closing (could add state for this later)
-            // Send request to close
-            const res = await fetch('/api/tastytrade/orders/close', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ position, accountNum })
-            });
-
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.error || 'Failed to close position');
-            }
-
-            // Remove from local state
-            setPositions(positions.filter(p => p.id !== position.id));
-        } catch (err: any) {
-            console.error('Failed to close position:', err);
-            setError(`Close failed: ${err.message}`);
-        }
-    };
+    }, [ready, authenticated, fetchAccountAndPositions]);
 
     if (!ready || !authenticated) {
         return (
@@ -182,54 +125,40 @@ export default function PositionsPage() {
         );
     }
 
-    const totalPnL = positions.reduce((sum, p) => sum + (p.unrealized_pnl || 0), 0);
+    const totalValue = positions.reduce((s, p) => s + p.marketValue, 0);
+    const totalPnl = positions.reduce((s, p) => s + p.unrealizedPnl, 0);
+    const totalCostBasis = positions.reduce((s, p) => s + p.quantity * p.averageOpenPrice, 0);
+    const totalPnlPct = totalCostBasis > 0 ? (totalPnl / totalCostBasis) * 100 : 0;
 
     return (
-        <main className="min-h-screen pb-6">
+        <main className="min-h-screen pb-24">
             {/* Header */}
             <header className="px-6 pt-12 pb-6 flex items-center gap-4">
                 <Link href="/dashboard" className="w-10 h-10 rounded-full bg-tm-surface flex items-center justify-center">
                     <ArrowLeft className="w-5 h-5" />
                 </Link>
                 <div className="flex-1">
-                    <h1 className="text-xl font-bold">Active Positions</h1>
-                    <p className="text-sm text-tm-muted">{positions.length} open</p>
+                    <h1 className="text-xl font-bold">TurboCore Holdings</h1>
+                    <p className="text-sm text-tm-muted">{positions.length} equity position{positions.length !== 1 ? 's' : ''}</p>
                 </div>
-                <div className="text-right">
-                    <p className="text-sm text-tm-muted">Total P&L</p>
-                    <p className={`font-mono font-bold ${totalPnL >= 0 ? 'profit-glow' : 'loss-glow'}`}>
-                        {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
-                    </p>
-                </div>
+                <button onClick={fetchAccountAndPositions} className="w-10 h-10 rounded-full bg-tm-surface flex items-center justify-center text-tm-muted hover:text-white transition">
+                    <RefreshCw className="w-4 h-4" />
+                </button>
             </header>
 
-            {/* Live Indicator */}
-            <div className="px-6 mb-4">
-                <div className="flex items-center gap-2 text-sm text-tm-muted">
-                    <span className="w-2 h-2 rounded-full bg-tm-green animate-pulse" />
-                    Live - Updates every 5s
-                </div>
-            </div>
-
-            {/* Account Balance Header */}
+            {/* Account Summary */}
             {balance && (
                 <div className="px-6 mb-6">
                     <div className="glass-card p-5">
                         <div className="flex items-center gap-2 mb-4">
                             <Wallet className="w-5 h-5 text-tm-purple" />
                             <h3 className="font-bold">Account Overview</h3>
-                            <Link
-                                href="/settings"
-                                className="ml-auto p-2 rounded-full hover:bg-tm-surface/50 transition-colors"
-                            >
-                                <Settings className="w-4 h-4 text-tm-muted" />
-                            </Link>
                         </div>
                         <div className="grid grid-cols-3 gap-4 text-center">
                             <div>
-                                <p className="text-xs text-tm-muted">Cash Available</p>
-                                <p className="text-lg font-bold font-mono">
-                                    ${balance.cashAvailable.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                <p className="text-xs text-tm-muted">Net Liquidation</p>
+                                <p className="text-lg font-bold font-mono text-tm-green">
+                                    ${balance.netLiquidation.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                 </p>
                             </div>
                             <div>
@@ -239,9 +168,9 @@ export default function PositionsPage() {
                                 </p>
                             </div>
                             <div>
-                                <p className="text-xs text-tm-muted">Net Liquidation</p>
-                                <p className="text-lg font-bold font-mono text-tm-green">
-                                    ${balance.netLiquidation.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                <p className="text-xs text-tm-muted">Cash Available</p>
+                                <p className="text-lg font-bold font-mono">
+                                    ${balance.cashAvailable.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                 </p>
                             </div>
                         </div>
@@ -249,175 +178,123 @@ export default function PositionsPage() {
                 </div>
             )}
 
-            {/* Capital Optimizer */}
-            <div className="px-6">
-                <CapitalOptimizer balance={balance} positions={positions} />
-            </div>
+            {/* TurboCore Portfolio Summary */}
+            {positions.length > 0 && (
+                <div className="px-6 mb-6">
+                    <div className="glass-card p-5 bg-gradient-to-br from-purple-900/20 to-indigo-900/20 border-purple-500/20">
+                        <div className="flex items-center gap-2 mb-3">
+                            <BarChart3 className="w-5 h-5 text-purple-400" />
+                            <h3 className="font-bold">TurboCore Portfolio</h3>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4 text-center">
+                            <div>
+                                <p className="text-xs text-tm-muted">Total Value</p>
+                                <p className="text-lg font-bold font-mono">
+                                    ${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-tm-muted">Unrealized P&L</p>
+                                <p className={`text-lg font-bold font-mono ${totalPnl >= 0 ? 'text-tm-green' : 'text-tm-red'}`}>
+                                    {totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-tm-muted">Return</p>
+                                <p className={`text-lg font-bold font-mono ${totalPnlPct >= 0 ? 'text-tm-green' : 'text-tm-red'}`}>
+                                    {totalPnlPct >= 0 ? '+' : ''}{totalPnlPct.toFixed(2)}%
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
-            {/* Positions List */}
-            <div className="px-6 space-y-4">
-                {positions.map((position) => (
-                    <PositionCard
-                        key={position.id}
-                        position={position}
-                        onClose={() => handleClose(position)}
-                    />
-                ))}
-
-                {positions.length === 0 && (
+            {/* Equity Positions */}
+            <div className="px-6 space-y-3">
+                {loading ? (
+                    [1, 2, 3].map(i => (
+                        <div key={i} className="glass-card p-5 animate-pulse">
+                            <div className="h-5 w-1/3 bg-tm-surface rounded mb-3" />
+                            <div className="h-4 w-2/3 bg-tm-surface rounded" />
+                        </div>
+                    ))
+                ) : positions.length === 0 ? (
                     <div className="glass-card p-8 text-center">
                         <TrendingUp className="w-12 h-12 text-tm-purple mx-auto mb-4" />
-                        <h3 className="font-semibold mb-2">No open positions</h3>
-                        <p className="text-sm text-tm-muted mb-4">Check signals for new opportunities</p>
-                        <Link href="/signals" className="btn-primary inline-block">
-                            View Signals
+                        <h3 className="font-semibold mb-2">No TurboCore positions</h3>
+                        <p className="text-sm text-tm-muted mb-4">Execute a TurboCore signal to open equity positions</p>
+                        <Link href="/dashboard" className="btn-primary inline-block">
+                            Go to Dashboard
                         </Link>
                     </div>
+                ) : (
+                    positions.map((pos) => (
+                        <EquityCard key={pos.symbol} position={pos} totalValue={totalValue} />
+                    ))
                 )}
             </div>
         </main>
     );
 }
 
-function PositionCard({
+function EquityCard({
     position,
-    onClose,
+    totalValue
 }: {
-    position: Position;
-    onClose: () => void;
+    position: EquityPosition;
+    totalValue: number;
 }) {
-    const pnl = position.unrealized_pnl || 0;
-    const isProfit = pnl >= 0;
-    const [showConfirm, setShowConfirm] = useState(false);
+    const isProfit = position.unrealizedPnl >= 0;
+    const allocationPct = totalValue > 0 ? (position.marketValue / totalValue) * 100 : 0;
 
-    // Calculate entry price (entry_debit is negative for puts = credit received)
-    const entryPrice = Math.abs(position.entry_debit || 0);
-    const currentPrice = position.current_value || entryPrice;
-    const pnlPercent = entryPrice > 0 ? ((pnl / (entryPrice * 100 * position.quantity)) * 100) : 0;
+    const symbolColors: Record<string, string> = {
+        'QQQ': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+        'QLD': 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
+        'TQQQ': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+        'SGOV': 'bg-green-500/20 text-green-400 border-green-500/30',
+    };
+    const color = symbolColors[position.symbol] || 'bg-gray-500/20 text-gray-400 border-gray-500/30';
 
     return (
         <div className="glass-card p-5">
-            {/* Header */}
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isProfit ? "bg-tm-green/20" : "bg-tm-red/20"
-                        }`}>
-                        <span className="font-bold text-lg">{position.symbol.slice(0, 2)}</span>
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${color}`}>
+                        <span className="font-bold text-sm">{position.symbol}</span>
                     </div>
                     <div>
                         <h3 className="font-bold text-lg">{position.symbol}</h3>
-                        <p className="text-sm text-tm-muted">{formatStrategy(position.strategy)}</p>
+                        <p className="text-xs text-tm-muted">
+                            {position.quantity} shares · Avg ${position.averageOpenPrice.toFixed(2)}
+                        </p>
                     </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    {/* Share button for profitable positions */}
-                    {isProfit && (
-                        <ShareButton
-                            data={{
-                                type: 'trade',
-                                title: `${position.symbol} Win`,
-                                amount: pnl,
-                                symbol: position.symbol,
-                                returnPercent: pnlPercent
-                            }}
-                            size="sm"
-                        />
-                    )}
-                    <div className="flex items-center gap-2 bg-tm-surface px-3 py-1.5 rounded-full">
-                        <span className="w-2 h-2 rounded-full bg-tm-green animate-pulse" />
-                        <span className="text-xs font-medium">LIVE</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Large P&L Display */}
-            <div className="text-center py-4 mb-4">
-                <p className="text-sm text-tm-muted mb-1">Unrealized P&L</p>
-                <p className={`text-4xl font-mono font-bold ${isProfit ? 'profit-glow' : 'loss-glow'}`}>
-                    {isProfit ? '+' : ''}${pnl.toFixed(2)}
-                </p>
-                <p className={`text-lg ${isProfit ? 'text-tm-green' : 'text-tm-red'}`}>
-                    {isProfit ? '+' : ''}{pnlPercent.toFixed(1)}%
-                </p>
-            </div>
-
-            {/* Stats Row */}
-            <div className="grid grid-cols-3 gap-4 mb-4 pb-4 border-b border-white/10">
-                <div>
-                    <p className="text-xs text-tm-muted">Entry</p>
-                    <p className="font-mono font-semibold">${entryPrice.toFixed(2)}</p>
-                </div>
-                <div className="text-center">
-                    <p className="text-xs text-tm-muted">Current</p>
-                    <p className={`font-mono font-semibold ${isProfit ? 'text-tm-green' : 'text-tm-red'}`}>
-                        ${currentPrice.toFixed(2)}
-                    </p>
                 </div>
                 <div className="text-right">
-                    <p className="text-xs text-tm-muted">Expiry</p>
-                    <p className="font-semibold flex items-center justify-end gap-1">
-                        <Clock className="w-3 h-3" />
-                        {getExpiryTime(position.expiry)}
+                    <p className={`text-lg font-bold font-mono ${isProfit ? 'text-tm-green' : 'text-tm-red'}`}>
+                        {isProfit ? '+' : ''}${position.unrealizedPnl.toFixed(2)}
+                    </p>
+                    <p className={`text-xs font-mono ${isProfit ? 'text-tm-green' : 'text-tm-red'}`}>
+                        {isProfit ? '+' : ''}{position.unrealizedPnlPct.toFixed(2)}%
                     </p>
                 </div>
             </div>
 
-            {/* Strike and Quantity Info */}
-            <div className="flex items-center justify-between mb-4 text-sm">
-                <span className="text-tm-muted truncate">
-                    Strikes: <span className="text-white font-mono break-words">
-                        {position.type?.includes('SPREAD') || position.short_strike ? (
-                            `S: $${position.short_strike} / L: $${position.long_strike || '-'}`
-                        ) : (
-                            `$${position.strike || position.short_strike}`
-                        )}
-                    </span>
-                </span>
-                <span className="text-tm-muted flex-shrink-0 ml-2">
-                    Qty: <span className="text-white font-mono">{position.quantity}</span>
-                </span>
-            </div>
-
-            {/* Applied Filters Badge */}
-            <div className="bg-tm-surface/50 rounded-lg p-3 mb-4">
-                <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs text-tm-muted">⚙️ Trade Params</span>
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-4 text-center bg-tm-surface/40 rounded-lg p-3">
+                <div>
+                    <p className="text-[10px] text-tm-muted mb-0.5">Market Value</p>
+                    <p className="font-mono text-sm font-bold">${position.marketValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
                 </div>
-                <div className="flex flex-wrap gap-2 text-xs">
-                    <span className="bg-tm-purple/20 text-tm-purple px-2 py-1 rounded-full">
-                        {position.type?.replace('_', ' ')}
-                    </span>
-                    <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full">
-                        DTE: {Math.max(0, Math.ceil((new Date(position.expiry).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))}d
-                    </span>
+                <div>
+                    <p className="text-[10px] text-tm-muted mb-0.5">Current Price</p>
+                    <p className="font-mono text-sm font-bold">${position.currentPrice.toFixed(2)}</p>
+                </div>
+                <div>
+                    <p className="text-[10px] text-tm-muted mb-0.5">Allocation</p>
+                    <p className="font-mono text-sm font-bold text-purple-400">{allocationPct.toFixed(1)}%</p>
                 </div>
             </div>
-
-            {/* Close Button */}
-            {!showConfirm ? (
-                <button
-                    onClick={() => setShowConfirm(true)}
-                    className="w-full py-3 rounded-xl border border-tm-red/50 text-tm-red hover:bg-tm-red/10 transition-colors font-semibold flex items-center justify-center gap-2"
-                >
-                    <XCircle className="w-4 h-4" />
-                    Close Position
-                </button>
-            ) : (
-                <div className="flex gap-3">
-                    <button
-                        onClick={() => setShowConfirm(false)}
-                        className="flex-1 py-3 rounded-xl border border-white/20 text-tm-muted"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={onClose}
-                        className="flex-1 py-3 rounded-xl bg-tm-red hover:bg-red-700 transition-colors font-semibold"
-                    >
-                        Confirm Close
-                    </button>
-                </div>
-            )}
         </div>
     );
 }

@@ -110,6 +110,12 @@ export async function GET(request: Request) {
 function inferStrategy(t: any): string {
     const sym: string = t['underlying-symbol'] || t.symbol || '';
     const desc: string = (t.description || '').toLowerCase();
+    const instrumentType: string = t['instrument-type'] || '';
+
+    // TurboCore equity rebalance trades
+    const turboCoreSymbols = ['QQQ', 'QLD', 'TQQQ', 'SGOV'];
+    if (instrumentType === 'Equity' && turboCoreSymbols.includes(sym)) return 'TurboCore';
+
     if (sym === 'TQQQ') return 'diagonal';
     if (desc.includes('calendar')) return 'calendar';
     if (desc.includes('put')) return 'theta';

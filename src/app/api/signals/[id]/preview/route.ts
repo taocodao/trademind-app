@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTastytradeTokens, storeTastytradeTokens } from '@/lib/redis';
 import { createSession } from '@/lib/tastytrade-api';
 import { calculateTurboCoreOrders } from '@/lib/strategy-executor';
+import { cookies } from 'next/headers';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,24 +16,38 @@ export async function POST(
     try {
         const body = await request.json();
         const { signalDetails, userId: bodyUserId } = body;
-        const id = params.id;
 
-        // 1. Get User ID from standard Auth header or fallback to body
+        // 1. Get User ID from cookie, header, or body
         let userId = bodyUserId;
-        const authHeader = request.headers.get("Authorization");
-        if (!userId && authHeader && authHeader.startsWith("Bearer ")) {
-            try {
-                const privyToken = authHeader.split(" ")[1];
-                const payload = privyToken.split(".")[1];
-                const decoded = JSON.parse(Buffer.from(payload, "base64").toString());
-                userId = decoded.sub || decoded.userId || "default-user";
-            } catch (err) {
-                console.warn("Could not decode Privy token for preview", err);
+
+        // Try cookie first (most reliable in Vercel)
+        if (!userId) {
+            const cookieStore = await cookies();
+            const privyToken = cookieStore.get('privy-token')?.value;
+            if (privyToken) {
+                try {
+                    const payload = privyToken.split('.')[1];
+                    const decoded = JSON.parse(Buffer.from(payload, 'base64').toString());
+                    userId = decoded.sub || decoded.userId;
+                } catch { }
+            }
+        }
+
+        // Try Authorization header
+        if (!userId) {
+            const authHeader = request.headers.get("Authorization");
+            if (authHeader?.startsWith("Bearer ")) {
+                try {
+                    const privyToken = authHeader.split(" ")[1];
+                    const payload = privyToken.split(".")[1];
+                    const decoded = JSON.parse(Buffer.from(payload, "base64").toString());
+                    userId = decoded.sub || decoded.userId;
+                } catch { }
             }
         }
 
         if (!userId) {
-            return NextResponse.json({ error: 'Missing userId' }, { status: 401 });
+            userId = 'default-user';
         }
 
         // 2. Get Tastytrade credentials

@@ -106,27 +106,40 @@ const executeServerManagedStrategy: StrategyExecutor = async (accessToken, accou
 };
 
 /**
+ * TurboCore Order - rich data for both display and execution
+ */
+export interface TurboCoreOrder {
+    symbol: string;
+    action: 'Buy' | 'Sell';
+    quantity: number;         // Whole shares (floored/ceiled)
+    exactShares: number;      // Exact fractional shares
+    diffValue: number;        // Dollar amount of the adjustment
+    targetPct: number;        // Target allocation %
+    targetValue: number;      // Target dollar value
+    currentShares: number;    // Current position
+    currentValue: number;     // Current dollar value
+    currentPrice: number;     // Live price per share
+}
+
+/**
  * Calculate TurboCore Sizer Strategy (Equity Rebalance) Orders
- * Calculates delta between target % and current holdings, then returns the orders to execute.
+ * Returns rich order data for both display and execution.
  */
 export const calculateTurboCoreOrders = async (
     accessToken: string,
     accountNumber: string,
     signal: SignalData
-) => {
+): Promise<TurboCoreOrder[]> => {
     const { getAccountBalance, getAccountPositions, getEquityQuote } = await import('./tastytrade-api');
 
     // 1. Fetch live Net Liq
     const balance = await getAccountBalance(accessToken, accountNumber);
-    // Use Target Investment Capital from UI if provided, otherwise fallback to account net liq
     const netLiq = signal.capital_required ? Number(signal.capital_required) : balance.netLiquidatingValue;
-    console.log(`   💰 Live Net Liq to allocate against: $${netLiq} (Account Net Liq: $${balance.netLiquidatingValue})`);
+    console.log(`   💰 Allocating against: $${netLiq} (Account Net Liq: $${balance.netLiquidatingValue})`);
 
-    // If signal.legs exists, this is a portfolio rebalance. Otherwise, it might be a single ticker.
     let legs = signal.legs as Array<{ symbol: string; target_pct: number }> | undefined;
 
     if (!legs) {
-        // Build single leg if only basic signal fields are present
         if (!signal.symbol || signal.target_pct === undefined) {
             throw new Error('TurboCore signal missing required "legs" array or "symbol"/"target_pct"');
         }
@@ -137,49 +150,51 @@ export const calculateTurboCoreOrders = async (
     const positions = await getAccountPositions(accessToken, accountNumber);
     const posMap = new Map(positions.map(p => [p.symbol, p.quantity]));
 
-    // 3. Process each leg and calculate orders
-    const ordersToSubmit: Array<{ symbol: string; action: 'Buy' | 'Sell'; quantity: number; price?: number; diffValue: number }> = [];
+    // 3. Process each leg
+    const ordersToSubmit: TurboCoreOrder[] = [];
 
     for (const leg of legs) {
         const symbol = leg.symbol;
-        if (symbol === 'SGOV') continue; // Skip cash equivalent for now, we just let cash ride in BP
+        if (symbol === 'SGOV') continue;
 
         const targetPct = leg.target_pct;
         const targetValue = netLiq * targetPct;
         const currentShares = posMap.get(symbol) || 0;
 
-        // Fetch live price
         const quote = await getEquityQuote(accessToken, symbol);
         const currentPrice = quote?.last || quote?.mid || signal.cost || 0;
 
         if (currentPrice === 0) {
-            throw new Error(`Failed to resolve a live market price or fallback cost for ${symbol}. Discarding order to prevent dangerous executions.`);
+            throw new Error(`Failed to resolve a live market price for ${symbol}.`);
         }
 
         const currentValue = currentShares * currentPrice;
         const diffValue = targetValue - currentValue;
-        const diffShares = diffValue / currentPrice;
+        const exactShares = diffValue / currentPrice;
+        const wholeShares = exactShares > 0 ? Math.floor(exactShares) : Math.ceil(exactShares);
 
-        // Truncate toward zero (floor for buys, ceil for sells) to ensure we don't over-leverage
-        const orderShares = diffShares > 0 ? Math.floor(diffShares) : Math.ceil(diffShares);
-
-        // 📈 MARKET ORDER EXECUTION
-        // User requested Market orders explicitly since we only trade highly liquid ETFs during market hours.
-        if (orderShares !== 0) {
+        // Only add order if delta >= $5 (Tastytrade notional minimum)
+        if (Math.abs(diffValue) >= 5) {
+            const action: 'Buy' | 'Sell' = diffValue > 0 ? 'Buy' : 'Sell';
             ordersToSubmit.push({
                 symbol,
-                action: orderShares > 0 ? 'Buy' : 'Sell',
-                quantity: Math.abs(orderShares),
-                price: undefined, // Market order doesn't need a price
-                diffValue
+                action,
+                quantity: Math.abs(wholeShares),
+                exactShares: Math.abs(exactShares),
+                diffValue: Math.abs(diffValue),
+                targetPct,
+                targetValue,
+                currentShares,
+                currentValue,
+                currentPrice,
             });
-            console.log(`   🔄 ${symbol}: Target ${(targetPct * 100).toFixed(1)}% ($${targetValue.toFixed(0)}), Curr ${currentShares}sh ($${currentValue.toFixed(0)}) -> ${orderShares > 0 ? 'BUY' : 'SELL'} ${Math.abs(orderShares)}sh @ MARKET`);
+            console.log(`   🔄 ${symbol}: Target ${(targetPct * 100).toFixed(1)}% ($${targetValue.toFixed(0)}), Curr ${currentShares}sh ($${currentValue.toFixed(0)}) -> ${action.toUpperCase()} $${Math.abs(diffValue).toFixed(0)} (≈${Math.abs(exactShares).toFixed(2)} shares)`);
         } else {
-            console.log(`   ✅ ${symbol}: Target ${(targetPct * 100).toFixed(1)}% ($${targetValue.toFixed(0)}), Curr ${currentShares}sh ($${currentValue.toFixed(0)}) -> OK (No trade)`);
+            console.log(`   ✅ ${symbol}: Target ${(targetPct * 100).toFixed(1)}% -> OK (delta < $5)`);
         }
     }
 
-    // 4. Sequence orders: SELLS before BUYS to free up Buying Power
+    // 4. Sequence: SELLS before BUYS
     ordersToSubmit.sort((a, b) => {
         if (a.action === 'Sell' && b.action !== 'Sell') return -1;
         if (a.action !== 'Sell' && b.action === 'Sell') return 1;
@@ -191,7 +206,7 @@ export const calculateTurboCoreOrders = async (
 
 /**
  * Execute TurboCore Sizer Strategy (Equity Rebalance)
- * Calculates delta between target % and current holdings, then submits Market orders.
+ * Uses Notional Market orders for precise dollar-based allocation (supports fractional shares).
  */
 const executeTurboCoreStrategy: StrategyExecutor = async (
     accessToken,
@@ -212,24 +227,22 @@ const executeTurboCoreStrategy: StrategyExecutor = async (
         };
     }
 
-    console.log(`🚀 Submitting ${ordersToSubmit.length} rebalance orders...`);
+    console.log(`🚀 Submitting ${ordersToSubmit.length} notional rebalance orders...`);
 
-    const { executeEquityOrder } = await import('./tastytrade-api');
+    const { executeNotionalEquityOrder } = await import('./tastytrade-api');
 
-    // Execute orders sequentially
     let lastOrderId = 'unknown';
     for (const order of ordersToSubmit) {
         try {
-            const resp = await executeEquityOrder(accessToken, accountNumber, {
+            const resp = await executeNotionalEquityOrder(accessToken, accountNumber, {
                 symbol: order.symbol,
                 action: order.action,
-                quantity: order.quantity,
-                price: order.price
+                dollarValue: order.diffValue,
             });
             lastOrderId = resp.orderId;
-            console.log(`   ✅ ${order.action} ${order.quantity} ${order.symbol} submitted: ${resp.orderId}`);
+            console.log(`   ✅ ${order.action} $${order.diffValue.toFixed(2)} of ${order.symbol} submitted: ${resp.orderId}`);
         } catch (err) {
-            console.error(`   ❌ Failed to ${order.action} ${order.quantity} ${order.symbol}:`, err);
+            console.error(`   ❌ Failed to ${order.action} $${order.diffValue.toFixed(2)} of ${order.symbol}:`, err);
             throw new Error(`Rebalance failed on ${order.symbol}: ${err instanceof Error ? err.message : String(err)}`);
         }
     }
@@ -237,7 +250,7 @@ const executeTurboCoreStrategy: StrategyExecutor = async (
     return {
         orderId: `batch_${lastOrderId}`,
         status: 'submitted',
-        message: `Successfully submitted ${ordersToSubmit.length} rebalance orders.`
+        message: `Successfully submitted ${ordersToSubmit.length} notional rebalance orders.`
     };
 };
 

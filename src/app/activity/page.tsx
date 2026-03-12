@@ -56,6 +56,9 @@ const formatDate = (d?: string) => d ? new Date(d).toLocaleString() : '-';
 const strategyBadge = (s?: string | null) => {
     if (!s) return null;
     const colors: Record<string, string> = {
+        turbocore: 'bg-purple-500/20 text-purple-300',
+        tqqq_turbocore: 'bg-purple-500/20 text-purple-300',
+        rebalance: 'bg-purple-500/20 text-purple-300',
         diagonal: 'bg-purple-500/20 text-purple-300',
         tqqq: 'bg-purple-500/20 text-purple-300',
         theta: 'bg-blue-500/20 text-blue-300',
@@ -98,28 +101,34 @@ export default function ActivityPage() {
 
     const fetchAll = useCallback(async () => {
         try {
-            // 1. TradeMind signal executions (last 30 days)
-            const tmRes = await fetch('/api/activity?limit=50');
-            const tmData = tmRes.ok ? await tmRes.json() : { activities: [] };
+            // 1. TradeMind signal executions (last 30 days) - gracefully handle 401
+            let tmItems: AnyItem[] = [];
+            try {
+                const tmRes = await fetch('/api/activity?limit=50');
+                if (tmRes.ok) {
+                    const tmData = await tmRes.json();
+                    tmItems = (tmData.activities || []).map((a: TradeMindItem) => ({
+                        ...a,
+                        _sortDate: new Date(a.created_at).getTime(),
+                    }));
+                }
+            } catch { /* auth may fail, still show tastytrade data */ }
 
             // 2. Real Tastytrade transactions
-            let ttItems: TastytradeItem[] = [];
+            let ttMapped: AnyItem[] = [];
             if (accountNumber) {
-                const ttRes = await fetch(`/api/tastytrade/transactions?accountNumber=${accountNumber}`);
-                if (ttRes.ok) {
-                    const ttData = await ttRes.json();
-                    ttItems = ttData.transactions || [];
-                }
+                try {
+                    const ttRes = await fetch(`/api/tastytrade/transactions?accountNumber=${accountNumber}`);
+                    if (ttRes.ok) {
+                        const ttData = await ttRes.json();
+                        const ttItems: TastytradeItem[] = ttData.transactions || [];
+                        ttMapped = ttItems.map(t => ({
+                            ...t,
+                            _sortDate: new Date(t.executed_at).getTime(),
+                        }));
+                    }
+                } catch { /* tastytrade may fail */ }
             }
-
-            const tmItems: AnyItem[] = (tmData.activities || []).map((a: TradeMindItem) => ({
-                ...a,
-                _sortDate: new Date(a.created_at).getTime(),
-            }));
-            const ttMapped: AnyItem[] = ttItems.map(t => ({
-                ...t,
-                _sortDate: new Date(t.executed_at).getTime(),
-            }));
 
             const merged = [...tmItems, ...ttMapped].sort((a, b) => b._sortDate - a._sortDate);
             setItems(merged);
@@ -249,7 +258,7 @@ export default function ActivityPage() {
                                                 )}
                                             </div>
                                             <p className="text-sm text-tm-muted capitalize">
-                                                {isTT ? `${tt.action} · ${tt.quantity} contracts @ $${tt.price?.toFixed(2)}` : tm.status.replace('_', ' ')}
+                                                {isTT ? `${tt.action} · ${tt.quantity} ${tt.strategy === 'TurboCore' ? 'shares' : 'contracts'} @ $${tt.price?.toFixed(2)}` : tm.status.replace('_', ' ')}
                                             </p>
                                         </div>
                                     </div>

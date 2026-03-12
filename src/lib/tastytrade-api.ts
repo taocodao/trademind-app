@@ -39,9 +39,11 @@ export interface OrderLeg {
 
 export interface OrderRequest {
     timeInForce: 'Day' | 'GTC' | 'GTD';
-    orderType: 'Limit' | 'Market';
+    orderType: 'Limit' | 'Market' | 'Notional Market';
     price?: number;
     priceEffect?: 'Debit' | 'Credit';
+    value?: number;       // For Notional Market orders: dollar amount
+    valueEffect?: 'Debit' | 'Credit'; // For Notional Market orders
     legs: OrderLeg[];
 }
 
@@ -479,18 +481,32 @@ export async function submitOrder(
     order: OrderRequest
 ): Promise<OrderResponse> {
     // Convert our order format to Tastytrade API format
-    const apiOrder = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const apiOrder: Record<string, any> = {
         'time-in-force': order.timeInForce,
         'order-type': order.orderType,
-        'price': order.price?.toString(),
-        'price-effect': order.priceEffect,
-        'legs': order.legs.map(leg => ({
+    };
+
+    if (order.orderType === 'Notional Market') {
+        // Notional Market: dollar value, no price, no quantity on legs
+        apiOrder['value'] = order.value;
+        apiOrder['value-effect'] = order.valueEffect;
+        apiOrder['legs'] = order.legs.map(leg => ({
+            'instrument-type': leg.instrumentType,
+            'symbol': leg.symbol,
+            'action': leg.action,
+        }));
+    } else {
+        // Standard Market/Limit
+        if (order.price) apiOrder['price'] = order.price.toString();
+        if (order.priceEffect) apiOrder['price-effect'] = order.priceEffect;
+        apiOrder['legs'] = order.legs.map(leg => ({
             'instrument-type': leg.instrumentType,
             'symbol': leg.symbol,
             'quantity': leg.quantity,
             'action': leg.action,
-        })),
-    };
+        }));
+    }
 
     const orderUrl = `${TASTYTRADE_API_BASE}/accounts/${accountNumber}/orders`;
     console.log(`📤 Submitting order to: ${orderUrl}`);
@@ -905,6 +921,48 @@ export async function executeEquityOrder(
                 // For long equity rebalancing:
                 // Buying shares we don't hold or adding to existing longs -> Buy to Open
                 // Selling existing long shares -> Sell to Close
+                action: action === 'Buy' ? 'Buy to Open' : 'Sell to Close',
+            },
+        ],
+    };
+
+    return submitOrder(accessToken, accountNumber, order);
+}
+
+/**
+ * Execute a Notional Market Order (Fractional Shares)
+ * Tastytrade requires 'Notional Market' order-type with a dollar 'value' instead of share quantity.
+ * Only works for fractional-eligible equities. Minimum $5 per order.
+ */
+export async function executeNotionalEquityOrder(
+    accessToken: string,
+    accountNumber: string,
+    signal: {
+        symbol: string;
+        action: 'Buy' | 'Sell';
+        dollarValue: number; // Must be >= $5
+    }
+): Promise<OrderResponse> {
+    const { symbol, action, dollarValue } = signal;
+
+    // Tastytrade minimum is $5 for notional orders
+    if (Math.abs(dollarValue) < 5) {
+        console.log(`⏭️ Skipping ${symbol}: notional value $${dollarValue.toFixed(2)} below $5 minimum`);
+        return { orderId: 'skipped_below_minimum', status: 'skipped', message: `Below $5 minimum` };
+    }
+
+    console.log(`📋 Notional Trade: ${action} $${dollarValue.toFixed(2)} of ${symbol}`);
+
+    const order: OrderRequest = {
+        timeInForce: 'Day',
+        orderType: 'Notional Market',
+        value: Math.round(dollarValue * 100) / 100, // Round to cents
+        valueEffect: action === 'Buy' ? 'Debit' : 'Credit',
+        legs: [
+            {
+                instrumentType: 'Equity',
+                symbol,
+                quantity: 0, // Not used for notional orders but required by interface
                 action: action === 'Buy' ? 'Buy to Open' : 'Sell to Close',
             },
         ],

@@ -18,14 +18,16 @@ export async function GET(request: Request) {
 
         const cookieStore = await cookies();
         const privyToken = cookieStore.get("privy-token")?.value;
-        let userId = "default-user";
 
+        let userId = 'default-user';
         if (privyToken) {
             try {
-                const payload = privyToken.split(".")[1];
-                const decoded = JSON.parse(Buffer.from(payload, "base64").toString());
-                userId = decoded.sub || decoded.userId || "default-user";
-            } catch (err) { }
+                const payload = privyToken.split('.')[1];
+                const decoded = JSON.parse(Buffer.from(payload, 'base64').toString());
+                userId = decoded.sub || decoded.userId || 'default-user';
+            } catch (err) {
+                // fall back to default
+            }
         }
 
         const tokens = await getTastytradeTokens(userId);
@@ -40,6 +42,7 @@ export async function GET(request: Request) {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
                     'Accept': 'application/json',
+                    'User-Agent': 'TradeMind/1.0',
                 }
             });
         };

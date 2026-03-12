@@ -271,11 +271,11 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
                 <div className="flex gap-2">
                     <button
                         onClick={() => onExecute({ ...signal, capital_required: investmentCapital })}
-                        disabled={isExecuting || isCrisis}
+                        disabled={isExecuting}
                         className={`
                                 flex-1 py-3 px-4 rounded-lg font-bold flex flex-col items-center justify-center transition-all
                                 ${isCrisis
-                                ? 'bg-red-500/10 text-red-500 cursor-not-allowed border border-red-500/20'
+                                ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30 cursor-pointer'
                                 : 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg'
                             }
                                 ${isExecuting ? 'opacity-70 cursor-wait' : ''}

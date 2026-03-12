@@ -76,16 +76,27 @@ export async function GET(request: Request) {
         });
 
         const orderId = resp.orderId;
-        console.log(`✅ Order submitted: ${orderId}. Waiting 3 seconds for fill...`);
-
-        // Wait 3 seconds then fetch the latest execution status
-        await new Promise(r => setTimeout(r, 3000));
+        console.log(`✅ Order submitted: ${orderId}. Polling up to 5 times for fill...`);
 
         let liveStatus;
-        try {
-            liveStatus = await getOrderStatus(accessToken, accountNumber, orderId);
-        } catch (fetchErr) {
-            console.warn(`Could not get order status for ${orderId}:`, fetchErr);
+        let attempts = 0;
+        const maxAttempts = 5;
+
+        while (attempts < maxAttempts) {
+            attempts++;
+            await new Promise(r => setTimeout(r, 2000)); // sleep 2 seconds
+
+            try {
+                liveStatus = await getOrderStatus(accessToken, accountNumber, orderId);
+                console.log(`   Poll ${attempts}: Status = ${liveStatus?.status}`);
+
+                // Stop polling if the order reached a final state
+                if (['Filled', 'Cancelled', 'Rejected'].includes(liveStatus?.status)) {
+                    break;
+                }
+            } catch (fetchErr) {
+                console.warn(`Could not get order status for ${orderId} (attempt ${attempts}):`, fetchErr);
+            }
         }
 
         return NextResponse.json({
@@ -94,6 +105,7 @@ export async function GET(request: Request) {
             orderId: orderId,
             initialStatus: resp.status,
             executionStatus: liveStatus?.status || 'Unknown',
+            pollingAttempts: attempts,
             liveDetails: liveStatus
         });
 

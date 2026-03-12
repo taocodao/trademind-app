@@ -243,18 +243,36 @@ const executeTurboCoreStrategy: StrategyExecutor = async (
 
     console.log(`🚀 Submitting ${ordersToSubmit.length} notional rebalance orders...`);
 
-    const { executeNotionalEquityOrder } = await import('./tastytrade-api');
+    const { executeNotionalEquityOrder, executeEquityOrder } = await import('./tastytrade-api');
 
     let lastOrderId = 'unknown';
     for (const order of ordersToSubmit) {
         try {
-            const resp = await executeNotionalEquityOrder(accessToken, accountNumber, {
-                symbol: order.symbol,
-                action: order.action,
-                dollarValue: order.diffValue,
-            });
+            let resp;
+
+            // 🛡️ Full liquidation (targetPct = 0, Sell action): use exact share-count order.
+            // Notional orders get converted by Tastytrade at the live execution price, which
+            // is always slightly different from our quote, causing "cannot_close_more_than_existing_position".
+            // Selling by exact share count (e.g., "Sell 1.0 shares") is always safe.
+            const isFullLiquidation = order.action === 'Sell' && order.targetPct === 0 && order.currentShares > 0;
+
+            if (isFullLiquidation) {
+                console.log(`   🏳️ Full liquidation of ${order.symbol}: selling exact ${order.currentShares} shares (share-count order)`);
+                resp = await executeEquityOrder(accessToken, accountNumber, {
+                    symbol: order.symbol,
+                    action: 'Sell',
+                    quantity: order.currentShares, // Exact position size — no rounding risk
+                });
+            } else {
+                resp = await executeNotionalEquityOrder(accessToken, accountNumber, {
+                    symbol: order.symbol,
+                    action: order.action,
+                    dollarValue: order.diffValue,
+                });
+            }
+
             lastOrderId = resp.orderId;
-            console.log(`   ✅ ${order.action} $${order.diffValue.toFixed(2)} of ${order.symbol} submitted: ${resp.orderId}`);
+            console.log(`   ✅ ${order.action} of ${order.symbol} submitted: ${resp.orderId}`);
         } catch (err) {
             console.error(`   ❌ Failed to ${order.action} $${order.diffValue.toFixed(2)} of ${order.symbol}:`, err);
             throw new Error(`Rebalance failed on ${order.symbol}: ${err instanceof Error ? err.message : String(err)}`);

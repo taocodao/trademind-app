@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getTastytradeTokens, storeTastytradeTokens } from '@/lib/redis';
 import { cookies } from 'next/headers';
 import { createSession } from '@/lib/tastytrade-api';
-import { executeNotionalEquityOrder } from '@/lib/tastytrade-api';
+import { executeNotionalEquityOrder, getOrderStatus } from '@/lib/tastytrade-api';
 
 export async function GET(request: Request) {
     try {
@@ -75,10 +75,26 @@ export async function GET(request: Request) {
             dollarValue: value
         });
 
+        const orderId = resp.orderId;
+        console.log(`✅ Order submitted: ${orderId}. Waiting 3 seconds for fill...`);
+
+        // Wait 3 seconds then fetch the latest execution status
+        await new Promise(r => setTimeout(r, 3000));
+
+        let liveStatus;
+        try {
+            liveStatus = await getOrderStatus(accessToken, accountNumber, orderId);
+        } catch (fetchErr) {
+            console.warn(`Could not get order status for ${orderId}:`, fetchErr);
+        }
+
         return NextResponse.json({
             success: true,
             request: { symbol, action, value },
-            orderResponse: resp
+            orderId: orderId,
+            initialStatus: resp.status,
+            executionStatus: liveStatus?.status || 'Unknown',
+            liveDetails: liveStatus
         });
 
     } catch (error) {

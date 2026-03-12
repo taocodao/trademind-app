@@ -646,6 +646,36 @@ export async function submitOrder(
 }
 
 /**
+ * Fetch the exact status of an order after submission
+ */
+export async function getOrderStatus(
+    accessToken: string,
+    accountNumber: string,
+    orderId: string
+) {
+    const url = `${TASTYTRADE_API_BASE}/accounts/${accountNumber}/orders/${orderId}`;
+    console.log(`🔍 Checking status for Order ID: ${orderId}`);
+
+    const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'User-Agent': 'TradeMind/1.0',
+        },
+    });
+
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Failed to fetch order status (${response.status}): ${text}`);
+    }
+
+    const data = await response.json();
+    return data.data; // contains .status among other things
+}
+
+/**
  * Execute a theta trade (cash-secured put)
  * UPDATED: Now fetches current market price to avoid stale signal prices
  */

@@ -170,25 +170,39 @@ export const calculateTurboCoreOrders = async (
 
         const currentValue = currentShares * currentPrice;
         const diffValue = targetValue - currentValue;
-        const exactShares = diffValue / currentPrice;
-        const wholeShares = exactShares > 0 ? Math.floor(exactShares) : Math.ceil(exactShares);
+        const action: 'Buy' | 'Sell' = diffValue > 0 ? 'Buy' : 'Sell';
+
+        // 🛡️ For SELL orders: cap to the floor of the current position value (to the cent).
+        // Floating-point math can produce a dollarValue slightly > currentValue, which causes
+        // Tastytrade to reject with "cannot_close_more_than_existing_position".
+        // We floor the sell value to guarantee we never oversell the actual holding.
+        let orderDollarValue = Math.abs(diffValue);
+        if (action === 'Sell') {
+            const maxSellValue = Math.floor(currentValue * 100) / 100; // floor to cent
+            if (orderDollarValue > maxSellValue) {
+                console.log(`   ⚠️  ${symbol}: Capping SELL from $${orderDollarValue.toFixed(4)} → $${maxSellValue.toFixed(2)} (prevents oversell)`);
+                orderDollarValue = maxSellValue;
+            }
+        }
+
+        const exactShares = orderDollarValue / currentPrice;
+        const wholeShares = action === 'Buy' ? Math.floor(exactShares) : Math.ceil(exactShares);
 
         // Only add order if delta >= $5 (Tastytrade notional minimum)
-        if (Math.abs(diffValue) >= 5) {
-            const action: 'Buy' | 'Sell' = diffValue > 0 ? 'Buy' : 'Sell';
+        if (orderDollarValue >= 5) {
             ordersToSubmit.push({
                 symbol,
                 action,
                 quantity: Math.abs(wholeShares),
                 exactShares: Math.abs(exactShares),
-                diffValue: Math.abs(diffValue),
+                diffValue: orderDollarValue,
                 targetPct,
                 targetValue,
                 currentShares,
                 currentValue,
                 currentPrice,
             });
-            console.log(`   🔄 ${symbol}: Target ${(targetPct * 100).toFixed(1)}% ($${targetValue.toFixed(0)}), Curr ${currentShares}sh ($${currentValue.toFixed(0)}) -> ${action.toUpperCase()} $${Math.abs(diffValue).toFixed(0)} (≈${Math.abs(exactShares).toFixed(2)} shares)`);
+            console.log(`   🔄 ${symbol}: Target ${(targetPct * 100).toFixed(1)}% ($${targetValue.toFixed(0)}), Curr ${currentShares}sh ($${currentValue.toFixed(0)}) -> ${action.toUpperCase()} $${orderDollarValue.toFixed(2)} (≈${Math.abs(exactShares).toFixed(2)} shares)`);
         } else {
             console.log(`   ✅ ${symbol}: Target ${(targetPct * 100).toFixed(1)}% -> OK (delta < $5)`);
         }

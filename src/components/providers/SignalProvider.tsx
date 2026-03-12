@@ -62,11 +62,20 @@ interface Signal {
 const MARKET_CLOSE_HOUR_ET = 16;
 const EXPIRY_CHECK_INTERVAL_MS = 60 * 1000;
 
-function isSignalExpired(signal: { expires_at?: string; expiresAt?: string; createdAt?: string }): boolean {
+function isSignalExpired(signal: { expires_at?: string; expiresAt?: string; createdAt?: string; strategy?: string; type?: string }): boolean {
     const expiresAt = signal.expires_at || signal.expiresAt;
     if (expiresAt) {
         const safeStr = expiresAt.replace(' ', 'T');
         return Date.now() > new Date(safeStr).getTime();
+    }
+
+    // TurboCore REBALANCE signals represent an ongoing portfolio allocation.
+    // They should NOT be expired by the market-close heuristic — only an
+    // explicit expires_at from the DB (checked above) should expire them.
+    const strat = (signal.strategy || '').toLowerCase();
+    const type = (signal.type || '').toLowerCase();
+    if (strat.includes('turbocore') || type === 'rebalance') {
+        return false;
     }
 
     // No explicit expiry — infer from creation date.
@@ -77,7 +86,6 @@ function isSignalExpired(signal: { expires_at?: string; expiresAt?: string; crea
 
         // Convert "now" to ET by subtracting offset (ET = UTC-4 in EDT, UTC-5 in EST)
         const etOffset = 4; // Using EDT (summer). Adjust if needed.
-        const nowEt = new Date(nowUtc.getTime() - etOffset * 60 * 60 * 1000);
 
         // Market close ET for the creation date
         const createdEt = new Date(created.getTime() - etOffset * 60 * 60 * 1000);
@@ -358,21 +366,24 @@ export function SignalProvider({ children }: SignalProviderProps) {
                             const strat = (s.strategy || '').toLowerCase();
                             const type = ((s as any).type || '').toLowerCase();
 
-                            // User only wants Turbobounce/Multi-Ticker/TurboCore signals
-                            const isTurbo =
-                                strat === 'turbobounce' ||
-                                strat === 'tqqq_turbocore' ||
-                                type === 'rebalance' ||
-                                (s as any).pool === 'MULTI_TICKER';
+                            // Only TurboCore signals — matches TQQQ_TURBOCORE, tqqq_turbocore, or type=rebalance
+                            const isTurboCore =
+                                strat.includes('turbocore') ||
+                                type === 'rebalance';
 
-                            if (!isTurbo) {
+                            if (!isTurboCore) {
+                                console.log(`[SignalProvider] Skipping non-TurboCore signal: strategy=${s.strategy}, type=${type}`);
                                 return false;
                             }
 
+                            // Non-pending signals always pass (already executed/rejected)
                             if (s.status && s.status !== 'pending') return true;
+
+                            // Only respect explicit DB-set expiry (isSignalExpired skips market-close
+                            // inference for turbocore/rebalance signals)
                             const expired = isSignalExpired(s as any);
                             if (expired) {
-                                // console.log(`⏰ Expired ${s.symbol}: expiresAt=${(s as any).expiresAt}`);
+                                console.log(`⏰ Expired TurboCore signal ${s.symbol}: expiresAt=${(s as any).expiresAt}`);
                                 return false;
                             }
                             return true;

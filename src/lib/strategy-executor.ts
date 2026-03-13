@@ -322,6 +322,8 @@ const STRATEGY_EXECUTORS: Record<string, StrategyExecutor> = {
     // TurboCore natively executed on Vercel
     'tqqq_turbocore': executeTurboCoreStrategy,
     'TQQQ_TURBOCORE': executeTurboCoreStrategy,
+    'tqqq_turbocore_pro': executeTurboCoreStrategy,
+    'TQQQ_TURBOCORE_PRO': executeTurboCoreStrategy,
     'rebalance': executeTurboCoreStrategy,
     'REBALANCE': executeTurboCoreStrategy,
 };

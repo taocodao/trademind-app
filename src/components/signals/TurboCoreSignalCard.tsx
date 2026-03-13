@@ -129,7 +129,7 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
                         <div>
                             <div className="flex items-center gap-2">
                                 <h3 className="font-bold text-lg text-white tracking-tight">
-                                    TQQQ TurboCore
+                                    {signal.strategy?.toUpperCase() === 'TQQQ_TURBOCORE_PRO' ? 'TurboCore Pro' : 'TQQQ TurboCore'}
                                 </h3>
                                 <div className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getRegimeColor(regime)}`}>
                                     {regime}

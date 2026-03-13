@@ -366,9 +366,10 @@ export function SignalProvider({ children }: SignalProviderProps) {
                             const strat = (s.strategy || '').toLowerCase();
                             const type = ((s as any).type || '').toLowerCase();
 
-                            // Only TurboCore signals — matches TQQQ_TURBOCORE, tqqq_turbocore, or type=rebalance
+                            // Only TurboCore signals — matches TQQQ_TURBOCORE, tqqq_turbocore, tqqq_turbocore_pro, or type=rebalance
                             const isTurboCore =
                                 strat.includes('turbocore') ||
+                                strat.includes('turbocore_pro') ||
                                 type === 'rebalance';
 
                             if (!isTurboCore) {

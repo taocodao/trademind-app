@@ -41,6 +41,33 @@ export function EducationCenter() {
             type: 'Analysis',
             lang: 'en'
         },
+        {
+            id: 'pro-5k-en',
+            title: 'TurboCore Pro 5K Report',
+            description: 'Comprehensive 5K account report for the advanced TurboCore Pro strategy.',
+            url: '/pro_files/TurboCore-Pro-5K-Report-English.md',
+            icon: <FileText className="w-5 h-5 text-tm-purple" />,
+            type: 'Report',
+            lang: 'en'
+        },
+        {
+            id: 'pro-report-en',
+            title: 'TurboCore Pro Report',
+            description: 'Main research report for the advanced TurboCore Pro strategy covering core metrics.',
+            url: '/pro_files/TurboCore_Pro_Report_English.md',
+            icon: <BookOpen className="w-5 h-5 text-tm-blue" />,
+            type: 'Analysis',
+            lang: 'en'
+        },
+        {
+            id: 'pro-comp-en',
+            title: 'TurboCore Pro Competitive Analysis 2026',
+            description: 'In-depth market and competitor analysis highlighting TurboCore Pro advantages.',
+            url: '/pro_files/TurboCore-Pro-Competitive-Report-2026-English.md',
+            icon: <FileText className="w-5 h-5 text-tm-purple" />,
+            type: 'Analysis',
+            lang: 'en'
+        },
         // Spanish
         {
             id: '5k-es',
@@ -69,6 +96,33 @@ export function EducationCenter() {
             type: 'Análisis',
             lang: 'es'
         },
+        {
+            id: 'pro-5k-es',
+            title: 'Informe TurboCore Pro 5K',
+            description: 'Informe exhaustivo de cuenta 5K para la estrategia avanzada TurboCore Pro.',
+            url: '/pro_files/TurboCore-Pro-5K-Report-Spanish.md',
+            icon: <FileText className="w-5 h-5 text-tm-purple" />,
+            type: 'Informe',
+            lang: 'es'
+        },
+        {
+            id: 'pro-report-es',
+            title: 'Informe TurboCore Pro',
+            description: 'Informe principal de investigación para la estrategia avanzada TurboCore Pro.',
+            url: '/pro_files/TurboCore_Pro_Reporte_Espanol.md',
+            icon: <BookOpen className="w-5 h-5 text-tm-blue" />,
+            type: 'Análisis',
+            lang: 'es'
+        },
+        {
+            id: 'pro-comp-es',
+            title: 'Análisis Competitivo TurboCore Pro 2026',
+            description: 'Análisis profundo del mercado y competidores destacando ventajas de TurboCore Pro.',
+            url: '/pro_files/TurboCore-Pro-Informe-Competitivo-2026-Spanish.md',
+            icon: <FileText className="w-5 h-5 text-tm-purple" />,
+            type: 'Análisis',
+            lang: 'es'
+        },
         // Chinese
         {
             id: '5k-zh',
@@ -93,6 +147,33 @@ export function EducationCenter() {
             title: '2026 竞争分析报告',
             description: '深入的市场和竞争对手分析，突出 TurboCore 的优势。',
             url: '/files/TurboCore_竞争分析报告_2026_CN.md',
+            icon: <FileText className="w-5 h-5 text-tm-purple" />,
+            type: '分析',
+            lang: 'zh'
+        },
+        {
+            id: 'pro-5k-zh',
+            title: 'TurboCore Pro 5K 报告',
+            description: '高级 TurboCore Pro 策略的全面 5K 账户报告。',
+            url: '/pro_files/TurboCore-Pro-5K-Report-Chinese.md',
+            icon: <FileText className="w-5 h-5 text-tm-purple" />,
+            type: '报告',
+            lang: 'zh'
+        },
+        {
+            id: 'pro-report-zh',
+            title: 'TurboCore Pro 主要报告',
+            description: '涵盖核心指标的高级 TurboCore Pro 策略主要研究报告。',
+            url: '/pro_files/TurboCore_Pro_报告_中文.md',
+            icon: <BookOpen className="w-5 h-5 text-tm-blue" />,
+            type: '分析',
+            lang: 'zh'
+        },
+        {
+            id: 'pro-comp-zh',
+            title: 'TurboCore Pro 2026 竞争分析报告',
+            description: '深入的市场和竞争对手分析，突出 TurboCore Pro 的优势。',
+            url: '/pro_files/TurboCore-Pro-竞争报告-2026-Chinese.md',
             icon: <FileText className="w-5 h-5 text-tm-purple" />,
             type: '分析',
             lang: 'zh'

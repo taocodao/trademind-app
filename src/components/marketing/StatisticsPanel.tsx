@@ -20,7 +20,30 @@ const BASE_YEARLY = [
     { year: 2025, start: 22208.40, trades: 44, pnl: 5613.49, end: 27821.89, retPct: 25.3 }
 ];
 
-export function StatisticsPanel() {
+const PRO_STATS = {
+    totalTrades: 4599,
+    cagr: 39.3,
+    netPnl: 57229.64, // At 5k base
+};
+
+const PRO_YEARLY = [
+    { year: 2019, start: 5000.00, trades: 918, pnl: 2907.87, end: 7907.87, retPct: 58.2 },
+    { year: 2020, start: 8313.89, trades: 144, pnl: 427.79, end: 8741.68, retPct: 5.1 },
+    { year: 2021, start: 8741.68, trades: 683, pnl: 3256.02, end: 11997.70, retPct: 37.2 },
+    { year: 2022, start: 12206.58, trades: 120, pnl: 2610.45, end: 14817.03, retPct: 21.4 },
+    { year: 2023, start: 14528.03, trades: 829, pnl: 21584.76, end: 36112.79, retPct: 148.6 },
+    { year: 2024, start: 34178.12, trades: 969, pnl: 11286.84, end: 45464.96, retPct: 33.0 },
+    { year: 2025, start: 45149.31, trades: 780, pnl: 20683.41, end: 65832.72, retPct: 45.8 },
+    { year: 2026, start: 65554.14, trades: 156, pnl: -3324.51, end: 62229.64, retPct: -5.1 }
+];
+
+export function StatisticsPanel({
+    strategyMode,
+    setStrategyMode
+}: {
+    strategyMode: 'standard' | 'pro';
+    setStrategyMode: (mode: 'standard' | 'pro') => void;
+}) {
     const { t } = useTranslation();
     const { initialInvestment } = useNarration();
     const multiplier = initialInvestment / 5000.0;
@@ -34,6 +57,9 @@ export function StatisticsPanel() {
         return val >= 0 ? `+${str}` : `-${str}`;
     };
 
+    const currentStats = strategyMode === 'pro' ? PRO_STATS : BASE_STATS;
+    const currentYearly = strategyMode === 'pro' ? PRO_YEARLY : BASE_YEARLY;
+
     return (
         <div className="w-full flex flex-col gap-6">
             {/* Legal Disclaimer Label */}
@@ -41,32 +67,64 @@ export function StatisticsPanel() {
                 {t('timeline.disclaimer')}
             </div>
 
-            <div className="glass-card p-6 border-l-4 border-tm-purple bg-tm-card/60">
-                <h3 className="text-xl font-bold text-white mb-4">{t('stats.title')}</h3>
+            {/* Strategy Toggle Tab */}
+            <div className="flex bg-tm-card/40 p-1 rounded-xl border border-white/10 w-full max-w-sm mx-auto shadow-lg relative z-20">
+                <button
+                    onClick={() => setStrategyMode('standard')}
+                    className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${strategyMode === 'standard' ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white hover:bg-white/5'}`}
+                >
+                    TurboCore (Standard)
+                </button>
+                <div className="relative flex-1">
+                    <button
+                        onClick={() => setStrategyMode('pro')}
+                        className={`w-full py-2 rounded-lg text-sm font-bold transition-all ${strategyMode === 'pro' ? 'bg-gradient-to-r from-tm-purple to-tm-blue text-white shadow-md' : 'text-tm-muted hover:text-white hover:bg-white/5'}`}
+                    >
+                        TurboCore Pro ML
+                    </button>
+                    <span className="absolute -top-2 -right-2 bg-tm-blue text-[9px] uppercase font-bold text-white px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(59,130,246,0.5)]">
+                        NEW
+                    </span>
+                </div>
+            </div>
+
+            <div className={`glass-card p-6 border-l-4 ${strategyMode === 'pro' ? 'border-tm-blue' : 'border-tm-purple'} bg-tm-card/60 relative z-10 transition-all duration-300`}>
+                <h3 className="text-xl font-bold text-white mb-4">
+                    {strategyMode === 'pro' ? 'TurboCore Pro ML Statistics' : t('stats.title')}
+                </h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                         <p className="text-tm-muted">{t('stats.total_trades')}</p>
-                        <p className="font-mono text-white text-lg">{BASE_STATS.totalTrades.toLocaleString()}</p>
+                        <p className="font-mono text-white text-lg">{currentStats.totalTrades.toLocaleString()}</p>
                     </div>
                     <div>
                         <p className="text-tm-muted">{t('stats.cagr')}</p>
-                        <p className="font-mono text-tm-green text-lg">{BASE_STATS.cagr}%</p>
+                        <p className="font-mono text-tm-green text-lg">{currentStats.cagr}%</p>
                     </div>
                     <div>
                         <p className="text-tm-muted">{t('stats.net_pnl')}</p>
-                        <p className="font-mono text-tm-green text-lg">{formatSignedCurrency(BASE_STATS.netPnl * multiplier)}</p>
+                        <p className="font-mono text-tm-green text-lg">{formatSignedCurrency(currentStats.netPnl * multiplier)}</p>
                     </div>
                     <div>
                         <p className="text-tm-muted">{t('stats.strategy_dist')}</p>
                         <p className="text-white text-xs mt-1">
-                            <span className="text-tm-purple font-mono">AGGRESSIVE</span> (TQQQ Focus)<br />
-                            <span className="text-tm-purple font-mono border-l border-white/20 pl-2 ml-1">DEFENSIVE</span> (SGOV/Cash)<br />
+                            {strategyMode === 'pro' ? (
+                                <>
+                                    <span className="text-tm-purple font-mono">LEAPS/QQQ</span> (Bull Focus)<br />
+                                    <span className="text-tm-blue font-mono border-l border-white/20 pl-2 ml-1">SGOV/QLD</span> (Hedging)<br />
+                                </>
+                            ) : (
+                                <>
+                                    <span className="text-tm-purple font-mono">AGGRESSIVE</span> (TQQQ Focus)<br />
+                                    <span className="text-tm-purple font-mono border-l border-white/20 pl-2 ml-1">DEFENSIVE</span> (SGOV/Cash)<br />
+                                </>
+                            )}
                         </p>
                     </div>
                 </div>
             </div>
 
-            <div className="glass-card p-6 overflow-x-auto bg-tm-card/60">
+            <div className="glass-card p-6 overflow-x-auto bg-tm-card/60 relative z-10">
                 <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
                     <span>📅</span> {t('stats.breakdown')}
                 </h3>
@@ -81,10 +139,10 @@ export function StatisticsPanel() {
                             <th className="py-2 text-right">{t('stats.th_ret')}</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-tm-border/50 text-white font-mono">
-                        {BASE_YEARLY.map((row) => (
-                            <tr key={row.year} className="hover:bg-white/5 transition-colors group">
-                                <td className="py-3 pr-4 font-bold text-tm-purple group-hover:text-tm-purple/80">{row.year}</td>
+                    <tbody className="divide-y divide-tm-border/50 text-white font-mono transition-all duration-300">
+                        {currentYearly.map((row) => (
+                            <tr key={`${strategyMode}-${row.year}`} className="hover:bg-white/5 transition-colors group animate-in fade-in duration-300">
+                                <td className={`py-3 pr-4 font-bold ${strategyMode === 'pro' ? 'text-tm-blue group-hover:text-tm-blue/80' : 'text-tm-purple group-hover:text-tm-purple/80'}`}>{row.year}</td>
                                 <td className="py-3 pr-4 text-right">{formatCurrency(row.start * multiplier)}</td>
                                 <td className="py-3 pr-4 text-center text-tm-muted">{row.trades}</td>
                                 <td className={`py-3 pr-4 text-right ${row.pnl >= 0 ? 'text-tm-green' : 'text-tm-red'}`}>

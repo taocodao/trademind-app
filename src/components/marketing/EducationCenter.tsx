@@ -277,11 +277,11 @@ export function EducationCenter() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
 
                 {/* Custom Selective Dropdown */}
-                <div className="relative w-full">
+                <div className="relative w-full z-50">
                     <label className="text-xs uppercase tracking-widest text-tm-muted font-bold mb-2 block">{t('education.select')}</label>
                     <button
                         onClick={() => setIsOpen(!isOpen)}
-                        className="w-full flex items-center justify-between bg-tm-bg/50 border border-white/10 hover:border-white/20 p-4 rounded-xl text-left transition-all group"
+                        className="w-full flex items-center justify-between bg-tm-bg/50 border border-white/10 hover:border-white/20 p-4 rounded-xl text-left transition-all group relative z-50"
                     >
                         <div className="flex items-center gap-3">
                             {selectedDoc.icon}
@@ -291,7 +291,7 @@ export function EducationCenter() {
                     </button>
 
                     {isOpen && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-[#1A1A24] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col">
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-[#1A1A24] border border-white/10 rounded-xl shadow-2xl z-[100] max-h-72 overflow-y-auto flex flex-col">
                             {DOCUMENTS.map(doc => (
                                 <button
                                     key={doc.id}

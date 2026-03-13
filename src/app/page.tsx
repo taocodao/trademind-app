@@ -18,6 +18,7 @@ export default function SinglePageMarketing() {
     const { t, i18n } = useTranslation();
     const { login, authenticated, ready } = usePrivy();
     const router = useRouter();
+    const [strategyMode, setStrategyMode] = useState<'standard' | 'pro'>('pro');
     const [curveData, setCurveData] = useState([]);
 
     useEffect(() => {
@@ -27,11 +28,15 @@ export default function SinglePageMarketing() {
     }, [ready, authenticated, router]);
 
     useEffect(() => {
-        fetch('/turbobounce_5k_curve.json')
+        const fetchUrl = strategyMode === 'pro'
+            ? '/turbocore_pro_5k_curve.json'
+            : '/turbobounce_5k_curve.json';
+
+        fetch(fetchUrl)
             .then(res => res.json())
             .then(data => setCurveData(data))
             .catch(err => console.error("Failed to load curve data:", err));
-    }, []);
+    }, [strategyMode]);
 
     if (!ready) {
         return (
@@ -87,14 +92,14 @@ export default function SinglePageMarketing() {
                 {/* Interactive Backtest Player */}
                 <div className="w-full max-w-5xl z-10 flex flex-col gap-8 mx-auto" id="about">
                     <div className="w-full">
-                        <StatisticsPanel />
+                        <StatisticsPanel strategyMode={strategyMode} setStrategyMode={setStrategyMode} />
                     </div>
                     <div className="w-full flex flex-col gap-8">
-                        <InteractiveTimeline data={curveData} />
+                        <InteractiveTimeline data={curveData} strategyMode={strategyMode} />
 
 
                         {/* Education Center Dropdown */}
-                        <div className="w-full z-10" id="education">
+                        <div className="w-full z-50 relative" id="education">
                             <EducationCenter />
                         </div>
                     </div>

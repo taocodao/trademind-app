@@ -73,10 +73,10 @@ export default function SinglePageMarketing() {
                         <video
                             key={i18n.language || 'en'}
                             src={{
-                                en: 'https://2axcssbne03i2gdo.public.blob.vercel-storage.com/TQQQ_TurboCore-English.mp4',
-                                es: 'https://2axcssbne03i2gdo.public.blob.vercel-storage.com/TuboCore__Estrategia_IA-spanish.mp4',
-                                zh: 'https://2axcssbne03i2gdo.public.blob.vercel-storage.com/TurboCore__AI%E9%A9%B1%E5%8A%A8%E7%9A%84TQQQ%E7%AD%96%E7%95%A5.mp4',
-                            }[i18n.language || 'en'] || 'https://2axcssbne03i2gdo.public.blob.vercel-storage.com/TQQQ_TurboCore-English.mp4'}
+                                en: 'https://2axcssbne03i2gdo.public.blob.vercel-storage.com/AI-Powered_Investing.mp4',
+                                es: 'https://2axcssbne03i2gdo.public.blob.vercel-storage.com/IA__Estrategias_TurboCore.mp4',
+                                zh: 'https://2axcssbne03i2gdo.public.blob.vercel-storage.com/AI%E6%8A%95%E8%B5%84%EF%BC%9A%E6%88%98%E8%83%9C%E5%B8%82%E5%9C%BA%E5%B4%A9%E7%9B%98.mp4',
+                            }[i18n.language || 'en'] || 'https://2axcssbne03i2gdo.public.blob.vercel-storage.com/AI-Powered_Investing.mp4'}
                             className="w-full rounded-xl border border-white/10 object-cover bg-tm-card/80"
                             controls
                             playsInline

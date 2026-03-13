@@ -234,29 +234,32 @@ export function EducationCenter() {
         }
     };
 
+    // If viewer is open, render as a fixed overlay modal so the user doesn't get stuck due to page scroll locking.
     if (isViewerOpen) {
         return (
-            <div className="w-full glass-card p-6 border-l-4 border-tm-blue bg-tm-card/40 animate-in fade-in duration-200">
-                {/* Header */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 md:p-6 mb-4 border-b border-white/10 bg-black/20 rounded-t-xl">
-                    <div className="flex items-center gap-3">
-                        {selectedDoc?.icon}
-                        <h3 className="font-bold text-white text-xl">{selectedDoc?.title}</h3>
+            <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8">
+                <div className="w-full max-w-5xl bg-[#0A0A0F] border border-white/20 rounded-xl shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 md:p-6 border-b border-white/10 bg-black/20 shrink-0 rounded-t-xl">
+                        <div className="flex items-center gap-3">
+                            {selectedDoc?.icon}
+                            <h3 className="font-bold text-white text-xl">{selectedDoc?.title}</h3>
+                        </div>
+                        <button
+                            onClick={() => setIsViewerOpen(false)}
+                            className="px-4 py-2 border border-white/20 bg-white/5 hover:bg-white/10 rounded-lg transition-colors text-white hover:text-white flex gap-2 items-center font-semibold"
+                        >
+                            <X className="w-5 h-5" /> Close
+                        </button>
                     </div>
-                    <button
-                        onClick={() => setIsViewerOpen(false)}
-                        className="px-4 py-2 border border-white/20 bg-white/5 hover:bg-white/10 rounded-lg transition-colors text-white hover:text-white flex gap-2 items-center font-semibold"
-                    >
-                        <X className="w-5 h-5" /> Close and Go Back
-                    </button>
-                </div>
 
-                {/* Body - Document Text */}
-                <div className="w-full overflow-y-auto p-4 md:p-8 bg-[#0D0D12]/50 rounded-b-xl max-h-[70vh]">
-                    <div className="max-w-4xl mx-auto prose prose-invert prose-p:text-gray-300 prose-headings:text-white prose-a:text-tm-blue prose-strong:text-white prose-code:text-tm-purple prose-th:text-white prose-td:text-gray-300 prose-blockquote:border-l-tm-purple prose-blockquote:text-gray-400 max-w-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {fileContent}
-                        </ReactMarkdown>
+                    {/* Body - Document Text */}
+                    <div className="w-full overflow-y-auto p-4 md:p-8 bg-[#0D0D12] rounded-b-xl">
+                        <div className="max-w-4xl mx-auto prose prose-invert prose-p:text-gray-300 prose-headings:text-white prose-a:text-tm-blue prose-strong:text-white prose-code:text-tm-purple prose-th:text-white prose-td:text-gray-300 prose-blockquote:border-l-tm-purple prose-blockquote:text-gray-400 max-w-none">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {fileContent}
+                            </ReactMarkdown>
+                        </div>
                     </div>
                 </div>
             </div>

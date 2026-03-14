@@ -187,8 +187,8 @@ export default function SignalsPage() {
     }
 
     return (
-        <main className="min-h-screen pb-6">
-            <header className="px-6 pt-12 pb-6 max-w-7xl mx-auto flex items-center gap-4">
+        <main className="min-h-screen pb-24 max-w-lg mx-auto w-full border-x border-white/5 bg-tm-bg shadow-2xl relative">
+            <header className="px-6 pt-12 pb-6 flex items-center gap-4">
                 <Link href="/dashboard" className="w-10 h-10 rounded-full bg-tm-surface flex items-center justify-center">
                     <ArrowLeft className="w-5 h-5" />
                 </Link>
@@ -207,7 +207,7 @@ export default function SignalsPage() {
 
             {/* Error */}
             {error && (
-                <div className="px-6 mb-4 max-w-7xl mx-auto">
+                <div className="px-6 mb-4">
                     <div className="glass-card p-4 border border-tm-red/30 flex items-center gap-3">
                         <AlertTriangle className="w-5 h-5 text-tm-red flex-shrink-0" />
                         <p className="text-sm text-tm-red">{error}</p>

@@ -153,19 +153,20 @@
         "title": "Integraciones Seguras y Encriptación Bancaria"
     },
     "footer": {
-        "company": "Compañía",
-        "about": "Sobre Nosotros",
-        "education": "Centro de Educación",
+        "company": "Empresa",
+        "about": "Acerca de Nosotros",
+        "education": "Centro Educativo",
         "pricing": "Precios",
         "legal": "Legal",
         "terms": "Términos de Servicio",
         "privacy": "Política de Privacidad",
-        "risk": "Aviso de Riesgo",
-        "disclaimer": "AVISO IMPORTANTE: TradeMind@bot es una plataforma de tecnología de software, no un asesor de inversiones registrado, corredor de bolsa o planificador financiero. No proporcionamos asesoramiento de inversión personalizado. Todas las señales de operación se generan algorítmicamente y se entregan de manera idéntica a todos los suscriptores. El rendimiento pasado, ya sea real o indicado por pruebas retrospectivas, no es indicativo de resultados futuros. Operar con opciones implica un riesgo sustancial de pérdida y no es apropiado para todos los inversores. Podrías perder una parte o la totalidad de tu capital invertido. Consulta a un profesional financiero calificado antes de tomar decisiones de inversión. Consulta el Aviso de Riesgo completo para obtener más detalles.",
-        "cftc": "REGLA CFTC 4.41: Los resultados de rendimiento hipotéticos o simulados tienen ciertas limitaciones. A diferencia de un registro de rendimiento real, los resultados simulados no representan operaciones reales. Además, dado que las operaciones no se han ejecutado, los resultados pueden haber compensado en exceso o en defecto el impacto, si lo hubiera, de ciertos factores del mercado, como la falta de liquidez. Los programas de negociación simulados en general también están sujetos al hecho de que están diseñados con el beneficio de la retrospectiva. No se hace ninguna representación de que cualquier cuenta logrará o es probable que logre ganancias o pérdidas similares a las mostradas.",
-        "brokerage": "Los servicios de corretaje son proporcionados por corredores de bolsa externos. TradeMind@bot nunca retiene los fondos de los clientes ni ejecuta operaciones fuera de las configuraciones API del corredor autorizadas por el usuario.",
+        "risk": "Divulgación de Riesgos",
+        "disclaimer": "TradeMind@bot es una plataforma de software tecnológico, no un asesor de inversiones registrado ni un corredor de bolsa. Todas las señales son generadas algorítmicamente y no constituyen asesoramiento financiero personalizado. El rendimiento pasado no es indicativo de resultados futuros. Los servicios de corretaje son proporcionados por corredores de bolsa externos. TradeMind@bot nunca custodia fondos de clientes ni ejecuta operaciones fuera de las configuraciones de API del bróker autorizadas por el usuario.",
+        "cftc": "REGLA CFTC 4.41: Los resultados de rendimiento hipotéticos o simulados tienen ciertas limitaciones. A diferencia de un historial real, los resultados simulados no representan operaciones reales. No se garantiza que ninguna cuenta logre ganancias o pérdidas similares a las mostradas.",
+        "brokerage": "Los servicios de corretaje son proporcionados por corredores externos. TradeMind@bot nunca custodia fondos de clientes.",
         "rights": "TradeMind@bot LLC. Todos los derechos reservados.",
-        "tagline": "Ingeniería Automatizada de Opciones."
+        "tagline": "Opera con Inteligencia. Crece sin Límites.",
+        "subtitle": "Señales de trading con IA para cualquier bróker."
     },
     "dashboard": {
         "nav": {

@@ -14,7 +14,7 @@ export function LegalFooter() {
                     <div>
                         <h3 className="text-2xl font-black tracking-tighter text-white mb-2">TradeMind<span className="text-tm-purple">@bot</span></h3>
                         <p className="text-white font-semibold text-sm mb-1">{t('footer.tagline') || 'Trade Smarter. Compound Faster.'}</p>
-                        <p className="text-tm-muted text-sm">{t('hero.subtitle') || 'AI-powered trading signals for every brokerage.'}</p>
+                        <p className="text-tm-muted text-sm">{t('footer.subtitle') || 'AI-powered trading signals for every brokerage.'}</p>
                     </div>
                     <div className="flex gap-16 md:gap-24 text-sm text-left">
                         <div className="flex flex-col gap-3">

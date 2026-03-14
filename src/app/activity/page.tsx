@@ -188,7 +188,7 @@ export default function ActivityPage() {
     }
 
     return (
-        <main className="min-h-screen pb-6">
+        <main className="min-h-screen pb-24 max-w-lg mx-auto w-full border-x border-white/5 bg-tm-bg shadow-2xl relative">
             {/* Header */}
             <header className="px-6 pt-12 pb-4 flex items-center gap-4">
                 <Link href="/dashboard" className="w-10 h-10 rounded-full bg-tm-surface flex items-center justify-center">

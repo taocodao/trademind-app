@@ -40,7 +40,7 @@ export default function SettingsPage() {
     }
 
     return (
-        <main className="min-h-screen pb-8">
+        <main className="min-h-screen bg-tm-bg max-w-lg mx-auto w-full pb-24 border-x border-white/5 shadow-2xl relative">
             {/* Header */}
             <header className="px-4 pt-10 pb-5 flex items-center gap-3">
                 <Link

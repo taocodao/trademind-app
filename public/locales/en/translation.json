@@ -165,7 +165,7 @@
         "cftc": "CFTC RULE 4.41: Hypothetical or simulated performance results have certain limitations. Unlike an actual performance record, simulated results do not represent actual trading. Also, since the trades have not been executed, the results may have under- or over-compensated for the impact, if any, of certain market factors, such as lack of liquidity. Simulated trading programs in general are also subject to the fact that they are designed with the benefit of hindsight. No representation is being made that any account will or is likely to achieve profit or losses similar to those shown.",
         "brokerage": "Brokerage services are provided by third-party broker-dealers. TradeMind@bot never holds customer funds or executes trades outside of user-authorized broker API configurations.",
         "rights": "TradeMind@bot LLC. All rights reserved.",
-        "tagline": "Automated Options Engineering."
+        "tagline": "Trade Smarter. Compound Faster."
     },
     "dashboard": {
         "nav": {

@@ -1,44 +1,38 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
+import Link from 'next/link';
 
 export function LegalFooter() {
-    const { t } = useTranslation();
     return (
         <footer className="w-full bg-[#05050A] py-12 px-6 border-t border-white/10 mt-10 z-20 relative">
             <div className="max-w-7xl mx-auto">
                 <div className="flex flex-col md:flex-row justify-between items-start mb-12 border-b border-white/10 pb-8 gap-8">
                     <div>
                         <h3 className="text-2xl font-black tracking-tighter text-white mb-2">TradeMind<span className="text-tm-purple">@bot</span></h3>
-                        <p className="text-tm-muted text-sm">{t('footer.tagline')}</p>
+                        <p className="text-white font-semibold text-sm mb-1">Trade Smarter. Compound Faster.</p>
+                        <p className="text-tm-muted text-sm">AI-powered trading signals for every brokerage.</p>
                     </div>
                     <div className="flex gap-16 md:gap-24 text-sm text-left">
-                        <div className="flex flex-col gap-2">
-                            <span className="text-white font-bold mb-1">{t('footer.company')}</span>
-                            <a href="#about" className="text-tm-muted hover:text-white transition-colors">{t('footer.about')}</a>
-                            <a href="#education" className="text-tm-muted hover:text-white transition-colors">{t('footer.education')}</a>
-                            <a href="#pricing" className="text-tm-muted hover:text-white transition-colors">{t('footer.pricing')}</a>
+                        <div className="flex flex-col gap-3">
+                            <span className="text-white font-bold mb-1">Company</span>
+                            <Link href="/about" className="text-tm-muted hover:text-white transition-colors">About Us</Link>
+                            <Link href="/#education" className="text-tm-muted hover:text-white transition-colors">Education Center</Link>
+                            <Link href="/#pricing" className="text-tm-muted hover:text-white transition-colors">Pricing</Link>
                         </div>
-                        <div className="flex flex-col gap-2">
-                            <span className="text-white font-bold mb-1">{t('footer.legal')}</span>
-                            <a href="/terms" className="text-tm-muted hover:text-white transition-colors">{t('footer.terms')}</a>
-                            <a href="/privacy" className="text-tm-muted hover:text-white transition-colors">{t('footer.privacy')}</a>
-                            <a href="/risk-disclosure" className="text-tm-muted hover:text-white transition-colors">{t('footer.risk')}</a>
+                        <div className="flex flex-col gap-3">
+                            <span className="text-white font-bold mb-1">Legal</span>
+                            <Link href="/terms" className="text-tm-muted hover:text-white transition-colors">Terms of Service</Link>
+                            <Link href="/privacy" className="text-tm-muted hover:text-white transition-colors">Privacy Policy</Link>
+                            <Link href="/risk-disclosure" className="text-tm-muted hover:text-white transition-colors">Risk Disclosure</Link>
                         </div>
                     </div>
                 </div>
 
-                <div className="text-[10px] md:text-xs text-tm-muted/70 leading-relaxed font-mono space-y-6">
+                <div className="text-[10px] md:text-xs text-tm-muted/50 leading-relaxed font-mono space-y-4">
                     <p>
-                        {t('footer.disclaimer')}
+                        IMPORTANT DISCLAIMER: TradeMind@bot is a software technology platform, not a registered investment advisor or broker-dealer. All signals are algorithmically generated and are not personalized financial advice. Past performance is not indicative of future results. CFTC Rule 4.41: Simulated or hypothetical performance results do not represent actual trading. Brokerage services are provided by third-party broker-dealers. TradeMind@bot never holds customer funds or executes trades outside of user-authorized broker API configurations.
                     </p>
-                    <p>
-                        {t('footer.cftc')}
-                    </p>
-                    <p>
-                        {t('footer.brokerage')}
-                    </p>
-                    <p className="text-center pt-6">
-                        &copy; {new Date().getFullYear()} {t('footer.rights')}
+                    <p className="text-center pt-6 text-tm-muted/70">
+                        &copy; {new Date().getFullYear()} TradeMind@bot LLC. All rights reserved.
                     </p>
                 </div>
             </div>

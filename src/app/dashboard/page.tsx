@@ -122,7 +122,7 @@ function TopNav({ onLogout, onRefresh, loading }: {
 
     return (
 
-        <nav className="sticky top-0 z-50 bg-tm-surface/95 backdrop-blur-md border-b border-white/5 hidden md:block">
+        <nav className="sticky top-0 z-50 bg-tm-surface/95 backdrop-blur-md border-b border-white/5 hidden">
 
             <div className="flex items-center justify-between px-4 py-2">
 
@@ -673,15 +673,13 @@ function DashboardContent() {
 
     return (
 
-        <main className="min-h-screen bg-tm-bg flex flex-col">
+        <main className="min-h-screen pb-24 max-w-lg mx-auto w-full border-x border-white/5 bg-tm-bg shadow-2xl relative flex flex-col">
 
             {/* TOP NAV */}
 
             <TopNav onLogout={logout} onRefresh={refreshAll} loading={loading} />
 
-
-
-            <div className="flex-1 px-4 py-3 space-y-3">
+            <div className="flex-1 px-4 py-3 space-y-3 flex flex-col">
 
 
 

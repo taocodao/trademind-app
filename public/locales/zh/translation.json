@@ -108,9 +108,15 @@
         }
     },
     "referral": {
-        "title": "赠送 $15，获得 $15",
-        "desc": "认识其他厌倦了盯盘的人吗？邀请他们加入 TurboBounce。他们首月可享 $15 优惠，注册成功后您也将获得 $15 账户余额奖励。",
-        "btn": "激活推荐代码"
+        "title": "$100 防欺诈推荐红包",
+        "desc": "给你的朋友免费试用 14 天的机会。如果他们留下，你就能获得实打实的返现。",
+        "btn": "激活推荐代码",
+        "stage1_title": "阶段 1：激活",
+        "stage1_desc": "当他们在14天试用期后支付首月费用时，获得 <strong className=\"text-tm-green\">$50 额度</strong>。",
+        "stage2_title": "阶段 2：留存",
+        "stage2_desc": "当他们完成第二个月的付费时，再获得 <strong className=\"text-tm-green\">$50 额度</strong>。",
+        "annual_title": "年度追加奖金",
+        "annual_desc": "如果他们跳过月付直接订阅年度计划，立刻获得 <strong className=\"text-tm-green\">$150 额度</strong>。"
     },
     "trust": {
         "title": "安全集成与银行级加密"

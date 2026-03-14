@@ -108,9 +108,15 @@
         }
     },
     "referral": {
-        "title": "Give $15, Get $15",
-        "desc": "Know someone tired of staring at charts? Invite them to TurboBounce. They get $15 off their first month, and you receive a $15 account credit when they sign up.",
-        "btn": "Activate Referral Code"
+        "title": "The $100 Anti-Fraud Referral",
+        "desc": "Give your friends a 14-day free trial. If they stay, you get paid.",
+        "btn": "Activate Referral Code",
+        "stage1_title": "Stage 1: Activation",
+        "stage1_desc": "Get <strong className=\"text-tm-green\">$50 credit</strong> when they pay for their first month after the 14-day trial.",
+        "stage2_title": "Stage 2: Retention",
+        "stage2_desc": "Get another <strong className=\"text-tm-green\">$50 credit</strong> when they complete their second paid month.",
+        "annual_title": "Annual Upsell Bonus",
+        "annual_desc": "Get a <strong className=\"text-tm-green\">$150 credit instantly</strong> if they bypass monthly and sign up for an Annual Plan."
     },
     "trust": {
         "title": "Secure Integrations & Bank-Level Encryption"

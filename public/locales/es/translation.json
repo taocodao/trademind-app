@@ -108,9 +108,15 @@
         }
     },
     "referral": {
-        "title": "Da $15, Recibe $15",
-        "desc": "¿Conoces a alguien cansado de mirar gráficos? Invítalo a TurboBounce. Consiguen $15 de descuento y tú recibes $15 de crédito en tu cuenta.",
-        "btn": "Activar Código de Referido"
+        "title": "El Referido Anti-Fraude de $100",
+        "desc": "Dale a tus amigos una prueba gratuita de 14 días. Si se quedan, te pagamos al instante.",
+        "btn": "Activar Código de Referido",
+        "stage1_title": "Etapa 1: Activación",
+        "stage1_desc": "Consigue <strong className=\"text-tm-green\">$50 de crédito</strong> cuando paguen su primer mes después de la prueba de 14 días.",
+        "stage2_title": "Etapa 2: Retención",
+        "stage2_desc": "Consigue otros <strong className=\"text-tm-green\">$50 de crédito</strong> cuando completen su segundo mes pagado.",
+        "annual_title": "Bono de Venta Anual",
+        "annual_desc": "Recibe un <strong className=\"text-tm-green\">crédito de $150 al instante</strong> si omiten la opción mensual y se suscriben a un Plan Anual."
     },
     "trust": {
         "title": "Integraciones Seguras y Encriptación Bancaria"

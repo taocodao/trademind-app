@@ -22,16 +22,16 @@ export function ReferralPromoSection() {
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left mt-6">
                         <div className="bg-white/5 p-4 rounded-xl border border-white/10">
-                            <h4 className="font-bold text-white mb-1">Stage 1: Activation</h4>
-                            <p className="text-sm">Get <strong className="text-tm-green">$50 credit</strong> when they pay for their first month after the 14-day trial.</p>
+                            <h4 className="font-bold text-white mb-1">{t('referral.stage1_title')}</h4>
+                            <p className="text-sm" dangerouslySetInnerHTML={{ __html: t('referral.stage1_desc') }} />
                         </div>
                         <div className="bg-white/5 p-4 rounded-xl border border-white/10">
-                            <h4 className="font-bold text-white mb-1">Stage 2: Retention</h4>
-                            <p className="text-sm">Get another <strong className="text-tm-green">$50 credit</strong> when they complete their second paid month.</p>
+                            <h4 className="font-bold text-white mb-1">{t('referral.stage2_title')}</h4>
+                            <p className="text-sm" dangerouslySetInnerHTML={{ __html: t('referral.stage2_desc') }} />
                         </div>
                         <div className="bg-tm-purple/10 p-4 rounded-xl border border-tm-purple/30">
-                            <h4 className="font-bold text-tm-purple mb-1">Annual Upsell Bonus</h4>
-                            <p className="text-sm">Get a <strong className="text-tm-green">$150 credit instantly</strong> if they bypass monthly and sign up for an Annual Plan.</p>
+                            <h4 className="font-bold text-tm-purple mb-1">{t('referral.annual_title')}</h4>
+                            <p className="text-sm" dangerouslySetInnerHTML={{ __html: t('referral.annual_desc') }} />
                         </div>
                     </div>
                 </div>

@@ -118,11 +118,11 @@ function TopNav({ onLogout, onRefresh, loading }: {
 
 }) {
 
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
 
     return (
 
-        <nav className="sticky top-0 z-50 bg-tm-surface/95 backdrop-blur-md border-b border-white/5 hidden">
+        <nav className="sticky top-0 z-50 bg-tm-surface/95 backdrop-blur-md border-b border-white/5 hidden md:block">
 
             <div className="flex items-center justify-between px-4 py-2">
 
@@ -133,6 +133,50 @@ function TopNav({ onLogout, onRefresh, loading }: {
                     <span className="w-2 h-2 rounded-full bg-tm-green animate-pulse" />
 
                     <span className="text-[10px] text-tm-green font-semibold">Live</span>
+
+                </div>
+
+
+
+                {/* Language Selector */}
+
+                <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 p-1 rounded-full bg-tm-card border border-tm-border/50 shadow-inner">
+
+                    <button
+
+                        onClick={() => i18n.changeLanguage('en')}
+
+                        className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all ${i18n.language?.startsWith('en') ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
+
+                    >
+
+                        EN
+
+                    </button>
+
+                    <button
+
+                        onClick={() => i18n.changeLanguage('es')}
+
+                        className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all ${i18n.language?.startsWith('es') ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
+
+                    >
+
+                        ES
+
+                    </button>
+
+                    <button
+
+                        onClick={() => i18n.changeLanguage('zh')}
+
+                        className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all ${i18n.language?.startsWith('zh') ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
+
+                    >
+
+                        中
+
+                    </button>
 
                 </div>
 
@@ -673,17 +717,18 @@ function DashboardContent() {
 
     return (
 
-        <main className="min-h-screen pb-24 max-w-lg mx-auto w-full border-x border-white/5 bg-tm-bg shadow-2xl relative flex flex-col">
+        <main className="min-h-screen bg-tm-bg flex flex-col">
 
             {/* TOP NAV */}
 
             <TopNav onLogout={logout} onRefresh={refreshAll} loading={loading} />
 
-            <div className="flex-1 px-4 py-3 space-y-3 flex flex-col">
+            <div className="flex-1 px-4 py-4 md:py-8 space-y-4 md:space-y-0 md:grid md:grid-cols-12 md:gap-8 max-w-7xl mx-auto w-full">
 
+                {/* Left Column: Account & Settings */}
+                <div className="md:col-span-5 lg:col-span-4 space-y-4">
 
-
-                {/* Welcome header */}
+                    {/* Welcome header */}
 
                 <div className="flex items-center justify-between">
 
@@ -696,48 +741,6 @@ function DashboardContent() {
                             {tastyUsername || user?.email?.address || t('dashboard.trader')}
 
                         </h1>
-
-                    </div>
-
-                    {/* Language Selector */}
-
-                    <div className="flex items-center gap-1.5 p-1 rounded-full bg-tm-card border border-tm-border/50 shadow-inner">
-
-                        <button
-
-                            onClick={() => i18n.changeLanguage('en')}
-
-                            className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all ${i18n.language?.startsWith('en') ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
-
-                        >
-
-                            EN
-
-                        </button>
-
-                        <button
-
-                            onClick={() => i18n.changeLanguage('es')}
-
-                            className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all ${i18n.language?.startsWith('es') ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
-
-                        >
-
-                            ES
-
-                        </button>
-
-                        <button
-
-                            onClick={() => i18n.changeLanguage('zh')}
-
-                            className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all ${i18n.language?.startsWith('zh') ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
-
-                        >
-
-                            中
-
-                        </button>
 
                     </div>
 
@@ -891,9 +894,14 @@ function DashboardContent() {
 
 
 
-                {/* Trade Signals */}
+                </div>
 
-                <div className="glass-card p-4">
+                {/* Right Column: Signals & Active Flow */}
+                <div className="md:col-span-7 lg:col-span-8 space-y-4">
+
+                    {/* Trade Signals */}
+
+                    <div className="glass-card p-4 md:p-6 mb-12 md:mb-0">
 
                     <StrategyTabs
                         strategies={enabledStrategies}
@@ -939,6 +947,7 @@ function DashboardContent() {
                                 )}
                             </div>
                         )}
+                    </div>
                     </div>
                 </div>
 

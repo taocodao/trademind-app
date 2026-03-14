@@ -8,7 +8,6 @@ export function PricingSection() {
     const { login, authenticated } = usePrivy();
     const [isAnnual, setIsAnnual] = useState(true);
     const [loadingTier, setLoadingTier] = useState<string | null>(null);
-    const [pendingTierId, setPendingTierId] = useState<string | null>(null);
 
     const TIERS = useMemo(() => [
         {
@@ -56,14 +55,15 @@ export function PricingSection() {
     ], [t, isAnnual]);
 
     useEffect(() => {
-        if (authenticated && pendingTierId) {
-            const tier = TIERS.find(t => t.id === pendingTierId);
+        const storedTierId = typeof window !== 'undefined' ? sessionStorage.getItem('pendingTierUrl') : null;
+        if (authenticated && storedTierId) {
+            const tier = TIERS.find(t => t.id === storedTierId);
             if (tier) {
                 handleSubscribe(tier);
             }
-            setPendingTierId(null);
+            sessionStorage.removeItem('pendingTierUrl');
         }
-    }, [authenticated, pendingTierId, TIERS]);
+    }, [authenticated, TIERS]);
 
     const handleSubscribe = async (tier: typeof TIERS[0]) => {
         const priceId = isAnnual ? tier.annualPriceId : tier.monthlyPriceId;
@@ -73,7 +73,9 @@ export function PricingSection() {
         }
 
         if (!authenticated) {
-            setPendingTierId(tier.id);
+            if (typeof window !== 'undefined') {
+                sessionStorage.setItem('pendingTierUrl', tier.id);
+            }
             login();
             return;
         }

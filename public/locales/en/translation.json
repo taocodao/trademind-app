@@ -46,44 +46,59 @@
         "description": "We are a software platform, not a hedge fund. We don't take a percentage of your wealth. Keep 100% of your compounding gains.",
         "popular": "Most Popular",
         "billed": "Billed annually or monthly. Cancel anytime online.",
-        "observer": {
-            "name": "The Observer",
-            "price": "Free",
-            "period": "",
-            "description": "Watch the signals and verify the performance.",
-            "features": [
-                "Delayed Signal Feed",
-                "View Live Strategy Stats",
-                "Options Education Course",
-                "Community Access"
-            ],
-            "button": "Start Observing"
-        },
-        "builder": {
-            "name": "The Builder",
-            "price": "$29",
+        "monthly_tab": "Monthly",
+        "annual_tab": "Annually",
+        "save_badge": "SAVE",
+        "trial_notice": "ALL TIERS INCLUDE A 14-DAY FREE TRIAL",
+        "trial_notice_sub": "All plans include a 14-day free trial. Cancel anytime.",
+        "loading": "Redirecting...",
+        "turbocore": {
+            "name": "TurboCore",
+            "description": "ML-powered foundation for steady compounding.",
+            "btn": "Start Compounding",
             "period": "/mo",
-            "description": "For growing accounts under $15,000.",
+            "billed_monthly": "Billed monthly",
+            "billed_annually": "Billed $249 annually",
+            "save_text": "Save 28% (3.5 months free)",
+            "save_short": "Save 28%",
             "features": [
-                "Real-Time Signal Alerts",
-                "1-Click Trade Approval",
-                "Position Sizing Calculator",
-                "Live Portfolio Sync"
-            ],
-            "button": "Start Building"
+                "TQQQ Core Model Access",
+                "SMA200 Capital Preservation Gate",
+                "Automated Tastytrade Execution",
+                "Standard UI Experience"
+            ]
         },
-        "compounder": {
-            "name": "The Compounder",
-            "price": "$49",
+        "turbocore_pro": {
+            "name": "TurboCore Pro",
+            "description": "Advanced capabilities with 39.3% historical CAGR.",
+            "btn": "Go Pro",
             "period": "/mo",
-            "description": "Maximum automation for hands-free wealth generation.",
+            "billed_monthly": "Billed monthly",
+            "billed_annually": "Billed $399 annually",
+            "save_text": "Save 32% (4 months free)",
+            "save_short": "Save 32%",
             "features": [
-                "Full Auto-Approve API Routing",
-                "Advanced IV-Crush Filters",
-                "Priority Support 24/7",
-                "Early Access to New Algos"
-            ],
-            "button": "Automate Now"
+                "Enhanced ML Regime Detection",
+                "Dynamic VIX-Adjusted Positioning",
+                "Early Signal Access",
+                "Priority Slack Support"
+            ]
+        },
+        "both_bundle": {
+            "name": "Both Bundle",
+            "description": "Get the ultimate edge with the full multi-strategy engine.",
+            "btn": "Get Everything",
+            "period": "/mo",
+            "billed_monthly": "Billed monthly",
+            "billed_annually": "Billed $549 annually",
+            "save_text": "Save 33% (4 months free)",
+            "save_short": "Save 33%",
+            "features": [
+                "TurboCore & TurboCore Pro Models",
+                "TurboBounce Mean-Reversion Alpha",
+                "Custom Portfolio Allocation Tooling",
+                "Direct Founder Office Hours"
+            ]
         }
     },
     "education": {

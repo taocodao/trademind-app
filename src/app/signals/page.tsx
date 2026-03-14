@@ -22,6 +22,9 @@ import { CalendarSignalCard, isCalendarSignal } from "@/components/signals/Calen
 import { ZebraSignalCard, isZebraSignal } from "@/components/zebra/ZebraSignalCard";
 import { DVOSignalCard, isDVOSignal } from "@/components/dvo/DVOSignalCard";
 import { TurboBounceSignalCard, isTurboBounceSignal } from "@/components/signals/TurboBounceSignalCard";
+import { TurboCoreSignalCard } from "@/components/signals/TurboCoreSignalCard";
+import { useStrategyContext } from "@/components/providers/StrategyContext";
+import { StrategyTabs } from "@/components/ui/StrategyTabs";
 
 interface Signal {
     id: string;
@@ -78,6 +81,7 @@ function formatTime(timeStr: string | undefined): string {
 
 export default function SignalsPage() {
     const { ready, authenticated } = usePrivy();
+    const { activeStrategy, setActiveStrategy, enabledStrategies } = useStrategyContext();
     const router = useRouter();
     const { allSignals, isConnected, removeSignal, updateSignalStatus } = useSignalContext();
     const [approving, setApproving] = useState<string | null>(null);
@@ -86,6 +90,14 @@ export default function SignalsPage() {
 
     const signals = allSignals.filter((s: any) => {
         if (s.status !== 'pending') {
+            return false;
+        }
+
+        // Strategy filter
+        const strat = (s.strategy || '').toLowerCase();
+        // Fallback matching 'REBALANCE' type to 'TQQQ_TURBOCORE' if not explicitly defined
+        const isLegacyRebalance = ((s as any).type === 'REBALANCE' && activeStrategy === 'TQQQ_TURBOCORE' && s.strategy === undefined);
+        if (strat !== activeStrategy.toLowerCase() && !isLegacyRebalance) {
             return false;
         }
 
@@ -216,6 +228,14 @@ export default function SignalsPage() {
                 </div>
             )}
 
+            <div className="px-6 mb-4">
+                <StrategyTabs
+                    strategies={enabledStrategies}
+                    activeKey={activeStrategy}
+                    onChange={setActiveStrategy}
+                />
+            </div>
+
             {/* Signals List */}
             <div className="px-6 space-y-4">
                 {signals.map((signal) => (
@@ -258,6 +278,17 @@ export default function SignalsPage() {
                             onApprove={() => handleApproveClick(signal)}
                             onSkip={() => handleSkip(signal.id)}
                             isApproving={approving === signal.id}
+                        />
+                    ) : (signal.strategy?.toLowerCase().includes('turbocore') || (signal as any).type === 'REBALANCE') ? (
+                        <TurboCoreSignalCard
+                            key={signal.id}
+                            signal={signal as any}
+                            onExecute={() => {
+                                // For now, we reuse the general confirmation modal
+                                handleApproveClick(signal);
+                            }}
+                            executingId={approving}
+                            accountData={null}
                         />
                     ) : (
                         <SignalCard

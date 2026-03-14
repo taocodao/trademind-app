@@ -11,6 +11,7 @@ import { ShadowLedgerPanel } from '@/components/dashboard/ShadowLedgerPanel';
 import { TQQQAutoApproveSettings } from '@/components/settings/TQQQAutoApproveSettings';
 import { TurboBounceAllocationSettings } from '@/components/settings/TurboBounceAllocationSettings';
 import { SubscriptionManager } from '@/components/settings/SubscriptionManager';
+import { MyStrategies } from '@/components/settings/MyStrategies';
 
 export default function SettingsPage() {
     const { ready, authenticated } = usePrivy();
@@ -72,6 +73,9 @@ export default function SettingsPage() {
 
                 {/* TurboBounce Multi-Ticker Setup */}
                 <TurboBounceAllocationSettings />
+                
+                {/* My Strategies Subscription */}
+                <MyStrategies />
 
                 {/* Strategy Summary */}
                 <section className="glass-card p-4">

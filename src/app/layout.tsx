@@ -4,6 +4,7 @@ import "./globals.css";
 import { PrivyProvider } from "@/components/providers/PrivyProvider";
 import { SignalProvider } from "@/components/providers/SignalProvider";
 import { SettingsProvider } from "@/components/providers/SettingsProvider";
+import { StrategyProvider } from "@/components/providers/StrategyContext";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { MarketingProviders } from "@/components/marketing/MarketingProviders";
 import Script from "next/script";
@@ -52,10 +53,12 @@ export default function RootLayout({
                     <PrivyProvider>
                         <SettingsProvider>
                             <SignalProvider>
-                                <div className="pb-16 md:pb-0">
-                                    {children}
-                                </div>
-                                <BottomNav />
+                                <StrategyProvider>
+                                    <div className="pb-16 md:pb-0">
+                                        {children}
+                                    </div>
+                                    <BottomNav />
+                                </StrategyProvider>
                             </SignalProvider>
                         </SettingsProvider>
                     </PrivyProvider>

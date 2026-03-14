@@ -15,13 +15,29 @@ export function ReferralPromoSection() {
                     <Gift className="w-8 h-8 text-tm-purple" />
                 </div>
 
-                <h2 className="text-3xl font-bold text-white mb-3 z-10">{t('referral.title')}</h2>
-                <p className="text-tm-muted max-w-lg mx-auto mb-8 z-10">
-                    {t('referral.desc')}
-                </p>
+                <h2 className="text-3xl font-bold text-white mb-3 z-10">{t('referral.title', 'The $100 Anti-Fraud Referral')}</h2>
+                <div className="text-tm-muted max-w-2xl mx-auto mb-8 z-10 space-y-4">
+                    <p>
+                        {t('referral.desc', 'Give your friends a 14-day free trial. If they stay, you get paid.')}
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left mt-6">
+                        <div className="bg-white/5 p-4 rounded-xl border border-white/10">
+                            <h4 className="font-bold text-white mb-1">Stage 1: Activation</h4>
+                            <p className="text-sm">Get <strong className="text-tm-green">$50 credit</strong> when they pay for their first month after the 14-day trial.</p>
+                        </div>
+                        <div className="bg-white/5 p-4 rounded-xl border border-white/10">
+                            <h4 className="font-bold text-white mb-1">Stage 2: Retention</h4>
+                            <p className="text-sm">Get another <strong className="text-tm-green">$50 credit</strong> when they complete their second paid month.</p>
+                        </div>
+                        <div className="bg-tm-purple/10 p-4 rounded-xl border border-tm-purple/30">
+                            <h4 className="font-bold text-tm-purple mb-1">Annual Upsell Bonus</h4>
+                            <p className="text-sm">Get a <strong className="text-tm-green">$150 credit instantly</strong> if they bypass monthly and sign up for an Annual Plan.</p>
+                        </div>
+                    </div>
+                </div>
 
                 <Link href="/refer" className="inline-flex items-center gap-2 bg-white text-[#0A0A0F] hover:bg-gray-200 px-8 py-3 rounded-full font-bold transition-all z-10 shadow-lg shadow-white/10 hover:shadow-white/20">
-                    {t('referral.btn')} <ArrowRight className="w-5 h-5" />
+                    {t('referral.btn', 'Activate Referral Code')} <ArrowRight className="w-5 h-5" />
                 </Link>
             </div>
         </section>

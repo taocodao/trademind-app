@@ -11,6 +11,9 @@ import {
     BarChart3
 } from "lucide-react";
 import Link from "next/link";
+import { useStrategyContext } from "@/components/providers/StrategyContext";
+import { StrategyTabs } from "@/components/ui/StrategyTabs";
+import { getStrategy } from "@/lib/strategies";
 
 interface EquityPosition {
     symbol: string;
@@ -29,12 +32,12 @@ interface AccountBalance {
     netLiquidation: number;
 }
 
-// Only TurboCore managed symbols
-const TURBOCORE_SYMBOLS = ['QQQ', 'QLD', 'TQQQ', 'SGOV'];
+
 
 export default function PositionsPage() {
     const { ready, authenticated } = usePrivy();
     const router = useRouter();
+    const { activeStrategy, setActiveStrategy, enabledStrategies } = useStrategyContext();
     const [positions, setPositions] = useState<EquityPosition[]>([]);
     const [loading, setLoading] = useState(true);
     const [accountNum, setAccountNum] = useState<string | null>(null);
@@ -67,10 +70,9 @@ export default function PositionsPage() {
                 const posData = await posRes.json();
                 const items = posData?.data?.items || [];
 
-                // Filter for equity positions in TurboCore universe
+                // Not filtering by symbol here anymore so we can cache all positions
                 const equityPositions: EquityPosition[] = items
                     .filter((p: any) => p['instrument-type'] === 'Equity')
-                    .filter((p: any) => TURBOCORE_SYMBOLS.includes(p.symbol))
                     .map((p: any) => {
                         const qty = Number(p.quantity) || 0;
                         const avgPrice = Number(p['average-open-price']) || 0;
@@ -125,26 +127,42 @@ export default function PositionsPage() {
         );
     }
 
-    const totalValue = positions.reduce((s, p) => s + p.marketValue, 0);
-    const totalPnl = positions.reduce((s, p) => s + p.unrealizedPnl, 0);
-    const totalCostBasis = positions.reduce((s, p) => s + p.quantity * p.averageOpenPrice, 0);
+    const activeStrategyConfig = getStrategy(activeStrategy);
+    const managedSymbols = activeStrategy === 'ALL'
+        ? Object.keys(positions.reduce((acc, p) => ({ ...acc, [p.symbol]: 1 }), {})) // All keys
+        : (activeStrategyConfig?.managedSymbols || []);
+
+    const filteredPositions = positions.filter(p => activeStrategy === 'ALL' || managedSymbols.includes(p.symbol));
+
+    const totalValue = filteredPositions.reduce((s, p) => s + p.marketValue, 0);
+    const totalPnl = filteredPositions.reduce((s, p) => s + p.unrealizedPnl, 0);
+    const totalCostBasis = filteredPositions.reduce((s, p) => s + p.quantity * p.averageOpenPrice, 0);
     const totalPnlPct = totalCostBasis > 0 ? (totalPnl / totalCostBasis) * 100 : 0;
 
     return (
         <main className="min-h-screen pb-24">
             {/* Header */}
-            <header className="px-6 pt-12 pb-6 flex items-center gap-4">
+            <header className="px-6 pt-12 pb-2 flex items-center gap-4">
                 <Link href="/dashboard" className="w-10 h-10 rounded-full bg-tm-surface flex items-center justify-center">
                     <ArrowLeft className="w-5 h-5" />
                 </Link>
                 <div className="flex-1">
-                    <h1 className="text-xl font-bold">TurboCore Holdings</h1>
-                    <p className="text-sm text-tm-muted">{positions.length} equity position{positions.length !== 1 ? 's' : ''}</p>
+                    <h1 className="text-xl font-bold">Positions</h1>
+                    <p className="text-sm text-tm-muted">{filteredPositions.length} equity position{filteredPositions.length !== 1 ? 's' : ''}</p>
                 </div>
                 <button onClick={fetchAccountAndPositions} className="w-10 h-10 rounded-full bg-tm-surface flex items-center justify-center text-tm-muted hover:text-white transition">
                     <RefreshCw className="w-4 h-4" />
                 </button>
             </header>
+
+            <div className="px-6 mb-6">
+                <StrategyTabs
+                    strategies={enabledStrategies}
+                    activeKey={activeStrategy}
+                    onChange={setActiveStrategy}
+                    showAll={true}
+                />
+            </div>
 
             {/* Account Summary */}
             {balance && (
@@ -178,13 +196,13 @@ export default function PositionsPage() {
                 </div>
             )}
 
-            {/* TurboCore Portfolio Summary */}
-            {positions.length > 0 && (
+            {/* Filtered Portfolio Summary */}
+            {filteredPositions.length > 0 && (
                 <div className="px-6 mb-6">
                     <div className="glass-card p-5 bg-gradient-to-br from-purple-900/20 to-indigo-900/20 border-purple-500/20">
                         <div className="flex items-center gap-2 mb-3">
-                            <BarChart3 className="w-5 h-5 text-purple-400" />
-                            <h3 className="font-bold">TurboCore Portfolio</h3>
+                            <BarChart3 className={`w-5 h-5 ${activeStrategyConfig?.color ? activeStrategyConfig.color.split(' ')[0] : 'text-purple-400'}`} />
+                            <h3 className="font-bold">{activeStrategy === 'ALL' ? 'All' : activeStrategyConfig?.label || 'TurboCore'} Portfolio</h3>
                         </div>
                         <div className="grid grid-cols-3 gap-4 text-center">
                             <div>
@@ -219,17 +237,17 @@ export default function PositionsPage() {
                             <div className="h-4 w-2/3 bg-tm-surface rounded" />
                         </div>
                     ))
-                ) : positions.length === 0 ? (
+                ) : filteredPositions.length === 0 ? (
                     <div className="glass-card p-8 text-center">
                         <TrendingUp className="w-12 h-12 text-tm-purple mx-auto mb-4" />
-                        <h3 className="font-semibold mb-2">No TurboCore positions</h3>
-                        <p className="text-sm text-tm-muted mb-4">Execute a TurboCore signal to open equity positions</p>
+                        <h3 className="font-semibold mb-2">No {activeStrategyConfig?.shortLabel || 'TurboCore'} positions</h3>
+                        <p className="text-sm text-tm-muted mb-4">Execute a signal to open equity positions</p>
                         <Link href="/dashboard" className="btn-primary inline-block">
                             Go to Dashboard
                         </Link>
                     </div>
                 ) : (
-                    positions.map((pos) => (
+                    filteredPositions.map((pos) => (
                         <EquityCard key={pos.symbol} position={pos} totalValue={totalValue} />
                     ))
                 )}

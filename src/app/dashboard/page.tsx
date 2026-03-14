@@ -50,6 +50,12 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 
 import { useSignalContext } from '@/components/providers/SignalProvider';
 
+import { useStrategyContext } from '@/components/providers/StrategyContext';
+
+import { StrategyTabs } from '@/components/ui/StrategyTabs';
+
+import { getStrategy } from '@/lib/strategies';
+
 import { TastytradeLink } from '@/components/TastytradeLink';
 
 import { TQQQStatusBanner } from '@/components/dashboard/TQQQStatusBanner';
@@ -330,6 +336,12 @@ function DashboardContent() {
 
 
 
+    const { activeStrategy, setActiveStrategy, enabledStrategies } = useStrategyContext();
+
+    const activeStrategyConfig = getStrategy(activeStrategy);
+
+
+
     const [data, setData] = useState<AccountData | null>(null);
 
     const [loading, setLoading] = useState(true);
@@ -340,11 +352,11 @@ function DashboardContent() {
 
     const [tastyUsername, setTastyUsername] = useState<string | null>(null);
 
-    // TurboCore Strategy Filtering (Only show the latest target state)
+    // Filter by the currently active strategy's key
     const coreSignals = allSignals.filter(s =>
-        s.strategy?.toUpperCase() === 'TQQQ_TURBOCORE' ||
-        s.strategy?.toUpperCase() === 'TQQQ_TURBOCORE_PRO' ||
-        (s as any).type === 'REBALANCE'
+        s.strategy?.toUpperCase() === activeStrategy.toUpperCase() ||
+        // Temporary fallback for older 'rebalance' types that implicitly meant TQQQ_TURBOCORE
+        ((s as any).type === 'REBALANCE' && activeStrategy === 'TQQQ_TURBOCORE' && s.strategy === undefined)
     ).slice(0, 1) as unknown as TurboCoreSignal[];
 
     const [recentOrders, setRecentOrders] = useState<any[]>([]);
@@ -885,8 +897,14 @@ function DashboardContent() {
 
                 <div className="glass-card p-4">
 
-                    <div className="flex items-center justify-between mb-3">
-                        <h2 className="font-semibold text-sm">TurboCore Strategy Signals</h2>
+                    <StrategyTabs
+                        strategies={enabledStrategies}
+                        activeKey={activeStrategy}
+                        onChange={setActiveStrategy}
+                    />
+
+                    <div className="flex items-center justify-between mb-3 mt-4">
+                        <h2 className="font-semibold text-sm">{activeStrategyConfig?.label || 'TurboCore'} Signals</h2>
                         {coreSignals.length > 0 && (
                             <span className="text-xs bg-tm-purple/20 text-tm-purple px-2 py-0.5 rounded-full">
                                 {coreSignals.length} Active Target Change

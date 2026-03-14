@@ -366,16 +366,8 @@ export function SignalProvider({ children }: SignalProviderProps) {
                             const strat = (s.strategy || '').toLowerCase();
                             const type = ((s as any).type || '').toLowerCase();
 
-                            // Only TurboCore signals — matches TQQQ_TURBOCORE, tqqq_turbocore, tqqq_turbocore_pro, or type=rebalance
-                            const isTurboCore =
-                                strat.includes('turbocore') ||
-                                strat.includes('turbocore_pro') ||
-                                type === 'rebalance';
-
-                            if (!isTurboCore) {
-                                console.log(`[SignalProvider] Skipping non-TurboCore signal: strategy=${s.strategy}, type=${type}`);
-                                return false;
-                            }
+                            // No longer filtering by strategy here so the multi-strategy 
+                            // frontend can handle routing them to the right tab.
 
                             // Non-pending signals always pass (already executed/rejected)
                             if (s.status && s.status !== 'pending') return true;

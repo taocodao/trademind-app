@@ -16,6 +16,8 @@ import {
     ExternalLink
 } from "lucide-react";
 import Link from "next/link";
+import { useStrategyContext } from "@/components/providers/StrategyContext";
+import { StrategyTabs } from "@/components/ui/StrategyTabs";
 
 // ---- Types ----------------------------------------------------------------
 
@@ -73,6 +75,7 @@ const strategyBadge = (s?: string | null) => {
 export default function ActivityPage() {
     const { ready, authenticated } = usePrivy();
     const router = useRouter();
+    const { activeStrategy, setActiveStrategy, enabledStrategies } = useStrategyContext();
 
     const [items, setItems] = useState<AnyItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -157,10 +160,21 @@ export default function ActivityPage() {
 
     const filtered = items.filter(item => {
         const sym = item.symbol?.toLowerCase() || '';
-        const strat = item.strategy?.toLowerCase() || '';
+        const rawStrat = item.strategy?.toLowerCase() || '';
+        // Same fallback for old REBALANCE type implicitly being TQQQ_TURBOCORE
+        const isLegacyRebalance = (item.source === 'trademind' && (item as TradeMindItem).status === 'REBALANCE' && rawStrat === '');
+        const stratKey = rawStrat || (isLegacyRebalance ? 'tqqq_turbocore' : '');
+
         const status = item.source === 'trademind' ? (item as TradeMindItem).status.toLowerCase() : 'executed';
         const q = filter.toLowerCase();
-        return sym.includes(q) || strat.includes(q) || status.includes(q);
+
+        // Check search filter
+        const matchesSearch = sym.includes(q) || stratKey.includes(q) || status.includes(q);
+
+        // Check strategy tab filter
+        const matchesStrategy = activeStrategy === 'ALL' || stratKey === activeStrategy.toLowerCase() || (activeStrategy === 'TQQQ_TURBOCORE' && stratKey === 'turbocore');
+
+        return matchesSearch && matchesStrategy;
     });
 
     if (!ready || !authenticated) {
@@ -202,8 +216,15 @@ export default function ActivityPage() {
                 </div>
             </header>
 
-            {/* Search */}
-            <div className="px-6 mb-4">
+            {/* Search and Tabs */}
+            <div className="px-6 mb-4 space-y-4">
+                <StrategyTabs
+                    strategies={enabledStrategies}
+                    activeKey={activeStrategy}
+                    onChange={setActiveStrategy}
+                    showAll={true}
+                />
+
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-tm-muted" />
                     <input

@@ -1,47 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { CreditCard, CheckCircle, ArrowRight, Star, Zap, Layers } from 'lucide-react';
-
-const PLANS = [
-    {
-        id: 'turbocore',
-        tier: 'turbocore',
-        name: 'TurboCore',
-        icon: CreditCard,
-        monthlyPrice: '$29',
-        annualPrice: '$249',
-        annualSave: 'Save 28%',
-        monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_MONTHLY_PRICE_ID || '',
-        annualPriceId: process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_ANNUAL_PRICE_ID || '',
-        color: 'purple',
-    },
-    {
-        id: 'turbocore_pro',
-        tier: 'turbocore_pro',
-        name: 'TurboCore Pro',
-        icon: Zap,
-        monthlyPrice: '$49',
-        annualPrice: '$399',
-        annualSave: 'Save 32%',
-        monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID || '',
-        annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID || '',
-        color: 'indigo',
-    },
-    {
-        id: 'both_bundle',
-        tier: 'both_bundle',
-        name: 'Both Bundle',
-        icon: Layers,
-        monthlyPrice: '$69',
-        annualPrice: '$549',
-        annualSave: 'Save 33%',
-        monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_BUNDLE_MONTHLY_PRICE_ID || '',
-        annualPriceId: process.env.NEXT_PUBLIC_STRIPE_BUNDLE_ANNUAL_PRICE_ID || '',
-        color: 'pink',
-        recommended: true,
-    },
-];
+import { useTranslation } from 'react-i18next';
 
 const TIER_LABELS: Record<string, string> = {
     observer: 'Observer (Free)',
@@ -53,8 +14,49 @@ const TIER_LABELS: Record<string, string> = {
 };
 
 export function SubscriptionManager({ currentTier }: { currentTier: string }) {
+    const { t } = useTranslation();
     const [loading, setLoading] = useState<string | null>(null);
     const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('annual');
+
+    const PLANS = useMemo(() => [
+        {
+            id: 'turbocore',
+            tier: 'turbocore',
+            name: t('pricing.turbocore.name', 'TurboCore'),
+            icon: CreditCard,
+            monthlyPrice: '$29',
+            annualPrice: '$249',
+            annualSave: t('pricing.turbocore.save_short', 'Save 28%'),
+            monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_MONTHLY_PRICE_ID || '',
+            annualPriceId: process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_ANNUAL_PRICE_ID || '',
+            color: 'purple',
+        },
+        {
+            id: 'turbocore_pro',
+            tier: 'turbocore_pro',
+            name: t('pricing.turbocore_pro.name', 'TurboCore Pro'),
+            icon: Zap,
+            monthlyPrice: '$49',
+            annualPrice: '$399',
+            annualSave: t('pricing.turbocore_pro.save_short', 'Save 32%'),
+            monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID || '',
+            annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID || '',
+            color: 'indigo',
+        },
+        {
+            id: 'both_bundle',
+            tier: 'both_bundle',
+            name: t('pricing.both_bundle.name', 'Both Bundle'),
+            icon: Layers,
+            monthlyPrice: '$69',
+            annualPrice: '$549',
+            annualSave: t('pricing.both_bundle.save_short', 'Save 33%'),
+            monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_BUNDLE_MONTHLY_PRICE_ID || '',
+            annualPriceId: process.env.NEXT_PUBLIC_STRIPE_BUNDLE_ANNUAL_PRICE_ID || '',
+            color: 'pink',
+            recommended: true,
+        },
+    ], [t]);
 
     const isSubscribed = currentTier !== 'observer';
 
@@ -125,7 +127,7 @@ export function SubscriptionManager({ currentTier }: { currentTier: string }) {
                             billingPeriod === 'monthly' ? 'bg-tm-purple text-white' : 'text-tm-muted'
                         }`}
                     >
-                        Monthly
+                        {t('pricing.monthly_tab', 'Monthly')}
                     </button>
                     <button
                         onClick={() => setBillingPeriod('annual')}
@@ -133,7 +135,7 @@ export function SubscriptionManager({ currentTier }: { currentTier: string }) {
                             billingPeriod === 'annual' ? 'bg-tm-purple text-white' : 'text-tm-muted'
                         }`}
                     >
-                        Annual <span className="text-[8px] bg-tm-green/20 text-tm-green px-1 rounded">SAVE</span>
+                        {t('pricing.annual_tab', 'Annual')} <span className="text-[8px] bg-tm-green/20 text-tm-green px-1 rounded">{t('pricing.save_badge', 'SAVE')}</span>
                     </button>
                 </div>
 
@@ -190,7 +192,7 @@ export function SubscriptionManager({ currentTier }: { currentTier: string }) {
                 </div>
 
                 <p className="text-[10px] text-tm-muted text-center mt-3">
-                    All plans include a 14-day free trial. Cancel anytime.
+                    {t('pricing.trial_notice_sub', 'All plans include a 14-day free trial. Cancel anytime.')}
                 </p>
             </div>
         </section>

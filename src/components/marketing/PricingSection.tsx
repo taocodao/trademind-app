@@ -157,7 +157,7 @@ export function PricingSection() {
                         </div>
 
                         <ul className="flex flex-col gap-4 mb-8 flex-grow">
-                            {tier.features.map((feat, i) => (
+                            {(Array.isArray(tier.features) ? tier.features : []).map((feat, i) => (
                                 <li key={i} className="flex items-start gap-3">
                                     <Check className={`w-5 h-5 shrink-0 ${tier.popular ? 'text-tm-purple' : 'text-tm-green'}`} />
                                     <span className="text-sm text-gray-300">{feat}</span>

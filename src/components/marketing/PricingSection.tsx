@@ -8,6 +8,7 @@ export function PricingSection() {
     const { login, authenticated } = usePrivy();
     const [isAnnual, setIsAnnual] = useState(true);
     const [loadingTier, setLoadingTier] = useState<string | null>(null);
+    const [selectedTier, setSelectedTier] = useState<string>('both_bundle');
 
     const TIERS = useMemo(() => [
         {
@@ -22,6 +23,7 @@ export function PricingSection() {
             features: t('pricing.turbocore.features', { returnObjects: true }) as string[],
             button: t('pricing.turbocore.btn'),
             popular: false,
+            accentColor: '#4f8ef7',
             monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_MONTHLY_PRICE_ID || '',
             annualPriceId: process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_ANNUAL_PRICE_ID || '',
         },
@@ -37,6 +39,7 @@ export function PricingSection() {
             features: t('pricing.turbocore_pro.features', { returnObjects: true }) as string[],
             button: t('pricing.turbocore_pro.btn'),
             popular: false,
+            accentColor: '#4f8ef7',
             monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID || '',
             annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID || '',
         },
@@ -52,6 +55,7 @@ export function PricingSection() {
             features: t('pricing.both_bundle.features', { returnObjects: true }) as string[],
             button: t('pricing.both_bundle.btn'),
             popular: true,
+            accentColor: '#7c3aed',
             monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_BUNDLE_MONTHLY_PRICE_ID || '',
             annualPriceId: process.env.NEXT_PUBLIC_STRIPE_BUNDLE_ANNUAL_PRICE_ID || '',
         }
@@ -104,6 +108,21 @@ export function PricingSection() {
         }
     };
 
+    const getCardClasses = (tier: typeof TIERS[0]) => {
+        const isSelected = selectedTier === tier.id;
+        const base = 'relative flex flex-col p-8 rounded-2xl border transition-all duration-300 cursor-pointer select-none';
+        if (tier.popular) {
+            if (isSelected) {
+                return `${base} border-tm-purple bg-tm-purple/10 shadow-[0_0_50px_rgba(124,58,237,0.4)] -translate-y-1`;
+            }
+            return `${base} border-tm-purple/60 bg-tm-purple/5 shadow-[0_0_30px_rgba(124,58,237,0.15)] hover:shadow-[0_0_50px_rgba(124,58,237,0.35)] hover:border-tm-purple hover:-translate-y-1`;
+        }
+        if (isSelected) {
+            return `${base} border-[#4f8ef7] bg-[#4f8ef7]/10 shadow-[0_0_45px_rgba(79,142,247,0.35)] -translate-y-1`;
+        }
+        return `${base} border-white/10 bg-tm-card/50 hover:border-[#4f8ef7]/60 hover:shadow-[0_0_40px_rgba(79,142,247,0.2)] hover:bg-white/5 hover:-translate-y-1`;
+    };
+
     return (
         <section className="w-full max-w-7xl mx-auto py-20 px-6 relative z-10" id="pricing">
             <div className="text-center mb-10">
@@ -138,48 +157,74 @@ export function PricingSection() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
-                {TIERS.map((tier) => (
-                    <div key={tier.id} className={`relative flex flex-col p-8 rounded-2xl border transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl cursor-pointer ${tier.popular ? 'border-tm-purple bg-tm-purple/5 shadow-[0_0_30px_rgba(124,58,237,0.15)] hover:shadow-[0_0_50px_rgba(124,58,237,0.35)] hover:border-tm-purple/80' : 'border-white/10 bg-tm-card/50 hover:border-[#4f8ef7]/60 hover:shadow-[0_0_40px_rgba(79,142,247,0.2)] hover:bg-white/5'}`}>
-                        {tier.popular && (
-                            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-tm-purple to-[#9d63f5] text-white text-xs font-bold uppercase tracking-widest py-1 px-4 rounded-full flex items-center gap-1 shadow-lg shadow-tm-purple/30">
-                                <Star className="w-3 h-3 fill-current" /> {t('pricing.popular')}
-                            </div>
-                        )}
-                        <h3 className="text-xl font-bold text-white mb-1">{tier.name}</h3>
-                        <p className="text-xs italic text-tm-purple/80 mb-2 font-medium">{tier.tagline}</p>
-                        <p className="text-sm text-tm-muted mb-6 leading-relaxed">{tier.description}</p>
-
-                        <div className="flex flex-col mb-8">
-                            <div className="flex items-end gap-1 mb-1">
-                                <span className="text-4xl font-bold text-white">{tier.price}</span>
-                                <span className="text-tm-muted text-sm mb-1">{tier.period}</span>
-                            </div>
-                            <span className="text-xs text-tm-muted">{tier.billedAction}</span>
-                            {tier.marketingFrame && (
-                                <span className="mt-2 text-xs font-bold text-tm-green py-1 px-2 bg-tm-green/10 rounded-md w-fit">
-                                    {tier.marketingFrame}
-                                </span>
-                            )}
-                        </div>
-
-                        <ul className="flex flex-col gap-4 mb-8 flex-grow">
-                            {(Array.isArray(tier.features) ? tier.features : []).map((feat, i) => (
-                                <li key={i} className="flex items-start gap-3">
-                                    <Check className={`w-5 h-5 shrink-0 ${tier.popular ? 'text-tm-purple' : 'text-tm-green'}`} />
-                                    <span className="text-sm text-gray-300">{feat}</span>
-                                </li>
-                            ))}
-                        </ul>
-
-                        <button
-                            onClick={() => handleSubscribe(tier)}
-                            disabled={loadingTier !== null}
-                            className={`w-full py-4 rounded-xl font-bold transition-all ${tier.popular ? 'bg-tm-purple hover:bg-tm-purple/90 text-white shadow-lg shadow-tm-purple/25' : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'} disabled:opacity-50`}
+                {TIERS.map((tier) => {
+                    const isSelected = selectedTier === tier.id;
+                    return (
+                        <div
+                            key={tier.id}
+                            className={getCardClasses(tier)}
+                            onClick={() => setSelectedTier(tier.id)}
                         >
-                            {loadingTier === tier.id ? t('pricing.loading', 'Redirecting...') : tier.button}
-                        </button>
-                    </div>
-                ))}
+                            {tier.popular && (
+                                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-tm-purple to-[#9d63f5] text-white text-xs font-bold uppercase tracking-widest py-1 px-4 rounded-full flex items-center gap-1 shadow-lg shadow-tm-purple/30">
+                                    <Star className="w-3 h-3 fill-current" /> {t('pricing.popular')}
+                                </div>
+                            )}
+                            {/* Selected ring indicator */}
+                            {isSelected && !tier.popular && (
+                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#4f8ef7] text-white text-[10px] font-bold uppercase tracking-widest py-0.5 px-3 rounded-full">
+                                    ✓ Selected
+                                </div>
+                            )}
+                            {isSelected && tier.popular && (
+                                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-tm-purple to-[#9d63f5] text-white text-xs font-bold uppercase tracking-widest py-1 px-4 rounded-full flex items-center gap-1 shadow-lg shadow-tm-purple/30">
+                                    <Star className="w-3 h-3 fill-current" /> {t('pricing.popular')}
+                                </div>
+                            )}
+                            <h3 className="text-xl font-bold text-white mb-1">{tier.name}</h3>
+                            <p className={`text-xs italic mb-2 font-medium ${tier.popular ? 'text-tm-purple/80' : 'text-[#4f8ef7]/80'}`}>{tier.tagline}</p>
+                            <p className="text-sm text-tm-muted mb-6 leading-relaxed">{tier.description}</p>
+
+                            <div className="flex flex-col mb-8">
+                                <div className="flex items-end gap-1 mb-1">
+                                    <span className="text-4xl font-bold text-white">{tier.price}</span>
+                                    <span className="text-tm-muted text-sm mb-1">{tier.period}</span>
+                                </div>
+                                <span className="text-xs text-tm-muted">{tier.billedAction}</span>
+                                {tier.marketingFrame && (
+                                    <span className="mt-2 text-xs font-bold text-tm-green py-1 px-2 bg-tm-green/10 rounded-md w-fit">
+                                        {tier.marketingFrame}
+                                    </span>
+                                )}
+                            </div>
+
+                            <ul className="flex flex-col gap-4 mb-8 flex-grow">
+                                {(Array.isArray(tier.features) ? tier.features : []).map((feat, i) => (
+                                    <li key={i} className="flex items-start gap-3">
+                                        <Check className={`w-5 h-5 shrink-0 ${tier.popular || isSelected ? 'text-tm-purple' : 'text-tm-green'}`} />
+                                        <span className="text-sm text-gray-300">{feat}</span>
+                                    </li>
+                                ))}
+                            </ul>
+
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleSubscribe(tier); }}
+                                disabled={loadingTier !== null}
+                                className={`w-full py-4 rounded-xl font-bold transition-all disabled:opacity-50 ${
+                                    isSelected
+                                        ? tier.popular
+                                            ? 'bg-tm-purple hover:bg-tm-purple/90 text-white shadow-lg shadow-tm-purple/25'
+                                            : 'bg-[#4f8ef7] hover:bg-[#4f8ef7]/90 text-white shadow-lg shadow-[#4f8ef7]/25'
+                                        : tier.popular
+                                            ? 'bg-tm-purple hover:bg-tm-purple/90 text-white shadow-lg shadow-tm-purple/25'
+                                            : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'
+                                }`}
+                            >
+                                {loadingTier === tier.id ? t('pricing.loading', 'Redirecting...') : tier.button}
+                            </button>
+                        </div>
+                    );
+                })}
             </div>
 
             <div className="mt-8 text-center text-xs text-tm-muted uppercase tracking-widest font-mono">

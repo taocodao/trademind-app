@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Check, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePrivy } from '@privy-io/react-auth';
@@ -8,66 +8,62 @@ export function PricingSection() {
     const { login, authenticated } = usePrivy();
     const [isAnnual, setIsAnnual] = useState(true);
     const [loadingTier, setLoadingTier] = useState<string | null>(null);
+    const [pendingTierId, setPendingTierId] = useState<string | null>(null);
 
     const TIERS = useMemo(() => [
         {
             id: 'turbocore',
-            name: t('pricing.turbocore.name', 'TurboCore'),
+            name: t('pricing.turbocore.name'),
             price: isAnnual ? '$20.75' : '$29',
-            period: '/mo',
-            billedAction: isAnnual ? 'Billed $249 annually' : 'Billed monthly',
-            marketingFrame: isAnnual ? 'Save 28% (3.5 months free)' : '',
-            description: t('pricing.turbocore.description', 'ML-powered foundation for steady compounding.'),
-            features: [
-                'TQQQ Core Model Access',
-                'SMA200 Capital Preservation Gate',
-                'Automated Tastytrade Execution',
-                'Standard UI Experience'
-            ],
-            button: 'Start Compounding',
+            period: t('pricing.turbocore.period', '/mo'),
+            billedAction: isAnnual ? t('pricing.turbocore.billed_annually') : t('pricing.turbocore.billed_monthly'),
+            marketingFrame: isAnnual ? t('pricing.turbocore.save_text') : '',
+            description: t('pricing.turbocore.description'),
+            features: t('pricing.turbocore.features', { returnObjects: true }) as string[],
+            button: t('pricing.turbocore.btn'),
             popular: false,
             monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_MONTHLY_PRICE_ID || '',
             annualPriceId: process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_ANNUAL_PRICE_ID || '',
         },
         {
             id: 'turbocore_pro',
-            name: t('pricing.turbocore_pro.name', 'TurboCore Pro'),
+            name: t('pricing.turbocore_pro.name'),
             price: isAnnual ? '$33.25' : '$49',
-            period: '/mo',
-            billedAction: isAnnual ? 'Billed $399 annually' : 'Billed monthly',
-            marketingFrame: isAnnual ? 'Save 32% (4 months free)' : '',
-            description: t('pricing.turbocore_pro.description', 'Advanced capabilities with 39.3% historical CAGR.'),
-            features: [
-                'Enhanced ML Regime Detection',
-                'Dynamic VIX-Adjusted Positioning',
-                'Early Signal Access',
-                'Priority Slack Support'
-            ],
-            button: 'Go Pro',
+            period: t('pricing.turbocore_pro.period', '/mo'),
+            billedAction: isAnnual ? t('pricing.turbocore_pro.billed_annually') : t('pricing.turbocore_pro.billed_monthly'),
+            marketingFrame: isAnnual ? t('pricing.turbocore_pro.save_text') : '',
+            description: t('pricing.turbocore_pro.description'),
+            features: t('pricing.turbocore_pro.features', { returnObjects: true }) as string[],
+            button: t('pricing.turbocore_pro.btn'),
             popular: false,
             monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID || '',
             annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID || '',
         },
         {
             id: 'both_bundle',
-            name: t('pricing.both_bundle.name', 'Both Bundle'),
+            name: t('pricing.both_bundle.name'),
             price: isAnnual ? '$45.75' : '$69',
-            period: '/mo',
-            billedAction: isAnnual ? 'Billed $549 annually' : 'Billed monthly',
-            marketingFrame: isAnnual ? 'Save 33% (4 months free)' : '',
-            description: t('pricing.both_bundle.description', 'Get the ultimate edge with the full multi-strategy engine.'),
-            features: [
-                'TurboCore & TurboCore Pro Models',
-                'TurboBounce Mean-Reversion Alpha',
-                'Custom Portfolio Allocation Tooling',
-                'Direct Founder Office Hours'
-            ],
-            button: 'Get Everything',
+            period: t('pricing.both_bundle.period', '/mo'),
+            billedAction: isAnnual ? t('pricing.both_bundle.billed_annually') : t('pricing.both_bundle.billed_monthly'),
+            marketingFrame: isAnnual ? t('pricing.both_bundle.save_text') : '',
+            description: t('pricing.both_bundle.description'),
+            features: t('pricing.both_bundle.features', { returnObjects: true }) as string[],
+            button: t('pricing.both_bundle.btn'),
             popular: true,
             monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_BUNDLE_MONTHLY_PRICE_ID || '',
             annualPriceId: process.env.NEXT_PUBLIC_STRIPE_BUNDLE_ANNUAL_PRICE_ID || '',
         }
     ], [t, isAnnual]);
+
+    useEffect(() => {
+        if (authenticated && pendingTierId) {
+            const tier = TIERS.find(t => t.id === pendingTierId);
+            if (tier) {
+                handleSubscribe(tier);
+            }
+            setPendingTierId(null);
+        }
+    }, [authenticated, pendingTierId, TIERS]);
 
     const handleSubscribe = async (tier: typeof TIERS[0]) => {
         const priceId = isAnnual ? tier.annualPriceId : tier.monthlyPriceId;
@@ -77,6 +73,7 @@ export function PricingSection() {
         }
 
         if (!authenticated) {
+            setPendingTierId(tier.id);
             login();
             return;
         }
@@ -116,7 +113,7 @@ export function PricingSection() {
                             !isAnnual ? 'text-white' : 'text-tm-muted hover:text-white/80'
                         }`}
                     >
-                        Monthly
+                        {t('pricing.monthly_tab', 'Monthly')}
                     </button>
                     <button
                         onClick={() => setIsAnnual(true)}
@@ -124,7 +121,7 @@ export function PricingSection() {
                             isAnnual ? 'text-white' : 'text-tm-muted hover:text-white/80'
                         }`}
                     >
-                        Annually <span className="text-[10px] bg-tm-green/20 text-tm-green px-1.5 py-0.5 rounded uppercase tracking-wider">Save</span>
+                        {t('pricing.annual_tab', 'Annually')} <span className="text-[10px] bg-tm-green/20 text-tm-green px-1.5 py-0.5 rounded uppercase tracking-wider">{t('pricing.save_badge', 'SAVE')}</span>
                     </button>
                     <div 
                         className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-tm-purple rounded-full transition-transform duration-300 ease-in-out ${
@@ -132,7 +129,7 @@ export function PricingSection() {
                         }`} 
                     />
                 </div>
-                <p className="mt-4 text-xs text-tm-purple/80 font-semibold tracking-wider uppercase">All tiers include a 14-Day Free Trial</p>
+                <p className="mt-4 text-xs text-tm-purple/80 font-semibold tracking-wider uppercase">{t('pricing.trial_notice', 'All tiers include a 14-Day Free Trial')}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
@@ -173,7 +170,7 @@ export function PricingSection() {
                             disabled={loadingTier !== null}
                             className={`w-full py-4 rounded-xl font-bold transition-all ${tier.popular ? 'bg-tm-purple hover:bg-tm-purple/90 text-white shadow-lg shadow-tm-purple/25' : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'} disabled:opacity-50`}
                         >
-                            {loadingTier === tier.id ? 'Redirecting...' : tier.button}
+                            {loadingTier === tier.id ? t('pricing.loading', 'Redirecting...') : tier.button}
                         </button>
                     </div>
                 ))}

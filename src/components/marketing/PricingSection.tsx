@@ -13,6 +13,7 @@ export function PricingSection() {
         {
             id: 'turbocore',
             name: t('pricing.turbocore.name'),
+            tagline: t('pricing.turbocore.tagline'),
             price: isAnnual ? '$20.75' : '$29',
             period: t('pricing.turbocore.period', '/mo'),
             billedAction: isAnnual ? t('pricing.turbocore.billed_annually') : t('pricing.turbocore.billed_monthly'),
@@ -27,6 +28,7 @@ export function PricingSection() {
         {
             id: 'turbocore_pro',
             name: t('pricing.turbocore_pro.name'),
+            tagline: t('pricing.turbocore_pro.tagline'),
             price: isAnnual ? '$33.25' : '$49',
             period: t('pricing.turbocore_pro.period', '/mo'),
             billedAction: isAnnual ? t('pricing.turbocore_pro.billed_annually') : t('pricing.turbocore_pro.billed_monthly'),
@@ -41,6 +43,7 @@ export function PricingSection() {
         {
             id: 'both_bundle',
             name: t('pricing.both_bundle.name'),
+            tagline: t('pricing.both_bundle.tagline'),
             price: isAnnual ? '$45.75' : '$69',
             period: t('pricing.both_bundle.period', '/mo'),
             billedAction: isAnnual ? t('pricing.both_bundle.billed_annually') : t('pricing.both_bundle.billed_monthly'),
@@ -136,14 +139,15 @@ export function PricingSection() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
                 {TIERS.map((tier) => (
-                    <div key={tier.id} className={`relative flex flex-col p-8 rounded-2xl border transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl ${tier.popular ? 'border-tm-purple bg-tm-purple/5 shadow-[0_0_30px_rgba(124,58,237,0.15)]' : 'border-white/10 bg-tm-card/50'}`}>
+                    <div key={tier.id} className={`relative flex flex-col p-8 rounded-2xl border transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl cursor-pointer ${tier.popular ? 'border-tm-purple bg-tm-purple/5 shadow-[0_0_30px_rgba(124,58,237,0.15)] hover:shadow-[0_0_50px_rgba(124,58,237,0.35)] hover:border-tm-purple/80' : 'border-white/10 bg-tm-card/50 hover:border-[#4f8ef7]/60 hover:shadow-[0_0_40px_rgba(79,142,247,0.2)] hover:bg-white/5'}`}>
                         {tier.popular && (
                             <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-tm-purple to-[#9d63f5] text-white text-xs font-bold uppercase tracking-widest py-1 px-4 rounded-full flex items-center gap-1 shadow-lg shadow-tm-purple/30">
                                 <Star className="w-3 h-3 fill-current" /> {t('pricing.popular')}
                             </div>
                         )}
-                        <h3 className="text-xl font-bold text-white mb-2">{tier.name}</h3>
-                        <p className="text-sm text-tm-muted mb-6">{tier.description}</p>
+                        <h3 className="text-xl font-bold text-white mb-1">{tier.name}</h3>
+                        <p className="text-xs italic text-tm-purple/80 mb-2 font-medium">{tier.tagline}</p>
+                        <p className="text-sm text-tm-muted mb-6 leading-relaxed">{tier.description}</p>
 
                         <div className="flex flex-col mb-8">
                             <div className="flex items-end gap-1 mb-1">

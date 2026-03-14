@@ -9,14 +9,36 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: "2025-01-27.acacia" as any,
 });
 
+/** Extract user ID from either the Privy session cookie (server-side) or a Bearer JWT (client-side fallback). */
+async function getUserId(req: NextRequest): Promise<string | null> {
+    // 1. Try the Privy session cookie (standard flow)
+    const cookieStore = await cookies();
+    const cookieUserId = cookieStore.get("privy-user-id")?.value;
+    if (cookieUserId) return cookieUserId;
+
+    // 2. Fall back to Bearer token (sent by client immediately after login)
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+        const token = authHeader.slice(7);
+        try {
+            // Privy JWT payload is base64-encoded — the `sub` claim is the user DID
+            const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString());
+            const sub: string = payload?.sub || payload?.privy_did || "";
+            if (sub) return sub;
+        } catch {
+            // malformed token — fall through to 401
+        }
+    }
+    return null;
+}
+
 export async function POST(req: NextRequest) {
     try {
         if (!process.env.STRIPE_SECRET_KEY) {
             return NextResponse.json({ error: "Stripe configuration error" }, { status: 500 });
         }
 
-        const cookieStore = await cookies();
-        const userId = cookieStore.get("privy-user-id")?.value;
+        const userId = await getUserId(req);
         if (!userId) {
             return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
         }

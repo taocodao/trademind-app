@@ -5,7 +5,7 @@ import { usePrivy } from '@privy-io/react-auth';
 
 export function PricingSection() {
     const { t } = useTranslation();
-    const { login, authenticated } = usePrivy();
+    const { login, authenticated, getAccessToken } = usePrivy();
     const [isAnnual, setIsAnnual] = useState(true);
     const [loadingTier, setLoadingTier] = useState<string | null>(null);
     const [selectedTier, setSelectedTier] = useState<string>('both_bundle');
@@ -64,11 +64,13 @@ export function PricingSection() {
     useEffect(() => {
         const storedTierId = typeof window !== 'undefined' ? sessionStorage.getItem('pendingTierUrl') : null;
         if (authenticated && storedTierId) {
-            const tier = TIERS.find(t => t.id === storedTierId);
-            if (tier) {
-                handleSubscribe(tier);
-            }
-            sessionStorage.removeItem('pendingTierUrl');
+            // Small delay so Privy fully establishes session before we call the API
+            const timer = setTimeout(() => {
+                const tier = TIERS.find(t => t.id === storedTierId);
+                if (tier) handleSubscribe(tier);
+                sessionStorage.removeItem('pendingTierUrl');
+            }, 400);
+            return () => clearTimeout(timer);
         }
     }, [authenticated, TIERS]);
 
@@ -89,9 +91,14 @@ export function PricingSection() {
 
         setLoadingTier(tier.id);
         try {
+            // Get Privy JWT — works immediately after login without waiting for cookie
+            const token = await getAccessToken();
             const res = await fetch('/api/stripe/checkout', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                },
                 body: JSON.stringify({ priceId, isAnnual }),
             });
             const data = await res.json();

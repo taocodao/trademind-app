@@ -8,7 +8,7 @@ export function LegalFooter() {
             <div className="max-w-7xl mx-auto">
                 <div className="flex flex-col md:flex-row justify-between items-start mb-12 border-b border-white/10 pb-8 gap-8">
                     <div>
-                        <h3 className="text-2xl font-black tracking-tighter text-white mb-2">TurboBounce</h3>
+                        <h3 className="text-2xl font-black tracking-tighter text-white mb-2">TradeMind<span className="text-tm-purple">@bot</span></h3>
                         <p className="text-tm-muted text-sm">{t('footer.tagline')}</p>
                     </div>
                     <div className="flex gap-16 md:gap-24 text-sm text-left">

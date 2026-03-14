@@ -1,7 +1,7 @@
 {
     "hero": {
         "title": "We Signal You Trade It Compounds",
-        "subtitle": "TurboBounce delivers AI trade signals — you pull the trigger",
+        "subtitle": "TradeMind@bot delivers AI trade signals — you pull the trigger",
         "cta": "Start Free"
     },
     "nav": {
@@ -161,10 +161,10 @@
         "terms": "Terms of Service",
         "privacy": "Privacy Policy",
         "risk": "Risk Disclosure",
-        "disclaimer": "IMPORTANT DISCLAIMER: TurboBounce is a software technology platform, not a registered investment advisor, broker-dealer, or financial planner. We do not provide personalized investment advice. All trade signals are algorithmically generated and delivered identically to all subscribers. Past performance, whether actual or indicated by backtests, is not indicative of future results. Trading options involves substantial risk of loss and is not appropriate for all investors. You could lose some or all of your invested capital. Consult a qualified financial professional before making investment decisions. See full Risk Disclosure for details.",
+        "disclaimer": "IMPORTANT DISCLAIMER: TradeMind@bot is a software technology platform, not a registered investment advisor, broker-dealer, or financial planner. We do not provide personalized investment advice. All trade signals are algorithmically generated and delivered identically to all subscribers. Past performance, whether actual or indicated by backtests, is not indicative of future results. Trading options involves substantial risk of loss and is not appropriate for all investors. You could lose some or all of your invested capital. Consult a qualified financial professional before making investment decisions. See full Risk Disclosure for details.",
         "cftc": "CFTC RULE 4.41: Hypothetical or simulated performance results have certain limitations. Unlike an actual performance record, simulated results do not represent actual trading. Also, since the trades have not been executed, the results may have under- or over-compensated for the impact, if any, of certain market factors, such as lack of liquidity. Simulated trading programs in general are also subject to the fact that they are designed with the benefit of hindsight. No representation is being made that any account will or is likely to achieve profit or losses similar to those shown.",
-        "brokerage": "Brokerage services are provided by third-party broker-dealers. TurboBounce never holds customer funds or executes trades outside of user-authorized broker API configurations.",
-        "rights": "TurboBounce LLC. All rights reserved.",
+        "brokerage": "Brokerage services are provided by third-party broker-dealers. TradeMind@bot never holds customer funds or executes trades outside of user-authorized broker API configurations.",
+        "rights": "TradeMind@bot LLC. All rights reserved.",
         "tagline": "Automated Options Engineering."
     },
     "dashboard": {

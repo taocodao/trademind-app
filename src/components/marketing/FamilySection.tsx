@@ -14,7 +14,7 @@ export function FamilySection() {
                         </div>
                         <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Teach Your Child How Professional Investing Actually Works.</h2>
                         <p className="text-gray-400 mb-6 leading-relaxed">
-                            Stop letting social media teach them about gambling on meme stocks. With the TurboBounce Family Bundle, link a Teen brokerage account to your master platform. They watch the AI analyze IV-crush natively, learning defined-risk compounding safely under your oversight.
+                            Stop letting social media teach them about gambling on meme stocks. With the TradeMind@bot Family Bundle, link a Teen brokerage account to your master platform. They watch the AI analyze IV-crush natively, learning defined-risk compounding safely under your oversight.
                         </p>
 
                         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">

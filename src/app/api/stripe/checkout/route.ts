@@ -5,75 +5,96 @@ import pool from "@/lib/db";
 
 export const dynamic = 'force-dynamic';
 
-// Ensure Stripe key is available
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: "2025-01-27.acacia" as any,
+});
 
 export async function POST(req: NextRequest) {
     try {
-        if (!STRIPE_SECRET_KEY) {
-            console.error("Missing STRIPE_SECRET_KEY");
+        if (!process.env.STRIPE_SECRET_KEY) {
             return NextResponse.json({ error: "Stripe configuration error" }, { status: 500 });
         }
 
-        const stripe = new Stripe(STRIPE_SECRET_KEY, {
-            apiVersion: "2025-01-27.acacia" as any,
-        });
-
         const cookieStore = await cookies();
         const userId = cookieStore.get("privy-user-id")?.value;
-
         if (!userId) {
             return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
         }
 
-        const { priceId, isAnnual } = await req.json();
-
+        const { priceId, isAnnual, referralCode } = await req.json();
         if (!priceId) {
             return NextResponse.json({ error: "Price ID is required" }, { status: 400 });
         }
 
-        // Fetch user from DB to see if they already have a Stripe ID
-        const result = await pool.query(
-            `SELECT stripe_customer_id FROM user_settings WHERE user_id = $1`,
-            [userId]
-        );
-        let customerId = result.rows[0]?.stripe_customer_id;
-
         const origin = req.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-        // Generate the Stripe Checkout Session
-        const sessionPayload: Stripe.Checkout.SessionCreateParams = {
-            payment_method_types: ["card"],
-            mode: "subscription",
-            billing_address_collection: "auto",
-            line_items: [
-                {
-                    price: priceId,
-                    quantity: 1,
-                },
-            ],
-            success_url: `${origin}/dashboard?checkout_success=true&session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${origin}/dashboard?checkout_canceled=true`,
-            metadata: {
-                userId: userId, // Pass to webhook to link account
-            },
-        };
+        // ── Fetch or create Stripe customer keyed to Privy DID ──────────────
+        const userResult = await pool.query(
+            `SELECT stripe_customer_id, has_had_trial FROM user_settings WHERE user_id = $1`,
+            [userId]
+        );
+        let customerId: string | undefined = userResult.rows[0]?.stripe_customer_id;
+        const hasHadTrial: boolean = userResult.rows[0]?.has_had_trial ?? false;
 
-        // Allow Afterpay/Klarna for the $399 Annual Compounder tier to improve conversion
-        if (isAnnual && priceId === process.env.NEXT_PUBLIC_STRIPE_COMPOUNDER_ANNUAL_PRICE_ID) {
-            // Include Affirm/Afterpay if supported dynamically by Stripe
-            sessionPayload.payment_method_types = ["card", "afterpay_clearpay", "klarna"];
+        if (!customerId) {
+            // Create Stripe customer and store DID in metadata (per guide Section Privy ↔ Stripe)
+            const customer = await stripe.customers.create({
+                metadata: { privy_did: userId },
+            });
+            customerId = customer.id;
+
+            await pool.query(
+                `INSERT INTO user_settings (user_id, stripe_customer_id)
+                 VALUES ($1, $2)
+                 ON CONFLICT (user_id) DO UPDATE SET stripe_customer_id = $2, updated_at = NOW()`,
+                [userId, customerId]
+            );
         }
 
-        if (customerId) {
-            sessionPayload.customer = customerId;
-        } else {
-            // Customer doesn't exist yet, we will create one during checkout
-            sessionPayload.customer_email = undefined;
+        // ── Build Checkout Session ───────────────────────────────────────────
+        // Klarna supported on annual subscriptions; Afterpay NOT supported (no recurring)
+        const annualPriceIds = [
+            process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_ANNUAL_PRICE_ID,
+            process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID,
+            process.env.NEXT_PUBLIC_STRIPE_BUNDLE_ANNUAL_PRICE_ID,
+        ].filter(Boolean);
+
+        const paymentMethods: Stripe.Checkout.SessionCreateParams.PaymentMethodType[] = ["card"];
+        if (isAnnual && annualPriceIds.includes(priceId)) {
+            paymentMethods.push("klarna"); // Klarna only — Afterpay doesn't support recurring
+        }
+
+        const sessionPayload: Stripe.Checkout.SessionCreateParams = {
+            customer: customerId,
+            payment_method_types: paymentMethods,
+            payment_method_collection: "always", // Require card even during trial
+            mode: "subscription",
+            billing_address_collection: "auto",
+            line_items: [{ price: priceId, quantity: 1 }],
+            success_url: `${origin}/dashboard?checkout_success=true&session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${origin}/settings?checkout_canceled=true`,
+            metadata: {
+                userId,          // For webhook → link account
+                referralCode: referralCode || "",
+            },
+            // ── Trial: session-level (not price-level) to allow abuse prevention ──
+            ...(!hasHadTrial ? {
+                subscription_data: {
+                    trial_period_days: 14,
+                    trial_settings: {
+                        end_behavior: { missing_payment_method: "cancel" as const },
+                    },
+                    metadata: { privy_did: userId },
+                },
+            } : {}),
+        };
+
+        // Pass referral client_reference_id for Rewardful tracking
+        if (referralCode) {
+            sessionPayload.client_reference_id = referralCode;
         }
 
         const session = await stripe.checkout.sessions.create(sessionPayload);
-
         return NextResponse.json({ url: session.url });
 
     } catch (error: any) {

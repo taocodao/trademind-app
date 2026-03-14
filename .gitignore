@@ -21,7 +21,11 @@ dist/
 .env.local
 .env.development.local
 .env.test.local
+.env.production
 .env.production.local
+.env.development.local
+.env.test.local
+deploy_vercel.ps1
 
 # Debug
 npm-debug.log*

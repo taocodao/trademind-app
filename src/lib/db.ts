@@ -343,7 +343,7 @@ export async function initializeUserTables(): Promise<void> {
             )
         `);
 
-        // Migrate user_id columns from UUID to TEXT for Privy DID support, and add new Stripe columns if missing
+        // ── Migrate user_settings columns ─────────────────────────────────
         await query(`
             DO $$ 
             BEGIN
@@ -357,12 +357,26 @@ export async function initializeUserTables(): Promise<void> {
                     ALTER TABLE user_settings ALTER COLUMN user_id TYPE VARCHAR(128) USING user_id::VARCHAR;
                 END IF;
 
-                -- Add Stripe and Profile columns if they don't exist
-                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS subscription_tier VARCHAR(20) DEFAULT 'observer';
+                -- Existing Stripe columns
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS subscription_tier VARCHAR(32) DEFAULT 'observer';
                 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(128);
                 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(128);
                 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS first_name VARCHAR(64);
                 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS last_name VARCHAR(64);
+
+                -- New Stripe columns (billing detail + fraud prevention + env flag)
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS stripe_price_id VARCHAR(128);
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS subscription_status VARCHAR(32);
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS billing_interval VARCHAR(8);
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS current_period_end TIMESTAMPTZ;
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS trial_end TIMESTAMPTZ;
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS has_had_trial BOOLEAN DEFAULT FALSE;
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS card_fingerprint VARCHAR(64);
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS livemode BOOLEAN DEFAULT FALSE;
+
+                -- Indexes for fast webhook lookups
+                CREATE INDEX IF NOT EXISTS idx_user_settings_stripe_customer ON user_settings (stripe_customer_id);
+                CREATE INDEX IF NOT EXISTS idx_user_settings_card_fingerprint ON user_settings (card_fingerprint);
 
                 -- Migrate positions.user_id if it's UUID type
                 IF EXISTS (
@@ -384,10 +398,26 @@ export async function initializeUserTables(): Promise<void> {
                     ALTER TABLE user_signal_executions ALTER COLUMN user_id TYPE VARCHAR(128) USING user_id::VARCHAR;
                 END IF;
             EXCEPTION WHEN others THEN
-                -- Log but don't fail on migration errors
                 RAISE NOTICE 'Migration warning: %', SQLERRM;
             END $$
         `);
+
+        // ── Referrals table (2-stage credits) ─────────────────────────────
+        await query(`
+            CREATE TABLE IF NOT EXISTS referrals (
+                id SERIAL PRIMARY KEY,
+                referrer_user_id VARCHAR(128) NOT NULL,
+                referred_user_id VARCHAR(128) NOT NULL,
+                referred_stripe_customer_id VARCHAR(128) NOT NULL,
+                stage1_paid BOOLEAN DEFAULT FALSE,
+                stage2_paid BOOLEAN DEFAULT FALSE,
+                annual_bonus_paid BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                updated_at TIMESTAMPTZ DEFAULT NOW(),
+                UNIQUE(referred_user_id)
+            )
+        `);
+        await query(`CREATE INDEX IF NOT EXISTS idx_referrals_referred_stripe ON referrals (referred_stripe_customer_id)`);
 
         // Add unique constraint for user_signal_executions if not exists
         await query(`

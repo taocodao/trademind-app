@@ -1,10 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { Check, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { usePrivy } from '@privy-io/react-auth';
 
 export function PricingSection() {
     const { t } = useTranslation();
+    const { login, authenticated } = usePrivy();
     const [isAnnual, setIsAnnual] = useState(true);
+    const [loadingTier, setLoadingTier] = useState<string | null>(null);
 
     const TIERS = useMemo(() => [
         {
@@ -22,7 +25,9 @@ export function PricingSection() {
                 'Standard UI Experience'
             ],
             button: 'Start Compounding',
-            popular: false
+            popular: false,
+            monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_MONTHLY_PRICE_ID || '',
+            annualPriceId: process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_ANNUAL_PRICE_ID || '',
         },
         {
             id: 'turbocore_pro',
@@ -39,7 +44,9 @@ export function PricingSection() {
                 'Priority Slack Support'
             ],
             button: 'Go Pro',
-            popular: false
+            popular: false,
+            monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID || '',
+            annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID || '',
         },
         {
             id: 'both_bundle',
@@ -56,9 +63,44 @@ export function PricingSection() {
                 'Direct Founder Office Hours'
             ],
             button: 'Get Everything',
-            popular: true
+            popular: true,
+            monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_BUNDLE_MONTHLY_PRICE_ID || '',
+            annualPriceId: process.env.NEXT_PUBLIC_STRIPE_BUNDLE_ANNUAL_PRICE_ID || '',
         }
     ], [t, isAnnual]);
+
+    const handleSubscribe = async (tier: typeof TIERS[0]) => {
+        const priceId = isAnnual ? tier.annualPriceId : tier.monthlyPriceId;
+        if (!priceId) {
+            alert('This plan is being configured. Please try again shortly.');
+            return;
+        }
+
+        if (!authenticated) {
+            login();
+            return;
+        }
+
+        setLoadingTier(tier.id);
+        try {
+            const res = await fetch('/api/stripe/checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ priceId, isAnnual }),
+            });
+            const data = await res.json();
+            if (data.url) {
+                window.location.href = data.url;
+            } else {
+                throw new Error(data.error || 'Checkout failed');
+            }
+        } catch (err) {
+            console.error('Checkout error:', err);
+            alert('Failed to start checkout. Please try again.');
+        } finally {
+            setLoadingTier(null);
+        }
+    };
 
     return (
         <section className="w-full max-w-7xl mx-auto py-20 px-6 relative z-10" id="pricing">
@@ -126,8 +168,12 @@ export function PricingSection() {
                             ))}
                         </ul>
 
-                        <button className={`w-full py-4 rounded-xl font-bold transition-all ${tier.popular ? 'bg-tm-purple hover:bg-tm-purple/90 text-white shadow-lg shadow-tm-purple/25' : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'}`}>
-                            {tier.button}
+                        <button
+                            onClick={() => handleSubscribe(tier)}
+                            disabled={loadingTier !== null}
+                            className={`w-full py-4 rounded-xl font-bold transition-all ${tier.popular ? 'bg-tm-purple hover:bg-tm-purple/90 text-white shadow-lg shadow-tm-purple/25' : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'} disabled:opacity-50`}
+                        >
+                            {loadingTier === tier.id ? 'Redirecting...' : tier.button}
                         </button>
                     </div>
                 ))}

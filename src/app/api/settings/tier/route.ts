@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
 
         const result = await pool.query(
             `SELECT subscription_tier, subscription_status, billing_interval,
-                    current_period_end, trial_end, stripe_price_id
+                    current_period_end, trial_end, stripe_price_id, cancel_at_period_end, cancel_at
              FROM user_settings WHERE user_id = $1`,
             [userId]
         );
@@ -43,6 +43,8 @@ export async function GET(req: NextRequest) {
                 currentPeriodEnd: null,
                 trialEnd: null,
                 priceId: null,
+                cancelAtPeriodEnd: false,
+                cancelAt: null,
             });
         }
 
@@ -54,6 +56,8 @@ export async function GET(req: NextRequest) {
             currentPeriodEnd: row.current_period_end || null,
             trialEnd: row.trial_end || null,
             priceId: row.stripe_price_id || null,
+            cancelAtPeriodEnd: row.cancel_at_period_end || false,
+            cancelAt: row.cancel_at || null,
         });
     } catch (error) {
         console.error('Error fetching subscription tier:', error);

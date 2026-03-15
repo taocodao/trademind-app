@@ -20,6 +20,8 @@ interface MembershipInfo {
     currentPeriodEnd: string | null;
     trialEnd: string | null;
     priceId: string | null;
+    cancelAtPeriodEnd?: boolean;
+    cancelAt?: string | null;
 }
 
 export function SubscriptionManager() {
@@ -30,6 +32,7 @@ export function SubscriptionManager() {
     const [membership, setMembership] = useState<MembershipInfo>({
         tier: 'observer', status: null, billingInterval: null,
         currentPeriodEnd: null, trialEnd: null, priceId: null,
+        cancelAtPeriodEnd: false, cancelAt: null,
     });
 
     // Fetch membership info on mount
@@ -130,6 +133,15 @@ export function SubscriptionManager() {
         }
     };
 
+    const handleCancelClick = async () => {
+        const confirmed = window.confirm(
+            "Are you sure you want to cancel your subscription?\n\nYou will keep access until the end of your billing period, but you won't be charged again."
+        );
+        if (confirmed) {
+            await handleManageBilling();
+        }
+    };
+
     // Compute display values
     const statusColor = membership.status === 'active' ? 'text-tm-green' :
         membership.status === 'trialing' ? 'text-yellow-400' :
@@ -141,7 +153,8 @@ export function SubscriptionManager() {
         membership.status === 'past_due' ? 'bg-tm-red/10 border-tm-red/20' :
         'bg-tm-surface/50 border-white/5';
 
-    const statusLabel = membership.status === 'active' ? 'Active' :
+    const statusLabel = membership.cancelAtPeriodEnd ? 'Canceling' :
+        membership.status === 'active' ? 'Active' :
         membership.status === 'trialing' ? 'Trial' :
         membership.status === 'past_due' ? 'Past Due' :
         membership.status === 'canceled' ? 'Canceled' : '';
@@ -217,18 +230,20 @@ export function SubscriptionManager() {
                                 )}
                                 {renewalDate && (
                                     <span>
-                                        {membership.status === 'trialing' ? 'Trial ends' : 'Renews'} {renewalDate}
+                                        {membership.cancelAtPeriodEnd ? 'Access ends' : membership.status === 'trialing' ? 'Trial ends' : 'Renews'} {renewalDate}
                                     </span>
                                 )}
                             </div>
                             <div className="flex items-center gap-3">
-                                <button
-                                    onClick={handleManageBilling}
-                                    disabled={portalLoading}
-                                    className="text-tm-muted hover:text-white transition-colors"
-                                >
-                                    {portalLoading ? '...' : 'Cancel'}
-                                </button>
+                                {!membership.cancelAtPeriodEnd && (
+                                    <button
+                                        onClick={handleCancelClick}
+                                        disabled={portalLoading}
+                                        className="text-tm-muted hover:text-white transition-colors"
+                                    >
+                                        {portalLoading ? '...' : 'Cancel'}
+                                    </button>
+                                )}
                                 <button
                                     onClick={handleManageBilling}
                                     disabled={portalLoading}
@@ -305,12 +320,12 @@ export function SubscriptionManager() {
                                     </span>
                                 ) : (
                                     <button
-                                        onClick={() => handleCheckout(priceId, billingPeriod === 'annual')}
-                                        disabled={loading !== null}
+                                        onClick={() => isSubscribed ? handleManageBilling() : handleCheckout(priceId, billingPeriod === 'annual')}
+                                        disabled={loading !== null || portalLoading}
                                         className="btn-primary text-xs flex items-center gap-1 px-4 py-2"
                                     >
-                                        {loading === priceId ? 'Loading...' : isSubscribed ? 'Switch' : 'Subscribe'}
-                                        <ArrowRight className="w-3 h-3" />
+                                        {loading === priceId ? 'Loading...' : isSubscribed ? 'Switch via Portal' : 'Subscribe'}
+                                        {isSubscribed ? <ExternalLink className="w-3 h-3" /> : <ArrowRight className="w-3 h-3" />}
                                     </button>
                                 )}
                             </div>

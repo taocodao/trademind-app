@@ -63,18 +63,21 @@ async function processWebhookEvent(event: Stripe.Event) {
 
             const sub = subscription as any;
             await pool.query(
-                `UPDATE user_settings
-                 SET subscription_tier = $1,
-                     stripe_customer_id = $2,
-                     stripe_subscription_id = $3,
-                     stripe_price_id = $4,
-                     subscription_status = $5,
-                     billing_interval = $6,
-                     current_period_end = to_timestamp($7),
-                     trial_end = $8,
-                     livemode = $9,
-                     updated_at = NOW()
-                 WHERE user_id = $10`,
+                `INSERT INTO user_settings (
+                    user_id, subscription_tier, stripe_customer_id, stripe_subscription_id, 
+                    stripe_price_id, subscription_status, billing_interval, current_period_end, trial_end, livemode, updated_at
+                 ) VALUES ($10, $1, $2, $3, $4, $5, $6, to_timestamp($7), $8, $9, NOW())
+                 ON CONFLICT (user_id) DO UPDATE 
+                 SET subscription_tier = EXCLUDED.subscription_tier,
+                     stripe_customer_id = EXCLUDED.stripe_customer_id,
+                     stripe_subscription_id = EXCLUDED.stripe_subscription_id,
+                     stripe_price_id = EXCLUDED.stripe_price_id,
+                     subscription_status = EXCLUDED.subscription_status,
+                     billing_interval = EXCLUDED.billing_interval,
+                     current_period_end = EXCLUDED.current_period_end,
+                     trial_end = EXCLUDED.trial_end,
+                     livemode = EXCLUDED.livemode,
+                     updated_at = EXCLUDED.updated_at`,
                 [
                     tier,
                     customerId,
@@ -124,6 +127,8 @@ async function processWebhookEvent(event: Stripe.Event) {
                      current_period_end = to_timestamp($6),
                      trial_end = $7,
                      livemode = $8,
+                     cancel_at_period_end = $10,
+                     cancel_at = $11,
                      updated_at = NOW()
                  WHERE stripe_customer_id = $9`,
                 [
@@ -136,9 +141,11 @@ async function processWebhookEvent(event: Stripe.Event) {
                     sub2.trial_end ? new Date(sub2.trial_end * 1000).toISOString() : null,
                     isLive,
                     customerId,
+                    subscription.cancel_at_period_end,
+                    subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
                 ]
             );
-            console.log(`🔄 Subscription updated for ${customerId}: ${tier} (${subscription.status})`);
+            console.log(`🔄 Subscription updated for ${customerId}: ${tier} (${subscription.status}, cancel_at_period_end: ${subscription.cancel_at_period_end})`);
             break;
         }
 
@@ -151,6 +158,8 @@ async function processWebhookEvent(event: Stripe.Event) {
                 `UPDATE user_settings
                  SET subscription_tier = 'observer',
                      subscription_status = 'canceled',
+                     cancel_at_period_end = false,
+                     cancel_at = null,
                      updated_at = NOW()
                  WHERE stripe_customer_id = $1`,
                 [customerId]

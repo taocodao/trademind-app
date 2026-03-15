@@ -21,9 +21,15 @@ export default function SinglePageMarketing() {
     const [strategyMode, setStrategyMode] = useState<'standard' | 'pro'>('pro');
     const [curveData, setCurveData] = useState([]);
 
+    const [shouldRender, setShouldRender] = useState(false);
+
     useEffect(() => {
-        if (ready && authenticated) {
-            router.push('/dashboard');
+        if (ready) {
+            if (authenticated && window.location.hash !== '#pricing') {
+                router.push('/dashboard');
+            } else {
+                setShouldRender(true);
+            }
         }
     }, [ready, authenticated, router]);
 
@@ -38,15 +44,13 @@ export default function SinglePageMarketing() {
             .catch(err => console.error("Failed to load curve data:", err));
     }, [strategyMode]);
 
-    if (!ready) {
+    if (!ready || !shouldRender) {
         return (
             <main className="min-h-screen flex items-center justify-center bg-tm-bg">
                 <div className="w-12 h-12 rounded-full border-4 border-tm-border border-t-tm-purple animate-spin" />
             </main>
         );
     }
-
-    if (authenticated) return null;
 
     return (
         <main className="min-h-screen flex flex-col bg-[#0A0A0F] overflow-x-hidden pt-16">

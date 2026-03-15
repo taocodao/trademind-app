@@ -882,7 +882,7 @@ function DashboardContent() {
                         <p className="text-sm text-tm-muted mb-6 max-w-sm">
                             Subscribe to access AI-powered automated trading signals, real-time targets, and portfolio backtests.
                         </p>
-                        <a href="/settings" className="btn-primary flex items-center gap-2 px-6 py-3 w-full justify-center text-sm">
+                        <a href="/#pricing" className="btn-primary flex items-center gap-2 px-6 py-3 w-full justify-center text-sm">
                             View Subscription Plans
                             <ArrowRight className="w-4 h-4 text-white/50" />
                         </a>

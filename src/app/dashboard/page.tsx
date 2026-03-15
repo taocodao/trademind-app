@@ -42,6 +42,10 @@ import {
 
     AlertCircle,
 
+    Crown,
+
+    Clock,
+
 } from 'lucide-react';
 
 import Link from 'next/link';
@@ -369,6 +373,12 @@ function DashboardContent() {
 
     const [gamStats, setGamStats] = useState<GamStats>({ streak: 0, winRate: 0, rank: null, totalProfit: 0 });
 
+    // ── Membership info ──
+    const [membership, setMembership] = useState<{
+        tier: string; status: string | null; billingInterval: string | null;
+        currentPeriodEnd: string | null; trialEnd: string | null;
+    }>({ tier: 'observer', status: null, billingInterval: null, currentPeriodEnd: null, trialEnd: null });
+
 
 
     // ── Auth guard ──
@@ -460,6 +470,12 @@ function DashboardContent() {
                 })
 
                 .catch(() => setTastyLinked(false));
+
+            // Also fetch membership
+            fetch('/api/settings/tier')
+                .then(r => r.json())
+                .then(d => { if (d.tier) setMembership(d); })
+                .catch(console.error);
 
         }
 
@@ -851,6 +867,40 @@ function DashboardContent() {
 
                 )}
 
+
+                {/* Subscription Badge */}
+                {membership.tier !== 'observer' && (
+                    <a href="/settings" className="glass-card p-3 flex items-center justify-between group">
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-tm-purple/20 flex items-center justify-center">
+                                <Crown className="w-4 h-4 text-tm-purple" />
+                            </div>
+                            <div>
+                                <p className="text-xs font-bold text-white">
+                                    {{ turbocore: 'TurboCore', turbocore_pro: 'TurboCore Pro', both_bundle: 'Both Bundle' }[membership.tier] || membership.tier}
+                                </p>
+                                <div className="flex items-center gap-1.5">
+                                    <span className={`w-1.5 h-1.5 rounded-full ${
+                                        membership.status === 'active' ? 'bg-tm-green' :
+                                        membership.status === 'trialing' ? 'bg-yellow-400 animate-pulse' : 'bg-tm-red'
+                                    }`} />
+                                    <span className={`text-[10px] font-semibold ${
+                                        membership.status === 'active' ? 'text-tm-green' :
+                                        membership.status === 'trialing' ? 'text-yellow-400' : 'text-tm-red'
+                                    }`}>
+                                        {membership.status === 'active' ? 'Active' :
+                                         membership.status === 'trialing' ? `Trial · ${Math.max(0, Math.ceil((new Date(membership.trialEnd || '').getTime() - Date.now()) / 86400000))}d left` :
+                                         membership.status === 'past_due' ? 'Past Due' : membership.status || ''}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-1 text-[10px] text-tm-muted group-hover:text-tm-purple transition-colors">
+                            <Clock className="w-3 h-3" />
+                            <span>{membership.billingInterval === 'year' ? 'Annual' : 'Monthly'}</span>
+                        </div>
+                    </a>
+                )}
 
 
                 {/* Balance Card */}

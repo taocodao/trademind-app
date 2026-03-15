@@ -2,7 +2,7 @@
 
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { ArrowLeft, Settings, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { TastytradeCredentials } from '@/components/settings/TastytradeCredentials';
@@ -16,18 +16,10 @@ import { MyStrategies } from '@/components/settings/MyStrategies';
 export default function SettingsPage() {
     const { ready, authenticated } = usePrivy();
     const router = useRouter();
-    const [currentTier, setCurrentTier] = useState<string>('observer');
 
     useEffect(() => {
         if (ready && !authenticated) {
             router.push('/');
-        } else if (ready && authenticated) {
-            fetch('/api/settings/tier')
-                .then(r => r.json())
-                .then(d => {
-                    if (d.tier) setCurrentTier(d.tier);
-                })
-                .catch(console.error);
         }
     }, [ready, authenticated, router]);
 
@@ -65,8 +57,8 @@ export default function SettingsPage() {
                 {/* Shadow Ledger for Tier 2b */}
                 <ShadowLedgerPanel />
 
-                {/* Subscription Tier Management */}
-                <SubscriptionManager currentTier={currentTier} />
+                {/* Subscription Tier Management — self-contained, fetches its own data */}
+                <SubscriptionManager />
 
                 {/* TQQQ Risk Level + Auto-Approval */}
                 <TQQQAutoApproveSettings />

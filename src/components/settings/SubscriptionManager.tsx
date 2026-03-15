@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { CreditCard, CheckCircle, ArrowRight, Star, Zap, Layers } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { CreditCard, CheckCircle, ArrowRight, Star, Zap, Layers, Clock, ExternalLink, Crown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const TIER_LABELS: Record<string, string> = {
@@ -13,10 +13,36 @@ const TIER_LABELS: Record<string, string> = {
     builder: 'Builder (Legacy)',
 };
 
-export function SubscriptionManager({ currentTier }: { currentTier: string }) {
+interface MembershipInfo {
+    tier: string;
+    status: string | null;
+    billingInterval: string | null;
+    currentPeriodEnd: string | null;
+    trialEnd: string | null;
+    priceId: string | null;
+}
+
+export function SubscriptionManager() {
     const { t } = useTranslation();
     const [loading, setLoading] = useState<string | null>(null);
     const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('annual');
+    const [portalLoading, setPortalLoading] = useState(false);
+    const [membership, setMembership] = useState<MembershipInfo>({
+        tier: 'observer', status: null, billingInterval: null,
+        currentPeriodEnd: null, trialEnd: null, priceId: null,
+    });
+
+    // Fetch membership info on mount
+    useEffect(() => {
+        fetch('/api/settings/tier')
+            .then(r => r.json())
+            .then(d => {
+                if (d.tier) setMembership(d);
+            })
+            .catch(console.error);
+    }, []);
+
+    const currentTier = membership.tier;
 
     const PLANS = useMemo(() => [
         {
@@ -86,6 +112,48 @@ export function SubscriptionManager({ currentTier }: { currentTier: string }) {
         }
     };
 
+    const handleManageBilling = async () => {
+        setPortalLoading(true);
+        try {
+            const res = await fetch('/api/stripe/portal', { method: 'POST' });
+            const data = await res.json();
+            if (data.url) {
+                window.location.href = data.url;
+            } else {
+                throw new Error(data.error || 'No portal URL returned');
+            }
+        } catch (err) {
+            console.error('Portal failed', err);
+            alert('Failed to open billing portal.');
+        } finally {
+            setPortalLoading(false);
+        }
+    };
+
+    // Compute display values
+    const statusColor = membership.status === 'active' ? 'text-tm-green' :
+        membership.status === 'trialing' ? 'text-yellow-400' :
+        membership.status === 'past_due' ? 'text-tm-red' :
+        membership.status === 'canceled' ? 'text-tm-red' : 'text-tm-muted';
+
+    const statusBgColor = membership.status === 'active' ? 'bg-tm-green/10 border-tm-green/20' :
+        membership.status === 'trialing' ? 'bg-yellow-400/10 border-yellow-400/20' :
+        membership.status === 'past_due' ? 'bg-tm-red/10 border-tm-red/20' :
+        'bg-tm-surface/50 border-white/5';
+
+    const statusLabel = membership.status === 'active' ? 'Active' :
+        membership.status === 'trialing' ? 'Trial' :
+        membership.status === 'past_due' ? 'Past Due' :
+        membership.status === 'canceled' ? 'Canceled' : '';
+
+    const trialDaysLeft = membership.trialEnd
+        ? Math.max(0, Math.ceil((new Date(membership.trialEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+        : null;
+
+    const renewalDate = membership.currentPeriodEnd
+        ? new Date(membership.currentPeriodEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : null;
+
     return (
         <section className="glass-card overflow-hidden relative">
             {isSubscribed && (
@@ -98,25 +166,75 @@ export function SubscriptionManager({ currentTier }: { currentTier: string }) {
                     <h3 className="font-semibold text-sm">Subscription Plan</h3>
                 </div>
 
-                {/* Current Tier Display */}
-                <div className={`rounded-xl p-3 mb-4 flex items-center gap-2 ${
-                    isSubscribed 
-                        ? 'bg-tm-green/10 border border-tm-green/20' 
-                        : 'bg-tm-surface/50 border border-white/5'
-                }`}>
-                    {isSubscribed ? (
-                        <CheckCircle className="w-4 h-4 text-tm-green shrink-0" />
-                    ) : (
-                        <Star className="w-4 h-4 text-tm-muted shrink-0" />
-                    )}
-                    <div>
-                        <p className={`font-bold text-sm ${isSubscribed ? 'text-tm-green' : 'text-tm-muted'}`}>
-                            {TIER_LABELS[currentTier] || currentTier} {isSubscribed ? '— Active' : ''}
-                        </p>
-                        {!isSubscribed && (
-                            <p className="text-xs text-tm-muted mt-0.5">Upgrade to unlock automated trading.</p>
+                {/* Enhanced Membership Display */}
+                <div className={`rounded-xl p-4 mb-4 border ${statusBgColor}`}>
+                    <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2.5">
+                            {isSubscribed ? (
+                                <div className="w-10 h-10 rounded-full bg-tm-purple/20 flex items-center justify-center">
+                                    <Crown className="w-5 h-5 text-tm-purple" />
+                                </div>
+                            ) : (
+                                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
+                                    <Star className="w-5 h-5 text-tm-muted" />
+                                </div>
+                            )}
+                            <div>
+                                <p className="font-bold text-sm text-white">
+                                    {TIER_LABELS[currentTier] || currentTier}
+                                </p>
+                                {statusLabel && (
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                        <span className={`w-1.5 h-1.5 rounded-full ${
+                                            membership.status === 'active' ? 'bg-tm-green' :
+                                            membership.status === 'trialing' ? 'bg-yellow-400 animate-pulse' :
+                                            'bg-tm-red'
+                                        }`} />
+                                        <span className={`text-xs font-semibold ${statusColor}`}>
+                                            {statusLabel}
+                                            {membership.status === 'trialing' && trialDaysLeft !== null && (
+                                                <span className="text-white/50 font-normal"> · {trialDaysLeft}d left</span>
+                                            )}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        {isSubscribed && (
+                            <CheckCircle className="w-5 h-5 text-tm-green shrink-0 mt-0.5" />
                         )}
                     </div>
+
+                    {/* Billing details row */}
+                    {isSubscribed && (
+                        <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-3 text-tm-muted">
+                                {membership.billingInterval && (
+                                    <span className="flex items-center gap-1">
+                                        <Clock className="w-3 h-3" />
+                                        {membership.billingInterval === 'year' ? 'Annual' : 'Monthly'}
+                                    </span>
+                                )}
+                                {renewalDate && (
+                                    <span>
+                                        {membership.status === 'trialing' ? 'Trial ends' : 'Renews'} {renewalDate}
+                                    </span>
+                                )}
+                            </div>
+                            <button
+                                onClick={handleManageBilling}
+                                disabled={portalLoading}
+                                className="flex items-center gap-1 text-tm-purple hover:text-purple-300 transition-colors font-semibold"
+                            >
+                                {portalLoading ? 'Opening...' : 'Manage'}
+                                <ExternalLink className="w-3 h-3" />
+                            </button>
+                        </div>
+                    )}
+
+                    {!isSubscribed && (
+                        <p className="text-xs text-tm-muted mt-2">Upgrade to unlock automated trading and full signals.</p>
+                    )}
                 </div>
 
                 {/* Billing Toggle */}

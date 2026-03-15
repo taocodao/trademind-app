@@ -46,6 +46,8 @@ import {
 
     Clock,
 
+    ArrowRight,
+
 } from 'lucide-react';
 
 import Link from 'next/link';
@@ -376,8 +378,8 @@ function DashboardContent() {
     // ── Membership info ──
     const [membership, setMembership] = useState<{
         tier: string; status: string | null; billingInterval: string | null;
-        currentPeriodEnd: string | null; trialEnd: string | null;
-    }>({ tier: 'observer', status: null, billingInterval: null, currentPeriodEnd: null, trialEnd: null });
+        currentPeriodEnd: string | null; trialEnd: string | null; fetched: boolean;
+    }>({ tier: 'observer', status: null, billingInterval: null, currentPeriodEnd: null, trialEnd: null, fetched: false });
 
 
 
@@ -474,8 +476,8 @@ function DashboardContent() {
             // Also fetch membership
             fetch('/api/settings/tier')
                 .then(r => r.json())
-                .then(d => { if (d.tier) setMembership(d); })
-                .catch(console.error);
+                .then(d => { setMembership(prev => ({ ...prev, ...d, fetched: true })); })
+                .catch(e => { console.error(e); setMembership(prev => ({ ...prev, fetched: true })); });
 
         }
 
@@ -761,7 +763,7 @@ function DashboardContent() {
 
                 {/* Welcome header */}
 
-                <div className="flex items-center justify-between">
+                <div className="glass-card p-4 flex items-center justify-between">
 
                     <div>
 
@@ -777,7 +779,7 @@ function DashboardContent() {
 
                     {/* Language Selector */}
 
-                    <div className="flex items-center gap-1 p-1 rounded-full bg-tm-card border border-tm-border/50 shadow-inner">
+                    <div className="flex items-center gap-1 p-1 rounded-full bg-black/40 border border-white/5 shadow-inner">
 
                         <button
 
@@ -867,43 +869,59 @@ function DashboardContent() {
 
                 )}
 
-
-                {/* Subscription Badge */}
-                {membership.tier !== 'observer' && (
-                    <a href="/settings" className="glass-card p-3 flex items-center justify-between group">
-                        <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-full bg-tm-purple/20 flex items-center justify-center">
-                                <Crown className="w-4 h-4 text-tm-purple" />
-                            </div>
-                            <div>
-                                <p className="text-xs font-bold text-white">
-                                    {{ turbocore: 'TurboCore', turbocore_pro: 'TurboCore Pro', both_bundle: 'Both Bundle' }[membership.tier] || membership.tier}
-                                </p>
-                                <div className="flex items-center gap-1.5">
-                                    <span className={`w-1.5 h-1.5 rounded-full ${
-                                        membership.status === 'active' ? 'bg-tm-green' :
-                                        membership.status === 'trialing' ? 'bg-yellow-400 animate-pulse' : 'bg-tm-red'
-                                    }`} />
-                                    <span className={`text-[10px] font-semibold ${
-                                        membership.status === 'active' ? 'text-tm-green' :
-                                        membership.status === 'trialing' ? 'text-yellow-400' : 'text-tm-red'
-                                    }`}>
-                                        {membership.status === 'active' ? 'Active' :
-                                         membership.status === 'trialing' ? `Trial · ${Math.max(0, Math.ceil((new Date(membership.trialEnd || '').getTime() - Date.now()) / 86400000))}d left` :
-                                         membership.status === 'past_due' ? 'Past Due' : membership.status || ''}
-                                    </span>
+                {!membership.fetched ? (
+                    <div className="flex flex-col items-center justify-center py-10">
+                        <div className="w-8 h-8 rounded-full border-2 border-tm-purple/30 border-t-tm-purple animate-spin" />
+                    </div>
+                ) : membership.tier === 'observer' ? (
+                    <div className="glass-card p-6 flex flex-col items-center justify-center text-center mt-4 border-tm-purple/20">
+                        <div className="w-16 h-16 rounded-full bg-tm-purple/10 flex items-center justify-center mb-4 border border-tm-purple/20">
+                            <Target className="w-8 h-8 text-tm-purple" />
+                        </div>
+                        <h2 className="text-xl font-bold mb-2">Unlock TradeMind Signals</h2>
+                        <p className="text-sm text-tm-muted mb-6 max-w-sm">
+                            Subscribe to access AI-powered automated trading signals, real-time targets, and portfolio backtests.
+                        </p>
+                        <a href="/settings" className="btn-primary flex items-center gap-2 px-6 py-3 w-full justify-center text-sm">
+                            View Subscription Plans
+                            <ArrowRight className="w-4 h-4 text-white/50" />
+                        </a>
+                    </div>
+                ) : (
+                    <>
+                        {/* Subscription Badge */}
+                        <a href="/settings" className="glass-card p-3 flex items-center justify-between group">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-full bg-tm-purple/20 flex items-center justify-center">
+                                    <Crown className="w-4 h-4 text-tm-purple" />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold text-white">
+                                        {{ turbocore: 'TurboCore', turbocore_pro: 'TurboCore Pro', both_bundle: 'Both Bundle' }[membership.tier] || membership.tier}
+                                    </p>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className={`w-1.5 h-1.5 rounded-full ${
+                                            membership.status === 'active' ? 'bg-tm-green' :
+                                            membership.status === 'trialing' ? 'bg-yellow-400 animate-pulse' : 'bg-tm-red'
+                                        }`} />
+                                        <span className={`text-[10px] font-semibold ${
+                                            membership.status === 'active' ? 'text-tm-green' :
+                                            membership.status === 'trialing' ? 'text-yellow-400' : 'text-tm-red'
+                                        }`}>
+                                            {membership.status === 'active' ? 'Active' :
+                                             membership.status === 'trialing' ? `Trial · ${Math.max(0, Math.ceil((new Date(membership.trialEnd || '').getTime() - Date.now()) / 86400000))}d left` :
+                                             membership.status === 'past_due' ? 'Past Due' : membership.status || ''}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div className="flex items-center gap-1 text-[10px] text-tm-muted group-hover:text-tm-purple transition-colors">
-                            <Clock className="w-3 h-3" />
-                            <span>{membership.billingInterval === 'year' ? 'Annual' : 'Monthly'}</span>
-                        </div>
-                    </a>
-                )}
+                            <div className="flex items-center gap-1 text-[10px] text-tm-muted group-hover:text-tm-purple transition-colors">
+                                <Clock className="w-3 h-3" />
+                                <span>{membership.billingInterval === 'year' ? 'Annual' : 'Monthly'}</span>
+                            </div>
+                        </a>
 
-
-                {/* Balance Card */}
+                        {/* Balance Card */}
 
                 {tastyLinked && (
 
@@ -1051,6 +1069,9 @@ function DashboardContent() {
                         )}
                     </div>
                 </div>
+
+                </>
+                )}
 
             </div>
 

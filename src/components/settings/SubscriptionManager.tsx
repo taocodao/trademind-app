@@ -221,14 +221,23 @@ export function SubscriptionManager() {
                                     </span>
                                 )}
                             </div>
-                            <button
-                                onClick={handleManageBilling}
-                                disabled={portalLoading}
-                                className="flex items-center gap-1 text-tm-purple hover:text-purple-300 transition-colors font-semibold"
-                            >
-                                {portalLoading ? 'Opening...' : 'Manage'}
-                                <ExternalLink className="w-3 h-3" />
-                            </button>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={handleManageBilling}
+                                    disabled={portalLoading}
+                                    className="text-tm-muted hover:text-white transition-colors"
+                                >
+                                    {portalLoading ? '...' : 'Cancel'}
+                                </button>
+                                <button
+                                    onClick={handleManageBilling}
+                                    disabled={portalLoading}
+                                    className="flex items-center gap-1 text-tm-purple hover:text-purple-300 transition-colors font-semibold"
+                                >
+                                    {portalLoading ? 'Opening...' : 'Manage'}
+                                    <ExternalLink className="w-3 h-3" />
+                                </button>
+                            </div>
                         </div>
                     )}
 

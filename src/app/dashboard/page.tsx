@@ -324,7 +324,7 @@ function ProgressCard({ stats }: { stats: GamStats }) {
 
 function DashboardContent() {
 
-    const { ready, authenticated, logout, user } = usePrivy();
+    const { ready, authenticated, logout, user, getAccessToken } = usePrivy();
 
     const router = useRouter();
 
@@ -378,6 +378,66 @@ function DashboardContent() {
         if (ready && !authenticated) router.push('/');
 
     }, [ready, authenticated, router]);
+
+
+
+    // ── Resume pending Stripe checkout after Privy login ──
+
+    useEffect(() => {
+
+        if (!ready || !authenticated) return;
+
+        const pendingTierId = typeof window !== 'undefined' ? sessionStorage.getItem('pendingTierUrl') : null;
+
+        if (!pendingTierId) return;
+
+        sessionStorage.removeItem('pendingTierUrl');
+
+        const isAnnual = sessionStorage.getItem('pendingTierAnnual') === 'true';
+
+        sessionStorage.removeItem('pendingTierAnnual');
+
+        const priceId = pendingTierId;
+
+        // Small delay to let Privy fully establish the session
+
+        const timer = setTimeout(async () => {
+
+            try {
+
+                const token = await getAccessToken();
+
+                const res = await fetch('/api/stripe/checkout', {
+
+                    method: 'POST',
+
+                    headers: {
+
+                        'Content-Type': 'application/json',
+
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+
+                    },
+
+                    body: JSON.stringify({ priceId, isAnnual }),
+
+                });
+
+                const data = await res.json();
+
+                if (data.url) window.location.href = data.url;
+
+            } catch (err) {
+
+                console.error('Pending checkout failed:', err);
+
+            }
+
+        }, 600);
+
+        return () => clearTimeout(timer);
+
+    }, [ready, authenticated]);
 
 
 
@@ -701,13 +761,13 @@ function DashboardContent() {
 
                     {/* Language Selector */}
 
-                    <div className="flex items-center gap-1.5 p-1 rounded-full bg-tm-card border border-tm-border/50 shadow-inner">
+                    <div className="flex items-center gap-1 p-1 rounded-full bg-tm-card border border-tm-border/50 shadow-inner">
 
                         <button
 
                             onClick={() => i18n.changeLanguage('en')}
 
-                            className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all ${i18n.language?.startsWith('en') ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
+                            className={`flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold transition-all ${i18n.language?.startsWith('en') ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
 
                         >
 
@@ -719,7 +779,7 @@ function DashboardContent() {
 
                             onClick={() => i18n.changeLanguage('es')}
 
-                            className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all ${i18n.language?.startsWith('es') ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
+                            className={`flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold transition-all ${i18n.language?.startsWith('es') ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
 
                         >
 
@@ -731,7 +791,7 @@ function DashboardContent() {
 
                             onClick={() => i18n.changeLanguage('zh')}
 
-                            className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all ${i18n.language?.startsWith('zh') ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
+                            className={`flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold transition-all ${i18n.language?.startsWith('zh') ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
 
                         >
 

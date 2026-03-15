@@ -83,7 +83,9 @@ export function PricingSection() {
 
         if (!authenticated) {
             if (typeof window !== 'undefined') {
-                sessionStorage.setItem('pendingTierUrl', tier.id);
+                // Store the actual priceId (not tier.id) so dashboard can call checkout directly
+                sessionStorage.setItem('pendingTierUrl', priceId);
+                sessionStorage.setItem('pendingTierAnnual', String(isAnnual));
             }
             login();
             return;

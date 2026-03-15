@@ -474,10 +474,14 @@ function DashboardContent() {
                 .catch(() => setTastyLinked(false));
 
             // Also fetch membership
-            fetch('/api/settings/tier')
-                .then(r => r.json())
-                .then(d => { setMembership(prev => ({ ...prev, ...d, fetched: true })); })
-                .catch(e => { console.error(e); setMembership(prev => ({ ...prev, fetched: true })); });
+            getAccessToken().then(token => {
+                fetch('/api/settings/tier', {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                })
+                    .then(r => r.json())
+                    .then(d => { setMembership(prev => ({ ...prev, ...d, fetched: true })); })
+                    .catch(e => { console.error(e); setMembership(prev => ({ ...prev, fetched: true })); });
+            });
 
         }
 

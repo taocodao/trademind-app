@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { CreditCard, CheckCircle, ArrowRight, Star, Zap, Layers, Clock, ExternalLink, Crown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { usePrivy } from '@privy-io/react-auth';
 
 const TIER_LABELS: Record<string, string> = {
     observer: 'Observer (Free)',
@@ -34,15 +35,20 @@ export function SubscriptionManager() {
         currentPeriodEnd: null, trialEnd: null, priceId: null,
         cancelAtPeriodEnd: false, cancelAt: null,
     });
+    const { getAccessToken } = usePrivy();
 
     // Fetch membership info on mount
     useEffect(() => {
-        fetch('/api/settings/tier')
-            .then(r => r.json())
-            .then(d => {
-                if (d.tier) setMembership(d);
+        getAccessToken().then(token => {
+            fetch('/api/settings/tier', {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
             })
-            .catch(console.error);
+                .then(r => r.json())
+                .then(d => {
+                    if (d.tier) setMembership(d);
+                })
+                .catch(console.error);
+        });
     }, []);
 
     const currentTier = membership.tier;
@@ -96,9 +102,13 @@ export function SubscriptionManager() {
         }
         setLoading(priceId);
         try {
+            const token = await getAccessToken();
             const res = await fetch('/api/stripe/checkout', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
                 body: JSON.stringify({ priceId, isAnnual }),
             });
             const data = await res.json();
@@ -118,7 +128,11 @@ export function SubscriptionManager() {
     const handleManageBilling = async () => {
         setPortalLoading(true);
         try {
-            const res = await fetch('/api/stripe/portal', { method: 'POST' });
+            const token = await getAccessToken();
+            const res = await fetch('/api/stripe/portal', { 
+                method: 'POST',
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {} 
+            });
             const data = await res.json();
             if (data.url) {
                 window.location.href = data.url;

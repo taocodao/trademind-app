@@ -2,25 +2,59 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import pool from '@/lib/db';
 
-export async function GET() {
+export const dynamic = 'force-dynamic';
+
+export async function GET(req: NextRequest) {
     try {
+        // 1. Try Privy session cookie
         const cookieStore = await cookies();
-        const userId = cookieStore.get('privy-user-id')?.value;
+        let userId = cookieStore.get('privy-user-id')?.value;
+
+        // 2. Fallback: Bearer token (sent by client right after login)
+        if (!userId) {
+            const authHeader = req.headers.get('Authorization');
+            if (authHeader?.startsWith('Bearer ')) {
+                const token = authHeader.slice(7);
+                try {
+                    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
+                    userId = payload?.sub || payload?.privy_did || '';
+                } catch {
+                    // malformed token
+                }
+            }
+        }
 
         if (!userId) {
             return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
         }
 
         const result = await pool.query(
-            `SELECT subscription_tier FROM user_settings WHERE user_id = $1`,
+            `SELECT subscription_tier, subscription_status, billing_interval,
+                    current_period_end, trial_end, stripe_price_id
+             FROM user_settings WHERE user_id = $1`,
             [userId]
         );
 
         if (result.rows.length === 0) {
-            return NextResponse.json({ tier: 'observer' });
+            return NextResponse.json({
+                tier: 'observer',
+                status: null,
+                billingInterval: null,
+                currentPeriodEnd: null,
+                trialEnd: null,
+                priceId: null,
+            });
         }
 
-        return NextResponse.json({ tier: result.rows[0].subscription_tier || 'observer' });
+        const row = result.rows[0];
+        return NextResponse.json({
+            tier: row.subscription_tier || 'observer',
+            status: row.subscription_status || null,
+            billingInterval: row.billing_interval || null,
+            currentPeriodEnd: row.current_period_end || null,
+            trialEnd: row.trial_end || null,
+            priceId: row.stripe_price_id || null,
+        });
     } catch (error) {
         console.error('Error fetching subscription tier:', error);
         return NextResponse.json(

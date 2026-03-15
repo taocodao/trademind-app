@@ -34,10 +34,10 @@ export function LegalFooter() {
 
                 <div className="text-[10px] md:text-xs text-tm-muted/50 leading-relaxed font-mono space-y-4">
                     <p>
-                        IMPORTANT DISCLAIMER: TradeMind@bot is a software technology platform, not a registered investment advisor or broker-dealer. All signals are algorithmically generated and are not personalized financial advice. Past performance is not indicative of future results. CFTC Rule 4.41: Simulated or hypothetical performance results do not represent actual trading. Brokerage services are provided by third-party broker-dealers. TradeMind@bot never holds customer funds or executes trades outside of user-authorized broker API configurations.
+                        {t('footer.disclaimer')}
                     </p>
                     <p className="text-center pt-6 text-tm-muted/70">
-                        &copy; {new Date().getFullYear()} TradeMind@bot LLC. All rights reserved.
+                        &copy; {new Date().getFullYear()} TradeMind@bot LLC. {t('footer.rights')}
                     </p>
                 </div>
             </div>

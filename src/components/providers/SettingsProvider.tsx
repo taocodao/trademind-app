@@ -17,41 +17,41 @@ interface ShadowLedger {
 
 interface AppSettings {
     tastytrade: TastytradeSettings;
-    investmentPrincipal: number;
+    investmentPrincipal: Record<string, number>; // strategy key -> amount
     riskLevel: RiskLevel;
     autoApproval: boolean;
     turboBounceMode: 'MODE_A' | 'MODE_B';
-    shadowLedger: ShadowLedger;
+    shadowLedger: Record<string, ShadowLedger>; // strategy key -> shadow ledger
 }
 
 interface SettingsContextValue {
     settings: AppSettings;
     updateTastytradeSettings: (settings: Partial<TastytradeSettings>) => void;
-    setInvestmentPrincipal: (amount: number) => void;
+    setInvestmentPrincipal: (strategy: string, amount: number) => void;
     setRiskLevel: (level: RiskLevel) => void;
     setAutoApproval: (enabled: boolean) => void;
     setTurboBounceMode: (mode: 'MODE_A' | 'MODE_B') => void;
-    updateShadowLedger: (updates: Partial<ShadowLedger>) => void;
+    updateShadowLedger: (strategy: string, updates: Partial<ShadowLedger>) => void;
     clearSettings: () => void;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
     tastytrade: { refreshToken: '', accounts: [] },
-    investmentPrincipal: 25000,
+    investmentPrincipal: {},
     riskLevel: 'MEDIUM',
     autoApproval: false,
     turboBounceMode: 'MODE_B',
-    shadowLedger: { balance: 0, positions: {} },
+    shadowLedger: {},
 };
 
 const SettingsContext = createContext<SettingsContextValue>({
     settings: DEFAULT_SETTINGS,
-    updateTastytradeSettings: () => { },
-    setInvestmentPrincipal: () => { },
-    setRiskLevel: () => { },
-    setAutoApproval: () => { },
-    setTurboBounceMode: () => { },
-    updateShadowLedger: () => { },
+    updateTastytradeSettings: (_s: Partial<TastytradeSettings>) => { },
+    setInvestmentPrincipal: (_strategy: string, _amount: number) => { },
+    setRiskLevel: (_level: RiskLevel) => { },
+    setAutoApproval: (_enabled: boolean) => { },
+    setTurboBounceMode: (_mode: 'MODE_A' | 'MODE_B') => { },
+    updateShadowLedger: (_strategy: string, _updates: Partial<ShadowLedger>) => { },
     clearSettings: () => { },
 });
 
@@ -67,7 +67,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         const stored = localStorage.getItem('tm_settings');
         if (stored) {
             try {
-                const parsed = JSON.parse(stored);
+                let parsed = JSON.parse(stored);
+                // Migrate old global scalar values to objects if needed
+                if (typeof parsed.investmentPrincipal === 'number') {
+                    parsed.investmentPrincipal = { 'default': parsed.investmentPrincipal };
+                }
+                if (parsed.shadowLedger && typeof parsed.shadowLedger.balance === 'number') {
+                    parsed.shadowLedger = { 'default': parsed.shadowLedger };
+                }
                 setSettings({ ...DEFAULT_SETTINGS, ...parsed });
             } catch (e) {
                 console.error('Failed to parse settings', e);
@@ -87,8 +94,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         });
     };
 
-    const setInvestmentPrincipal = (amount: number) => {
-        persist({ ...settings, investmentPrincipal: amount });
+    const setInvestmentPrincipal = (strategy: string, amount: number) => {
+        persist({ 
+            ...settings, 
+            investmentPrincipal: {
+                ...settings.investmentPrincipal,
+                [strategy]: amount
+            } 
+        });
     };
 
     const setRiskLevel = (level: RiskLevel) => {
@@ -103,10 +116,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         persist({ ...settings, turboBounceMode: mode });
     };
 
-    const updateShadowLedger = (updates: Partial<ShadowLedger>) => {
+    const updateShadowLedger = (strategy: string, updates: Partial<ShadowLedger>) => {
+        const currentLedger = settings.shadowLedger[strategy] || { balance: 0, positions: {} };
         persist({
             ...settings,
-            shadowLedger: { ...settings.shadowLedger, ...updates }
+            shadowLedger: { 
+                ...settings.shadowLedger, 
+                [strategy]: { ...currentLedger, ...updates }
+            }
         });
     };
 

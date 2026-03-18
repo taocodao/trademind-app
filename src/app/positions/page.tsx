@@ -181,11 +181,13 @@ export default function PositionsPage() {
     }
 
     const activeStrategyConfig = getStrategy(activeStrategy);
-    const managedSymbols = activeStrategy === 'ALL'
-        ? Object.keys(positions.reduce((acc, p) => ({ ...acc, [p.symbol]: 1 }), {})) // All keys
-        : (activeStrategyConfig?.managedSymbols || []);
 
-    const filteredPositions = positions.filter(p => activeStrategy === 'ALL' || managedSymbols.includes(p.symbol));
+    // For a live Tastytrade account, both strategies share the same physical account
+    // and the same underlying symbols — so we show ALL positions on every strategy tab.
+    // For shadow (virtual) ledger, positions are already isolated per strategy by design.
+    const filteredPositions = isVirtualLedger
+        ? positions  // Shadow ledger positions are already strategy-scoped
+        : positions; // Live account: show all positions on all strategy tabs (one physical account)
 
     const totalValue = filteredPositions.reduce((s, p) => s + p.marketValue, 0);
     const totalPnl = filteredPositions.reduce((s, p) => s + p.unrealizedPnl, 0);
@@ -211,14 +213,24 @@ export default function PositionsPage() {
                 </button>
             </header>
 
-            <div className="px-6 mb-6">
-                <StrategyTabs
-                    strategies={enabledStrategies}
-                    activeKey={activeStrategy}
-                    onChange={setActiveStrategy}
-                    showAll={true}
-                />
-            </div>
+            {/* Strategy context — tabs shown for shadow; shared-account banner for live */}
+            {isVirtualLedger ? (
+                <div className="px-6 mb-6">
+                    <StrategyTabs
+                        strategies={enabledStrategies}
+                        activeKey={activeStrategy}
+                        onChange={setActiveStrategy}
+                        showAll={false}
+                    />
+                </div>
+            ) : (
+                <div className="px-6 mb-4">
+                    <div className="flex items-center gap-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-xs text-blue-300">
+                        <span>🏦</span>
+                        <span>TurboCore &amp; Pro share one Tastytrade account — all positions are shown together.</span>
+                    </div>
+                </div>
+            )}
 
             {/* Account Summary */}
             {balance && (

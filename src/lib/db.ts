@@ -214,6 +214,67 @@ export async function closePosition(
 }
 
 // ============================================================
+// SHADOW POSITIONS
+// ============================================================
+
+export interface ShadowPosition {
+    id: number;
+    user_id: string;
+    strategy: string;
+    symbol: string;
+    quantity: number;
+    avg_price: number;
+    signal_id: string | null;
+    executed_at: Date;
+}
+
+export async function createShadowPosition(
+    userId: string,
+    strategy: string,
+    symbol: string,
+    quantity: number,
+    avgPrice: number,
+    signalId?: string
+): Promise<ShadowPosition> {
+    const result = await query(
+        `INSERT INTO shadow_positions (
+            user_id, strategy, symbol, quantity, avg_price, signal_id, executed_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
+        ON CONFLICT (user_id, strategy, symbol) DO UPDATE SET
+            quantity = shadow_positions.quantity + $4,
+            avg_price = CASE WHEN shadow_positions.quantity + $4 > 0 
+                             THEN ((shadow_positions.avg_price * shadow_positions.quantity) + ($5 * $4)) / (shadow_positions.quantity + $4)
+                             ELSE 0 END,
+            executed_at = NOW()
+        RETURNING *`,
+        [userId, strategy, symbol, quantity, avgPrice, signalId || null]
+    );
+    return result.rows[0];
+}
+
+export async function clearShadowPositions(userId: string, strategy: string): Promise<void> {
+    await query(
+        `DELETE FROM shadow_positions WHERE user_id = $1 AND strategy = $2`,
+        [userId, strategy]
+    );
+}
+
+export async function getShadowPositions(userId: string, strategy?: string): Promise<ShadowPosition[]> {
+    let queryText = `SELECT * FROM shadow_positions WHERE user_id = $1`;
+    const params: unknown[] = [userId];
+
+    if (strategy) {
+        queryText += ` AND strategy = $2`;
+        params.push(strategy);
+    }
+
+    queryText += ` ORDER BY symbol ASC`;
+
+    const result = await query(queryText, params);
+    return result.rows;
+}
+
+// ============================================================
 // USER SIGNAL EXECUTIONS
 // ============================================================
 
@@ -340,6 +401,21 @@ export async function initializeUserTables(): Promise<void> {
                 badge_id VARCHAR(50) NOT NULL,
                 unlocked_at TIMESTAMP DEFAULT NOW(),
                 UNIQUE(user_id, badge_id)
+            )
+        `);
+
+        // Shadow Positions
+        await query(`
+            CREATE TABLE IF NOT EXISTS shadow_positions (
+                id SERIAL PRIMARY KEY,
+                user_id VARCHAR(128) NOT NULL,
+                strategy VARCHAR(64) NOT NULL,
+                symbol VARCHAR(20) NOT NULL,
+                quantity DECIMAL(15, 6) DEFAULT 0,
+                avg_price DECIMAL(15, 4) DEFAULT 0,
+                signal_id VARCHAR(128),
+                executed_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(user_id, strategy, symbol)
             )
         `);
 

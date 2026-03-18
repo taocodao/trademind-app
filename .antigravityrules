@@ -1,0 +1,6 @@
+ENV: Windows.
+Always use 'cmd /c' for all shell executions to ensure the process terminates correctly and sends an EOF signal.
+Example: Use 'cmd /c pip install pandas' instead of 'pip install pandas'.
+Avoid interactive shells. Always append '; echo DONE' at the end of multi-step commands.
+Redirect long output: always use '> /tmp/output.log 2>&1' and read the file afterward.
+Use '--max-time 30' with curl to prevent indefinite hanging.

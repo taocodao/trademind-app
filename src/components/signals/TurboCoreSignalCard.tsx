@@ -23,9 +23,9 @@ export interface TurboCoreSignal {
 interface PreviewOrder {
     symbol: string;
     action: 'Buy' | 'Sell';
-    quantity: number;       // Whole shares
-    exactShares: number;    // Fractional shares
-    diffValue: number;      // Dollar amount
+    quantity: number;
+    exactShares: number;
+    diffValue: number;
     targetPct: number;
     targetValue: number;
     currentShares: number;
@@ -39,17 +39,20 @@ interface Props {
     executingId: string | null;
     accountData: any;
     principalSetting?: number;
+    isExecuted?: boolean;        // NEW: locks button after execution
+    shadowBalance?: number;       // NEW: used when not linked to Tastytrade
 }
 
-export function TurboCoreSignalCard({ signal, onExecute, executingId, accountData, principalSetting }: Props) {
+export function TurboCoreSignalCard({ signal, onExecute, executingId, accountData, principalSetting, isExecuted, shadowBalance }: Props) {
     const { t } = useTranslation();
     const isExecuting = executingId === String(signal.id);
     const [expanded, setExpanded] = useState(false);
     const isLinked = !!accountData?.accountNumber;
 
-    // Capital Allocation Calculator State
-    const defaultCapital = principalSetting || (accountData?.netLiquidatingValue ? Math.floor(accountData.netLiquidatingValue) : 5000);
-    const [investmentCapital, setInvestmentCapital] = useState<number>(defaultCapital);
+    // Capital basis: use live net liq if linked, shadow balance if virtual, fallback to principalSetting
+    const capitalBasis = isLinked
+        ? (accountData?.netLiquidatingValue || principalSetting || 5000)
+        : (shadowBalance || principalSetting || 5000);
 
     // Parse Payload Defaults
     const regime = signal.regime || "SIDEWAYS";
@@ -69,7 +72,7 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        signalDetails: { ...signal, capital_required: investmentCapital },
+                        signalDetails: { ...signal, capital_required: capitalBasis },
                         accountNumber: accountData?.accountNumber
                     })
                 });
@@ -84,7 +87,7 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
             }
         }, 600);
         return () => clearTimeout(timeout);
-    }, [investmentCapital, isLinked, signal, accountData?.accountNumber]);
+    }, [isLinked, signal, accountData?.accountNumber, capitalBasis]);
 
     // Extract multi-ticker target weights
     const allocations = signal.legs || [];
@@ -99,23 +102,34 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
         return "text-red-400 bg-red-400/10 border-red-400/20";
     };
 
-    // Compute local whole-share display for non-connected users (no live data)
+    // Compute local whole-share display using capitalBasis (real account or shadow balance)
     const getLocalOrderDisplay = () => {
         const orders: Array<{ symbol: string; targetPct: number; dollarAmount: number; approxShares: string }> = [];
         for (const leg of allocations) {
             if (leg.symbol === 'SGOV') continue;
             const pct = leg.target_pct;
-            const dollarAmount = investmentCapital * pct;
+            const dollarAmount = capitalBasis * pct;
             if (dollarAmount < 5) continue;
+            // Approximate share prices for display (market-close reference)
+            const refPrice = leg.symbol === 'QQQ' ? 490 : leg.symbol === 'QLD' ? 68 : 55;
             orders.push({
                 symbol: leg.symbol,
                 targetPct: pct,
                 dollarAmount,
-                approxShares: `≈${dollarAmount > 0 ? (dollarAmount / (leg.symbol === 'QQQ' ? 490 : leg.symbol === 'QLD' ? 68 : 55)).toFixed(1) : '0'}`,
+                approxShares: `≈${(dollarAmount / refPrice).toFixed(1)}`,
             });
         }
         return orders;
     };
+
+    // Format signal creation timestamp with date (e.g. "Mar 18, 3:00 PM")
+    const signalTimestamp = signal.createdAt || (signal as any).created_at;
+    const formattedTimestamp = signalTimestamp
+        ? new Date(signalTimestamp).toLocaleString([], {
+            month: 'short', day: 'numeric',
+            hour: 'numeric', minute: '2-digit'
+        })
+        : null;
 
     return (
         <div className="bg-black/40 border border-[#333] rounded-xl overflow-hidden hover:border-[#444] transition-all group">
@@ -140,9 +154,9 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
                                 <span className={confidence >= 0.65 ? 'text-green-400' : 'text-yellow-400'}>
                                     Target Rebalance
                                 </span>
-                                {(signal.createdAt || (signal as any).created_at) && (
+                                {formattedTimestamp && (
                                     <span className="text-xs text-white/30 border-l border-white/10 pl-2">
-                                        {new Date(signal.createdAt || (signal as any).created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                                        {formattedTimestamp}
                                     </span>
                                 )}
                             </div>
@@ -163,51 +177,37 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
                     <div className="bg-[#111] p-3 rounded-lg border border-white/5 text-center">
                         <div className="text-[10px] text-white/50 mb-1">QQQ</div>
                         <div className="font-mono text-sm font-bold text-white/90">{getTarget('QQQ')}%</div>
-                        <div className="font-mono text-[10px] text-white/40 mt-1">${(investmentCapital * (Number(getTarget('QQQ')) / 100)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                        <div className="font-mono text-[10px] text-white/40 mt-1">${(capitalBasis * (Number(getTarget('QQQ')) / 100)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                     </div>
                     <div className="bg-[#111] p-3 rounded-lg border border-white/5 text-center">
                         <div className="text-[10px] text-white/50 mb-1">QLD (2x)</div>
                         <div className="font-mono text-sm font-bold text-blue-400">{getTarget('QLD')}%</div>
-                        <div className="font-mono text-[10px] text-white/40 mt-1">${(investmentCapital * (Number(getTarget('QLD')) / 100)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                        <div className="font-mono text-[10px] text-white/40 mt-1">${(capitalBasis * (Number(getTarget('QLD')) / 100)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                     </div>
                     <div className="bg-[#111] p-3 rounded-lg border border-white/5 text-center">
                         <div className="text-[10px] text-white/50 mb-1">TQQQ (3x)</div>
                         <div className="font-mono text-sm font-bold text-purple-400">{getTarget('TQQQ')}%</div>
-                        <div className="font-mono text-[10px] text-white/40 mt-1">${(investmentCapital * (Number(getTarget('TQQQ')) / 100)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                        <div className="font-mono text-[10px] text-white/40 mt-1">${(capitalBasis * (Number(getTarget('TQQQ')) / 100)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                     </div>
                     <div className="bg-[#111] p-3 rounded-lg border border-white/5 text-center">
                         <div className="text-[10px] text-white/50 mb-1">SGOV</div>
                         <div className="font-mono text-sm font-bold text-green-400">{getTarget('SGOV')}%</div>
-                        <div className="font-mono text-[10px] text-white/40 mt-1">${(investmentCapital * (Number(getTarget('SGOV')) / 100)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                        <div className="font-mono text-[10px] text-white/40 mt-1">${(capitalBasis * (Number(getTarget('SGOV')) / 100)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                     </div>
                 </div>
 
-                {/* Capital Allocation Calculator */}
-                <div className="mb-4 bg-black/50 p-3 rounded-lg border border-white/5">
-                    <div className="flex justify-between items-center mb-2">
-                        <label className="text-xs text-white/70 font-semibold flex items-center gap-1">
-                            <Target className="w-3.5 h-3.5 text-purple-400" />
-                            Target Investment Capital
-                        </label>
-                        <span className="text-xs font-mono text-purple-400 font-bold">${investmentCapital.toLocaleString()}</span>
-                    </div>
-                    <input
-                        type="range"
-                        min={1000}
-                        max={100000}
-                        step={500}
-                        value={investmentCapital}
-                        onChange={(e) => setInvestmentCapital(Number(e.target.value))}
-                        className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-purple-500 mb-2"
-                    />
-                    <div className="flex justify-between text-[10px] text-white/30 font-mono">
-                        <span>$1k</span>
-                        <span>$50k</span>
-                        <span>$100k</span>
-                    </div>
+                {/* Capital basis label (replaces slider) */}
+                <div className="mb-4 flex items-center justify-between px-2 py-2 bg-black/30 rounded-lg border border-white/5 text-xs">
+                    <span className="text-white/50 flex items-center gap-1">
+                        <DollarSign className="w-3.5 h-3.5 text-purple-400" />
+                        {isLinked ? 'Account Net Liq' : 'Shadow Balance'}
+                    </span>
+                    <span className="font-mono font-bold text-purple-400">
+                        ${capitalBasis.toLocaleString()}
+                    </span>
                 </div>
 
-                {/* Order Details - ALWAYS SHOWN (for both connected and non-connected users) */}
+                {/* Order Details */}
                 <div className="mb-4 bg-purple-900/10 p-3 rounded-lg border border-purple-500/20 relative overflow-hidden">
                     <div className="text-xs text-purple-400 font-semibold mb-2 flex justify-between items-center">
                         <span className="flex items-center gap-1">
@@ -218,7 +218,6 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
                     </div>
 
                     {isLinked ? (
-                        // Connected users: show live preview from API
                         previewOrders.length === 0 && !isPreviewLoading ? (
                             <div className="text-xs text-white/40 italic text-center py-2">No rebalance needed</div>
                         ) : (
@@ -243,19 +242,16 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
                             </div>
                         )
                     ) : (
-                        // Non-connected users: show estimated whole-share orders
                         (() => {
                             const localOrders = getLocalOrderDisplay();
                             return localOrders.length === 0 ? (
-                                <div className="text-xs text-white/40 italic text-center py-2">Adjust capital slider to see orders</div>
+                                <div className="text-xs text-white/40 italic text-center py-2">Set your shadow balance in Settings to see orders</div>
                             ) : (
                                 <div className="space-y-1.5">
                                     {localOrders.map((o, i) => (
                                         <div key={i} className="flex justify-between items-center text-xs font-mono bg-black/40 p-2 rounded border border-white/5">
                                             <div className="flex items-center gap-2">
-                                                <span className="font-bold px-1.5 py-0.5 rounded text-green-400 bg-green-400/10">
-                                                    BUY
-                                                </span>
+                                                <span className="font-bold px-1.5 py-0.5 rounded text-green-400 bg-green-400/10">BUY</span>
                                                 <span className="text-white/90 font-bold">{o.symbol}</span>
                                             </div>
                                             <div className="text-right">
@@ -265,7 +261,7 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
                                         </div>
                                     ))}
                                     <div className="text-[10px] text-yellow-400/60 text-center pt-1">
-                                        💡 Connect Tastytrade for exact live pricing & auto-execution
+                                        💡 Connect Tastytrade for exact live pricing &amp; auto-execution
                                     </div>
                                 </div>
                             );
@@ -275,37 +271,45 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
 
                 {/* Footer Controls & Execution */}
                 <div className="flex gap-2">
-                    <button
-                        onClick={() => onExecute({ ...signal, capital_required: investmentCapital })}
-                        disabled={isExecuting}
-                        className={`
+                    {isExecuted ? (
+                        // Locked executed state
+                        <div className="flex-1 py-3 px-4 rounded-lg font-bold flex items-center justify-center gap-2 bg-green-500/10 border border-green-500/30 text-green-400 cursor-default">
+                            <CheckCircle className="w-4 h-4" />
+                            <span>Executed</span>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={() => onExecute({ ...signal, capital_required: capitalBasis })}
+                            disabled={isExecuting}
+                            className={`
                                 flex-1 py-3 px-4 rounded-lg font-bold flex flex-col items-center justify-center transition-all
                                 ${isCrisis
-                                ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30 cursor-pointer'
-                                : 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg'
-                            }
+                                    ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30 cursor-pointer'
+                                    : 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg'
+                                }
                                 ${isExecuting ? 'opacity-70 cursor-wait' : ''}
                             `}
-                    >
-                        {isExecuting ? (
-                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        ) : isCrisis ? (
-                            <>
-                                <span className="flex items-center gap-1"><AlertTriangle className="w-4 h-4" /> RISK OFF</span>
-                                <span className="text-[10px] font-normal opacity-70">Bear regime — 100% cash</span>
-                            </>
-                        ) : isLinked ? (
-                            <>
-                                <span className="flex items-center gap-1"><Zap className="w-4 h-4" /> EXECUTE NOTIONAL SYNC</span>
-                                <span className="text-[10px] font-normal opacity-70">Dollar-based · fractional shares</span>
-                            </>
-                        ) : (
-                            <>
-                                <span className="flex items-center gap-1"><Shield className="w-4 h-4" /> CALCULATE SHADOW SYNC</span>
-                                <span className="text-[10px] font-normal opacity-70">Manual execution guide</span>
-                            </>
-                        )}
-                    </button>
+                        >
+                            {isExecuting ? (
+                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : isCrisis ? (
+                                <>
+                                    <span className="flex items-center gap-1"><AlertTriangle className="w-4 h-4" /> RISK OFF</span>
+                                    <span className="text-[10px] font-normal opacity-70">Bear regime — 100% cash</span>
+                                </>
+                            ) : isLinked ? (
+                                <>
+                                    <span className="flex items-center gap-1"><Zap className="w-4 h-4" /> EXECUTE NOTIONAL SYNC</span>
+                                    <span className="text-[10px] font-normal opacity-70">Dollar-based · fractional shares</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="flex items-center gap-1"><Shield className="w-4 h-4" /> CALCULATE SHADOW SYNC</span>
+                                    <span className="text-[10px] font-normal opacity-70">Manual execution guide</span>
+                                </>
+                            )}
+                        </button>
+                    )}
 
                     <button
                         onClick={() => setExpanded(!expanded)}

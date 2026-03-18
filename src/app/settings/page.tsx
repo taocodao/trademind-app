@@ -12,10 +12,13 @@ import { TQQQAutoApproveSettings } from '@/components/settings/TQQQAutoApproveSe
 import { TurboBounceAllocationSettings } from '@/components/settings/TurboBounceAllocationSettings';
 import { SubscriptionManager } from '@/components/settings/SubscriptionManager';
 import { MyStrategies } from '@/components/settings/MyStrategies';
+import { StrategyTabs } from '@/components/ui/StrategyTabs';
+import { useStrategyContext } from '@/components/providers/StrategyContext';
 
 export default function SettingsPage() {
     const { ready, authenticated } = usePrivy();
     const router = useRouter();
+    const { activeStrategy, setActiveStrategy, enabledStrategies } = useStrategyContext();
 
     useEffect(() => {
         if (ready && !authenticated) {
@@ -51,24 +54,42 @@ export default function SettingsPage() {
             </header>
 
             <div className="px-4 space-y-4">
-                {/* Investment Principal */}
-                <InvestmentPrincipal />
-
-                {/* Shadow Ledger for Tier 2b */}
-                <ShadowLedgerPanel />
-
+                
                 {/* Subscription Tier Management — self-contained, fetches its own data */}
                 <SubscriptionManager />
 
-                {/* TQQQ Risk Level + Auto-Approval */}
-                <TQQQAutoApproveSettings />
+                {/* My Strategies Subscription */}
+                <MyStrategies />
+                
+                {/* Strategy-Specific Settings */}
+                <div className="glass-card p-4">
+                    <h3 className="font-semibold mb-3 text-sm">Strategy Configuration</h3>
+                    <div className="mb-4">
+                        <StrategyTabs
+                            strategies={enabledStrategies}
+                            activeKey={activeStrategy}
+                            onChange={setActiveStrategy}
+                        />
+                    </div>
+                    
+                    <div className="space-y-4">
+                        {/* Investment Principal */}
+                        <InvestmentPrincipal strategy={activeStrategy} />
+
+                        {/* Shadow Ledger — now managed in the Positions tab */}
+                        <div className="flex items-center gap-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-xs text-blue-300">
+                            <span className="text-lg">💼</span>
+                            <span>Shadow Ledger balance &amp; virtual positions are managed in the <strong>Positions</strong> tab.</span>
+                        </div>
+
+                        {/* Auto-Approve Settings */}
+                        <TQQQAutoApproveSettings />
+                    </div>
+                </div>
 
                 {/* TurboBounce Multi-Ticker Setup */}
                 <TurboBounceAllocationSettings />
                 
-                {/* My Strategies Subscription */}
-                <MyStrategies />
-
                 {/* Strategy Summary */}
                 <section className="glass-card p-4">
                     <h3 className="font-semibold mb-3 text-sm">Strategy Summary</h3>

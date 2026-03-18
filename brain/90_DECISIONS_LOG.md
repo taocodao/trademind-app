@@ -2,6 +2,27 @@
 
 ---
 
+## 2026-03-15: Subscription Webhook & Access Flow Enhancements
+
+**Decision**: Reimplemented Stripe Webhook handling for robustness and fixed Vercel deployment/redirect issues causing webhook failures (307).
+
+**Context**: 
+- Vercel's "Deployment Protection" (Vercel Authentication) was intercepting unauthenticated Stripe webhooks with a 307 redirect.
+- Stripe's Strict URL matching meant requests hitting `trademind.bot` were being redirected to `www.trademind.bot`, dropping POST payloads.
+- Subscription database updates (`user_settings`) lacked `cancel_at_period_end` tracking, creating UI inconsistencies.
+- Cross-domain cookie mismatch required explicitly attaching Privy tokens to client-side API requests for subscription updates.
+
+**Resolution**:
+- Disabled Vercel Authentication on production deployment to fix 307 redirect loops on webhooks.
+- Updated Stripe webhook URL to explicitly use `https://www.trademind.bot/api/stripe/webhook`.
+- Webhooks now track `cancel_at_period_end` and `cancel_at` for graceful subscription cessation.
+- The `checkout.session.completed` hook now uses `INSERT ... ON CONFLICT DO UPDATE` to safely handle first-time vs returning users.
+- Explicitly attach Privy's `getAccessToken()` to `Authorization: Bearer <token>` on all `/api/settings/tier` API calls from the client.
+
+**Affected**: `src/app/api/stripe/webhook/route.ts`, `src/components/settings/SubscriptionManager.tsx`, `src/app/dashboard/page.tsx`, `Vercel Settings`, `Stripe Settings`.
+
+---
+
 ## 2026-03-10: Migration of Equity Execution to Vercel (Next.js)
 
 **Decision**: Move the TurboCore (Equity/ETF Rebalancing) delta calculation and order submission logic from the EC2 Python backend directly into the Vercel (Next.js) frontend client.

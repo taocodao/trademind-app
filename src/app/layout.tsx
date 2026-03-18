@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { PrivyProvider } from "@/components/providers/PrivyProvider";
 import { SignalProvider } from "@/components/providers/SignalProvider";
@@ -9,15 +8,7 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { MarketingProviders } from "@/components/marketing/MarketingProviders";
 import Script from "next/script";
 
-const inter = Inter({
-    subsets: ["latin"],
-    variable: "--font-inter",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-    subsets: ["latin"],
-    variable: "--font-mono",
-});
+// Fonts migrated to globals.css
 
 export const metadata: Metadata = {
     title: "TradeMind - Smart Trade Signals",
@@ -48,7 +39,7 @@ export default function RootLayout({
                 </Script>
                 <Script async src="https://r.wdfl.co/rw.js" data-rewardful={process.env.NEXT_PUBLIC_REWARDFUL_API_KEY || ""} strategy="afterInteractive" />
             </head>
-            <body className={`${inter.variable} ${jetbrainsMono.variable} antialiased min-h-screen bg-tm-bg`}>
+            <body className={`font-sans antialiased min-h-screen bg-tm-bg`}>
                 <MarketingProviders>
                     <PrivyProvider>
                         <SettingsProvider>

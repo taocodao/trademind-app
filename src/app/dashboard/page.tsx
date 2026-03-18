@@ -1097,6 +1097,7 @@ function DashboardContent() {
                                         executingId={executingId}
                                         accountData={data}
                                         principalSetting={(settings?.investmentPrincipal as unknown as Record<string, number>)?.[activeStrategy] || (settings?.investmentPrincipal as unknown as Record<string, number>)?.['default'] || 25000}
+                                        shadowBalance={(settings?.shadowLedger as unknown as Record<string, any>)?.[activeStrategy]?.balance || (settings?.shadowLedger as unknown as Record<string, any>)?.['default']?.balance}
                                     />
                                 ))}
 

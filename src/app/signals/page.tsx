@@ -89,6 +89,7 @@ export default function SignalsPage() {
     const [approving, setApproving] = useState<string | null>(null);
     const [confirmModal, setConfirmModal] = useState<Signal | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [executedIds, setExecutedIds] = useState<Set<string>>(new Set());
 
     const signals = allSignals.filter((s: any) => {
         if (s.status !== 'pending') {
@@ -160,6 +161,9 @@ export default function SignalsPage() {
             }
 
             console.log("Trade executed successfully:", data);
+
+            // Mark as executed (lock the button) before removing from list
+            setExecutedIds(prev => new Set(prev).add(confirmModal.id));
 
             // Remove the executed signal from the list
             removeSignal(confirmModal.id);
@@ -300,12 +304,11 @@ export default function SignalsPage() {
                         <TurboCoreSignalCard
                             key={signal.id}
                             signal={signal as any}
-                            onExecute={() => {
-                                // For now, we reuse the general confirmation modal
-                                handleApproveClick(signal);
-                            }}
+                            onExecute={() => handleApproveClick(signal)}
                             executingId={approving}
                             accountData={null}
+                            isExecuted={executedIds.has(signal.id)}
+                            shadowBalance={(settings?.shadowLedger as unknown as Record<string, any>)?.[activeStrategy]?.balance || (settings?.shadowLedger as unknown as Record<string, any>)?.['default']?.balance}
                         />
                     ) : (
                         <SignalCard

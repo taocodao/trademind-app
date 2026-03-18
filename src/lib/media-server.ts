@@ -8,7 +8,20 @@
  */
 import { Redis } from "@upstash/redis";
 
-const redis = Redis.fromEnv();
+// Safely initialize Redis to prevent build errors when env vars are missing/invalid
+const getRedisClient = () => {
+    const url = process.env.UPSTASH_REDIS_REST_URL;
+    if (url && url.startsWith('https://') && url !== 'FILL_IN') {
+        try {
+            return Redis.fromEnv();
+        } catch (e) {
+            return null;
+        }
+    }
+    return null;
+};
+
+const redis = getRedisClient();
 
 export type VideoSlot = "clip1" | "clip2" | "clip3";
 
@@ -20,6 +33,7 @@ const FALLBACKS: Record<VideoSlot, string> = {
 
 export async function getVideoUrls(): Promise<Record<VideoSlot, string>> {
     try {
+        if (!redis) return FALLBACKS;
         const stored = await redis.hgetall("media:videos");
         return {
             clip1: (stored?.clip1 as string) ?? FALLBACKS.clip1,
@@ -33,6 +47,7 @@ export async function getVideoUrls(): Promise<Record<VideoSlot, string>> {
 
 export async function getVideoUrl(slot: VideoSlot): Promise<string> {
     try {
+        if (!redis) return FALLBACKS[slot];
         const url = await redis.hget<string>("media:videos", slot);
         return url ?? FALLBACKS[slot];
     } catch {

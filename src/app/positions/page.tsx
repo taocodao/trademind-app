@@ -15,6 +15,7 @@ import { useStrategyContext } from "@/components/providers/StrategyContext";
 import { StrategyTabs } from "@/components/ui/StrategyTabs";
 import { getStrategy } from "@/lib/strategies";
 import { useSettings } from "@/components/providers/SettingsProvider";
+import { ShadowLedgerPanel } from "@/components/dashboard/ShadowLedgerPanel";
 
 interface EquityPosition {
     symbol: string;
@@ -312,6 +313,13 @@ export default function PositionsPage() {
                     ))
                 )}
             </div>
+
+            {/* Shadow Ledger Panel — shown in Positions when not linked to live broker */}
+            {isVirtualLedger && (
+                <div className="px-6 mt-6">
+                    <ShadowLedgerPanel strategy={activeStrategy} />
+                </div>
+            )}
         </main>
     );
 }

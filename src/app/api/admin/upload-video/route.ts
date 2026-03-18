@@ -2,7 +2,19 @@ import { put } from "@vercel/blob";
 import { Redis } from "@upstash/redis";
 import { NextRequest, NextResponse } from "next/server";
 
-const redis = Redis.fromEnv();
+// Safely initialize Redis to prevent build errors when env vars are missing/invalid
+const getRedis = () => {
+    if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_URL !== 'FILL_IN') {
+        try {
+            return Redis.fromEnv();
+        } catch (e) {
+            return null;
+        }
+    }
+    return null;
+};
+
+const redis = getRedis();
 
 // Valid slot names that can be uploaded
 const VALID_SLOTS = ["clip1", "clip2", "clip3"] as const;
@@ -43,6 +55,10 @@ export async function POST(req: NextRequest) {
             addRandomSuffix: false, // Keep stable URLs for the same slot
         });
 
+        if (!redis) {
+            return NextResponse.json({ error: "Redis is not configured on this environment" }, { status: 500 });
+        }
+
         // Save URL mapping in Redis hash: media:videos { clip1: url, clip2: url, ... }
         await redis.hset("media:videos", { [slot]: blob.url });
 
@@ -60,6 +76,9 @@ export async function POST(req: NextRequest) {
  */
 export async function GET() {
     try {
+        if (!redis) {
+            return NextResponse.json({ videos: {} });
+        }
         const videos = await redis.hgetall("media:videos");
         return NextResponse.json({ videos: videos ?? {} });
     } catch (err: unknown) {

@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
                 use.approved_at,
                 use.executed_at,
                 use.error_message,
+                use.source as execution_source,
                 s.symbol,
                 s.strategy
              FROM user_signal_executions use
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
             ...row,
             source: 'trademind',
             symbol: row.symbol || null,
-            strategy: row.strategy || null,
+            strategy: (row.execution_source && row.execution_source !== 'manual') ? row.execution_source : (row.strategy || null),
         }));
 
         return NextResponse.json({ activities });

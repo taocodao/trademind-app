@@ -1,11 +1,17 @@
 import { Redis } from '@upstash/redis';
 
-// Initialize Redis client
-// Uses UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN from environment
-const redis = new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL || '',
-    token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
-});
+// Initialize Redis client safely
+const getRedisClient = () => {
+    const url = process.env.UPSTASH_REDIS_REST_URL;
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+    
+    if (url && url.startsWith('https://') && url !== 'FILL_IN') {
+        return new Redis({ url, token: token || '' });
+    }
+    return null;
+};
+
+const redis = getRedisClient();
 
 export interface TastytradeTokens {
     accessToken: string;
@@ -23,6 +29,10 @@ export async function storeTastytradeTokens(
     userId: string,
     tokens: TastytradeTokens
 ): Promise<void> {
+    if (!redis) {
+        console.warn('⚠️ storeTastytradeTokens: Redis not configured');
+        return;
+    }
     const key = `tastytrade:${userId}`;
     await redis.set(key, JSON.stringify(tokens));
     // Tokens don't expire (refresh token is long-lived)
@@ -34,6 +44,7 @@ export async function storeTastytradeTokens(
 export async function getTastytradeTokens(
     userId: string
 ): Promise<TastytradeTokens | null> {
+    if (!redis) return null;
     const key = `tastytrade:${userId}`;
     const data = await redis.get<string>(key);
 
@@ -58,6 +69,7 @@ export async function isTastytradeLinked(userId: string): Promise<boolean> {
  * Delete Tastytrade tokens (unlink account)
  */
 export async function unlinkTastytrade(userId: string): Promise<void> {
+    if (!redis) return;
     const key = `tastytrade:${userId}`;
     await redis.del(key);
 }

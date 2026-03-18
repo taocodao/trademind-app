@@ -1,8 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { StrategyConfig, STRATEGIES, getStrategy } from '@/lib/strategies';
+import { StrategyConfig, STRATEGIES, getStrategy, getStrategiesForSubscription } from '@/lib/strategies';
 import { useSignalContext } from './SignalProvider';
+import { usePrivy } from '@privy-io/react-auth';
 
 interface StrategyContextType {
     activeStrategy: string;
@@ -20,43 +21,88 @@ export function StrategyProvider({ children }: { children: ReactNode }) {
     const [enabledStrategies, setEnabledStrategies] = useState<StrategyConfig[]>([STRATEGIES[0]]); // Default to TurboCore
     const [userStrategies, _setUserStrategies] = useState<string[]>([]);
     const [hasLoadedPrefs, setHasLoadedPrefs] = useState(false);
+    const { getAccessToken, authenticated } = usePrivy();
 
     // Parse signals to figure out which strategies are active for this user
     useEffect(() => {
         if (!hasLoadedPrefs) return;
         
-        let activeConfigs: StrategyConfig[] = [];
-
-        // Condition 1: User has explicit subscriptions saved
-        if (userStrategies.length > 0) {
-            activeConfigs = userStrategies
-                .map(key => getStrategy(key))
-                .filter((config): config is StrategyConfig => config !== undefined);
-        } else {
-            // Condition 2: Fallback to active signals from DB
-            const activeKeys = new Set<string>();
-            allSignals.forEach(signal => {
-                if (signal.strategy) {
-                    // Check if strategy matches any in our registry
-                    const strategyConf = getStrategy(signal.strategy);
-                    if (strategyConf) {
-                        activeKeys.add(strategyConf.key);
-                    }
-                }
+        // Always try to sync with subscription tier for bundle holders
+        if (authenticated) {
+            getAccessToken().then(token => {
+                fetch('/api/settings/tier', {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                })
+                    .then(r => r.json())
+                    .then(d => {
+                        const tierKeys = getStrategiesForSubscription(
+                            d.tier === 'turbocore' ? 'TURBOCORE' : 
+                            d.tier === 'turbocore_pro' ? 'TURBOCORE_PRO' : 
+                            d.tier === 'both_bundle' ? 'BOTH' : '' as any
+                        );
+                        
+                        // If user is a bundle holder, ensure BOTH are enabled
+                        if (d.tier === 'both_bundle') {
+                            const current = new Set(userStrategies);
+                            let changed = false;
+                            tierKeys.forEach(k => {
+                                if (!current.has(k)) {
+                                    current.add(k);
+                                    changed = true;
+                                }
+                            });
+                            if (changed) {
+                                console.log('🔄 StrategyContext: Auto-enabling both strategies for bundle user');
+                                setUserStrategies(Array.from(current));
+                                return; // setUserStrategies will trigger a re-run of this hook
+                            }
+                        }
+                        
+                        // If no explicitly saved strategies, use the tier default
+                        if (userStrategies.length === 0 && tierKeys.length > 0) {
+                            setUserStrategies(tierKeys);
+                        } else {
+                            updateEnabledStrategies();
+                        }
+                    })
+                    .catch(e => {
+                        console.error('Failed to parse tier for strategy init', e);
+                        updateEnabledStrategies();
+                    });
             });
-
-            activeConfigs = Array.from(activeKeys)
-                .map(key => getStrategy(key))
-                .filter((config): config is StrategyConfig => config !== undefined);
-        }
-
-        // Fallback to default if no signals found and no user strategies
-        if (activeConfigs.length > 0) {
-            setEnabledStrategies(activeConfigs);
         } else {
-            setEnabledStrategies([STRATEGIES[0]]);
+            updateEnabledStrategies();
         }
-    }, [allSignals, userStrategies, hasLoadedPrefs]);
+
+        function updateEnabledStrategies() {
+            let activeConfigs: StrategyConfig[] = [];
+
+            if (userStrategies.length > 0) {
+                activeConfigs = userStrategies
+                    .map(key => getStrategy(key))
+                    .filter((config): config is StrategyConfig => config !== undefined);
+            } else {
+                // Fallback to scanning signals
+                const activeKeys = new Set<string>();
+                allSignals.forEach(signal => {
+                    if (signal.strategy) {
+                        const strategyConf = getStrategy(signal.strategy);
+                        if (strategyConf) activeKeys.add(strategyConf.key);
+                    }
+                });
+
+                activeConfigs = Array.from(activeKeys)
+                    .map(key => getStrategy(key))
+                    .filter((config): config is StrategyConfig => config !== undefined);
+            }
+
+            if (activeConfigs.length > 0) {
+                setEnabledStrategies(activeConfigs);
+            } else {
+                setEnabledStrategies([STRATEGIES[0]]);
+            }
+        }
+    }, [allSignals, userStrategies, hasLoadedPrefs, authenticated, getAccessToken]);
 
     // Ensure state synchronization
     const setActiveStrategy = (key: string) => {

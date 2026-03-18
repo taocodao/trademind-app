@@ -115,20 +115,26 @@ export async function POST(
             const balanceData = await getAccountBalance(accessToken, accountNumber);
             const buyingPower = balanceData.buyingPower;
 
-            const estimatedCost = signalData.cost ||
-                (signalData.capital_required) ||
-                ((signalData.strike || 0) * 100 * (signalData.contracts || 1));
+            const isRebalance = signalData.action === 'REBALANCE' || signalData.type === 'REBALANCE' || String(signalData.strategy || '').includes('TURBOCORE');
 
-            if (buyingPower < estimatedCost) {
-                console.error(`❌ Insufficient Buying Power: $${buyingPower} < $${estimatedCost}`);
-                return NextResponse.json({
-                    status: 'failed',
-                    signal: { id, ...signalData },
-                    error: 'Insufficient buying power',
-                    message: `Account has $${buyingPower.toFixed(2)} BP, but trade requires ~$${estimatedCost.toFixed(2)}`
-                }, { status: 400 });
+            if (!isRebalance) {
+                const estimatedCost = signalData.cost ||
+                    (signalData.capital_required) ||
+                    ((signalData.strike || 0) * 100 * (signalData.contracts || 1));
+
+                if (buyingPower < estimatedCost) {
+                    console.error(`❌ Insufficient Buying Power: $${buyingPower} < $${estimatedCost}`);
+                    return NextResponse.json({
+                        status: 'failed',
+                        signal: { id, ...signalData },
+                        error: 'Insufficient buying power',
+                        message: `Account has $${buyingPower.toFixed(2)} BP, but trade requires ~$${estimatedCost.toFixed(2)}`
+                    }, { status: 400 });
+                }
+                console.log(`✅ Buying Power OK: $${buyingPower} available > $${estimatedCost} required`);
+            } else {
+                console.log(`✅ Buying Power Check Bypassed: Rebalance trade (sells fund buys)`);
             }
-            console.log(`✅ Buying Power OK: $${buyingPower} available > $${estimatedCost} required`);
         } catch (bpError) {
             console.warn('⚠️ Could not verify buying power (proceeding with caution):', bpError);
         }

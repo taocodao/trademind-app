@@ -6,7 +6,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 
 export function ShadowLedgerPanel({ strategy = 'default' }: { strategy?: string }) {
     const { settings, updateShadowLedger } = useSettings();
-    const ledger = (settings.shadowLedger as Record<string, any>)[strategy] || (settings.shadowLedger as Record<string, any>)['default'] || { balance: 0, positions: {} };
+    const ledger = (settings.shadowLedger as unknown as Record<string, any>)[strategy] || (settings.shadowLedger as unknown as Record<string, any>)['default'] || { balance: 0, positions: {} };
 
     const [amount, setAmount] = useState('');
     const [action, setAction] = useState<'deposit' | 'withdraw'>('deposit');

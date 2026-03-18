@@ -9,7 +9,7 @@ export function InvestmentPrincipal({ strategy = 'default' }: { strategy?: strin
     const [inputValue, setInputValue] = useState('');
     const [saved, setSaved] = useState(false);
 
-    const principalAmount = (settings.investmentPrincipal as Record<string, number>)[strategy] || (settings.investmentPrincipal as Record<string, number>)['default'] || 25000;
+    const principalAmount = (settings.investmentPrincipal as unknown as Record<string, number>)[strategy] || (settings.investmentPrincipal as unknown as Record<string, number>)['default'] || 25000;
 
     useEffect(() => {
         setInputValue(principalAmount.toLocaleString());

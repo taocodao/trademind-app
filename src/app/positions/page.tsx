@@ -111,7 +111,7 @@ export default function PositionsPage() {
             } else {
                 // Fetch virtual shadow positions
                 setIsVirtualLedger(true);
-                const activeLedger = (settings?.shadowLedger as Record<string, any>)?.[activeStrategy] || (settings?.shadowLedger as Record<string, any>)?.['default'] || { balance: 0, positions: {} };
+                const activeLedger = (settings?.shadowLedger as unknown as Record<string, any>)?.[activeStrategy] || (settings?.shadowLedger as unknown as Record<string, any>)?.['default'] || { balance: 0, positions: {} };
                 
                 setBalance({
                     cashAvailable: activeLedger.balance,

@@ -660,7 +660,7 @@ function DashboardContent() {
                 fetchAccountData(); // Immediately refresh positions matching user request
             } else {
                 // Tier 2b: Shadow Sync Calculation
-                const shadowLedgers = settings?.shadowLedger as Record<string, any> || {};
+                const shadowLedgers = settings?.shadowLedger as unknown as Record<string, any> || {};
                 const activeLedger = shadowLedgers[activeStrategy] || shadowLedgers['default'];
                 if (!activeLedger) {
                     throw new Error("No shadow ledger found. Please configure it in settings.");
@@ -1007,7 +1007,7 @@ function DashboardContent() {
 
                         <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5 text-xs text-tm-muted">
 
-                            <span>Principal: <span className="text-tm-text font-semibold">${((settings.investmentPrincipal as Record<string, number>)[activeStrategy] || (settings.investmentPrincipal as Record<string, number>)['default'] || 25000).toLocaleString()}</span></span>
+                            <span>Principal: <span className="text-tm-text font-semibold">${((settings.investmentPrincipal as unknown as Record<string, number>)[activeStrategy] || (settings.investmentPrincipal as unknown as Record<string, number>)['default'] || 25000).toLocaleString()}</span></span>
 
                         </div>
 
@@ -1096,7 +1096,7 @@ function DashboardContent() {
                                         onExecute={handleTurboCoreExecute}
                                         executingId={executingId}
                                         accountData={data}
-                                        principalSetting={(settings?.investmentPrincipal as Record<string, number>)?.[activeStrategy] || (settings?.investmentPrincipal as Record<string, number>)?.['default'] || 25000}
+                                        principalSetting={(settings?.investmentPrincipal as unknown as Record<string, number>)?.[activeStrategy] || (settings?.investmentPrincipal as unknown as Record<string, number>)?.['default'] || 25000}
                                     />
                                 ))}
 

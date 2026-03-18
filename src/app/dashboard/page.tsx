@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 
 
 import { usePrivy } from '@privy-io/react-auth';
@@ -658,7 +660,8 @@ function DashboardContent() {
                 fetchAccountData(); // Immediately refresh positions matching user request
             } else {
                 // Tier 2b: Shadow Sync Calculation
-                if (!settings?.shadowLedger) {
+                const activeLedger = settings?.shadowLedger[activeStrategy] || settings?.shadowLedger['default'];
+                if (!activeLedger) {
                     throw new Error("No shadow ledger found. Please configure it in settings.");
                 }
 
@@ -670,8 +673,8 @@ function DashboardContent() {
                 const endpoint = '/api/calculate_delta_trade';
                 const payload = {
                     targetMatrix,
-                    shadowBalance: settings.shadowLedger.balance || 0,
-                    shadowPositions: settings.shadowLedger.positions || {}
+                    shadowBalance: activeLedger.balance || 0,
+                    shadowPositions: activeLedger.positions || {}
                 };
 
                 const response = await fetch(endpoint, {
@@ -687,9 +690,41 @@ function DashboardContent() {
 
                 const result = await response.json();
                 console.log("Calculated Shadow Orders: ", result.orders);
-                // For a polished experience, we'd open a modal here. For now, we resolve the signal and toast.
-                setToast({ msg: `Shadow Sync: Calculated ${result.orders?.length || 0} manual trades. Check console logs.`, ok: true });
+
+                // Commit the shadow trades to DB
+                if (result.orders && result.orders.length > 0) {
+                    const syncRes = await fetch('/api/shadow-positions', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            action: 'sync',
+                            strategy: activeStrategy,
+                            signalId: signal.id,
+                            orders: result.orders
+                        }),
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+
+                    if (!syncRes.ok) {
+                        const errData = await syncRes.json();
+                        throw new Error(errData.error || errData.message || 'Failed to save shadow positions');
+                    }
+                } else {
+                    // Even if no trades, mark signal as executed
+                    await fetch('/api/shadow-positions', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            action: 'sync',
+                            strategy: activeStrategy,
+                            signalId: signal.id,
+                            orders: []
+                        }),
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                }
+
+                setToast({ msg: `Shadow Sync Executed: Processed ${result.orders?.length || 0} trades virtually.`, ok: true });
                 await removeSignal(String(signal.id));
+                // Optional: trigger a refresh of shadow positions to update balance/ledgers if shown on dashboard
             }
         } catch (err: any) {
             console.error('Core Exec error:', err);
@@ -755,7 +790,7 @@ function DashboardContent() {
 
     return (
 
-        <main className="min-h-screen pb-24 max-w-lg mx-auto w-full border-x border-white/5 bg-tm-bg shadow-2xl relative flex flex-col">
+        <main className="min-h-screen pb-24 max-w-4xl mx-auto w-full border-x border-white/5 bg-tm-bg shadow-2xl relative flex flex-col">
 
             {/* TOP NAV */}
 
@@ -971,7 +1006,7 @@ function DashboardContent() {
 
                         <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5 text-xs text-tm-muted">
 
-                            <span>Principal: <span className="text-tm-text font-semibold">${settings.investmentPrincipal.toLocaleString()}</span></span>
+                            <span>Principal: <span className="text-tm-text font-semibold">${(settings.investmentPrincipal[activeStrategy] || settings.investmentPrincipal['default'] || 25000).toLocaleString()}</span></span>
 
                         </div>
 
@@ -1060,7 +1095,7 @@ function DashboardContent() {
                                         onExecute={handleTurboCoreExecute}
                                         executingId={executingId}
                                         accountData={data}
-                                        principalSetting={settings?.investmentPrincipal}
+                                        principalSetting={settings?.investmentPrincipal[activeStrategy] || settings?.investmentPrincipal['default'] || 25000}
                                     />
                                 ))}
 

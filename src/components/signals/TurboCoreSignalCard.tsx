@@ -17,6 +17,7 @@ export interface TurboCoreSignal {
     ema_signal?: number;
     sma200_gate?: boolean;
     timestamp: string;
+    createdAt?: string;
 }
 
 interface PreviewOrder {
@@ -139,6 +140,11 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
                                 <span className={confidence >= 0.65 ? 'text-green-400' : 'text-yellow-400'}>
                                     Target Rebalance
                                 </span>
+                                {(signal.createdAt || (signal as any).created_at) && (
+                                    <span className="text-xs text-white/30 border-l border-white/10 pl-2">
+                                        {new Date(signal.createdAt || (signal as any).created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>

@@ -43,7 +43,8 @@ export function SignalCard({
 
     // Position sizing calculation
     const riskPct = settings.riskLevel === 'LOW' ? 0.05 : settings.riskLevel === 'HIGH' ? 0.10 : 0.075;
-    const maxRisk = settings.investmentPrincipal * riskPct;
+    const principal = settings.investmentPrincipal?.['default'] ?? 5000;
+    const maxRisk = principal * riskPct;
     const maxLossPerContract = (signal.maxLoss || 5.0) * 100;
     // Cap at 10 contracts, floor at 1
     const quantity = Math.min(Math.max(1, Math.floor(maxRisk / maxLossPerContract)), 10);

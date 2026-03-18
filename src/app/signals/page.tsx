@@ -25,6 +25,7 @@ import { TurboBounceSignalCard, isTurboBounceSignal } from "@/components/signals
 import { TurboCoreSignalCard } from "@/components/signals/TurboCoreSignalCard";
 import { useStrategyContext } from "@/components/providers/StrategyContext";
 import { StrategyTabs } from "@/components/ui/StrategyTabs";
+import { useSettings } from "@/components/providers/SettingsProvider";
 
 interface Signal {
     id: string;
@@ -82,6 +83,7 @@ function formatTime(timeStr: string | undefined): string {
 export default function SignalsPage() {
     const { ready, authenticated } = usePrivy();
     const { activeStrategy, setActiveStrategy, enabledStrategies } = useStrategyContext();
+    const { settings } = useSettings();
     const router = useRouter();
     const { allSignals, isConnected, removeSignal, updateSignalStatus } = useSignalContext();
     const [approving, setApproving] = useState<string | null>(null);
@@ -139,6 +141,7 @@ export default function SignalsPage() {
         setConfirmModal(null); // Close modal immediately to show loading state on card
 
         try {
+            const isTurboCore = (confirmModal.strategy || '').toLowerCase().includes('turbocore') || (confirmModal as any).type === 'REBALANCE';
             console.log(`Approving signal ${confirmModal.id} with execution...`);
             const response = await fetch(`/api/signals/${confirmModal.id}/approve`, {
                 method: 'POST',
@@ -161,8 +164,22 @@ export default function SignalsPage() {
             // Remove the executed signal from the list
             removeSignal(confirmModal.id);
 
-            // Navigate to positions to see the trade
-            router.push('/positions');
+            // Navigate to positions to see the trade unless it's a shadow execution
+            if (!settings?.tastytrade?.refreshToken && isTurboCore) {
+                // For shadow trades, just clear it and maybe refresh
+                const syncRes = await fetch('/api/shadow-positions', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'sync',
+                        strategy: confirmModal.strategy || 'TQQQ_TURBOCORE',
+                        signalId: confirmModal.id,
+                        orders: [] // Note: simplified, actual shadow sync might happen inside dashboard instead, or we let the backend handle it
+                    }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            } else {
+                router.push('/positions');
+            }
 
         } catch (err) {
             console.error('Trade execution failed:', err);
@@ -187,7 +204,7 @@ export default function SignalsPage() {
     }
 
     return (
-        <main className="min-h-screen pb-24 max-w-lg mx-auto w-full border-x border-white/5 bg-tm-bg shadow-2xl relative">
+        <main className="min-h-screen pb-24 max-w-4xl mx-auto w-full border-x border-white/5 bg-tm-bg shadow-2xl relative">
             <header className="px-6 pt-12 pb-6 flex items-center gap-4">
                 <Link href="/dashboard" className="w-10 h-10 rounded-full bg-tm-surface flex items-center justify-center">
                     <ArrowLeft className="w-5 h-5" />
@@ -316,51 +333,82 @@ export default function SignalsPage() {
                     <div className="glass-card p-6 max-w-md w-full">
                         <h2 className="text-xl font-bold mb-4">Confirm Trade</h2>
 
-                        <div className="bg-tm-surface rounded-xl p-4 mb-4">
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="w-10 h-10 rounded-xl bg-tm-purple/20 flex items-center justify-center">
-                                    <Calendar className="w-5 h-5 text-tm-purple" />
+                        {((confirmModal.strategy || '').toLowerCase().includes('turbocore') || (confirmModal as any).type === 'REBALANCE') ? (
+                            <div className="bg-tm-surface rounded-xl p-4 mb-4">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="w-10 h-10 rounded-xl bg-tm-purple/20 flex items-center justify-center">
+                                        <TrendingUp className="w-5 h-5 text-tm-purple" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold">Atomic Rebalance</h3>
+                                        <p className="text-sm text-tm-muted">{confirmModal.strategy || 'TurboCore'}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="font-bold">{confirmModal.symbol}</h3>
-                                    <p className="text-sm text-tm-muted">{confirmModal.strategy}</p>
+                                
+                                <p className="text-xs text-tm-muted mb-2">Target Allocations:</p>
+                                <div className="grid grid-cols-2 gap-2 mb-4">
+                                    {((confirmModal as any).legs || []).map((leg: any, i: number) => (
+                                        <div key={i} className="flex justify-between bg-black/30 p-2 rounded text-xs px-3 border border-white/5">
+                                            <span className="font-bold">{leg.symbol}</span>
+                                            <span className="text-purple-400 font-mono">{(leg.target_pct * 100).toFixed(0)}%</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="text-xs text-tm-muted bg-blue-500/10 border border-blue-500/20 p-2 rounded">
+                                    This will intelligently size, route, and execute notional market orders to achieve these precise target allocations.
                                 </div>
                             </div>
+                        ) : (
+                            <div className="bg-tm-surface rounded-xl p-4 mb-4">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="w-10 h-10 rounded-xl bg-tm-purple/20 flex items-center justify-center">
+                                        <Calendar className="w-5 h-5 text-tm-purple" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold">{confirmModal.symbol}</h3>
+                                        <p className="text-sm text-tm-muted">{confirmModal.strategy}</p>
+                                    </div>
+                                </div>
 
-                            <div className="flex gap-4 mt-2 mb-4 text-xs text-tm-muted">
-                                <div>
-                                    <span className="opacity-70">Generated:</span>{' '}
-                                    <span className="font-medium text-white/90">{formatTime((confirmModal as any).createdAt || (confirmModal as any).created_at as string)}</span>
+                                <div className="flex gap-4 mt-2 mb-4 text-xs text-tm-muted">
+                                    <div>
+                                        <span className="opacity-70">Generated:</span>{' '}
+                                        <span className="font-medium text-white/90">{formatTime((confirmModal as any).createdAt || (confirmModal as any).created_at as string)}</span>
+                                    </div>
+                                    <div>
+                                        <span className="opacity-70">Expires:</span>{' '}
+                                        <span className="font-medium text-white/90">{formatTime((confirmModal as any).expiresAt || (confirmModal as any).expires_at as string)}</span>
+                                    </div>
                                 </div>
-                                <div>
-                                    <span className="opacity-70">Expires:</span>{' '}
-                                    <span className="font-medium text-white/90">{formatTime((confirmModal as any).expiresAt || (confirmModal as any).expires_at as string)}</span>
-                                </div>
-                            </div>
 
-                            <div className="grid grid-cols-2 gap-3 text-sm">
-                                <div>
-                                    <p className="text-tm-muted">Strike</p>
-                                    <p className="font-mono font-semibold">${confirmModal.strike}</p>
-                                </div>
-                                <div>
-                                    <p className="text-tm-muted">Cost</p>
-                                    <p className="font-mono font-semibold">${confirmModal.cost}</p>
-                                </div>
-                                <div>
-                                    <p className="text-tm-muted">Front Expiry</p>
-                                    <p className="font-semibold">{confirmModal.frontExpiry}</p>
-                                </div>
-                                <div>
-                                    <p className="text-tm-muted">Back Expiry</p>
-                                    <p className="font-semibold">{confirmModal.backExpiry}</p>
+                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div>
+                                        <p className="text-tm-muted">Strike</p>
+                                        <p className="font-mono font-semibold">${confirmModal.strike}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-tm-muted">Cost</p>
+                                        <p className="font-mono font-semibold">${confirmModal.cost}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-tm-muted">Front Expiry</p>
+                                        <p className="font-semibold">{confirmModal.frontExpiry}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-tm-muted">Back Expiry</p>
+                                        <p className="font-semibold">{confirmModal.backExpiry}</p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
                         <div className="flex items-center gap-2 mb-6 text-sm">
                             <AlertTriangle className="w-4 h-4 text-yellow-400" />
-                            <span className="text-tm-muted">This will submit a real trade to Tastytrade</span>
+                            <span className="text-tm-muted">
+                                {settings?.tastytrade?.refreshToken 
+                                    ? "This will submit a real trade to Tastytrade" 
+                                    : "This will log a virtual trade to your Shadow Ledger"}
+                            </span>
                         </div>
 
                         <div className="flex gap-3">
@@ -372,9 +420,14 @@ export default function SignalsPage() {
                             </button>
                             <button
                                 onClick={handleConfirmApprove}
-                                className="flex-1 py-3 rounded-xl bg-tm-green hover:bg-green-600 transition-colors font-semibold flex items-center justify-center gap-2"
+                                disabled={approving === confirmModal.id}
+                                className="flex-1 py-3 rounded-xl bg-tm-green hover:bg-green-600 transition-colors font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
                             >
-                                <CheckCircle className="w-4 h-4" />
+                                {approving === confirmModal.id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <CheckCircle className="w-4 h-4" />
+                                )}
                                 Execute Trade
                             </button>
                         </div>

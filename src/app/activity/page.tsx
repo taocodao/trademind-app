@@ -172,7 +172,18 @@ export default function ActivityPage() {
         const matchesSearch = sym.includes(q) || stratKey.includes(q) || status.includes(q);
 
         // Check strategy tab filter
-        const matchesStrategy = activeStrategy === 'ALL' || stratKey === activeStrategy.toLowerCase() || (activeStrategy === 'TQQQ_TURBOCORE' && stratKey === 'turbocore');
+        const activeLower = activeStrategy.toLowerCase();
+        let matchesStrategy = false;
+        
+        if (activeLower === 'all') {
+            matchesStrategy = true;
+        } else if (activeLower === 'tqqq_turbocore') {
+            matchesStrategy = stratKey === 'tqqq_turbocore' || stratKey === 'turbocore' || isLegacyRebalance;
+        } else if (activeLower === 'tqqq_turbocore_pro') {
+            matchesStrategy = stratKey === 'tqqq_turbocore_pro' || stratKey === 'pro';
+        } else {
+            matchesStrategy = stratKey === activeLower;
+        }
 
         return matchesSearch && matchesStrategy;
     });

@@ -660,7 +660,8 @@ function DashboardContent() {
                 fetchAccountData(); // Immediately refresh positions matching user request
             } else {
                 // Tier 2b: Shadow Sync Calculation
-                const activeLedger = settings?.shadowLedger[activeStrategy] || settings?.shadowLedger['default'];
+                const shadowLedgers = settings?.shadowLedger as Record<string, any> || {};
+                const activeLedger = shadowLedgers[activeStrategy] || shadowLedgers['default'];
                 if (!activeLedger) {
                     throw new Error("No shadow ledger found. Please configure it in settings.");
                 }

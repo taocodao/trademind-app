@@ -4,9 +4,9 @@ import { useState } from 'react';
 import { Wallet, ArrowDownToLine, ArrowUpFromLine, RefreshCcw } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 
-export function ShadowLedgerPanel() {
+export function ShadowLedgerPanel({ strategy = 'default' }: { strategy?: string }) {
     const { settings, updateShadowLedger } = useSettings();
-    const ledger = settings.shadowLedger || { balance: 0, positions: {} };
+    const ledger = (settings.shadowLedger as Record<string, any>)[strategy] || (settings.shadowLedger as Record<string, any>)['default'] || { balance: 0, positions: {} };
 
     const [amount, setAmount] = useState('');
     const [action, setAction] = useState<'deposit' | 'withdraw'>('deposit');
@@ -22,7 +22,7 @@ export function ShadowLedgerPanel() {
             newBalance = Math.max(0, newBalance - num);
         }
 
-        updateShadowLedger({ balance: newBalance });
+        updateShadowLedger(strategy, { balance: newBalance });
         setAmount('');
     };
 
@@ -96,7 +96,7 @@ export function ShadowLedgerPanel() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-2 gap-2">
-                        {Object.entries(ledger.positions).map(([symbol, shares]) => (
+                        {Object.entries(ledger.positions as Record<string, number>).map(([symbol, shares]) => (
                             <div key={symbol} className="bg-white/5 border border-white/10 rounded-lg p-3 flex justify-between items-center">
                                 <span className="font-bold">{symbol}</span>
                                 <span className="font-mono text-tm-muted">{shares} sh</span>

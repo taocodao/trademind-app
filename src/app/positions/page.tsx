@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useStrategyContext } from "@/components/providers/StrategyContext";
 import { StrategyTabs } from "@/components/ui/StrategyTabs";
 import { getStrategy } from "@/lib/strategies";
+import { useSettings } from "@/components/providers/SettingsProvider";
 
 interface EquityPosition {
     symbol: string;
@@ -24,6 +25,7 @@ interface EquityPosition {
     unrealizedPnl: number;
     unrealizedPnlPct: number;
     instrumentType: string;
+    isVirtual?: boolean;
 }
 
 interface AccountBalance {
@@ -42,16 +44,27 @@ export default function PositionsPage() {
     const [loading, setLoading] = useState(true);
     const [accountNum, setAccountNum] = useState<string | null>(null);
     const [balance, setBalance] = useState<AccountBalance | null>(null);
+    const [isVirtualLedger, setIsVirtualLedger] = useState(false);
+    const { settings } = useSettings();
 
     const fetchAccountAndPositions = useCallback(async () => {
         try {
+            setLoading(true);
+            setPositions([]);
+            
             // 1. Get account number
             const acctRes = await fetch('/api/tastytrade/account');
-            if (!acctRes.ok) { setLoading(false); return; }
-            const acctData = await acctRes.json();
-            const acct = acctData.data?.items?.[0]?.account?.['account-number'];
-            if (!acct) { setLoading(false); return; }
-            setAccountNum(acct);
+            let isTastyLinked = false;
+            let acct = null;
+            if (acctRes.ok) {
+                const acctData = await acctRes.json();
+                acct = acctData.data?.items?.[0]?.account?.['account-number'];
+                if (acct) {
+                    isTastyLinked = true;
+                    setAccountNum(acct);
+                    setIsVirtualLedger(false);
+                }
+            }
 
             // 2. Fetch balance
             const balRes = await fetch(`/api/tastytrade/balance?accountNumber=${acct}`);
@@ -95,6 +108,45 @@ export default function PositionsPage() {
                     });
 
                 setPositions(equityPositions);
+            } else {
+                // Fetch virtual shadow positions
+                setIsVirtualLedger(true);
+                const activeLedger = (settings?.shadowLedger as Record<string, any>)?.[activeStrategy] || (settings?.shadowLedger as Record<string, any>)?.['default'] || { balance: 0, positions: {} };
+                
+                setBalance({
+                    cashAvailable: activeLedger.balance,
+                    buyingPower: activeLedger.balance,
+                    netLiquidation: activeLedger.balance, // Will add positions value below
+                });
+
+                // Fetch from API instead of local settings for better tracking if preferred, 
+                // but since we read from DB:
+                const shadowRes = await fetch(`/api/shadow-positions?strategy=${activeStrategy}`);
+                if (shadowRes.ok) {
+                    const shadowData = await shadowRes.json();
+                    const shadowEq: EquityPosition[] = (shadowData.positions || []).map((p: any) => {
+                        const qty = Number(p.quantity);
+                        const avgPrice = Number(p.avg_price);
+                        const lastPrice = avgPrice; // We don't have live pricing here without another API call
+                        const marketVal = qty * lastPrice;
+                        return {
+                            symbol: p.symbol,
+                            quantity: qty,
+                            averageOpenPrice: avgPrice,
+                            currentPrice: lastPrice,
+                            marketValue: marketVal,
+                            unrealizedPnl: 0, // No live prices, no PnL
+                            unrealizedPnlPct: 0,
+                            instrumentType: 'Equity',
+                            isVirtual: true,
+                        };
+                    });
+                    
+                    const positionsValue = shadowEq.reduce((acc, p) => acc + p.marketValue, 0);
+                    setBalance(prev => prev ? { ...prev, netLiquidation: prev.cashAvailable + positionsValue } : null);
+                    
+                    setPositions(shadowEq);
+                }
             }
         } catch (err) {
             console.error('Error fetching positions:', err);
@@ -147,7 +199,10 @@ export default function PositionsPage() {
                     <ArrowLeft className="w-5 h-5" />
                 </Link>
                 <div className="flex-1">
-                    <h1 className="text-xl font-bold">Positions</h1>
+                    <h1 className="text-xl font-bold flex items-center gap-2">
+                        Positions
+                        {isVirtualLedger && <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-bold">VIRTUAL</span>}
+                    </h1>
                     <p className="text-sm text-tm-muted">{filteredPositions.length} equity position{filteredPositions.length !== 1 ? 's' : ''}</p>
                 </div>
                 <button onClick={fetchAccountAndPositions} className="w-10 h-10 rounded-full bg-tm-surface flex items-center justify-center text-tm-muted hover:text-white transition">
@@ -231,9 +286,14 @@ export default function PositionsPage() {
             {/* Equity Positions */}
             <div className="px-6 space-y-3">
                 {loading ? (
-                    [1, 2, 3].map(i => (
-                        <div key={i} className="glass-card p-5 animate-pulse">
-                            <div className="h-5 w-1/3 bg-tm-surface rounded mb-3" />
+                    filteredPositions.map((pos) => (
+                        <div key={pos.symbol} className="glass-card p-4 hover:bg-white/5 transition relative">
+                            {pos.isVirtual && (
+                                <div className="absolute -top-2 -right-2 rotate-12 text-[9px] bg-blue-500 text-white font-bold px-1.5 py-0.5 rounded opacity-80 backdrop-blur-md">
+                                    VIRTUAL
+                                </div>
+                            )}
+                            <div className="flex items-center justify-between mb-3 border-b border-white/5 pb-3"></div>
                             <div className="h-4 w-2/3 bg-tm-surface rounded" />
                         </div>
                     ))

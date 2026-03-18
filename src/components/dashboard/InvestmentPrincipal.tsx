@@ -4,14 +4,16 @@ import { useState, useEffect } from 'react';
 import { DollarSign, Check } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 
-export function InvestmentPrincipal() {
+export function InvestmentPrincipal({ strategy = 'default' }: { strategy?: string }) {
     const { settings, setInvestmentPrincipal } = useSettings();
     const [inputValue, setInputValue] = useState('');
     const [saved, setSaved] = useState(false);
 
+    const principalAmount = (settings.investmentPrincipal as Record<string, number>)[strategy] || (settings.investmentPrincipal as Record<string, number>)['default'] || 25000;
+
     useEffect(() => {
-        setInputValue(settings.investmentPrincipal.toLocaleString());
-    }, [settings.investmentPrincipal]);
+        setInputValue(principalAmount.toLocaleString());
+    }, [principalAmount]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         // Strip non-numeric except digits
@@ -27,7 +29,7 @@ export function InvestmentPrincipal() {
     const handleSave = () => {
         const num = parseInt(inputValue.replace(/[^0-9]/g, ''), 10);
         if (!isNaN(num) && num >= 1000) {
-            setInvestmentPrincipal(num);
+            setInvestmentPrincipal(strategy, num);
             setSaved(true);
             setTimeout(() => setSaved(false), 2000);
         }

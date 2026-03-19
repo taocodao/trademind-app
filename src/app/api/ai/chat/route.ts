@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkAIBudget, consumeMessages, getUserFromRequest } from '@/lib/ai';
+import { checkFeatureAccess, getUserFromRequest } from '@/lib/ai';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
-    const budget = await checkAIBudget(user.privyDid, 1);
+    const access = await checkFeatureAccess(user.privyDid, 'chat');
     
-    if (!budget.allowed) {
-      return NextResponse.json({ error: 'LIMIT_REACHED' }, { status: 402 });
+    if (!access.allowed) {
+      return NextResponse.json({ error: 'FEATURE_LOCKED' }, { status: 403 });
     }
 
     const { message, sessionId, history } = await req.json();
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
       role: 'system',
       content: `You are TradeMind AI — an educational investment copilot (not a financial advisor).
 TurboCore signal today: ${turboRegime} (${turboConf}% confidence), ML Score: ${mlScore}/100.
-User plan: ${budget.tier}.
+User plan: ${user.tier}.
 Rules: Be educational, not directive. Never say "you should buy/sell X". 
 Use "If your thesis is X, then..." framing. Be concise (under 200 words unless asked for more).
 Always mention the TurboCore signal context when directly relevant.`
@@ -54,9 +54,6 @@ Always mention the TurboCore signal context when directly relevant.`
     if (!res.ok) {
         throw new Error(`Perplexity API Error: ${res.statusText}`);
     }
-
-    // Deduct budget immediately
-    await consumeMessages(user.privyDid, 1, 'chat', undefined, sessionId);
 
     // Return the stream directly to the client
     return new NextResponse(res.body, {

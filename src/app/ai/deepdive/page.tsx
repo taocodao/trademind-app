@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from 'react';
-import { ArrowLeft, Search, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, Search, Loader2, Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface DeepDiveData {
@@ -21,6 +21,22 @@ export default function DeepDivePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<DeepDiveData | null>(null);
+  
+  const [featureAccess, setFeatureAccess] = useState({ isLocked: false, freeRemaining: 0, loading: true });
+
+  useEffect(() => {
+    fetch('/api/ai/features')
+      .then(res => res.json())
+      .then(resData => {
+         const feature = resData.features?.find((f: any) => f.key === 'deepdive');
+         setFeatureAccess({
+            isLocked: feature ? !feature.isActive : true,
+            freeRemaining: resData.freeRemaining || 0,
+            loading: false
+         });
+      })
+      .catch(() => setFeatureAccess(prev => ({ ...prev, loading: false })));
+  }, []);
 
   const handleSearch = async (forcedTicker?: string) => {
     const searchTicker = (forcedTicker || ticker).trim();
@@ -38,17 +54,18 @@ export default function DeepDivePage() {
         body: JSON.stringify({ ticker: searchTicker })
       });
 
-      if (response.status === 402) {
-         setError('You have exhausted your AI message limit for the month. Upgrade to Pro for more messages.');
+      if (response.status === 403) {
+         setError('FEATURE_LOCKED');
          setIsLoading(false);
          return;
       }
 
-      if (!response.ok) throw new Error('Failed to fetch deep dive');
+      if (!response.ok) {
+         const resData = await response.json().catch(() => ({}));
+         throw new Error(resData.error || 'Failed to fetch deep dive');
+      }
       
       const resData = await response.json();
-      if (resData.error) throw new Error(resData.error);
-      
       setData(resData);
     } catch (e: any) {
       console.error(e);
@@ -57,6 +74,38 @@ export default function DeepDivePage() {
       setIsLoading(false);
     }
   };
+
+  if (featureAccess.loading) {
+     return (
+        <div className="min-h-screen bg-tm-bg py-24 flex items-center justify-center">
+            <Loader2 className="w-8 h-8 text-tm-purple animate-spin" />
+        </div>
+     );
+  }
+
+  if (featureAccess.isLocked || error === 'FEATURE_LOCKED') {
+     const isFree = featureAccess.freeRemaining > 0;
+     return (
+        <div className="min-h-screen bg-tm-bg py-24 px-6 max-w-lg mx-auto flex flex-col items-center justify-center text-center">
+            <div className="w-16 h-16 rounded-full bg-tm-purple/20 flex items-center justify-center mb-6 border border-tm-purple/30">
+               <Lock className="w-8 h-8 text-tm-purple" />
+            </div>
+            <h1 className="text-white font-black text-2xl mb-2">Feature Locked</h1>
+            <p className="text-tm-muted mb-8 leading-relaxed">
+               You haven't unlocked Stock Deep Dive yet. 
+            </p>
+            <button 
+               onClick={() => router.push('/ai')}
+               className="bg-tm-purple hover:bg-tm-purple/90 text-white px-8 py-3.5 rounded-xl font-bold transition-all active:scale-95 shadow-[0_0_20px_rgba(168,85,247,0.3)]"
+            >
+               {isFree ? "Add for FREE" : "Unlock for $5/mo"}
+            </button>
+            <button onClick={() => router.back()} className="mt-6 text-tm-muted text-sm font-medium hover:text-white">
+               Go Back
+            </button>
+        </div>
+     );
+  }
 
   const recentSearches = ['QQQ', 'NVDA', 'SPY', 'TSLA'];
 
@@ -70,9 +119,6 @@ export default function DeepDivePage() {
           <Search className="w-5 h-5 text-amber-400" />
           Stock Deep Dive
         </h1>
-        <div className="ml-auto text-xs font-medium text-tm-muted bg-tm-surface px-2 py-1 rounded-full border border-tm-border">
-          Cost: 2 msgs
-        </div>
       </header>
 
       <div className="bg-tm-surface p-2 rounded-2xl border border-tm-border/50 mb-4 flex items-center">
@@ -113,7 +159,7 @@ export default function DeepDivePage() {
          </div>
       )}
 
-      {error && (
+      {error && !error.includes('LOCKED') && (
          <div className="bg-tm-red/10 border border-tm-red/20 text-tm-red text-sm p-4 rounded-xl mt-4">
             {error}
          </div>

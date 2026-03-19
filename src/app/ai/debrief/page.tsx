@@ -10,41 +10,58 @@ export default function DebriefPage() {
   const [history, setHistory] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [featureAccess, setFeatureAccess] = useState({ isLocked: false, freeRemaining: 0, loading: true });
 
   useEffect(() => {
-    fetch('/api/ai/debrief')
-      .then(async r => {
+    Promise.all([
+      fetch('/api/ai/features').then(res => res.json()),
+      fetch('/api/ai/debrief').then(async r => {
          if (r.status === 403) {
-            setError('UPGRADE_REQUIRED');
+            setError('FEATURE_LOCKED');
             return null;
          }
          return r.json();
       })
-      .then(data => {
-         if (data) {
-            setDebrief(data.latest);
-            setHistory(data.history);
+    ]).then(([featuresData, debriefData]) => {
+         const feature = featuresData.features?.find((f: any) => f.key === 'debrief');
+         setFeatureAccess({
+            isLocked: feature ? !feature.isActive : true,
+            freeRemaining: featuresData.freeRemaining || 0,
+            loading: false
+         });
+         if (debriefData) {
+            setDebrief(debriefData.latest);
+            setHistory(debriefData.history);
          }
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, []);
 
-  if (error === 'UPGRADE_REQUIRED') {
+  if (featureAccess.loading) {
+     return (
+        <div className="min-h-screen bg-tm-bg py-24 flex items-center justify-center">
+            <Loader2 className="w-8 h-8 text-tm-purple animate-spin" />
+        </div>
+     );
+  }
+
+  if (featureAccess.isLocked || error === 'FEATURE_LOCKED') {
+     const isFree = featureAccess.freeRemaining > 0;
      return (
         <div className="min-h-screen bg-tm-bg py-24 px-6 max-w-lg mx-auto flex flex-col items-center justify-center text-center">
             <div className="w-16 h-16 rounded-full bg-tm-purple/20 flex items-center justify-center mb-6 border border-tm-purple/30">
                <Lock className="w-8 h-8 text-tm-purple" />
             </div>
-            <h1 className="text-white font-black text-2xl mb-2">Pro Feature</h1>
+            <h1 className="text-white font-black text-2xl mb-2">Feature Locked</h1>
             <p className="text-tm-muted mb-8 leading-relaxed">
-               Weekly Performance Debriefs are available securely to Pro and Bundle subscribers. Upgrade to unlock personalized AI trading coaching.
+               You haven't unlocked the Weekly Debrief yet.
             </p>
             <button 
-               onClick={() => router.push('/settings')}
-               className="bg-tm-purple text-white px-8 py-3.5 rounded-xl font-bold transition-transform active:scale-95"
+               onClick={() => router.push('/ai')}
+               className="bg-tm-purple hover:bg-tm-purple/90 text-white px-8 py-3.5 rounded-xl font-bold transition-all active:scale-95 shadow-[0_0_20px_rgba(168,85,247,0.3)]"
             >
-               View Plans
+               {isFree ? "Add for FREE" : "Unlock for $5/mo"}
             </button>
             <button onClick={() => router.back()} className="mt-6 text-tm-muted text-sm font-medium hover:text-white">
                Go Back
@@ -63,9 +80,6 @@ export default function DebriefPage() {
           <TrendingUp className="w-5 h-5 text-emerald-400" />
           Weekly Debrief
         </h1>
-        <div className="ml-auto flex items-center gap-1.5 text-[10px] font-bold text-tm-purple bg-tm-purple/10 px-2 py-1 rounded-full border border-tm-purple/30 uppercase tracking-wider">
-          <Lock className="w-3 h-3" /> PRO
-        </div>
       </header>
 
       {isLoading ? (

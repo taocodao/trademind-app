@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkAIBudget, consumeMessages, getUserFromRequest } from '@/lib/ai';
+import { checkFeatureAccess, getUserFromRequest } from '@/lib/ai';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,14 +7,10 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
     
-    // Pro-gate check
-    if (!['pro', 'bundle'].includes(user.tier)) {
-       return NextResponse.json({ error: 'UPGRADE_REQUIRED' }, { status: 403 });
-    }
-
-    const budget = await checkAIBudget(user.privyDid, 2);
-    if (!budget.allowed) {
-      return NextResponse.json({ error: 'LIMIT_REACHED' }, { status: 402 });
+    // Pro-gate check removed (now feature-subscription based)
+    const access = await checkFeatureAccess(user.privyDid, 'strategy');
+    if (!access.allowed) {
+      return NextResponse.json({ error: 'FEATURE_LOCKED' }, { status: 403 });
     }
 
     const { ticker, thesis, timeframe, risk } = await req.json();
@@ -78,8 +74,6 @@ Use current realistic estimates for strikes. Order by best fit first.`
         console.error("Strategy Parse Error:", data.choices[0].message.content);
         throw new Error('Failed to parse strategy AI output');
     }
-
-    await consumeMessages(user.privyDid, 2, 'strategy_builder', data.usage);
     
     return NextResponse.json({ strategies });
 

@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkAIBudget, consumeMessages, getUserFromRequest } from '@/lib/ai';
+import { checkFeatureAccess, getUserFromRequest } from '@/lib/ai';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
-    const budget = await checkAIBudget(user.privyDid, 3);
-    if (!budget.allowed) {
-      return NextResponse.json({ error: 'LIMIT_REACHED' }, { status: 402 });
+    const access = await checkFeatureAccess(user.privyDid, 'screenshot');
+    if (!access.allowed) {
+      return NextResponse.json({ error: 'FEATURE_LOCKED' }, { status: 403 });
     }
 
     const { messages, imageBase64 } = await req.json();
@@ -49,9 +49,6 @@ Is it aligned with the ${turboRegime} regime? Suggest structural improvements. N
     if (!res.ok) {
         throw new Error(`Perplexity API Error: ${res.statusText}`);
     }
-
-    // Deduct budget immediately 
-    await consumeMessages(user.privyDid, 3, 'screenshot');
 
     // Return the stream directly to the client
     return new NextResponse(res.body, {

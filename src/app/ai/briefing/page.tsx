@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Sunrise, Calendar, Loader2 } from 'lucide-react';
+import { ArrowLeft, Sunrise, Calendar, Loader2, Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function BriefingPage() {
@@ -9,20 +9,66 @@ export default function BriefingPage() {
   const [briefing, setBriefing] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [featureAccess, setFeatureAccess] = useState({ isLocked: false, freeRemaining: 0, loading: true });
 
-  // For this implementation plan demo, we will check if it's currently available 
-  // by hitting a simulated 'read' endpoint or just fetching the latest from DB.
-  // We'll create a dedicated GET /api/ai/briefing route to actually fetch them.
   useEffect(() => {
-    fetch('/api/ai/briefing')
-      .then(r => r.json())
-      .then(data => {
-         if (data.today) setBriefing(data.today);
-         if (data.history) setHistory(data.history);
+    Promise.all([
+      fetch('/api/ai/features').then(res => res.json()),
+      fetch('/api/ai/briefing').then(async r => {
+         if (r.status === 403) {
+            setError('FEATURE_LOCKED');
+            return null;
+         }
+         return r.json();
+      })
+    ]).then(([featuresData, briefingData]) => {
+         const feature = featuresData.features?.find((f: any) => f.key === 'briefing');
+         setFeatureAccess({
+            isLocked: feature ? !feature.isActive : true,
+            freeRemaining: featuresData.freeRemaining || 0,
+            loading: false
+         });
+         if (briefingData) {
+            if (briefingData.today) setBriefing(briefingData.today);
+            if (briefingData.history) setHistory(briefingData.history);
+         }
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, []);
+
+  if (featureAccess.loading) {
+     return (
+        <div className="min-h-screen bg-tm-bg py-24 flex items-center justify-center">
+            <Loader2 className="w-8 h-8 text-tm-purple animate-spin" />
+        </div>
+     );
+  }
+
+  if (featureAccess.isLocked || error === 'FEATURE_LOCKED') {
+     const isFree = featureAccess.freeRemaining > 0;
+     return (
+        <div className="min-h-screen bg-tm-bg py-24 px-6 max-w-lg mx-auto flex flex-col items-center justify-center text-center">
+            <div className="w-16 h-16 rounded-full bg-tm-purple/20 flex items-center justify-center mb-6 border border-tm-purple/30">
+               <Lock className="w-8 h-8 text-tm-purple" />
+            </div>
+            <h1 className="text-white font-black text-2xl mb-2">Feature Locked</h1>
+            <p className="text-tm-muted mb-8 leading-relaxed">
+               You haven't unlocked the Morning Briefing yet. 
+            </p>
+            <button 
+               onClick={() => router.push('/ai')}
+               className="bg-tm-purple hover:bg-tm-purple/90 text-white px-8 py-3.5 rounded-xl font-bold transition-all active:scale-95 shadow-[0_0_20px_rgba(168,85,247,0.3)]"
+            >
+               {isFree ? "Add for FREE" : "Unlock for $5/mo"}
+            </button>
+            <button onClick={() => router.back()} className="mt-6 text-tm-muted text-sm font-medium hover:text-white">
+               Go Back
+            </button>
+        </div>
+     );
+  }
 
   return (
     <div className="min-h-screen bg-tm-bg pb-24 px-4 pt-6 max-w-lg mx-auto flex flex-col">
@@ -34,9 +80,6 @@ export default function BriefingPage() {
           <Sunrise className="w-5 h-5 text-orange-400" />
           Morning Brief
         </h1>
-        <div className="ml-auto text-xs font-medium text-tm-muted bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-full border border-emerald-500/20">
-          Free
-        </div>
       </header>
 
       {isLoading ? (

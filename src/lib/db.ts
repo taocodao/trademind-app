@@ -582,7 +582,6 @@ export async function initializeUserTables(): Promise<void> {
                 created_at TIMESTAMPTZ DEFAULT NOW()
             )
         `);
-
         // AI COPILOT: Message budget transactions
         await query(`
             CREATE TABLE IF NOT EXISTS ai_message_transactions (
@@ -596,6 +595,35 @@ export async function initializeUserTables(): Promise<void> {
                 created_at TIMESTAMPTZ DEFAULT NOW()
             )
         `);
+
+        // ── AI Feature Subscriptions (per-feature $5/mo add-ons) ──────────────
+        await query(`
+            CREATE TABLE IF NOT EXISTS ai_feature_subscriptions (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id VARCHAR(128) NOT NULL,
+                feature_key VARCHAR(32) NOT NULL,
+                is_free_entitlement BOOLEAN DEFAULT false,
+                stripe_subscription_item_id VARCHAR(128),
+                status VARCHAR(20) DEFAULT 'active',
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                updated_at TIMESTAMPTZ DEFAULT NOW(),
+                UNIQUE(user_id, feature_key)
+            )
+        `);
+        await query(`CREATE INDEX IF NOT EXISTS idx_ai_feature_subs_user ON ai_feature_subscriptions(user_id)`);
+
+        // ── Referral Activity Feed ────────────────────────────────────────────
+        await query(`
+            CREATE TABLE IF NOT EXISTS referral_activity (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                referral_id INTEGER REFERENCES referrals(id),
+                event_type VARCHAR(32) NOT NULL,
+                credit_amount NUMERIC(10,2) DEFAULT 0,
+                description TEXT,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )
+        `);
+        await query(`CREATE INDEX IF NOT EXISTS idx_referral_activity_referral ON referral_activity(referral_id)`);
 
         // ── Migrate user_settings columns ─────────────────────────────────
         await query(`
@@ -636,6 +664,10 @@ export async function initializeUserTables(): Promise<void> {
                 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS push_subscription JSONB;
                 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS briefing_enabled BOOLEAN DEFAULT true;
                 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS debrief_enabled BOOLEAN DEFAULT true;
+
+                -- AI Feature system columns  
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS free_features_selected INTEGER DEFAULT 0;
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS free_features_limit INTEGER DEFAULT 0;
 
                 -- Indexes for fast webhook lookups
                 CREATE INDEX IF NOT EXISTS idx_user_settings_stripe_customer ON user_settings (stripe_customer_id);

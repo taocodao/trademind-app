@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { getUserFromRequest } from '@/lib/ai';
+import { checkFeatureAccess, getUserFromRequest } from '@/lib/ai';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
     // Only logged in users can read briefs
-    await getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
+    const access = await checkFeatureAccess(user.privyDid, 'briefing');
+    if (!access.allowed) {
+      return NextResponse.json({ error: 'FEATURE_LOCKED' }, { status: 403 });
+    }
 
     // Get today
     const today = new Date().toISOString().split('T')[0];

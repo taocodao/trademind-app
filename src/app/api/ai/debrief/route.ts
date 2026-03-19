@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { getUserFromRequest } from '@/lib/ai';
+import { checkFeatureAccess, getUserFromRequest } from '@/lib/ai';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,9 +8,10 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
     
-    // Pro-gate check
-    if (!['pro', 'bundle'].includes(user.tier)) {
-       return NextResponse.json({ error: 'UPGRADE_REQUIRED' }, { status: 403 });
+    // Pro-gate check removed (now feature-subscription based)
+    const access = await checkFeatureAccess(user.privyDid, 'debrief');
+    if (!access.allowed) {
+      return NextResponse.json({ error: 'FEATURE_LOCKED' }, { status: 403 });
     }
 
     // Fetch user's latest debrief

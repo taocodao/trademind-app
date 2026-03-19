@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from 'react';
-import { Camera, Bot, ArrowLeft, Send, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Camera, Bot, ArrowLeft, Send, Loader2, Lock } from 'lucide-react';
 import { SignalContextBadge } from '@/components/ui/SignalContextBadge';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -11,6 +11,23 @@ export default function ScreenshotPage() {
   const [description, setDescription] = useState('');
   const [streamData, setStreamData] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [featureAccess, setFeatureAccess] = useState({ isLocked: false, freeRemaining: 0, loading: true });
+
+  useEffect(() => {
+    fetch('/api/ai/features')
+      .then(res => res.json())
+      .then(resData => {
+         const feature = resData.features?.find((f: any) => f.key === 'screenshot');
+         setFeatureAccess({
+            isLocked: feature ? !feature.isActive : true,
+            freeRemaining: resData.freeRemaining || 0,
+            loading: false
+         });
+      })
+      .catch(() => setFeatureAccess(prev => ({ ...prev, loading: false })));
+  }, []);
 
   // Mocked state for UI testing
   const turboSignal = { regime: 'BULL', confidence: 87, mlScore: 92, allocation: { TQQQ: 80, HYG: 20 } };
@@ -19,6 +36,7 @@ export default function ScreenshotPage() {
     if (!description.trim() || isStreaming) return;
     setIsStreaming(true);
     setStreamData('');
+    setError(null);
 
     try {
       const response = await fetch('/api/ai/screenshot', {
@@ -29,8 +47,8 @@ export default function ScreenshotPage() {
         })
       });
 
-      if (response.status === 402) {
-         setStreamData('You have exhausted your AI message limit for the month. Upgrade to Pro for more messages.');
+      if (response.status === 403) {
+         setError('FEATURE_LOCKED');
          setIsStreaming(false);
          return;
       }
@@ -69,6 +87,38 @@ export default function ScreenshotPage() {
     }
   };
 
+  if (featureAccess.loading) {
+     return (
+        <div className="min-h-screen bg-tm-bg py-24 flex items-center justify-center">
+            <Loader2 className="w-8 h-8 text-tm-purple animate-spin" />
+        </div>
+     );
+  }
+
+  if (featureAccess.isLocked || error === 'FEATURE_LOCKED') {
+     const isFree = featureAccess.freeRemaining > 0;
+     return (
+        <div className="min-h-screen bg-tm-bg py-24 px-6 max-w-lg mx-auto flex flex-col items-center justify-center text-center">
+            <div className="w-16 h-16 rounded-full bg-tm-purple/20 flex items-center justify-center mb-6 border border-tm-purple/30">
+               <Lock className="w-8 h-8 text-tm-purple" />
+            </div>
+            <h1 className="text-white font-black text-2xl mb-2">Feature Locked</h1>
+            <p className="text-tm-muted mb-8 leading-relaxed">
+               You haven't unlocked the Screenshot Analyzer yet. 
+            </p>
+            <button 
+               onClick={() => router.push('/ai')}
+               className="bg-tm-purple hover:bg-tm-purple/90 text-white px-8 py-3.5 rounded-xl font-bold transition-all active:scale-95 shadow-[0_0_20px_rgba(168,85,247,0.3)]"
+            >
+               {isFree ? "Add for FREE" : "Unlock for $5/mo"}
+            </button>
+            <button onClick={() => router.back()} className="mt-6 text-tm-muted text-sm font-medium hover:text-white">
+               Go Back
+            </button>
+        </div>
+     );
+  }
+
   return (
     <div className="min-h-screen bg-tm-bg pb-24 px-4 pt-6 max-w-lg mx-auto flex flex-col">
       <header className="flex items-center gap-3 mb-6">
@@ -79,9 +129,6 @@ export default function ScreenshotPage() {
           <Camera className="w-5 h-5 text-emerald-400" />
           Analyzer
         </h1>
-        <div className="ml-auto text-xs font-medium text-tm-muted bg-tm-surface px-2 py-1 rounded-full border border-tm-border">
-          Cost: 3 msgs
-        </div>
       </header>
 
       <div className="mb-4">

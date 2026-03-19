@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkAIBudget, getUserFromRequest } from '@/lib/ai';
+import { getUserFromRequest } from '@/lib/ai';
+import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  try {
+    // Redirect to /api/ai/features for backwards compatibility
     const user = await getUserFromRequest(req);
-    const budget = await checkAIBudget(user.privyDid, 0); // Cost 0 just checking
-    return NextResponse.json(budget);
-  } catch (error: any) {
-    if (error.message === 'Unauthorized') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+    const subsResult = await query(
+        `SELECT feature_key FROM ai_feature_subscriptions WHERE user_id = $1 AND status = 'active'`,
+        [user.privyDid]
+    );
+    return NextResponse.json({
+        tier: user.tier,
+        activeFeatures: subsResult.rows.map((r: any) => r.feature_key),
+        chatIncluded: user.tier !== 'observer',
+    });
 }

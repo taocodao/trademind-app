@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Calculator, Loader2, Lock, Send, Target, Clock, ShieldAlert, MessageSquare } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -26,6 +26,22 @@ export default function StrategyPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [strategies, setStrategies] = useState<Strategy[] | null>(null);
+  
+  const [featureAccess, setFeatureAccess] = useState({ isLocked: false, freeRemaining: 0, loading: true });
+
+  useEffect(() => {
+    fetch('/api/ai/features')
+      .then(res => res.json())
+      .then(resData => {
+         const feature = resData.features?.find((f: any) => f.key === 'strategy');
+         setFeatureAccess({
+            isLocked: feature ? !feature.isActive : true,
+            freeRemaining: resData.freeRemaining || 0,
+            loading: false
+         });
+      })
+      .catch(() => setFeatureAccess(prev => ({ ...prev, loading: false })));
+  }, []);
 
   const handleBuild = async () => {
     if (!ticker.trim() || !thesis.trim() || isLoading) return;
@@ -42,21 +58,17 @@ export default function StrategyPage() {
       });
 
       if (response.status === 403) {
-         setError('UPGRADE_REQUIRED');
+         setError('FEATURE_LOCKED');
          setIsLoading(false);
          return;
       }
-      if (response.status === 402) {
-         setError('You have exhausted your AI monthly message limit. Upgrade to Pro for more.');
-         setIsLoading(false);
-         return;
+      
+      if (!response.ok) {
+         const resData = await response.json().catch(() => ({}));
+         throw new Error(resData.error || 'Failed to generate strategies');
       }
-
-      if (!response.ok) throw new Error('Failed to generate strategies');
       
       const resData = await response.json();
-      if (resData.error) throw new Error(resData.error);
-      
       setStrategies(resData.strategies);
     } catch (e: any) {
       console.error(e);
@@ -66,21 +78,30 @@ export default function StrategyPage() {
     }
   };
 
-  if (error === 'UPGRADE_REQUIRED') {
+  if (featureAccess.loading) {
+     return (
+        <div className="min-h-screen bg-tm-bg py-24 flex items-center justify-center">
+            <Loader2 className="w-8 h-8 text-tm-purple animate-spin" />
+        </div>
+     );
+  }
+
+  if (featureAccess.isLocked || error === 'FEATURE_LOCKED') {
+     const isFree = featureAccess.freeRemaining > 0;
      return (
         <div className="min-h-screen bg-tm-bg py-24 px-6 max-w-lg mx-auto flex flex-col items-center justify-center text-center">
             <div className="w-16 h-16 rounded-full bg-tm-purple/20 flex items-center justify-center mb-6 border border-tm-purple/30">
                <Lock className="w-8 h-8 text-tm-purple" />
             </div>
-            <h1 className="text-white font-black text-2xl mb-2">Pro Feature</h1>
+            <h1 className="text-white font-black text-2xl mb-2">Feature Locked</h1>
             <p className="text-tm-muted mb-8 leading-relaxed">
-               The AI Options Strategy Builder is available exclusively to Pro and Bundle subscribers. Upgrade to get instant multi-leg setups aligned with your thesis.
+               You haven't unlocked the Strategy Builder yet. 
             </p>
             <button 
-               onClick={() => router.push('/settings')}
-               className="bg-tm-purple text-white px-8 py-3.5 rounded-xl font-bold transition-transform active:scale-95"
+               onClick={() => router.push('/ai')}
+               className="bg-tm-purple hover:bg-tm-purple/90 text-white px-8 py-3.5 rounded-xl font-bold transition-all active:scale-95 shadow-[0_0_20px_rgba(168,85,247,0.3)]"
             >
-               View Plans
+               {isFree ? "Add for FREE" : "Unlock for $5/mo"}
             </button>
             <button onClick={() => router.back()} className="mt-6 text-tm-muted text-sm font-medium hover:text-white">
                Go Back
@@ -99,12 +120,9 @@ export default function StrategyPage() {
           <Calculator className="w-5 h-5 text-tm-purple" />
           Strategy Builder
         </h1>
-        <div className="ml-auto flex items-center gap-1.5 text-[10px] font-bold text-tm-purple bg-tm-purple/10 px-2 py-1 rounded-full border border-tm-purple/30 uppercase tracking-wider">
-          <Lock className="w-3 h-3" /> PRO
-        </div>
       </header>
 
-      {error && !error.includes('UPGRADE') && (
+      {error && !error.includes('LOCKED') && (
          <div className="bg-tm-red/10 border border-tm-red/20 text-tm-red text-sm p-4 rounded-xl mb-4">
             {error}
          </div>
@@ -236,7 +254,7 @@ export default function StrategyPage() {
                   disabled={isLoading || !ticker.trim() || !thesis.trim()}
                   className="w-full bg-tm-purple hover:bg-tm-purple/90 text-white font-bold text-sm rounded-xl py-4 transition-colors disabled:opacity-50 flex justify-center items-center gap-2 shadow-lg shadow-tm-purple/20"
                >
-                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Structure Plays (Cost: 2 msgs)'}
+                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Structure Plays'}
                </button>
             </div>
          </div>

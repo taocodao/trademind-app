@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkAIBudget, consumeMessages, getUserFromRequest } from '@/lib/ai';
+import { checkFeatureAccess, getUserFromRequest } from '@/lib/ai';
 import { redis } from '@/lib/redis';
 
 export const dynamic = 'force-dynamic';
@@ -8,10 +8,10 @@ const CACHE_TTL = 900; // 15 mins
 export async function POST(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
-    const budget = await checkAIBudget(user.privyDid, 2);
+    const access = await checkFeatureAccess(user.privyDid, 'deepdive');
     
-    if (!budget.allowed) {
-      return NextResponse.json({ error: 'LIMIT_REACHED' }, { status: 402 });
+    if (!access.allowed) {
+      return NextResponse.json({ error: 'FEATURE_LOCKED' }, { status: 403 });
     }
 
     const { ticker } = await req.json();
@@ -89,9 +89,6 @@ export async function POST(req: NextRequest) {
     if (redis) {
        await redis.setex(cacheKey, CACHE_TTL, JSON.stringify(analysis));
     }
-
-    // Deduct cost
-    await consumeMessages(user.privyDid, 2, 'deep_dive', data.usage);
     
     return NextResponse.json(analysis);
 

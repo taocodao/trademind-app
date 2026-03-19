@@ -145,6 +145,14 @@ async function processWebhookEvent(event: Stripe.Event) {
                     subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
                 ]
             );
+            
+            // Auto-set free_features_limit based on new tier
+            const newFreeLimit = tier === 'both_bundle' ? 2 : ['turbocore', 'turbocore_pro'].includes(tier) ? 1 : 0;
+            await pool.query(
+                `UPDATE user_settings SET free_features_limit = $1 WHERE stripe_customer_id = $2`,
+                [newFreeLimit, customerId]
+            );
+
             console.log(`🔄 Subscription updated for ${customerId}: ${tier} (${subscription.status}, cancel_at_period_end: ${subscription.cancel_at_period_end})`);
             break;
         }
@@ -164,6 +172,19 @@ async function processWebhookEvent(event: Stripe.Event) {
                  WHERE stripe_customer_id = $1`,
                 [customerId]
             );
+
+            // Deactivate all AI feature subscriptions
+            await pool.query(
+                `UPDATE ai_feature_subscriptions SET status = 'canceled', updated_at = NOW()
+                 WHERE user_id = (SELECT user_id FROM user_settings WHERE stripe_customer_id = $1)`,
+                [customerId]
+            );
+            await pool.query(
+                `UPDATE user_settings SET free_features_selected = 0, free_features_limit = 0
+                 WHERE stripe_customer_id = $1`,
+                [customerId]
+            );
+
             console.log(`❌ Subscription canceled for ${customerId}`);
             break;
         }
@@ -257,6 +278,11 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
                 `UPDATE referrals SET stage1_paid=true, annual_bonus_paid=true, updated_at=NOW() WHERE id=$1`,
                 [ref.id]
             );
+            await pool.query(
+                `INSERT INTO referral_activity (referral_id, event_type, credit_amount, description)
+                 VALUES ($1, 'annual_bonus', 150, 'Annual bonus: $150 credit — friend joined annual plan')`,
+                [ref.id]
+            );
             console.log(`💰 $150 annual referral bonus issued to ${referrerStripeId}`);
         } else if (!ref.stage1_paid) {
             // Monthly plan: $50 stage 1
@@ -268,6 +294,11 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
             });
             await pool.query(
                 `UPDATE referrals SET stage1_paid=true, updated_at=NOW() WHERE id=$1`,
+                [ref.id]
+            );
+            await pool.query(
+                `INSERT INTO referral_activity (referral_id, event_type, credit_amount, description)
+                 VALUES ($1, 'stage1_paid', 50, 'Stage 1: $50 credit — friend paid first month')`,
                 [ref.id]
             );
             console.log(`💰 $50 referral Stage 1 issued to ${referrerStripeId}`);
@@ -284,6 +315,11 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
         });
         await pool.query(
             `UPDATE referrals SET stage2_paid=true, updated_at=NOW() WHERE id=$1`,
+            [ref.id]
+        );
+        await pool.query(
+            `INSERT INTO referral_activity (referral_id, event_type, credit_amount, description)
+             VALUES ($1, 'stage2_paid', 50, 'Stage 2: $50 credit — friend completed second month')`,
             [ref.id]
         );
         console.log(`💰 $50 referral Stage 2 issued to ${referrerStripeId}`);
@@ -331,6 +367,15 @@ async function linkReferral(referralCode: string, referredUserId: string, referr
              ON CONFLICT DO NOTHING`,
             [referralCode, referredUserId, referredCustomerId]
         );
+        
+        const newRef = await pool.query(`SELECT id FROM referrals WHERE referred_user_id = $1`, [referredUserId]);
+        if (newRef.rows.length) {
+            await pool.query(
+                `INSERT INTO referral_activity (referral_id, event_type, description)
+                 VALUES ($1, 'signed_up', 'Friend signed up and started 14-day trial')`,
+                [newRef.rows[0].id]
+            );
+        }
     } catch (err) {
         console.error("Failed to link referral:", err);
     }

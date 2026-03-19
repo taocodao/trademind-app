@@ -1,133 +1,229 @@
-"use client";
+'use client';
 
-import { useSettings } from '@/components/providers/SettingsProvider';
-import { AIFeatureCard } from '@/components/ui/AIFeatureCard';
-import { Camera, Sunrise, Calculator, Search, TrendingUp, MessageSquare, Bot, ArrowUpRight } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { 
+  Bot, ShieldCheck, Zap, Maximize, 
+  Briefcase, ScanSearch, LineChart, Target,
+  FileSearch, MessageSquare, Coffee, ShieldAlert,
+  Loader2, CheckCircle2
+} from 'lucide-react';
+import { AIFeatureCard } from '@/components/ui/AIFeatureCard';
+import { usePrivy } from '@privy-io/react-auth';
+import { useRouter } from 'next/navigation';
 
 export default function AIHubPage() {
-  const { settings } = useSettings();
-  const [budget, setBudget] = useState<{ used: number; limit: number; remaining: number } | null>(null);
+  const { authenticated, ready } = usePrivy();
+  const router = useRouter();
+  
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchFeatures = async () => {
+    try {
+      const res = await fetch('/api/ai/features');
+      if (!res.ok) throw new Error('Failed to load features');
+      const json = await res.json();
+      setData(json);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Fetch budget on load
-    fetch('/api/ai/budget').then(r => r.json()).then(data => {
-      if (data.allowed !== undefined) setBudget(data);
-    }).catch(console.error);
-  }, []);
+    if (ready && authenticated) {
+      fetchFeatures();
+    } else if (ready && !authenticated) {
+      router.push('/');
+    }
+  }, [ready, authenticated, router]);
 
-  const tier = settings?.subscription_tier || 'observer';
-  const used = budget?.used || 0;
-  const limit = budget?.limit || (tier === 'observer' ? 10 : tier === 'core' ? 50 : tier === 'pro' ? 400 : 1500);
-  const percent = Math.min(100, Math.round((used / limit) * 100)) || 0;
+  const handleSubscribe = async (featureKey: string) => {
+    setIsProcessing(true);
+    try {
+      const res = await fetch('/api/ai/subscribe-feature', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ featureKey })
+      });
+      
+      const json = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(json.error || 'Failed to subscribe');
+      }
+      
+      if (json.method === 'paid') {
+          alert('Added to your Stripe subscription! ($5/mo)');
+      } else {
+          alert('Feature added for free!');
+      }
+      
+      await fetchFeatures();
+      
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleUnsubscribe = async (featureKey: string) => {
+    if (!confirm('Are you sure you want to remove access to this feature?')) return;
+    
+    setIsProcessing(true);
+    try {
+      const res = await fetch('/api/ai/unsubscribe-feature', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ featureKey })
+      });
+      
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || 'Failed to unsubscribe');
+      }
+      
+      alert('Feature removed.');
+      await fetchFeatures();
+      
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  if (!ready || loading) {
+    return (
+      <div className="flex h-[calc(100vh-80px)] items-center justify-center bg-tm-bg">
+        <Loader2 className="h-8 w-8 animate-spin text-tm-purple mb-4" />
+      </div>
+    );
+  }
+
+  const { tier, features, freeRemaining, freeLimit, chatIncluded } = data || {};
+  const isObserver = tier === 'observer';
 
   return (
-    <div className="min-h-screen bg-tm-bg pb-24 px-4 pt-6 space-y-6 max-w-lg mx-auto">
-      <header className="flex items-center justify-between mb-4">
-        <h1 className="text-white font-bold text-2xl tracking-tight flex items-center gap-2">
-          <Bot className="w-7 h-7 text-tm-purple" />
-          AI Copilot
-        </h1>
-      </header>
+    <div className="min-h-screen bg-tm-bg text-white pb-24">
       
-      {/* Budget Card */}
-      <div className="bg-tm-surface border border-tm-border rounded-xl p-4 flex flex-col gap-3 relative overflow-hidden">
-        <div className="flex justify-between items-end relative z-10">
-          <div>
-            <div className="text-white font-bold text-lg">{limit - used} messages left</div>
-            <div className="text-tm-muted text-xs mt-0.5">Resets month-end</div>
+      {/* Header section */}
+      <div className="px-5 pt-8 pb-6 bg-tm-surface/50 border-b border-tm-border">
+        <div className="flex items-center gap-3 mb-2 opacity-90">
+          <Bot className="text-tm-purple h-8 w-8" />
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">AI Copilot</h1>
+        </div>
+        <p className="text-tm-muted text-sm max-w-sm mt-1 mb-4 leading-relaxed">
+          Your personal market analyst powered by Perplexity Pro real-time engine. 
+        </p>
+        
+        {!isObserver && (
+          <div className="bg-tm-purple/10 border border-tm-purple/30 rounded-xl p-4 flex flex-col gap-2">
+            <div className="flex justify-between items-center w-full">
+               <span className="text-sm font-medium text-white flex items-center gap-2">
+                 <Zap className="h-4 w-4 text-amber-400" /> Subscription Tier: <span className="uppercase text-tm-purple">{tier.replace('_', ' ')}</span>
+               </span>
+               <span className="text-xs font-semibold bg-tm-purple/20 px-2 py-1 rounded text-tm-purple">
+                  {freeRemaining} / {freeLimit} free picks left
+               </span>
+            </div>
+            {freeRemaining > 0 && (
+                <p className="text-xs text-tm-muted">You have unused free AI feature picks. Add a feature below for free!</p>
+            )}
+            {freeRemaining === 0 && freeLimit > 0 && (
+                <p className="text-xs text-tm-muted">You have used your free picks. Additional features are $5/mo.</p>
+            )}
           </div>
-          <div className="text-tm-purple font-semibold text-sm">{percent}% used</div>
-        </div>
+        )}
         
-        <div className="h-2 w-full bg-tm-bg rounded-full overflow-hidden relative z-10">
-          <div 
-            className="h-full bg-tm-purple transition-all duration-1000 ease-out" 
-            style={{ width: `${percent}%` }}
-          />
-        </div>
-        
-        {/* Decorative background glow */}
-        <div className="absolute -top-10 -right-10 w-32 h-32 bg-tm-purple/10 rounded-full blur-2xl pointer-events-none" />
+        {isObserver && (
+          <div className="bg-tm-surface border border-tm-border rounded-xl p-4 flex flex-col gap-2 relative overflow-hidden">
+             <div className="absolute top-0 right-0 w-32 h-32 bg-tm-purple/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
+             <ShieldAlert className="h-6 w-6 text-amber-500 mb-1" />
+             <h3 className="font-semibold text-white">Unlock AI Copilot</h3>
+             <p className="text-xs text-tm-muted">Subscribe to a base plan to unlock free AI features and the $5/mo add-ons.</p>
+             <Link href="/pricing" className="mt-2 text-tm-purple text-sm font-medium hover:underline">View Plans →</Link>
+          </div>
+        )}
       </div>
 
-      {tier === 'observer' && (
-        <Link href="/settings" className="flex items-center justify-between bg-tm-purple text-white p-3 rounded-xl font-medium shadow-lg shadow-tm-purple/20 active:scale-[0.98] transition-transform">
-          <span>Upgrade to unlock full AI powers</span>
-          <ArrowUpRight className="w-4 h-4" />
-        </Link>
+      {isProcessing && (
+        <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-tm-purple/30 overflow-hidden">
+           <div className="h-full bg-tm-purple animate-pulse w-full"></div>
+        </div>
       )}
 
-      {/* AI Features Grid */}
-      <div className="space-y-3 pt-2">
-        <h2 className="text-white font-semibold text-sm px-1 opacity-90">Core Tools</h2>
-        <div className="grid grid-cols-2 gap-3">
-          <AIFeatureCard 
-            title="Screenshot Analyzer"
-            description="Upload any position chart to test alignment"
-            icon={<Camera className="w-6 h-6 text-emerald-400" />}
-            tier="all"
-            messagesRequired={3}
-            href="/ai/screenshot"
-            userTier={tier}
-          />
-          <AIFeatureCard 
-            title="Deep Dive"
-            description="Live web search on catalysts + IV rank"
-            icon={<Search className="w-6 h-6 text-amber-400" />}
-            tier="all"
-            messagesRequired={2}
-            href="/ai/deepdive"
-            userTier={tier}
-          />
+      {/* Feature Grids */}
+      <div className="px-5 py-6 space-y-8">
+
+        {/* PRO TOOLS */}
+        <div>
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
+            <ScanSearch className="h-5 w-5 text-tm-muted" /> Available Features
+          </h2>
+          <div className="grid grid-cols-2 gap-3">
+            {features?.map((f: any) => (
+                <AIFeatureCard 
+                  key={f.key}
+                  title={f.name}
+                  featureKey={f.key}
+                  price={f.price}
+                  description={getDescriptionFor(f.key)}
+                  icon={getIconFor(f.key)}
+                  isActive={f.isActive}
+                  isFreePickAvailable={freeRemaining > 0}
+                  userTier={tier}
+                  onSubscribe={handleSubscribe}
+                  onUnsubscribe={handleUnsubscribe}
+                />
+            ))}
+          </div>
+        </div>
+        
+        {/* FREE CHAT - ALWAYS BOTTOM */}
+        <div>
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
+             <MessageSquare className="h-5 w-5 text-tm-muted" /> Included Core
+          </h2>
+          <div className="grid grid-cols-1 gap-3">
+             <AIFeatureCard 
+                  title="TradeMind Chat"
+                  featureKey="chat"
+                  price={0}
+                  description="General educational chat with the AI copilot. Always unlimited for all plans."
+                  icon={<MessageSquare className="h-6 w-6 text-blue-400" />}
+                  isActive={chatIncluded}
+                  isFreePickAvailable={false}
+                  userTier={tier}
+                  href="/ai/chat"
+              />
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <AIFeatureCard 
-            title="Morning Brief"
-            description="Daily regime summary at 8:15 AM ET"
-            icon={<Sunrise className="w-6 h-6 text-orange-400" />}
-            tier="all"
-            messagesRequired={0}
-            href="/ai/briefing"
-            userTier={tier}
-          />
-          <AIFeatureCard 
-            title="Strategy Builder"
-            description="Options structuring from your thesis"
-            icon={<Calculator className="w-6 h-6 text-tm-purple" />}
-            tier="pro"
-            messagesRequired={2}
-            href="/ai/strategy"
-            userTier={tier}
-          />
-        </div>
-
-        <h2 className="text-white font-semibold text-sm px-1 pt-4 opacity-90">Performance Coaching</h2>
-        <AIFeatureCard 
-          title="Weekly Debrief"
-          description="Personalized Sunday review bridging your portfolio vs TurboCore"
-          icon={<TrendingUp className="w-6 h-6 text-emerald-400" />}
-          tier="pro"
-          messagesRequired={0}
-          href="/ai/debrief"
-          userTier={tier}
-        />
       </div>
-
-      <div className="pt-4">
-        <Link href="/ai/chat" className="flex items-center gap-3 bg-tm-surface hover:bg-tm-surface/80 border border-tm-border rounded-2xl p-4 transition-colors">
-          <div className="w-10 h-10 rounded-full bg-tm-purple/20 flex items-center justify-center text-tm-purple shrink-0">
-            <MessageSquare className="w-5 h-5 fill-current opacity-80" />
-          </div>
-          <div>
-            <div className="text-white font-medium">Free Chat</div>
-            <div className="text-tm-muted text-xs line-clamp-1">Ask any market question (1 message)</div>
-          </div>
-        </Link>
-      </div>
-
     </div>
   );
+}
+
+function getIconFor(key: string) {
+    if (key === 'screenshot') return <FileSearch className="h-6 w-6 text-indigo-400" />;
+    if (key === 'deepdive') return <LineChart className="h-6 w-6 text-green-400" />;
+    if (key === 'briefing') return <Coffee className="h-6 w-6 text-amber-400" />;
+    if (key === 'strategy') return <Target className="h-6 w-6 text-rose-400" />;
+    if (key === 'debrief') return <Briefcase className="h-6 w-6 text-purple-400" />;
+    return <Bot className="h-6 w-6" />;
+}
+
+function getDescriptionFor(key: string) {
+    if (key === 'screenshot') return "Upload screenshots of trades or charts for instant AI analysis and breakdowns.";
+    if (key === 'deepdive') return "In-depth ticker analysis with live news catalysts and options risk profiling.";
+    if (key === 'briefing') return "Daily morning market briefing tailored to the active TurboCore regime.";
+    if (key === 'strategy') return "Build realistic multi-leg options strategies optimized for your specific thesis.";
+    if (key === 'debrief') return "Weekly performance review and educational insights on your closed trades.";
+    return "";
 }

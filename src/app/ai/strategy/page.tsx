@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { ArrowLeft, Calculator, Loader2, Lock, Send, Target, Clock, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Calculator, Loader2, Lock, Send, Target, Clock, ShieldAlert, MessageSquare } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Strategy {
@@ -11,7 +11,7 @@ interface Strategy {
   maxGain: number | null;
   breakeven: number | null;
   probabilityOfProfit: number;
-  turboAlignment: 'strong' | | 'moderate' | 'neutral' | 'against';
+  turboAlignment: 'strong' | 'moderate' | 'neutral' | 'against';
   rationale: string;
   riskReward: string;
 }

@@ -1,17 +1,21 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Camera, Bot, ArrowLeft, Send, Loader2, Lock } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Camera, ArrowLeft, Send, Loader2, Lock, X, ImagePlus } from 'lucide-react';
 import { SignalContextBadge } from '@/components/ui/SignalContextBadge';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 export default function ScreenshotPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [description, setDescription] = useState('');
   const [streamData, setStreamData] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [imageMediaType, setImageMediaType] = useState<string>('image/jpeg');
 
   const [featureAccess, setFeatureAccess] = useState({ isLocked: false, freeRemaining: 0, loading: true });
 
@@ -29,11 +33,36 @@ export default function ScreenshotPage() {
       .catch(() => setFeatureAccess(prev => ({ ...prev, loading: false })));
   }, []);
 
-  // Mocked state for UI testing
+  // Mocked TurboCore signal context
   const turboSignal = { regime: 'BULL', confidence: 87, mlScore: 92, allocation: { TQQQ: 80, HYG: 20 } };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImageMediaType(file.type || 'image/jpeg');
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const result = ev.target?.result as string;
+      // result is: data:image/png;base64,XXXX
+      const base64 = result.split(',')[1];
+      setImageBase64(base64);
+      setImagePreview(result); // full data URL for <img> preview
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const clearImage = () => {
+    setImageBase64(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const canSubmit = (imageBase64 || description.trim()) && !isStreaming;
+
   const handleAnalyze = async () => {
-    if (!description.trim() || isStreaming) return;
+    if (!canSubmit) return;
     setIsStreaming(true);
     setStreamData('');
     setError(null);
@@ -42,15 +71,18 @@ export default function ScreenshotPage() {
       const response = await fetch('/api/ai/screenshot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [{ role: 'user', content: description }]
-        })
+        body: JSON.stringify({ description, imageBase64, imageMediaType })
       });
 
       if (response.status === 403) {
-         setError('FEATURE_LOCKED');
-         setIsStreaming(false);
-         return;
+        setError('FEATURE_LOCKED');
+        setIsStreaming(false);
+        return;
+      }
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Analysis failed');
       }
 
       if (!response.body) throw new Error('No response body');
@@ -62,8 +94,7 @@ export default function ScreenshotPage() {
         const { done, value } = await reader.read();
         if (done) break;
         const chunk = decoder.decode(value);
-        
-        // Parse SSE chunk (Perplexity uses standard OpenAI-like streaming)
+
         const lines = chunk.split('\n').filter(line => line.trim() !== '');
         for (const line of lines) {
           if (line.replace(/^data: /, '') === '[DONE]') continue;
@@ -73,50 +104,50 @@ export default function ScreenshotPage() {
               if (data.choices?.[0]?.delta?.content) {
                 setStreamData(prev => prev + data.choices[0].delta.content);
               }
-            } catch (e) {
-               // ignore split payload errors
+            } catch {
+              // ignore parse errors for split chunks
             }
           }
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      setStreamData('Sorry, there was an error processing your request.');
+      setError(e.message || 'Sorry, there was an error processing your request.');
     } finally {
       setIsStreaming(false);
     }
   };
 
   if (featureAccess.loading) {
-     return (
-        <div className="min-h-screen bg-tm-bg py-24 flex items-center justify-center">
-            <Loader2 className="w-8 h-8 text-tm-purple animate-spin" />
-        </div>
-     );
+    return (
+      <div className="min-h-screen bg-tm-bg py-24 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-tm-purple animate-spin" />
+      </div>
+    );
   }
 
   if (featureAccess.isLocked || error === 'FEATURE_LOCKED') {
-     const isFree = featureAccess.freeRemaining > 0;
-     return (
-        <div className="min-h-screen bg-tm-bg py-24 px-6 max-w-lg mx-auto flex flex-col items-center justify-center text-center">
-            <div className="w-16 h-16 rounded-full bg-tm-purple/20 flex items-center justify-center mb-6 border border-tm-purple/30">
-               <Lock className="w-8 h-8 text-tm-purple" />
-            </div>
-            <h1 className="text-white font-black text-2xl mb-2">Feature Locked</h1>
-            <p className="text-tm-muted mb-8 leading-relaxed">
-               You haven't unlocked the Screenshot Analyzer yet. 
-            </p>
-            <button 
-               onClick={() => router.push('/ai')}
-               className="bg-tm-purple hover:bg-tm-purple/90 text-white px-8 py-3.5 rounded-xl font-bold transition-all active:scale-95 shadow-[0_0_20px_rgba(168,85,247,0.3)]"
-            >
-               {isFree ? "Add for FREE" : "Unlock for $5/mo"}
-            </button>
-            <button onClick={() => router.back()} className="mt-6 text-tm-muted text-sm font-medium hover:text-white">
-               Go Back
-            </button>
+    const isFree = featureAccess.freeRemaining > 0;
+    return (
+      <div className="min-h-screen bg-tm-bg py-24 px-6 max-w-lg mx-auto flex flex-col items-center justify-center text-center">
+        <div className="w-16 h-16 rounded-full bg-tm-purple/20 flex items-center justify-center mb-6 border border-tm-purple/30">
+          <Lock className="w-8 h-8 text-tm-purple" />
         </div>
-     );
+        <h1 className="text-white font-black text-2xl mb-2">Feature Locked</h1>
+        <p className="text-tm-muted mb-8 leading-relaxed">
+          You haven't unlocked the Screenshot Analyzer yet.
+        </p>
+        <button
+          onClick={() => router.push('/ai')}
+          className="bg-tm-purple hover:bg-tm-purple/90 text-white px-8 py-3.5 rounded-xl font-bold transition-all active:scale-95 shadow-[0_0_20px_rgba(168,85,247,0.3)]"
+        >
+          {isFree ? "Add for FREE" : "Unlock for $5/mo"}
+        </button>
+        <button onClick={() => router.back()} className="mt-6 text-tm-muted text-sm font-medium hover:text-white">
+          Go Back
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -135,38 +166,77 @@ export default function ScreenshotPage() {
         <SignalContextBadge signal={turboSignal} />
       </div>
 
+      {/* AI Response */}
       <div className="flex-1 overflow-y-auto space-y-4 pb-4">
-         {streamData && (
-            <div className="bg-purple-600/10 border border-tm-purple/20 rounded-xl p-4 text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">
-               {streamData}
-               {isStreaming && <span className="inline-block w-1.5 h-4 ml-1 bg-tm-purple animate-pulse align-middle" />}
-            </div>
-         )}
+        {error && error !== 'FEATURE_LOCKED' && (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-sm text-red-400">
+            {error}
+          </div>
+        )}
+        {streamData && (
+          <div className="bg-purple-600/10 border border-tm-purple/20 rounded-xl p-4 text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">
+            {streamData}
+            {isStreaming && <span className="inline-block w-1.5 h-4 ml-1 bg-tm-purple animate-pulse align-middle" />}
+          </div>
+        )}
       </div>
 
+      {/* Input Area */}
       <div className="mt-auto bg-tm-surface p-3 rounded-2xl border border-tm-border/50">
-         <div className="flex items-center gap-2 mb-3 px-2">
-            <button className="w-10 h-10 rounded-full bg-tm-bg border border-tm-border flex items-center justify-center text-tm-muted hover:text-white transition-colors">
-               <Camera className="w-4 h-4" />
-            </button>
-            <span className="text-xs text-tm-muted">Upload Chart (Coming Soon)</span>
-         </div>
-         <div className="relative">
-            <textarea 
-               value={description}
-               onChange={e => setDescription(e.target.value)}
-               placeholder="Or describe the position you are considering..."
-               className="w-full bg-tm-bg text-sm text-white rounded-xl placeholder:text-tm-muted/50 p-3 pr-12 resize-none border-none focus:ring-1 focus:ring-tm-purple"
-               rows={3}
-            />
-            <button 
-               onClick={handleAnalyze}
-               disabled={isStreaming || !description.trim()}
-               className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-tm-purple flex items-center justify-center text-white disabled:opacity-50 disabled:bg-tm-surface"
+
+        {/* Image preview */}
+        {imagePreview && (
+          <div className="relative mb-3 rounded-xl overflow-hidden border border-tm-border">
+            <img src={imagePreview} alt="Chart preview" className="w-full max-h-48 object-cover" />
+            <button
+              onClick={clearImage}
+              className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/70 flex items-center justify-center text-white hover:bg-black transition-colors"
             >
-               {isStreaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              <X className="w-3.5 h-3.5" />
             </button>
-         </div>
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-3 py-2">
+              <span className="text-xs text-white/80 font-medium">Chart ready for analysis</span>
+            </div>
+          </div>
+        )}
+
+        {/* Upload button row */}
+        <div className="flex items-center gap-2 mb-3 px-1">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleImageSelect}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-2 text-xs text-tm-muted hover:text-white transition-colors bg-tm-bg border border-tm-border rounded-lg px-3 py-2"
+          >
+            <ImagePlus className="w-3.5 h-3.5" />
+            {imageBase64 ? 'Change Chart' : 'Upload Chart'}
+          </button>
+          <span className="text-xs text-tm-muted/50">PNG, JPG, WEBP supported</span>
+        </div>
+
+        {/* Text input */}
+        <div className="relative">
+          <textarea
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAnalyze(); } }}
+            placeholder={imageBase64 ? "Add context about this chart (optional)..." : "Or describe the position you are considering..."}
+            className="w-full bg-tm-bg text-sm text-white rounded-xl placeholder:text-tm-muted/50 p-3 pr-12 resize-none border-none focus:ring-1 focus:ring-tm-purple"
+            rows={3}
+          />
+          <button
+            onClick={handleAnalyze}
+            disabled={!canSubmit}
+            className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-tm-purple flex items-center justify-center text-white disabled:opacity-40 disabled:bg-tm-surface transition-all hover:bg-tm-purple/90 active:scale-95"
+          >
+            {isStreaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          </button>
+        </div>
       </div>
     </div>
   );

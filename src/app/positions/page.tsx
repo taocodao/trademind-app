@@ -44,9 +44,7 @@ export default function PositionsPage() {
     const { activeStrategy, setActiveStrategy, enabledStrategies } = useStrategyContext();
     const [positions, setPositions] = useState<EquityPosition[]>([]);
     const [loading, setLoading] = useState(true);
-    const [accountNum, setAccountNum] = useState<string | null>(null);
     const [balance, setBalance] = useState<AccountBalance | null>(null);
-    const [isVirtualLedger, setIsVirtualLedger] = useState(false);
     const { settings } = useSettings();
     
     // Transfer modal state
@@ -145,119 +143,57 @@ export default function PositionsPage() {
             setLoading(true);
             setPositions([]);
             
-            // 1. Get account number
-            const acctRes = await fetch('/api/tastytrade/account');
-            let isTastyLinked = false;
-            let acct = null;
-            if (acctRes.ok) {
-                const acctData = await acctRes.json();
-                acct = acctData.data?.items?.[0]?.account?.['account-number'];
-                if (acct) {
-                    isTastyLinked = true;
-                    setAccountNum(acct);
-                    setIsVirtualLedger(false);
+            // 1. Fetch virtual balance from API
+            let virtualBalance = 100000;
+            try {
+                const vBalRes = await fetch(`/api/virtual-accounts?strategy=${activeStrategy}`);
+                if (vBalRes.ok) {
+                    const vBalData = await vBalRes.json();
+                    virtualBalance = Number(vBalData.balance);
                 }
+            } catch (e) {
+                console.error('Virtual balance fetch error', e);
             }
+            
+            setBalance({
+                cashAvailable: virtualBalance,
+                buyingPower: virtualBalance, // For virtual accounts, buying power is roughly cash available
+                netLiquidation: virtualBalance, // Will update below by adding positions value
+            });
 
-            // 2. Fetch balance
-            const balRes = await fetch(`/api/tastytrade/balance?accountNumber=${acct}`);
-            if (balRes.ok) {
-                const bal = await balRes.json();
-                setBalance({
-                    cashAvailable: bal.cashAvailable ?? 0,
-                    buyingPower: bal.buyingPower ?? 0,
-                    netLiquidation: bal.netLiquidatingValue ?? 0,
+            // 2. Fetch shadow positions
+            const shadowRes = await fetch(`/api/shadow-positions?strategy=${activeStrategy}`);
+            if (shadowRes.ok) {
+                const shadowData = await shadowRes.json();
+                const shadowEq: EquityPosition[] = (shadowData.positions || []).map((p: any) => {
+                    const qty = Number(p.quantity);
+                    const avgPrice = Number(p.avg_price);
+                    const lastPrice = avgPrice; // No live pricing without another API call right now
+                    const marketVal = qty * lastPrice;
+                    return {
+                        symbol: p.symbol,
+                        quantity: qty,
+                        averageOpenPrice: avgPrice,
+                        currentPrice: lastPrice,
+                        marketValue: marketVal,
+                        unrealizedPnl: 0,
+                        unrealizedPnlPct: 0,
+                        instrumentType: 'Equity',
+                        isVirtual: true,
+                    };
                 });
-            }
-
-            // 3. Fetch positions from Tastytrade
-            const posRes = await fetch(`/api/tastytrade/positions?accountNumber=${acct}`);
-            if (posRes.ok) {
-                const posData = await posRes.json();
-                const items = posData?.data?.items || [];
-
-                // Not filtering by symbol here anymore so we can cache all positions
-                const equityPositions: EquityPosition[] = items
-                    .filter((p: any) => p['instrument-type'] === 'Equity')
-                    .map((p: any) => {
-                        const qty = Number(p.quantity) || 0;
-                        const avgPrice = Number(p['average-open-price']) || 0;
-                        const closePrice = Number(p['close-price']) || avgPrice;
-                        const marketVal = qty * closePrice;
-                        const costBasis = qty * avgPrice;
-                        const pnl = marketVal - costBasis;
-                        const pnlPct = costBasis > 0 ? (pnl / costBasis) * 100 : 0;
-
-                        return {
-                            symbol: p.symbol,
-                            quantity: qty,
-                            averageOpenPrice: avgPrice,
-                            currentPrice: closePrice,
-                            marketValue: marketVal,
-                            unrealizedPnl: pnl,
-                            unrealizedPnlPct: pnlPct,
-                            instrumentType: p['instrument-type'],
-                        };
-                    });
-
-                setPositions(equityPositions);
-            } else {
-                // Fetch virtual shadow positions
-                setIsVirtualLedger(true);
                 
-                // Fetch balance from API
-                let virtualBalance = 100000;
-                try {
-                    const vBalRes = await fetch(`/api/virtual-accounts?strategy=${activeStrategy}`);
-                    if (vBalRes.ok) {
-                        const vBalData = await vBalRes.json();
-                        virtualBalance = Number(vBalData.balance);
-                    }
-                } catch (e) {
-                    console.error('Virtual balance fetch error', e);
-                }
+                const positionsValue = shadowEq.reduce((acc, p) => acc + p.marketValue, 0);
+                setBalance(prev => prev ? { ...prev, netLiquidation: prev.cashAvailable + positionsValue } : null);
                 
-                setBalance({
-                    cashAvailable: virtualBalance,
-                    buyingPower: virtualBalance,
-                    netLiquidation: virtualBalance, // Will add positions value below
-                });
-
-                // Fetch from API instead of local settings for better tracking if preferred, 
-                // but since we read from DB:
-                const shadowRes = await fetch(`/api/shadow-positions?strategy=${activeStrategy}`);
-                if (shadowRes.ok) {
-                    const shadowData = await shadowRes.json();
-                    const shadowEq: EquityPosition[] = (shadowData.positions || []).map((p: any) => {
-                        const qty = Number(p.quantity);
-                        const avgPrice = Number(p.avg_price);
-                        const lastPrice = avgPrice; // We don't have live pricing here without another API call
-                        const marketVal = qty * lastPrice;
-                        return {
-                            symbol: p.symbol,
-                            quantity: qty,
-                            averageOpenPrice: avgPrice,
-                            currentPrice: lastPrice,
-                            marketValue: marketVal,
-                            unrealizedPnl: 0, // No live prices, no PnL
-                            unrealizedPnlPct: 0,
-                            instrumentType: 'Equity',
-                            isVirtual: true,
-                        };
-                    });
-                    
-                    const positionsValue = shadowEq.reduce((acc, p) => acc + p.marketValue, 0);
-                    setBalance(prev => prev ? { ...prev, netLiquidation: prev.cashAvailable + positionsValue } : null);
-                    
-                    setPositions(shadowEq);
-                }
+                setPositions(shadowEq);
             }
         } catch (err) {
-            console.error('Error fetching positions:', err);
+            console.error('Error fetching virtual positions:', err);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [activeStrategy]);
 
     useEffect(() => {
         if (ready && !authenticated) {
@@ -285,12 +221,8 @@ export default function PositionsPage() {
 
     const activeStrategyConfig = getStrategy(activeStrategy);
 
-    // For a live Tastytrade account, both strategies share the same physical account
-    // and the same underlying symbols — so we show ALL positions on every strategy tab.
-    // For shadow (virtual) ledger, positions are already isolated per strategy by design.
-    const filteredPositions = isVirtualLedger
-        ? positions  // Shadow ledger positions are already strategy-scoped
-        : positions; // Live account: show all positions on all strategy tabs (one physical account)
+    // Positions are already isolated per strategy natively in the database.
+    const filteredPositions = positions;
 
     const totalValue = filteredPositions.reduce((s, p) => s + p.marketValue, 0);
     const totalPnl = filteredPositions.reduce((s, p) => s + p.unrealizedPnl, 0);
@@ -307,7 +239,7 @@ export default function PositionsPage() {
                 <div className="flex-1">
                     <h1 className="text-xl font-bold flex items-center gap-2">
                         Positions
-                        {isVirtualLedger && <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-bold">VIRTUAL</span>}
+                        <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-bold">VIRTUAL</span>
                     </h1>
                     <p className="text-sm text-tm-muted">{filteredPositions.length} equity position{filteredPositions.length !== 1 ? 's' : ''}</p>
                 </div>
@@ -316,24 +248,15 @@ export default function PositionsPage() {
                 </button>
             </header>
 
-            {/* Strategy context — tabs shown for shadow; shared-account banner for live */}
-            {isVirtualLedger ? (
-                <div className="px-6 mb-6">
-                    <StrategyTabs
-                        strategies={enabledStrategies}
-                        activeKey={activeStrategy}
-                        onChange={setActiveStrategy}
-                        showAll={false}
-                    />
-                </div>
-            ) : (
-                <div className="px-6 mb-4">
-                    <div className="flex items-center gap-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-xs text-blue-300">
-                        <span>🏦</span>
-                        <span>TurboCore &amp; Pro share one Tastytrade account — all positions are shown together.</span>
-                    </div>
-                </div>
-            )}
+            {/* Strategy tabs */}
+            <div className="px-6 mb-6">
+                <StrategyTabs
+                    strategies={enabledStrategies}
+                    activeKey={activeStrategy}
+                    onChange={setActiveStrategy}
+                    showAll={false}
+                />
+            </div>
 
             {/* Account Summary */}
             {balance && (
@@ -342,32 +265,30 @@ export default function PositionsPage() {
                         <div className="flex items-center gap-2 mb-4">
                             <Wallet className="w-5 h-5 text-tm-purple" />
                             <h3 className="font-bold">Account Overview</h3>
-                            {isVirtualLedger && (
-                                <div className="ml-auto flex gap-2">
-                                    <button onClick={() => setShowTransferModal('deposit')} className="text-[10px] bg-green-500/20 text-green-400 px-3 py-1 rounded-full font-bold hover:bg-green-500/30 transition">
-                                        DEPOSIT
-                                    </button>
-                                    <button onClick={() => setShowTransferModal('withdraw')} className="text-[10px] bg-red-500/20 text-red-400 px-3 py-1 rounded-full font-bold hover:bg-red-500/30 transition">
-                                        WITHDRAW
-                                    </button>
-                                </div>
-                            )}
+                            <div className="ml-auto flex gap-2">
+                                <button onClick={() => setShowTransferModal('deposit')} className="text-[10px] bg-green-500/20 text-green-400 px-3 py-1 rounded-full font-bold hover:bg-green-500/30 transition">
+                                    DEPOSIT
+                                </button>
+                                <button onClick={() => setShowTransferModal('withdraw')} className="text-[10px] bg-red-500/20 text-red-400 px-3 py-1 rounded-full font-bold hover:bg-red-500/30 transition">
+                                    WITHDRAW
+                                </button>
+                            </div>
                         </div>
                         <div className="grid grid-cols-3 gap-4 text-center">
                             <div>
-                                <p className="text-xs text-tm-muted">Net Liquidation</p>
+                                <p className="text-xs text-tm-muted">Total Value</p>
                                 <p className="text-lg font-bold font-mono text-tm-green">
                                     ${balance.netLiquidation.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                 </p>
                             </div>
                             <div>
-                                <p className="text-xs text-tm-muted">Buying Power</p>
+                                <p className="text-xs text-tm-muted">Positions Value</p>
                                 <p className="text-lg font-bold font-mono text-tm-purple">
-                                    ${balance.buyingPower.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                    ${(balance.netLiquidation - balance.cashAvailable).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                 </p>
                             </div>
                             <div>
-                                <p className="text-xs text-tm-muted">Cash Available</p>
+                                <p className="text-xs text-tm-muted">Cash Balance</p>
                                 <p className="text-lg font-bold font-mono">
                                     ${balance.cashAvailable.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                 </p>
@@ -523,29 +444,25 @@ export default function PositionsPage() {
                     filteredPositions.map((pos) => (
                         <div key={pos.symbol} className="relative group">
                             <EquityCard position={pos} totalValue={totalValue} />
-                            {pos.isVirtual && (
-                                <button
-                                    onClick={() => {
-                                        setEditPositionModal(pos);
-                                        setEditQuantity(pos.quantity.toString());
-                                    }}
-                                    className="absolute top-4 right-4 p-2 bg-black/50 border border-white/10 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/10 hover:text-tm-purple backdrop-blur-md z-10"
-                                    title="Edit target quantity"
-                                >
-                                    <Edit2 className="w-4 h-4" />
-                                </button>
-                            )}
+                            <button
+                                onClick={() => {
+                                    setEditPositionModal(pos);
+                                    setEditQuantity(pos.quantity.toString());
+                                }}
+                                className="absolute top-4 right-4 p-2 bg-black/50 border border-white/10 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/10 hover:text-tm-purple backdrop-blur-md z-10"
+                                title="Edit target quantity"
+                            >
+                                <Edit2 className="w-4 h-4" />
+                            </button>
                         </div>
                     ))
                 )}
             </div>
 
-            {/* Shadow Ledger Panel — shown in Positions when not linked to live broker */}
-            {isVirtualLedger && (
-                <div className="px-6 mt-6">
-                    <ShadowLedgerPanel strategy={activeStrategy} />
-                </div>
-            )}
+            {/* Shadow Ledger Panel */}
+            <div className="px-6 mt-6">
+                <ShadowLedgerPanel strategy={activeStrategy} />
+            </div>
         </main>
     );
 }

@@ -14,7 +14,8 @@ import {
     Trash2,
     Loader2,
     ExternalLink,
-    Wallet
+    Wallet,
+    AlertTriangle
 } from "lucide-react";
 import Link from "next/link";
 import { useStrategyContext } from "@/components/providers/StrategyContext";
@@ -257,6 +258,15 @@ export default function ActivityPage() {
                 </div>
             </header>
 
+            {!accountNumber && (
+                <div className="px-6 mb-3">
+                    <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-xs text-amber-300">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                        Tastytrade not connected — only virtual and signal activity shown.
+                    </div>
+                </div>
+            )}
+
             {/* Search and Tabs */}
             <div className="px-6 mb-4 space-y-4">
                 <StrategyTabs
@@ -290,7 +300,11 @@ export default function ActivityPage() {
                     <div className="text-center py-12 glass-card">
                         <Activity className="w-12 h-12 text-tm-muted mx-auto mb-4 opacity-50" />
                         <h3 className="text-lg font-semibold mb-2">No activity recorded</h3>
-                        <p className="text-tm-muted text-sm">Trades and signals will appear here.</p>
+                        <p className="text-tm-muted text-sm">
+                            {accountNumber 
+                                ? 'No trades match the current filter.' 
+                                : 'Connect Tastytrade in Settings to see live transactions.'}
+                        </p>
                     </div>
                 ) : (
                     filtered.map((item) => {
@@ -318,7 +332,11 @@ export default function ActivityPage() {
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2 flex-wrap">
-                                                <h3 className="font-bold text-base">{item.symbol || (isVirt && virt.type.toUpperCase()) || 'UNKNOWN'}</h3>
+                                                <h3 className="font-bold text-base">
+                                                    {item.symbol 
+                                                        || (isVirt && virt.type.toUpperCase()) 
+                                                        || (tm.signal_id ? `Signal #${tm.signal_id.slice(-6)}` : 'N/A')}
+                                                </h3>
                                                 {strategyBadge(item.strategy)}
                                                 {isTT && (
                                                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">LIVE</span>

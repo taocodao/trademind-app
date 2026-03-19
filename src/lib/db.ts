@@ -287,7 +287,7 @@ export interface VirtualAccount {
     updated_at: Date;
 }
 
-export async function getVirtualBalance(userId: string, strategy: string): Promise<number> {
+export async function getVirtualBalance(userId: string, strategy: string): Promise<{ balance: number; isDefault: boolean }> {
     const result = await query(
         `SELECT cash_balance FROM virtual_accounts WHERE user_id = $1 AND strategy = $2`,
         [userId, strategy]
@@ -298,9 +298,9 @@ export async function getVirtualBalance(userId: string, strategy: string): Promi
             `INSERT INTO virtual_accounts (user_id, strategy, cash_balance) VALUES ($1, $2, 100000.00) RETURNING cash_balance`,
             [userId, strategy]
         );
-        return parseFloat(init.rows[0].cash_balance);
+        return { balance: parseFloat(init.rows[0].cash_balance), isDefault: true };
     }
-    return parseFloat(result.rows[0].cash_balance);
+    return { balance: parseFloat(result.rows[0].cash_balance), isDefault: false };
 }
 
 export async function logVirtualTransaction(

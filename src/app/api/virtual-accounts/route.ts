@@ -21,8 +21,8 @@ export async function GET(req: Request) {
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     try {
-        const balance = await getVirtualBalance(userId, strategy);
-        return NextResponse.json({ balance });
+        const result = await getVirtualBalance(userId, strategy);
+        return NextResponse.json({ balance: result.balance, isDefault: result.isDefault });
     } catch (error) {
         console.error('Failed to get virtual balance:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

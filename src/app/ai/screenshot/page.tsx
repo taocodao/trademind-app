@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { Camera, ArrowLeft, Send, Loader2, Lock, X, ImagePlus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Camera, ArrowLeft, Send, Loader2, Lock, X, Clipboard } from 'lucide-react';
 import { SignalContextBadge } from '@/components/ui/SignalContextBadge';
 import { useRouter } from 'next/navigation';
+import ReactMarkdown from 'react-markdown';
 
 export default function ScreenshotPage() {
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [description, setDescription] = useState('');
   const [streamData, setStreamData] = useState('');
@@ -33,30 +33,36 @@ export default function ScreenshotPage() {
       .catch(() => setFeatureAccess(prev => ({ ...prev, loading: false })));
   }, []);
 
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (!file) continue;
+          setImageMediaType(file.type);
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const result = ev.target?.result as string;
+            setImageBase64(result.split(',')[1]);
+            setImagePreview(result);
+          };
+          reader.readAsDataURL(file);
+          break;
+        }
+      }
+    };
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, []);
+
   // Mocked TurboCore signal context
   const turboSignal = { regime: 'BULL', confidence: 87, mlScore: 92, allocation: { TQQQ: 80, HYG: 20 } };
-
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setImageMediaType(file.type || 'image/jpeg');
-
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const result = ev.target?.result as string;
-      // result is: data:image/png;base64,XXXX
-      const base64 = result.split(',')[1];
-      setImageBase64(base64);
-      setImagePreview(result); // full data URL for <img> preview
-    };
-    reader.readAsDataURL(file);
-  };
 
   const clearImage = () => {
     setImageBase64(null);
     setImagePreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const canSubmit = (imageBase64 || description.trim()) && !isStreaming;
@@ -143,7 +149,7 @@ export default function ScreenshotPage() {
         >
           {isFree ? "Add for FREE" : "Unlock for $5/mo"}
         </button>
-        <button onClick={() => router.back()} className="mt-6 text-tm-muted text-sm font-medium hover:text-white">
+        <button onClick={() => router.push('/ai')} className="mt-6 text-tm-muted text-sm font-medium hover:text-white">
           Go Back
         </button>
       </div>
@@ -153,7 +159,7 @@ export default function ScreenshotPage() {
   return (
     <div className="min-h-screen bg-tm-bg pb-24 px-4 pt-6 max-w-lg mx-auto flex flex-col">
       <header className="flex items-center gap-3 mb-6">
-        <button onClick={() => router.back()} className="p-2 -ml-2 text-tm-muted hover:text-white">
+        <button onClick={() => router.push('/ai')} className="p-2 -ml-2 text-tm-muted hover:text-white transition-colors">
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="text-white font-bold text-xl flex items-center gap-2">
@@ -174,8 +180,8 @@ export default function ScreenshotPage() {
           </div>
         )}
         {streamData && (
-          <div className="bg-purple-600/10 border border-tm-purple/20 rounded-xl p-4 text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">
-            {streamData}
+          <div className="bg-purple-600/10 border border-tm-purple/20 rounded-xl p-4 text-sm text-gray-200 leading-relaxed prose prose-invert prose-sm max-w-none">
+            <ReactMarkdown>{streamData}</ReactMarkdown>
             {isStreaming && <span className="inline-block w-1.5 h-4 ml-1 bg-tm-purple animate-pulse align-middle" />}
           </div>
         )}
@@ -200,23 +206,12 @@ export default function ScreenshotPage() {
           </div>
         )}
 
-        {/* Upload button row */}
+        {/* Paste tool tip */}
         <div className="flex items-center gap-2 mb-3 px-1">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleImageSelect}
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-2 text-xs text-tm-muted hover:text-white transition-colors bg-tm-bg border border-tm-border rounded-lg px-3 py-2"
-          >
-            <ImagePlus className="w-3.5 h-3.5" />
-            {imageBase64 ? 'Change Chart' : 'Upload Chart'}
-          </button>
-          <span className="text-xs text-tm-muted/50">PNG, JPG, WEBP supported</span>
+          <div className="flex items-center gap-2 text-xs text-tm-muted/60 bg-tm-bg/60 border border-tm-border/40 rounded-lg px-3 py-2">
+            <Clipboard className="w-3.5 h-3.5" />
+            Paste a screenshot with <kbd className="bg-white/10 px-1 rounded">Ctrl+V</kbd>
+          </div>
         </div>
 
         {/* Text input */}

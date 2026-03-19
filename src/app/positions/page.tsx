@@ -16,7 +16,6 @@ import { useStrategyContext } from "@/components/providers/StrategyContext";
 import { StrategyTabs } from "@/components/ui/StrategyTabs";
 import { getStrategy } from "@/lib/strategies";
 import { useSettings } from "@/components/providers/SettingsProvider";
-import { ShadowLedgerPanel } from "@/components/dashboard/ShadowLedgerPanel";
 
 interface EquityPosition {
     symbol: string;
@@ -51,6 +50,35 @@ export default function PositionsPage() {
     const [showTransferModal, setShowTransferModal] = useState<'deposit' | 'withdraw' | null>(null);
     const [transferAmount, setTransferAmount] = useState('');
     const [transferLoading, setTransferLoading] = useState(false);
+
+    const [showOnboarding, setShowOnboarding] = useState(false);
+    const [onboardingAmount, setOnboardingAmount] = useState('');
+
+    const handleOnboardingSubmit = async () => {
+        if (!onboardingAmount) return;
+        const diff = parseFloat(onboardingAmount) - 100000;
+        const action = diff > 0 ? 'deposit' : 'withdraw';
+        const absoluteAmount = Math.abs(diff);
+
+        if (absoluteAmount === 0) {
+           setShowOnboarding(false);
+           return;
+        }
+
+        try {
+            const res = await fetch('/api/virtual-accounts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ strategy: activeStrategy, action, amount: absoluteAmount })
+            });
+            if (res.ok) {
+                setShowOnboarding(false);
+                fetchAccountAndPositions();
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
 
     const handleTransfer = async () => {
         if (!showTransferModal || !transferAmount) return;
@@ -145,11 +173,13 @@ export default function PositionsPage() {
             
             // 1. Fetch virtual balance from API
             let virtualBalance = 100000;
+            let isDefault = false;
             try {
                 const vBalRes = await fetch(`/api/virtual-accounts?strategy=${activeStrategy}`);
                 if (vBalRes.ok) {
                     const vBalData = await vBalRes.json();
                     virtualBalance = Number(vBalData.balance);
+                    isDefault = vBalData.isDefault;
                 }
             } catch (e) {
                 console.error('Virtual balance fetch error', e);
@@ -187,6 +217,10 @@ export default function PositionsPage() {
                 setBalance(prev => prev ? { ...prev, netLiquidation: prev.cashAvailable + positionsValue } : null);
                 
                 setPositions(shadowEq);
+
+                if (isDefault && shadowEq.length === 0) {
+                    setShowOnboarding(true);
+                }
             }
         } catch (err) {
             console.error('Error fetching virtual positions:', err);
@@ -342,6 +376,39 @@ export default function PositionsPage() {
                 </div>
             )}
 
+            {/* Onboarding Modal */}
+            {showOnboarding && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+                    <div className="bg-[#111] border border-white/10 p-6 rounded-2xl w-full max-w-sm">
+                        <div className="w-12 h-12 rounded-full bg-tm-purple/20 flex items-center justify-center mb-4 mx-auto">
+                            <Wallet className="w-6 h-6 text-tm-purple" />
+                        </div>
+                        <h3 className="text-lg font-bold text-center mb-2">Set Your Starting Capital</h3>
+                        <p className="text-xs text-tm-muted text-center mb-6 leading-relaxed">
+                            Enter the amount you're starting with. This initializes your virtual portfolio 
+                            to mirror real position sizing from TurboCore signals.
+                        </p>
+                        <input
+                            type="number"
+                            min="1000"
+                            step="1000"
+                            value={onboardingAmount}
+                            onChange={(e) => setOnboardingAmount(e.target.value)}
+                            placeholder="e.g. 25000"
+                            className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-lg font-mono focus:outline-none focus:border-tm-purple mb-4"
+                            autoFocus
+                        />
+                        <button
+                            onClick={handleOnboardingSubmit}
+                            disabled={!onboardingAmount || parseFloat(onboardingAmount) < 1000}
+                            className="w-full py-3 rounded-xl font-bold bg-tm-purple hover:bg-tm-purple/90 text-white transition disabled:opacity-50"
+                        >
+                            Start Tracking
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Edit Position Modal */}
             {editPositionModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
@@ -459,9 +526,12 @@ export default function PositionsPage() {
                 )}
             </div>
 
-            {/* Shadow Ledger Panel */}
+            {/* Account Details Footer */}
             <div className="px-6 mt-6">
-                <ShadowLedgerPanel strategy={activeStrategy} />
+                <div className="glass-card p-5 text-sm text-tm-muted text-center border border-white/5">
+                    <p>Virtual portfolio initialized with <span className="text-white font-bold font-mono">${balance?.cashAvailable?.toLocaleString()}</span></p>
+                    <p className="mt-1 text-xs opacity-60">Use Deposit/Withdraw above to adjust virtual cash.</p>
+                </div>
             </div>
         </main>
     );

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, TrendingUp, Activity, Bell, Settings } from 'lucide-react';
+import { Home, Bot, Activity, Bell, Settings } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -19,7 +19,7 @@ export function BottomNav() {
 
     // useMemo MUST be called before any early returns (Rules of Hooks)
     const navItems = useMemo(() => [
-        { name: t('dashboard.nav.signals'), href: '/signals', icon: TrendingUp },
+        { name: 'AI', href: '/ai', icon: Bot },
         { name: t('dashboard.nav.positions'), href: '/positions', icon: Activity },
         { name: t('dashboard.nav.activity'), href: '/activity', icon: Bell },
         { name: t('dashboard.nav.settings'), href: '/settings', icon: Settings },

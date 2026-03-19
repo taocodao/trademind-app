@@ -530,6 +530,73 @@ export async function initializeUserTables(): Promise<void> {
             )
         `);
 
+        // AI COPILOT: Compliance conversation log
+        await query(`
+            CREATE TABLE IF NOT EXISTS ai_chat_logs (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                privy_did VARCHAR(128) NOT NULL,
+                session_id UUID NOT NULL,
+                feature_type VARCHAR(32) NOT NULL,
+                role VARCHAR(16) NOT NULL,
+                content TEXT NOT NULL,
+                model_used VARCHAR(32),
+                tokens_input INTEGER,
+                tokens_output INTEGER,
+                messages_cost INTEGER DEFAULT 1,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )
+        `);
+
+        // AI COPILOT: Shared morning briefings
+        await query(`
+            CREATE TABLE IF NOT EXISTS ai_briefings (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                date DATE UNIQUE NOT NULL,
+                regime VARCHAR(16),
+                confidence INTEGER,
+                ml_score INTEGER,
+                content JSONB NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )
+        `);
+
+        // AI COPILOT: Per-user weekly debriefs
+        await query(`
+            CREATE TABLE IF NOT EXISTS ai_debriefs (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                privy_did VARCHAR(128) NOT NULL,
+                week_start DATE NOT NULL,
+                content JSONB NOT NULL,
+                pdf_url VARCHAR(512),
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                UNIQUE(privy_did, week_start)
+            )
+        `);
+
+        // AI COPILOT: Deep dive 15-min cache log
+        await query(`
+            CREATE TABLE IF NOT EXISTS ai_deepdive_cache (
+                ticker VARCHAR(16) PRIMARY KEY,
+                content JSONB NOT NULL,
+                expires_at TIMESTAMPTZ NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )
+        `);
+
+        // AI COPILOT: Message budget transactions
+        await query(`
+            CREATE TABLE IF NOT EXISTS ai_message_transactions (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                privy_did VARCHAR(128) NOT NULL,
+                feature_type VARCHAR(32) NOT NULL,
+                messages_used INTEGER NOT NULL,
+                tokens_in INTEGER,
+                tokens_out INTEGER,
+                session_id UUID,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )
+        `);
+
         // ── Migrate user_settings columns ─────────────────────────────────
         await query(`
             DO $$ 
@@ -560,6 +627,15 @@ export async function initializeUserTables(): Promise<void> {
                 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS has_had_trial BOOLEAN DEFAULT FALSE;
                 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS card_fingerprint VARCHAR(64);
                 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS livemode BOOLEAN DEFAULT FALSE;
+
+                -- AI Copilot columns
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS ai_messages_used INTEGER DEFAULT 0;
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS ai_messages_limit INTEGER DEFAULT 50;
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS ai_bonus_messages INTEGER DEFAULT 0;
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS ai_reset_date DATE DEFAULT date_trunc('month', NOW());
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS push_subscription JSONB;
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS briefing_enabled BOOLEAN DEFAULT true;
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS debrief_enabled BOOLEAN DEFAULT true;
 
                 -- Indexes for fast webhook lookups
                 CREATE INDEX IF NOT EXISTS idx_user_settings_stripe_customer ON user_settings (stripe_customer_id);

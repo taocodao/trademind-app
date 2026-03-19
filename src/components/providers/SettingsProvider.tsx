@@ -22,6 +22,7 @@ interface AppSettings {
     autoApproval: boolean;
     turboBounceMode: 'MODE_A' | 'MODE_B';
     shadowLedger: Record<string, ShadowLedger>; // strategy key -> shadow ledger
+    subscription_tier?: string;
 }
 
 interface SettingsContextValue {

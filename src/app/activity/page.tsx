@@ -13,7 +13,8 @@ import {
     RefreshCw,
     Trash2,
     Loader2,
-    ExternalLink
+    ExternalLink,
+    Wallet
 } from "lucide-react";
 import Link from "next/link";
 import { useStrategyContext } from "@/components/providers/StrategyContext";
@@ -49,7 +50,19 @@ interface TastytradeItem {
     strategy: string;
 }
 
-type AnyItem = (TradeMindItem | TastytradeItem) & { _sortDate: number };
+interface VirtualItem {
+    id: number;
+    source: 'virtual';
+    symbol: string | null;
+    type: string; // 'buy', 'sell', 'deposit', 'withdraw'
+    quantity: number | null;
+    price: number | null;
+    amount: number;
+    created_at: string;
+    strategy: string;
+}
+
+type AnyItem = (TradeMindItem | TastytradeItem | VirtualItem) & { _sortDate: number };
 
 // ---- Helpers ----------------------------------------------------------------
 
@@ -133,7 +146,24 @@ export default function ActivityPage() {
                 } catch { /* tastytrade may fail */ }
             }
 
-            const merged = [...tmItems, ...ttMapped].sort((a, b) => b._sortDate - a._sortDate);
+            // 3. Virtual Transactions
+            let virtMapped: AnyItem[] = [];
+            try {
+                const virtRes = await fetch('/api/virtual-accounts/transactions?strategy=ALL');
+                if (virtRes.ok) {
+                    const virtData = await virtRes.json();
+                    const virtItems: VirtualItem[] = (virtData.transactions || []).map((v: any) => ({
+                        ...v,
+                        source: 'virtual'
+                    }));
+                    virtMapped = virtItems.map(v => ({
+                        ...v,
+                        _sortDate: new Date(v.created_at).getTime(),
+                    }));
+                }
+            } catch { /* virt may fail */ }
+
+            const merged = [...tmItems, ...ttMapped, ...virtMapped].sort((a, b) => b._sortDate - a._sortDate);
             setItems(merged);
         } catch (e) {
             console.error('Failed to load activity', e);
@@ -265,8 +295,10 @@ export default function ActivityPage() {
                 ) : (
                     filtered.map((item) => {
                         const isTT = item.source === 'tastytrade';
+                        const isVirt = item.source === 'virtual';
                         const tt = item as TastytradeItem;
                         const tm = item as TradeMindItem;
+                        const virt = item as VirtualItem;
 
                         return (
                             <div key={`${item.source}-${item.id}`} className="glass-card p-5 hover:bg-tm-surface/50 transition-colors">
@@ -276,6 +308,9 @@ export default function ActivityPage() {
                                         <div className="p-2 rounded-lg bg-white/5">
                                             {isTT
                                                 ? <CheckCircle className="w-5 h-5 text-tm-green" />
+                                                : isVirt ? ((virt.type === 'deposit' || virt.type === 'withdraw') 
+                                                    ? <Wallet className="w-5 h-5 text-tm-purple" /> 
+                                                    : <CheckCircle className="w-5 h-5 text-tm-green" />)
                                                 : tm.status === 'executed' ? <CheckCircle className="w-5 h-5 text-tm-green" />
                                                     : tm.status === 'failed' ? <XCircle className="w-5 h-5 text-tm-red" />
                                                         : <Clock className="w-5 h-5 text-tm-muted" />
@@ -283,14 +318,19 @@ export default function ActivityPage() {
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2 flex-wrap">
-                                                <h3 className="font-bold text-base">{item.symbol || 'UNKNOWN'}</h3>
+                                                <h3 className="font-bold text-base">{item.symbol || (isVirt && virt.type.toUpperCase()) || 'UNKNOWN'}</h3>
                                                 {strategyBadge(item.strategy)}
                                                 {isTT && (
                                                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">LIVE</span>
                                                 )}
+                                                {isVirt && (
+                                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">VIRTUAL</span>
+                                                )}
                                             </div>
                                             <p className="text-sm text-tm-muted capitalize">
-                                                {isTT ? `${tt.action} · ${tt.quantity} ${tt.strategy === 'TurboCore' ? 'shares' : 'contracts'} @ $${tt.price?.toFixed(2)}` : tm.status.replace('_', ' ')}
+                                                {isTT ? `${tt.action} · ${tt.quantity} ${tt.strategy === 'TurboCore' ? 'shares' : 'contracts'} @ $${tt.price?.toFixed(2)}` 
+                                                : isVirt ? `${virt.type} ${virt.quantity ? `· ${virt.quantity} shares @ $${virt.price?.toFixed(2)}` : ''}`
+                                                : tm.status.replace('_', ' ')}
                                             </p>
                                         </div>
                                     </div>
@@ -300,6 +340,13 @@ export default function ActivityPage() {
                                                 <p className="text-xs text-tm-muted font-mono">Order: {tt.order_id}</p>
                                                 <p className="text-xs text-tm-green">
                                                     {tt.value > 0 ? `+$${tt.value.toFixed(2)}` : `-$${Math.abs(tt.value).toFixed(2)}`}
+                                                </p>
+                                            </>
+                                        ) : isVirt ? (
+                                            <>
+                                                <p className="text-xs text-tm-muted font-mono">Virtual</p>
+                                                <p className={`text-xs ${virt.type === 'withdraw' || virt.type === 'buy' ? 'text-tm-red' : 'text-tm-green'}`}>
+                                                    {virt.type === 'withdraw' || virt.type === 'buy' ? '-' : '+'}${Number(virt.amount).toFixed(2)}
                                                 </p>
                                             </>
                                         ) : (
@@ -322,6 +369,18 @@ export default function ActivityPage() {
                                                 <div className="flex-1 flex justify-between">
                                                     <span className="text-tm-green">{tt.description || 'Trade Executed'}</span>
                                                     <span className="font-mono text-xs">{formatDate(tt.executed_at)}</span>
+                                                </div>
+                                            </div>
+                                        </>
+                                    ) : isVirt ? (
+                                        <>
+                                            <div className="flex items-center gap-3 relative z-10">
+                                                <div className={`w-2 h-2 rounded-full ring-4 ring-tm-surface ${virt.type === 'deposit' || virt.type === 'withdraw' ? 'bg-tm-purple' : 'bg-tm-green'}`} />
+                                                <div className="flex-1 flex justify-between">
+                                                    <span className={virt.type === 'deposit' || virt.type === 'withdraw' ? 'text-tm-purple' : 'text-tm-green'}>
+                                                        {virt.type === 'deposit' || virt.type === 'withdraw' ? 'Ledger Updated' : 'Virtual Trade Executed'}
+                                                    </span>
+                                                    <span className="font-mono text-xs">{formatDate(virt.created_at)}</span>
                                                 </div>
                                             </div>
                                         </>

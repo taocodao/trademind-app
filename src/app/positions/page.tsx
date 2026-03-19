@@ -8,7 +8,8 @@ import {
     TrendingUp,
     RefreshCw,
     Wallet,
-    BarChart3
+    BarChart3,
+    Edit2
 } from "lucide-react";
 import Link from "next/link";
 import { useStrategyContext } from "@/components/providers/StrategyContext";
@@ -47,6 +48,97 @@ export default function PositionsPage() {
     const [balance, setBalance] = useState<AccountBalance | null>(null);
     const [isVirtualLedger, setIsVirtualLedger] = useState(false);
     const { settings } = useSettings();
+    
+    // Transfer modal state
+    const [showTransferModal, setShowTransferModal] = useState<'deposit' | 'withdraw' | null>(null);
+    const [transferAmount, setTransferAmount] = useState('');
+    const [transferLoading, setTransferLoading] = useState(false);
+
+    const handleTransfer = async () => {
+        if (!showTransferModal || !transferAmount) return;
+        setTransferLoading(true);
+        try {
+            const res = await fetch('/api/virtual-accounts', {
+                method: 'POST',
+                body: JSON.stringify({
+                    strategy: activeStrategy,
+                    action: showTransferModal,
+                    amount: parseFloat(transferAmount)
+                }),
+                headers: { 'Content-Type': 'application/json' }
+            });
+            if (res.ok) {
+                setShowTransferModal(null);
+                setTransferAmount('');
+                fetchAccountAndPositions();
+            } else {
+                alert('Transfer failed');
+            }
+        } catch (e) {
+            console.error('Transfer error:', e);
+        } finally {
+            setTransferLoading(false);
+        }
+    };
+
+    // Edit Position modal state
+    const [editPositionModal, setEditPositionModal] = useState<EquityPosition | null>(null);
+    const [editQuantity, setEditQuantity] = useState('');
+    const [editLoading, setEditLoading] = useState(false);
+
+    const handleEditPosition = async () => {
+        if (!editPositionModal || !editQuantity) return;
+        setEditLoading(true);
+
+        try {
+            const newQty = parseInt(editQuantity, 10);
+            if (isNaN(newQty) || newQty < 0) throw new Error("Invalid quantity");
+
+            const currentQty = editPositionModal.quantity;
+            const diff = newQty - currentQty;
+            
+            if (diff === 0) {
+                setEditPositionModal(null);
+                setEditQuantity('');
+                return;
+            }
+
+            const action = diff > 0 ? 'buy' : 'sell';
+            const absDiff = Math.abs(diff);
+            
+            // Dummy signal ID for manual adjustments to bypass idempotency logic but still track it
+            const manualSignalId = `manual_adj_${Date.now()}`;
+
+            const res = await fetch('/api/virtual-accounts/execute', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    signalId: manualSignalId,
+                    strategy: activeStrategy,
+                    orders: [{
+                        symbol: editPositionModal.symbol,
+                        quantity: absDiff,
+                        price: editPositionModal.currentPrice, // Using the loaded price as a proxy
+                        action: action
+                    }]
+                })
+            });
+
+            if (res.ok) {
+                setEditPositionModal(null);
+                setEditQuantity('');
+                fetchAccountAndPositions();
+            } else {
+                const errData = await res.json();
+                alert(`Edit failed: ${errData.error || errData.message}`);
+            }
+        } catch (e) {
+            console.error('Position Edit Error:', e);
+            alert('Failed to edit position.');
+        } finally {
+            setEditLoading(false);
+        }
+    };
 
     const fetchAccountAndPositions = useCallback(async () => {
         try {
@@ -112,12 +204,23 @@ export default function PositionsPage() {
             } else {
                 // Fetch virtual shadow positions
                 setIsVirtualLedger(true);
-                const activeLedger = (settings?.shadowLedger as unknown as Record<string, any>)?.[activeStrategy] || (settings?.shadowLedger as unknown as Record<string, any>)?.['default'] || { balance: 0, positions: {} };
+                
+                // Fetch balance from API
+                let virtualBalance = 100000;
+                try {
+                    const vBalRes = await fetch(`/api/virtual-accounts?strategy=${activeStrategy}`);
+                    if (vBalRes.ok) {
+                        const vBalData = await vBalRes.json();
+                        virtualBalance = Number(vBalData.balance);
+                    }
+                } catch (e) {
+                    console.error('Virtual balance fetch error', e);
+                }
                 
                 setBalance({
-                    cashAvailable: activeLedger.balance,
-                    buyingPower: activeLedger.balance,
-                    netLiquidation: activeLedger.balance, // Will add positions value below
+                    cashAvailable: virtualBalance,
+                    buyingPower: virtualBalance,
+                    netLiquidation: virtualBalance, // Will add positions value below
                 });
 
                 // Fetch from API instead of local settings for better tracking if preferred, 
@@ -239,6 +342,16 @@ export default function PositionsPage() {
                         <div className="flex items-center gap-2 mb-4">
                             <Wallet className="w-5 h-5 text-tm-purple" />
                             <h3 className="font-bold">Account Overview</h3>
+                            {isVirtualLedger && (
+                                <div className="ml-auto flex gap-2">
+                                    <button onClick={() => setShowTransferModal('deposit')} className="text-[10px] bg-green-500/20 text-green-400 px-3 py-1 rounded-full font-bold hover:bg-green-500/30 transition">
+                                        DEPOSIT
+                                    </button>
+                                    <button onClick={() => setShowTransferModal('withdraw')} className="text-[10px] bg-red-500/20 text-red-400 px-3 py-1 rounded-full font-bold hover:bg-red-500/30 transition">
+                                        WITHDRAW
+                                    </button>
+                                </div>
+                            )}
                         </div>
                         <div className="grid grid-cols-3 gap-4 text-center">
                             <div>
@@ -259,6 +372,93 @@ export default function PositionsPage() {
                                     ${balance.cashAvailable.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                 </p>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Transfer Modal */}
+            {showTransferModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+                    <div className="bg-[#111] border border-white/10 p-5 rounded-xl w-full max-w-sm">
+                        <h3 className="text-lg font-bold mb-4 capitalize">{showTransferModal} Virtual Cash</h3>
+                        <p className="text-xs text-tm-muted mb-4">
+                            {showTransferModal === 'deposit' ? 'Add' : 'Remove'} virtual funds for the {activeStrategyConfig?.label || activeStrategy} ledger.
+                        </p>
+                        <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={transferAmount}
+                            onChange={(e) => setTransferAmount(e.target.value)}
+                            placeholder="Amount ($)"
+                            className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-tm-purple mb-4 font-mono"
+                        />
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowTransferModal(null)}
+                                className="flex-1 py-3 rounded-lg font-bold bg-white/5 hover:bg-white/10 transition"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleTransfer}
+                                disabled={transferLoading || !transferAmount || parseFloat(transferAmount) <= 0}
+                                className={`flex-1 py-3 rounded-lg font-bold transition flex items-center justify-center
+                                    ${showTransferModal === 'deposit' 
+                                        ? 'bg-green-600 hover:bg-green-500 text-white' 
+                                        : 'bg-red-600 hover:bg-red-500 text-white'
+                                    } disabled:opacity-50`}
+                            >
+                                {transferLoading ? (
+                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    'Confirm'
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Position Modal */}
+            {editPositionModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+                    <div className="bg-[#111] border border-white/10 p-5 rounded-xl w-full max-w-sm">
+                        <h3 className="text-lg font-bold mb-4">Edit {editPositionModal.symbol}</h3>
+                        <p className="text-xs text-tm-muted mb-4">
+                            Adjust virtual position quantity. Cash balance will automatically update using the last price (${editPositionModal.currentPrice.toFixed(2)}). Set to 0 to close.
+                        </p>
+                        <div className="mb-4">
+                            <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">New Target Quantity (Shares)</label>
+                            <input
+                                type="number"
+                                min="0"
+                                step="1"
+                                value={editQuantity}
+                                onChange={(e) => setEditQuantity(e.target.value)}
+                                placeholder={`Current: ${editPositionModal.quantity}`}
+                                className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-tm-purple font-mono"
+                            />
+                        </div>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => { setEditPositionModal(null); setEditQuantity(''); }}
+                                className="flex-1 py-3 rounded-lg font-bold bg-white/5 hover:bg-white/10 transition"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleEditPosition}
+                                disabled={editLoading || editQuantity === ''}
+                                className="flex-1 py-3 rounded-lg font-bold bg-purple-600 hover:bg-purple-500 text-white transition flex items-center justify-center disabled:opacity-50"
+                            >
+                                {editLoading ? (
+                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    'Update'
+                                )}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -321,7 +521,21 @@ export default function PositionsPage() {
                     </div>
                 ) : (
                     filteredPositions.map((pos) => (
-                        <EquityCard key={pos.symbol} position={pos} totalValue={totalValue} />
+                        <div key={pos.symbol} className="relative group">
+                            <EquityCard position={pos} totalValue={totalValue} />
+                            {pos.isVirtual && (
+                                <button
+                                    onClick={() => {
+                                        setEditPositionModal(pos);
+                                        setEditQuantity(pos.quantity.toString());
+                                    }}
+                                    className="absolute top-4 right-4 p-2 bg-black/50 border border-white/10 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/10 hover:text-tm-purple backdrop-blur-md z-10"
+                                    title="Edit target quantity"
+                                >
+                                    <Edit2 className="w-4 h-4" />
+                                </button>
+                            )}
+                        </div>
                     ))
                 )}
             </div>

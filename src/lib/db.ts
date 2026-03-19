@@ -275,6 +275,78 @@ export async function getShadowPositions(userId: string, strategy?: string): Pro
 }
 
 // ============================================================
+// VIRTUAL ACCOUNTS & TRANSACTIONS
+// ============================================================
+
+export interface VirtualAccount {
+    id: number;
+    user_id: string;
+    strategy: string;
+    cash_balance: number;
+    created_at: Date;
+    updated_at: Date;
+}
+
+export async function getVirtualBalance(userId: string, strategy: string): Promise<number> {
+    const result = await query(
+        `SELECT cash_balance FROM virtual_accounts WHERE user_id = $1 AND strategy = $2`,
+        [userId, strategy]
+    );
+    if (result.rows.length === 0) {
+        // Initialize if doesn't exist (100k starting)
+        const init = await query(
+            `INSERT INTO virtual_accounts (user_id, strategy, cash_balance) VALUES ($1, $2, 100000.00) RETURNING cash_balance`,
+            [userId, strategy]
+        );
+        return parseFloat(init.rows[0].cash_balance);
+    }
+    return parseFloat(result.rows[0].cash_balance);
+}
+
+export async function logVirtualTransaction(
+    userId: string,
+    strategy: string,
+    type: 'buy' | 'sell' | 'deposit' | 'withdraw',
+    amount: number, // positive for everything, we just log the absolute magnitude
+    symbol?: string,
+    quantity?: number,
+    price?: number,
+    signalId?: string
+) {
+    await query(
+        `INSERT INTO virtual_transactions (
+            user_id, strategy, type, symbol, quantity, price, amount, signal_id, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
+        [userId, strategy, type, symbol || null, quantity || null, price || null, Math.abs(amount), signalId || null]
+    );
+}
+
+export async function updateVirtualBalance(
+    userId: string,
+    strategy: string,
+    deltaAmount: number, // Positive adds to balance, negative subtracts from balance
+    transactionType?: 'deposit' | 'withdraw'
+): Promise<number> {
+    // Upsert the balance
+    const result = await query(
+        `INSERT INTO virtual_accounts (user_id, strategy, cash_balance)
+         VALUES ($1, $2, 100000.00 + $3)
+         ON CONFLICT (user_id, strategy) 
+         DO UPDATE SET cash_balance = virtual_accounts.cash_balance + $3, updated_at = NOW()
+         RETURNING cash_balance`,
+        [userId, strategy, deltaAmount]
+    );
+    
+    const newBalance = parseFloat(result.rows[0].cash_balance);
+    
+    if (transactionType) {
+        await logVirtualTransaction(userId, strategy, transactionType, Math.abs(deltaAmount));
+    }
+    
+    return newBalance;
+}
+
+// ============================================================
 // USER SIGNAL EXECUTIONS
 // ============================================================
 
@@ -323,6 +395,45 @@ export async function getUserExecution(
         [userId, signalId]
     );
     return result.rows[0] || null;
+}
+
+// Alias for semantic clarity
+export const getUserExecutionForSignal = getUserExecution;
+
+export interface OrderLineData {
+    execution_id: number;
+    user_id: string;
+    symbol: string;
+    action: string;
+    quantity: number;
+    notional_value: number | null;
+    price: number;
+    order_id: string | null;
+    is_virtual: boolean;
+}
+
+export async function createOrderLines(lines: OrderLineData[]): Promise<void> {
+    if (lines.length === 0) return;
+    
+    // Batch insert using UNNEST
+    const executionIds = lines.map(l => l.execution_id);
+    const userIds = lines.map(l => l.user_id);
+    const symbols = lines.map(l => l.symbol);
+    const actions = lines.map(l => l.action);
+    const quantities = lines.map(l => l.quantity);
+    const nominalValues = lines.map(l => l.notional_value);
+    const prices = lines.map(l => l.price);
+    const orderIds = lines.map(l => l.order_id);
+    const isVirtuals = lines.map(l => l.is_virtual);
+
+    await query(`
+        INSERT INTO user_order_lines (
+            execution_id, user_id, symbol, action, quantity, notional_value, price, order_id, is_virtual
+        )
+        SELECT * FROM UNNEST (
+            $1::int[], $2::varchar[], $3::varchar[], $4::varchar[], $5::numeric[], $6::numeric[], $7::numeric[], $8::varchar[], $9::boolean[]
+        )
+    `, [executionIds, userIds, symbols, actions, quantities, nominalValues, prices, orderIds, isVirtuals]);
 }
 
 // ============================================================
@@ -517,6 +628,52 @@ export async function initializeUserTables(): Promise<void> {
         await query(`
             ALTER TABLE user_signal_executions 
             ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'manual'
+        `);
+
+        // ── Signal Execution Order Lines (Itemized) ───────────────────────
+        await query(`
+            CREATE TABLE IF NOT EXISTS user_order_lines (
+                id SERIAL PRIMARY KEY,
+                execution_id INTEGER NOT NULL REFERENCES user_signal_executions(id) ON DELETE CASCADE,
+                user_id VARCHAR(128) NOT NULL,
+                symbol VARCHAR(20) NOT NULL,
+                action VARCHAR(10) NOT NULL,           -- 'buy' or 'sell'
+                quantity DECIMAL(15, 6) NOT NULL,      -- Can be fractional for TastyTrade, forced integer for Virtual
+                notional_value DECIMAL(15, 2),         -- dollar amount
+                price DECIMAL(15, 4) NOT NULL,         -- execution/market price
+                order_id VARCHAR(128),                 -- Tastytrade order ID (null for virtual)
+                is_virtual BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )
+        `);
+
+        // ── Virtual Accounts (DB-backed balances) ─────────────────────────
+        await query(`
+            CREATE TABLE IF NOT EXISTS virtual_accounts (
+                id SERIAL PRIMARY KEY,
+                user_id VARCHAR(128) NOT NULL,
+                strategy VARCHAR(64) NOT NULL,
+                cash_balance DECIMAL(15, 2) DEFAULT 100000.00,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                updated_at TIMESTAMPTZ DEFAULT NOW(),
+                UNIQUE(user_id, strategy)
+            )
+        `);
+
+        // ── Virtual Transactions (Activity Log) ───────────────────────────
+        await query(`
+            CREATE TABLE IF NOT EXISTS virtual_transactions (
+                id SERIAL PRIMARY KEY,
+                user_id VARCHAR(128) NOT NULL,
+                strategy VARCHAR(64) NOT NULL,
+                type VARCHAR(20) NOT NULL,    -- 'buy', 'sell', 'deposit', 'withdraw'
+                symbol VARCHAR(20),
+                quantity DECIMAL(15, 6),
+                price DECIMAL(15, 4),
+                amount DECIMAL(15, 2) NOT NULL,
+                signal_id VARCHAR(128),
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )
         `);
 
         console.log('✅ User tables initialized and migrated');

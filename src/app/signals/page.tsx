@@ -162,28 +162,28 @@ export default function SignalsPage() {
 
             console.log("Trade executed successfully:", data);
 
-            // Mark as executed (lock the button) before removing from list
+            // Mark as executed (lock the button)
             setExecutedIds(prev => new Set(prev).add(confirmModal.id));
+            
+            // Intentionally skip removeSignal() so the UI card remains visible and locks to green 'Executed'.
+            // The user will leave the page naturally or refresh.
 
-            // Remove the executed signal from the list
-            removeSignal(confirmModal.id);
-
-            // Navigate to positions to see the trade unless it's a shadow execution
+            // Just sync shadow trades if needed (bg process)
             if (!settings?.tastytrade?.refreshToken && isTurboCore) {
-                // For shadow trades, just clear it and maybe refresh
-                const syncRes = await fetch('/api/shadow-positions', {
+                fetch('/api/shadow-positions', {
                     method: 'POST',
                     body: JSON.stringify({
                         action: 'sync',
                         strategy: confirmModal.strategy || 'TQQQ_TURBOCORE',
                         signalId: confirmModal.id,
-                        orders: [] // Note: simplified, actual shadow sync might happen inside dashboard instead, or we let the backend handle it
+                        orders: [] 
                     }),
                     headers: { 'Content-Type': 'application/json' }
-                });
-            } else {
-                router.push('/positions');
+                }).catch(e => console.error("Shadow sync failed:", e));
             }
+
+            // Close the modal
+            setConfirmModal(null);
 
         } catch (err) {
             console.error('Trade execution failed:', err);

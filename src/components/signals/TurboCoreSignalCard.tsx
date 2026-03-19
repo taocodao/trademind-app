@@ -18,6 +18,11 @@ export interface TurboCoreSignal {
     sma200_gate?: boolean;
     timestamp: string;
     createdAt?: string;
+    userExecution?: {
+        status: string;
+        orderId: string | null;
+        executedAt: string | null;
+    };
 }
 
 interface PreviewOrder {
@@ -304,8 +309,8 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
                                 </>
                             ) : (
                                 <>
-                                    <span className="flex items-center gap-1"><Shield className="w-4 h-4" /> CALCULATE SHADOW SYNC</span>
-                                    <span className="text-[10px] font-normal opacity-70">Manual execution guide</span>
+                                    <span className="flex items-center gap-1"><Shield className="w-4 h-4" /> EXECUTE VIRTUALLY</span>
+                                    <span className="text-[10px] font-normal opacity-70">Integer shares · market quotes</span>
                                 </>
                             )}
                         </button>

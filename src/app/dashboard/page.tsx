@@ -655,15 +655,26 @@ function DashboardContent() {
                 }
 
                 setToast({ msg: 'TurboCore Atomic Rebalance queued successfully', ok: true });
-                await removeSignal(String(signal.id));
+                // We no longer rely on a local executedIds set; the next DB fetch will have userExecution populated
                 fetchOrders();
                 fetchAccountData(); // Immediately refresh positions matching user request
             } else {
                 // Tier 2b: Shadow Sync Calculation
-                const shadowLedgers = settings?.shadowLedger as unknown as Record<string, any> || {};
-                const activeLedger = shadowLedgers[activeStrategy] || shadowLedgers['default'];
-                if (!activeLedger) {
-                    throw new Error("No shadow ledger found. Please configure it in settings.");
+                // 1. Get virtual balance
+                const balRes = await fetch(`/api/virtual-accounts?strategy=${activeStrategy}`);
+                if (!balRes.ok) throw new Error('Failed to fetch virtual account balance');
+                const balData = await balRes.json();
+                const activeBalance = balData.balance || 100000;
+                
+                // 2. Get shadow positions
+                const posRes = await fetch(`/api/shadow-positions?strategy=${activeStrategy}`);
+                let activePositions = {};
+                if (posRes.ok) {
+                    const posData = await posRes.json();
+                    activePositions = (posData.positions || []).reduce((acc: any, p: any) => {
+                        acc[p.symbol] = Number(p.quantity);
+                        return acc;
+                    }, {});
                 }
 
                 const targetMatrix: Record<string, number> = {};
@@ -674,8 +685,8 @@ function DashboardContent() {
                 const endpoint = '/api/calculate_delta_trade';
                 const payload = {
                     targetMatrix,
-                    shadowBalance: activeLedger.balance || 0,
-                    shadowPositions: activeLedger.positions || {}
+                    shadowBalance: activeBalance,
+                    shadowPositions: activePositions
                 };
 
                 const response = await fetch(endpoint, {
@@ -692,40 +703,29 @@ function DashboardContent() {
                 const result = await response.json();
                 console.log("Calculated Shadow Orders: ", result.orders);
 
-                // Commit the shadow trades to DB
-                if (result.orders && result.orders.length > 0) {
-                    const syncRes = await fetch('/api/shadow-positions', {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            action: 'sync',
-                            strategy: activeStrategy,
-                            signalId: signal.id,
-                            orders: result.orders
-                        }),
-                        headers: { 'Content-Type': 'application/json' }
-                    });
+                // Commit the virtual trades to the new DB-backed execution route
+                const syncRes = await fetch('/api/virtual-accounts/execute', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        signalId: signal.id,
+                        strategy: activeStrategy,
+                        orders: result.orders || []
+                    }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
 
-                    if (!syncRes.ok) {
-                        const errData = await syncRes.json();
-                        throw new Error(errData.error || errData.message || 'Failed to save shadow positions');
+                if (!syncRes.ok) {
+                    const errData = await syncRes.json();
+                    if (errData.error === 'Already executed') {
+                        setToast({ msg: 'Signal was already executed. Removing from dashboard.', ok: true });
+                        await removeSignal(String(signal.id));
+                        return;
                     }
-                } else {
-                    // Even if no trades, mark signal as executed
-                    await fetch('/api/shadow-positions', {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            action: 'sync',
-                            strategy: activeStrategy,
-                            signalId: signal.id,
-                            orders: []
-                        }),
-                        headers: { 'Content-Type': 'application/json' }
-                    });
+                    throw new Error(errData.error || errData.message || 'Failed to execute virtual trades');
                 }
 
-                setToast({ msg: `Shadow Sync Executed: Processed ${result.orders?.length || 0} trades virtually.`, ok: true });
-                await removeSignal(String(signal.id));
-                // Optional: trigger a refresh of shadow positions to update balance/ledgers if shown on dashboard
+                setToast({ msg: `Virtual Execution Complete: Processed ${result.orders?.length || 0} trades.`, ok: true });
+                // We no longer manually manage executedIds because the signal object will re-render with userExecution.status = 'executed'
             }
         } catch (err: any) {
             console.error('Core Exec error:', err);
@@ -1095,6 +1095,7 @@ function DashboardContent() {
                                         signal={signal}
                                         onExecute={handleTurboCoreExecute}
                                         executingId={executingId}
+                                        isExecuted={signal.userExecution?.status === 'executed'}
                                         accountData={data}
                                         principalSetting={(settings?.investmentPrincipal as unknown as Record<string, number>)?.[activeStrategy] || (settings?.investmentPrincipal as unknown as Record<string, number>)?.['default'] || 25000}
                                         shadowBalance={(settings?.shadowLedger as unknown as Record<string, any>)?.[activeStrategy]?.balance || (settings?.shadowLedger as unknown as Record<string, any>)?.['default']?.balance}

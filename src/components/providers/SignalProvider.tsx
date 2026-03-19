@@ -56,6 +56,11 @@ interface Signal {
     dte?: number;
     confidence?: number;
     capital_required?: number;
+    userExecution?: {
+        status: string;
+        orderId: string | null;
+        executedAt: string | null;
+    };
 }
 
 // Signals expire at market close (4:00 PM ET) on the day they were created
@@ -405,6 +410,39 @@ export function SignalProvider({ children }: SignalProviderProps) {
         }
     }, [isMounted, attemptAutoApprove]); // _setAllSignals is stable
 
+    // SSE Connection for real-time push notifications
+    useEffect(() => {
+        if (!isMounted) return;
+        
+        console.log('[SignalProvider] Connecting to SSE stream...');
+        const eventSource = new EventSource('/api/signals/stream');
+        
+        eventSource.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'new_signal') {
+                    console.log(`[SignalProvider] SSE Real-time signal push received! Strategy: ${data.strategy}`);
+                    // Re-fetch from DB when push arrives
+                    fetchExistingSignals();
+                } else if (data.type === 'connected') {
+                    console.log('[SignalProvider] SSE Connected successfully');
+                }
+            } catch (e) {
+                // ignore keep-alives or malformed JSON
+            }
+        };
+        
+        eventSource.onerror = (err) => {
+            console.warn('[SignalProvider] SSE connection error, will auto-reconnect', err);
+        };
+        
+        return () => {
+            console.log('[SignalProvider] Closing SSE stream');
+            eventSource.close();
+        };
+    }, [isMounted, fetchExistingSignals]);
+
+    // Fallback polling (less aggressive now that SSE is active)
     useEffect(() => {
         if (!isMounted) return;
         fetchExistingSignals();
@@ -422,9 +460,10 @@ export function SignalProvider({ children }: SignalProviderProps) {
 
             if (d >= 1 && d <= 5) {
                 if (h === 15) {
-                    // During 3:00 PM - 3:59 PM ET (1 hour before market close)
-                    // The signal comes out at 15:00 ET, so we poll every 30 seconds
-                    delay = 30 * 1000;
+                    // During 3:00 PM - 3:59 PM ET
+                    // Used to be 30s here, but SSE handles the primary push.
+                    // Keep a 1-minute fallback just in case SSE drops exactly at 15:00.
+                    delay = 60 * 1000;
                 } else if (h >= 9 && h < 16) {
                     // During rest of market hours, poll every 5 minutes
                     delay = 5 * 60 * 1000;
@@ -432,7 +471,6 @@ export function SignalProvider({ children }: SignalProviderProps) {
             }
 
             timeoutId = setTimeout(() => {
-                console.log(`[SignalProvider] Polling trigger...`);
                 fetchExistingSignals();
                 scheduleNextPoll();
             }, delay);

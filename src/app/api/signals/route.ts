@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getPendingSignals } from '@/lib/db';
+import { cookies } from 'next/headers';
+import { getPendingSignals, getUserExecutionForSignal } from '@/lib/db';
 
 export const maxDuration = 35;
 
@@ -8,16 +9,40 @@ export async function GET() {
         console.log('[Signals API] Fetching directly from RDS...');
         const start = Date.now();
 
-        // Fetch directly from RDS (shared with EC2)
         const signals = await getPendingSignals();
+
+        // Decode Privy token to get user ID
+        const cookieStore = await cookies();
+        const privyToken = cookieStore.get('privy-token')?.value;
+        let userId: string | null = null;
+        if (privyToken) {
+            try {
+                const payload = privyToken.split('.')[1];
+                const decoded = JSON.parse(atob(payload));
+                userId = decoded.sub || decoded.privy_did || null;
+            } catch (e) {
+                console.warn('[Signals API] Failed to decode privy token', e);
+            }
+        }
 
         const duration = Date.now() - start;
         console.log(`[Signals API] RDS fetch took ${duration}ms. Found ${signals?.length || 0} signals.`);
 
-        // Standardize signal format for frontend
-        const formattedSignals = (signals || []).map(s => {
-            // If data is stored as JSON string, parse it
+        // Standardize signal format for frontend and attach userExecution
+        const formattedSignals = await Promise.all((signals || []).map(async (s) => {
             const signalData = typeof s.data === 'string' ? JSON.parse(s.data) : s.data;
+            let userExecution = null;
+            
+            if (userId) {
+                const execution = await getUserExecutionForSignal(userId, s.id.toString());
+                if (execution) {
+                    userExecution = {
+                        status: execution.status,
+                        orderId: execution.order_id,
+                        executedAt: execution.executed_at,
+                    };
+                }
+            }
 
             return {
                 ...signalData,
@@ -27,9 +52,10 @@ export async function GET() {
                 status: s.status,
                 createdAt: s.created_at,
                 expiresAt: s.expires_at,
-                source: 'rds'
+                source: 'rds',
+                userExecution // newly added execution tracking per user
             };
-        });
+        }));
 
         return NextResponse.json({
             signals: formattedSignals,

@@ -77,9 +77,17 @@ export async function POST(req: NextRequest) {
             }, { status: 400 });
         }
 
-        const addonPriceId = process.env.STRIPE_AI_ADDON_PRICE_ID;
+        const FEATURE_PRICE_MAP: Record<string, string | undefined> = {
+            screenshot: process.env.STRIPE_AI_PRICE_SCREENSHOT,
+            deepdive:   process.env.STRIPE_AI_PRICE_DEEPDIVE,
+            briefing:   process.env.STRIPE_AI_PRICE_BRIEFING,
+            strategy:   process.env.STRIPE_AI_PRICE_STRATEGY,
+            debrief:    process.env.STRIPE_AI_PRICE_DEBRIEF,
+        };
+
+        const addonPriceId = FEATURE_PRICE_MAP[featureKey];
         if (!addonPriceId) {
-            return NextResponse.json({ error: 'Addon price not configured' }, { status: 500 });
+            return NextResponse.json({ error: `Price not configured for feature: ${featureKey}` }, { status: 500 });
         }
 
         // Verify subscription still exists in Stripe before adding items

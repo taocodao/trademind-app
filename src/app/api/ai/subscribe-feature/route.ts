@@ -82,6 +82,32 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Addon price not configured' }, { status: 500 });
         }
 
+        // Verify subscription still exists in Stripe before adding items
+        let subscription;
+        try {
+            subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        } catch (stripeErr: any) {
+            if (stripeErr.code === 'resource_missing') {
+                // Stale subscription ID — clear it from DB so user can re-subscribe cleanly
+                await query(
+                    `UPDATE user_settings SET stripe_subscription_id = NULL WHERE user_id = $1`,
+                    [user.privyDid]
+                );
+                return NextResponse.json({
+                    error: 'Your Stripe subscription record is out of sync. Please go to Settings → Subscription and re-subscribe to your plan, then try again.',
+                    code: 'SUBSCRIPTION_NOT_FOUND'
+                }, { status: 400 });
+            }
+            throw stripeErr; // Re-throw unexpected errors
+        }
+
+        if (subscription.status !== 'active' && subscription.status !== 'trialing') {
+            return NextResponse.json({
+                error: `Your subscription is ${subscription.status}. Please update your payment method in Settings.`,
+                code: 'SUBSCRIPTION_INACTIVE'
+            }, { status: 400 });
+        }
+
         // Add a new item to the existing subscription
         const subItem = await stripe.subscriptionItems.create({
             subscription: subscriptionId,

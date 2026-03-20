@@ -251,6 +251,36 @@ export const calculateTurboCoreOrders = async (
                 });
 
                 console.log(`🏹 LEAPS execution: ${leapsResult.action} — ${leapsResult.message}`);
+                
+                // Phase 4 Fix: Persist LEAPS execution to the Database
+                if (leapsResult.action === 'buy_to_open' || leapsResult.action === 'rebalance' || leapsResult.action === 'roll') {
+                    if (leapsResult.newState && signal.id) {
+                         const { createPosition, getUserSettings } = await import('./db');
+                         try {
+                              const userSettings = await getUserSettings(userId);
+                              const riskLevel = userSettings?.risk_level || 'moderate';
+                              
+                              await createPosition({
+                                   id: leapsResult.orderId || `leaps_${Date.now()}`,
+                                   userId: userId,
+                                   signalId: String(signal.id),
+                                   symbol: leapsResult.newState.occSymbol,
+                                   strategy: signal.strategy || 'TURBOCORE_PRO_LEAPS',
+                                   strike: leapsResult.newState.strikePrice,
+                                   expiration: leapsResult.newState.expirationDate,
+                                   backExpiry: undefined,
+                                   contracts: leapsResult.newState.contracts,
+                                   entryPrice: (leapsResult.newState.openCostPerContract || 0) / 100, // DB expects per-share cost
+                                   capitalRequired: (leapsResult.newState.openCostPerContract || 0) * leapsResult.newState.contracts,
+                                   riskLevel: riskLevel,
+                                   direction: 'bullish'
+                              });
+                              console.log(`✅ LEAPS Position saved to DB: ${leapsResult.newState.occSymbol}`);
+                         } catch(dbErr) {
+                              console.error(`⚠️ Failed to save LEAPS position to DB:`, dbErr);
+                         }
+                    }
+                }
             } catch (err) {
                 console.error(`❌ LEAPS allocation failed:`, err);
             }

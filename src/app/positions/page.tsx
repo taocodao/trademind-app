@@ -283,14 +283,34 @@ export default function PositionsPage() {
                     symbol: p.symbol,
                     quantity: qty,
                     averageOpenPrice: avgPrice,
-                    currentPrice: avgPrice,
-                    marketValue: marketVal,
+                    currentPrice: avgPrice, // Will be overridden by live quotes below
+                    marketValue: marketVal, // Will be overridden by live quotes below
                     unrealizedPnl: 0,
                     unrealizedPnlPct: 0,
                     instrumentType: 'Equity',
                     isVirtual: true,
                 };
             });
+
+            // Phase 1 Fix: Fetch Live Quotes for Virtual Positions
+            if (shadowEq.length > 0) {
+                try {
+                    const symbols = shadowEq.map(p => p.symbol).join(',');
+                    const qRes = await fetch(`/api/quotes?symbols=${symbols}`);
+                    if (qRes.ok) {
+                        const livePrices = await qRes.json();
+                        shadowEq.forEach(p => {
+                            const livePrice = livePrices[p.symbol] || p.averageOpenPrice;
+                            p.currentPrice = livePrice;
+                            p.marketValue = p.quantity * livePrice;
+                            p.unrealizedPnl = (livePrice - p.averageOpenPrice) * p.quantity;
+                            p.unrealizedPnlPct = p.averageOpenPrice > 0 ? ((livePrice - p.averageOpenPrice) / p.averageOpenPrice) * 100 : 0;
+                        });
+                    }
+                } catch (qErr) {
+                    console.warn("Failed to fetch live quotes for virtual positions", qErr);
+                }
+            }
 
             const positionsValue = shadowEq.reduce((acc, p) => acc + p.marketValue, 0);
             setBalance(prev => prev ? { ...prev, netLiquidation: prev.cashAvailable + positionsValue } : null);
@@ -379,7 +399,7 @@ export default function PositionsPage() {
                 <div className="glass-card p-5">
                     <div className="flex items-center gap-2 mb-4">
                         <Wallet className="w-5 h-5 text-tm-purple" />
-                        <h3 className="font-bold">Account Overview</h3>
+                        <h3 className="font-bold border-b border-transparent">Account Overview</h3>
                         {!isLive && (
                             <div className="ml-auto flex gap-2">
                                 <button onClick={() => setShowTransferModal('deposit')} className="text-[10px] bg-green-500/20 text-green-400 px-3 py-1 rounded-full font-bold hover:bg-green-500/30 transition">
@@ -391,23 +411,30 @@ export default function PositionsPage() {
                             </div>
                         )}
                     </div>
-                    <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="grid grid-cols-4 gap-4 text-center">
                         <div>
-                            <p className="text-xs text-tm-muted">Total Value</p>
-                            <p className="text-lg font-bold font-mono text-tm-green">
+                            <p className="text-[10px] text-tm-muted uppercase tracking-wider font-semibold mb-1">Total Value</p>
+                            <p className="text-lg font-bold font-mono text-white">
                                 ${(balance?.netLiquidation || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                             </p>
                         </div>
                         <div>
-                            <p className="text-xs text-tm-muted">Positions Value</p>
-                            <p className="text-lg font-bold font-mono text-tm-purple">
+                            <p className="text-[10px] text-tm-muted uppercase tracking-wider font-semibold mb-1">Cash</p>
+                            <p className="text-lg font-bold font-mono text-emerald-400">
+                                ${(balance?.cashAvailable || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] text-tm-muted uppercase tracking-wider font-semibold mb-1">Positions Value</p>
+                            <p className="text-lg font-bold font-mono text-purple-400">
                                 ${((balance?.netLiquidation || 0) - (balance?.cashAvailable || 0)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                             </p>
                         </div>
                         <div>
-                            <p className="text-xs text-tm-muted">Cash Balance</p>
-                            <p className="text-lg font-bold font-mono">
-                                ${(balance?.cashAvailable || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            <p className="text-[10px] text-tm-muted uppercase tracking-wider font-semibold mb-1">Realized P&L</p>
+                            {/* Placeholder for Phase 6 */}
+                            <p className="text-lg font-bold font-mono text-tm-muted">
+                                --
                             </p>
                         </div>
                     </div>
@@ -534,161 +561,105 @@ export default function PositionsPage() {
                 </div>
             )}
 
-            {/* Filtered Portfolio Summary */}
-            {filteredPositions.length > 0 && (
-                <div className="px-6 mb-6">
-                    <div className="glass-card p-5 bg-gradient-to-br from-purple-900/20 to-indigo-900/20 border-purple-500/20">
-                        <div className="flex items-center gap-2 mb-3">
-                            <BarChart3 className={`w-5 h-5 ${activeStrategyConfig?.color ? activeStrategyConfig.color.split(' ')[0] : 'text-purple-400'}`} />
-                            <h3 className="font-bold">{activeStrategy === 'ALL' ? 'All' : activeStrategyConfig?.label || 'TurboCore'} Portfolio</h3>
-                        </div>
-                        <div className="grid grid-cols-3 gap-4 text-center">
-                            <div>
-                                <p className="text-xs text-tm-muted">Total Value</p>
-                                <p className="text-lg font-bold font-mono">
-                                    ${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-xs text-tm-muted">Unrealized P&L</p>
-                                <p className={`text-lg font-bold font-mono ${totalPnl >= 0 ? 'text-tm-green' : 'text-tm-red'}`}>
-                                    {totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-xs text-tm-muted">Return</p>
-                                <p className={`text-lg font-bold font-mono ${totalPnlPct >= 0 ? 'text-tm-green' : 'text-tm-red'}`}>
-                                    {totalPnlPct >= 0 ? '+' : ''}{totalPnlPct.toFixed(2)}%
-                                </p>
-                            </div>
-                        </div>
+            {/* Equity Positions Table */}
+            <div className="px-6">
+                <h2 className="text-sm font-bold text-tm-muted uppercase tracking-wider mb-3">Equity Holdings</h2>
+                <div className="glass-card overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse min-w-[500px]">
+                            <thead>
+                                <tr className="border-b border-white/5 bg-white/[0.02]">
+                                    <th className="px-4 py-3 text-[10px] uppercase font-bold text-tm-muted">Symbol</th>
+                                    <th className="px-4 py-3 text-[10px] uppercase font-bold text-tm-muted text-right">Price</th>
+                                    <th className="px-4 py-3 text-[10px] uppercase font-bold text-tm-muted text-right">Cost/sh</th>
+                                    <th className="px-4 py-3 text-[10px] uppercase font-bold text-tm-muted text-right">Market Value</th>
+                                    <th className="px-4 py-3 text-[10px] uppercase font-bold text-tm-muted text-right">Unrealized G/L</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loading && equityPositions.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} className="px-4 py-8 text-center text-tm-muted text-xs animate-pulse">Loading positions...</td>
+                                    </tr>
+                                ) : equityPositions.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} className="px-4 py-8 text-center text-tm-muted text-xs">No active equity positions.</td>
+                                    </tr>
+                                ) : (
+                                    equityPositions.map((pos) => {
+                                        const isProfit = pos.unrealizedPnl >= 0;
+                                        const symbolColors: Record<string, string> = {
+                                            'QQQ': 'text-blue-400',
+                                            'QLD': 'text-indigo-400',
+                                            'TQQQ': 'text-purple-400',
+                                            'SGOV': 'text-emerald-400',
+                                        };
+                                        const color = symbolColors[pos.symbol] || 'text-white';
+                                        
+                                        return (
+                                            <tr key={pos.symbol} className="border-b border-white/5 hover:bg-white/[0.02] transition last:border-0 relative group">
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`font-bold font-mono ${color}`}>{pos.symbol}</span>
+                                                        <span className="text-[10px] text-tm-muted font-mono bg-white/5 px-1.5 py-0.5 rounded">
+                                                            x{pos.quantity}
+                                                        </span>
+                                                        {pos.isVirtual && (
+                                                            <span className="text-[8px] bg-blue-500/20 text-blue-400 font-bold px-1 py-0.5 rounded border border-blue-500/30">V</span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-right font-mono text-sm">
+                                                    ${pos.currentPrice.toFixed(2)}
+                                                </td>
+                                                <td className="px-4 py-3 text-right font-mono text-sm text-tm-muted">
+                                                    ${pos.averageOpenPrice.toFixed(2)}
+                                                </td>
+                                                <td className="px-4 py-3 text-right font-mono text-sm">
+                                                    ${pos.marketValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <p className={`font-mono text-sm font-bold ${isProfit ? 'text-tm-green' : 'text-tm-red'}`}>
+                                                        {isProfit ? '+' : ''}${pos.unrealizedPnl.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                                    </p>
+                                                    <p className={`font-mono text-[10px] ${isProfit ? 'text-tm-green/70' : 'text-tm-red/70'}`}>
+                                                        {isProfit ? '+' : ''}{pos.unrealizedPnlPct.toFixed(2)}%
+                                                    </p>
+                                                    
+                                                    {/* Edit Button overlaid on hover */}
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditPositionModal(pos);
+                                                            setEditQuantity(pos.quantity.toString());
+                                                        }}
+                                                        className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 bg-[#1a1a1a] border border-white/10 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/10 hover:text-tm-purple backdrop-blur-md"
+                                                        title="Edit target quantity"
+                                                    >
+                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-            )}
-
-            {/* Equity Positions */}
-            <div className="px-6 space-y-3">
-                {loading ? (
-                    filteredPositions.map((pos) => (
-                        <div key={pos.symbol} className="glass-card p-4 hover:bg-white/5 transition relative">
-                            {pos.isVirtual && (
-                                <div className="absolute -top-2 -right-2 rotate-12 text-[9px] bg-blue-500 text-white font-bold px-1.5 py-0.5 rounded opacity-80 backdrop-blur-md">
-                                    VIRTUAL
-                                </div>
-                            )}
-                            <div className="flex items-center justify-between mb-3 border-b border-white/5 pb-3"></div>
-                            <div className="h-4 w-2/3 bg-tm-surface rounded" />
-                        </div>
-                    ))
-                ) : filteredPositions.length === 0 ? (
-                    <div className="glass-card p-8 text-center">
-                        <TrendingUp className="w-12 h-12 text-tm-purple mx-auto mb-4" />
-                        <h3 className="font-semibold mb-2">No {activeStrategyConfig?.shortLabel || 'TurboCore'} positions</h3>
-                        <p className="text-sm text-tm-muted mb-4">Execute a signal to open equity and option positions</p>
-                        <Link href="/dashboard" className="btn-primary inline-block">
-                            Go to Dashboard
-                        </Link>
-                    </div>
-                ) : (
-                    equityPositions.map((pos) => (
-                        <div key={pos.symbol} className="relative group">
-                            <EquityCard position={pos} totalValue={totalValue} />
-                            <button
-                                onClick={() => {
-                                    setEditPositionModal(pos);
-                                    setEditQuantity(pos.quantity.toString());
-                                }}
-                                className="absolute top-4 right-4 p-2 bg-black/50 border border-white/10 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/10 hover:text-tm-purple backdrop-blur-md z-10"
-                                title="Edit target quantity"
-                            >
-                                <Edit2 className="w-4 h-4" />
-                            </button>
-                        </div>
-                    ))
-                )}
             </div>
 
             {/* Option Positions */}
             {optionPositions.length > 0 && (
                 <div className="px-6 mt-8 space-y-3">
-                    <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-amber-400"></span> Options
+                    <h2 className="text-sm font-bold text-tm-muted uppercase tracking-wider mb-2 gap-2 flex items-center">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Options
                     </h2>
                     {optionPositions.map((pos) => (
                         <OptionCard key={pos.symbol} position={pos} totalValue={totalValue} />
                     ))}
                 </div>
             )}
-
-            {/* Account Details Footer */}
-            <div className="px-6 mt-6">
-                <div className="glass-card p-5 text-sm text-tm-muted text-center border border-white/5">
-                    <p>Virtual portfolio initialized with <span className="text-white font-bold font-mono">${balance?.cashAvailable?.toLocaleString()}</span></p>
-                    <p className="mt-1 text-xs opacity-60">Use Deposit/Withdraw above to adjust virtual cash.</p>
-                </div>
-            </div>
         </main>
-    );
-}
-
-function EquityCard({
-    position,
-    totalValue
-}: {
-    position: EquityPosition;
-    totalValue: number;
-}) {
-    const isProfit = position.unrealizedPnl >= 0;
-    const allocationPct = totalValue > 0 ? (position.marketValue / totalValue) * 100 : 0;
-
-    const symbolColors: Record<string, string> = {
-        'QQQ': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-        'QLD': 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
-        'TQQQ': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-        'SGOV': 'bg-green-500/20 text-green-400 border-green-500/30',
-    };
-    const color = symbolColors[position.symbol] || 'bg-gray-500/20 text-gray-400 border-gray-500/30';
-
-    return (
-        <div className="glass-card p-5">
-            <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${color}`}>
-                        <span className="font-bold text-sm">{position.symbol}</span>
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-lg">{position.symbol}</h3>
-                        <p className="text-xs text-tm-muted">
-                            {position.quantity} shares · Avg ${position.averageOpenPrice.toFixed(2)}
-                        </p>
-                    </div>
-                </div>
-                <div className="text-right">
-                    <p className={`text-lg font-bold font-mono ${isProfit ? 'text-tm-green' : 'text-tm-red'}`}>
-                        {isProfit ? '+' : ''}${position.unrealizedPnl.toFixed(2)}
-                    </p>
-                    <p className={`text-xs font-mono ${isProfit ? 'text-tm-green' : 'text-tm-red'}`}>
-                        {isProfit ? '+' : ''}{position.unrealizedPnlPct.toFixed(2)}%
-                    </p>
-                </div>
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-4 text-center bg-tm-surface/40 rounded-lg p-3">
-                <div>
-                    <p className="text-[10px] text-tm-muted mb-0.5">Market Value</p>
-                    <p className="font-mono text-sm font-bold">${position.marketValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-                </div>
-                <div>
-                    <p className="text-[10px] text-tm-muted mb-0.5">Current Price</p>
-                    <p className="font-mono text-sm font-bold">${position.currentPrice.toFixed(2)}</p>
-                </div>
-                <div>
-                    <p className="text-[10px] text-tm-muted mb-0.5">Allocation</p>
-                    <p className="font-mono text-sm font-bold text-purple-400">{allocationPct.toFixed(1)}%</p>
-                </div>
-            </div>
-        </div>
     );
 }
 

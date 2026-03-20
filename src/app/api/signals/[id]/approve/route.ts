@@ -43,7 +43,7 @@ export async function POST(
         if (!hasTastytrade) {
             const signalData = body.signal || body.signalDetails || body;
             const strategy = signalData.strategy || 'TQQQ_TURBOCORE';
-            const orders = buildVirtualOrdersFromSignal(signalData);
+            const orders = await buildVirtualOrdersFromSignal(signalData, strategy, request);
 
             // Dynamically construct relative URL since Vercel env holds the baseUrl 
             const protocol = request.headers.get('x-forwarded-proto') || 'http';
@@ -244,7 +244,8 @@ export async function POST(
                     id: orderId,
                     userId: userId,
                     signalId: id,
-                    symbol: signalData.symbol || 'UNKNOWN',
+                    // Phase 3 Fix: Store accurate symbols instead of UNKNOWN for TurboCore signals
+                    symbol: (signalData.legs?.map((l: any) => l.symbol).join(',')) || signalData.symbol || 'REBALANCE',
                     strategy: signalData.strategy || 'theta',
                     strike: signalData.strike || 0,
                     expiration: signalData.frontExpiry || signalData.expiry || defaultFrontExpiry,
@@ -266,15 +267,16 @@ export async function POST(
 
             // After successful real trade execution — mirror to virtual account for UI display
             try {
-                const orders = buildVirtualOrdersFromSignal(signalData);
                 const protocol = request.headers.get('x-forwarded-proto') || 'http';
                 const host = request.headers.get('host');
                 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
+                const strategy = signalData.strategy || 'TQQQ_TURBOCORE';
+                const orders = await buildVirtualOrdersFromSignal(signalData, strategy, request);
 
                 await fetch(`${baseUrl}/api/virtual-accounts/execute`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', Cookie: request.headers.get('cookie') || '' },
-                    body: JSON.stringify({ signalId: id + '_mirror', strategy: signalData.strategy || 'TQQQ_TURBOCORE', orders })
+                    body: JSON.stringify({ signalId: id + '_mirror', strategy: strategy, orders })
                 });
             } catch (mirrorErr) {
                 console.warn('Mirror to virtual failed (non-critical):', mirrorErr);
@@ -321,20 +323,95 @@ export async function POST(
 }
 
 // Helper function to convert signal data into execution orders for the virtual ledger
-function buildVirtualOrdersFromSignal(signal: any) {
-    // For TURBOCORE rebalance signals
+async function buildVirtualOrdersFromSignal(signal: any, strategy: string, request: Request) {
     if (signal.type === 'REBALANCE' || String(signal.strategy).includes('TURBOCORE') || String(signal.strategy).includes('PRO')) {
         const legs = signal.legs || signal.data?.legs || [];
-        return legs
-            .filter((leg: any) => leg.target_pct > 0 || leg.action === 'buy')
-            .map((leg: any) => ({
-                symbol: leg.symbol,
-                action: 'buy',
-                quantity: leg.target_pct ? leg.target_pct * 100 : leg.quantity || 1, // Store percentage or qty
-                price: signal.data?.price || signal.cost || 100
-            }));
+        
+        const protocol = request.headers.get('x-forwarded-proto') || 'http';
+        const host = request.headers.get('host');
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
+        
+        // 1. Fetch live quotes purely to cost virtual orders correctly
+        let prices: Record<string, number> = {};
+        try {
+            const symbols = legs.map((l: any) => l.symbol).join(',');
+            const res = await fetch(`${baseUrl}/api/quotes?symbols=${symbols}`);
+            if (res.ok) prices = await res.json();
+        } catch(e) { console.warn('Failed to fetch Yahoo quotes for virtual sizes', e) }
+
+        // 2. Fetch current virtual balance and shadow positions
+        let virtualBalance = 100000;
+        let shadowEq: any[] = [];
+        try {
+             const vBalRes = await fetch(`${baseUrl}/api/virtual-accounts?strategy=${strategy}`, {
+                 headers: { Cookie: request.headers.get('cookie') || '' }
+             });
+             if (vBalRes.ok) virtualBalance = Number((await vBalRes.json()).balance || 100000);
+             
+             const shadowRes = await fetch(`${baseUrl}/api/shadow-positions?strategy=${strategy}`, {
+                 headers: { Cookie: request.headers.get('cookie') || '' }
+             });
+             if (shadowRes.ok) shadowEq = (await shadowRes.json()).positions || [];
+        } catch(e) { console.warn('Failed to fetch virtual state', e) }
+
+        let netLiq = virtualBalance;
+        const posMap = new Map<string, number>();
+        for (const p of shadowEq) {
+            const qty = Number(p.quantity);
+            const livePrice = prices[p.symbol] || p.avg_price || 100;
+            netLiq += qty * livePrice;
+            posMap.set(p.symbol, qty);
+        }
+
+        if (signal.capital_required) {
+            netLiq = Number(signal.capital_required); 
+        }
+
+        const orders: any[] = [];
+        for (const leg of legs) {
+            const symbol = leg.symbol;
+            if (symbol === 'SGOV' || symbol === 'QQQ_LEAPS') continue;
+            
+            const livePrice = prices[symbol] || signal.data?.price || signal.cost || 100;
+            const targetValue = netLiq * leg.target_pct;
+            const currentShares = posMap.get(symbol) || 0;
+            const currentValue = currentShares * livePrice;
+            
+            const diffValue = targetValue - currentValue;
+            const action = diffValue > 0 ? 'buy' : 'sell';
+            let orderDollarValue = Math.abs(diffValue);
+            
+            if (action === 'sell') {
+                const maxSellValue = currentValue;
+                if (orderDollarValue > maxSellValue) orderDollarValue = maxSellValue;
+            }
+            
+            const exactShares = orderDollarValue / livePrice;
+            let wholeShares = action === 'buy' ? Math.floor(exactShares) : Math.ceil(exactShares);
+            if (action === 'sell' && wholeShares > currentShares) wholeShares = currentShares;
+            
+            if (wholeShares > 0 && orderDollarValue >= 5) {
+               orders.push({
+                   symbol,
+                   action,
+                   quantity: wholeShares,
+                   price: livePrice
+               });
+            } else if (leg.target_pct === 0 && currentShares > 0) {
+               orders.push({ symbol, action: 'sell', quantity: currentShares, price: livePrice });
+            }
+        }
+        
+        orders.sort((a,b) => {
+            if (a.action === 'sell' && b.action !== 'sell') return -1;
+            if (a.action !== 'sell' && b.action === 'sell') return 1;
+            return 0;
+        });
+        
+        return orders;
     }
-    // For individual equity/options signals
+
+    // Individual equity/options signals (legacy/theta/zebra)
     return [{
         symbol: signal.symbol || 'UNKNOWN',
         action: signal.direction === 'bearish' ? 'sell' : 'buy',

@@ -175,18 +175,24 @@ export default function PositionsPage() {
             setLoading(true);
             setPositions([]);
 
-            const hasTastytrade = !!(settings?.tastytrade?.refreshToken);
+            // ── LIVE DETECTION: Ask the server if TT is connected (same approach as dashboard) ──
+            let accountNumber = '';
+            try {
+                const acctRes = await fetch('/api/tastytrade/account');
+                if (acctRes.ok) {
+                    const acctJson = await acctRes.json();
+                    accountNumber = acctJson?.data?.items?.[0]?.account?.['account-number'] || '';
+                }
+            } catch (_) { /* Not connected */ }
+
+            const hasTastytrade = !!accountNumber;
 
             if (hasTastytrade) {
                 // ── LIVE PATH: Fetch from Tastytrade ────────────────────────
                 setIsLive(true);
-                // account number lives in accounts[0]['account-number'] as returned by Tastytrade OAuth
-                const accountNumber = (settings?.tastytrade?.accounts?.[0] as any)?.['account-number']
-                    || (settings?.tastytrade?.accounts?.[0] as any)?.account_number
-                    || '';
                 
                 try {
-                    // Fetch real positions
+                    // Fetch live positions
                     const posRes = await fetch(`/api/tastytrade/positions?accountNumber=${accountNumber}`);
                     if (posRes.ok) {
                         const posData = await posRes.json();
@@ -215,15 +221,14 @@ export default function PositionsPage() {
                             });
                         setPositions(livePositions);
                         
-                        // Set balance from positions data (TT doesn't have separate balance endpoint yet)
                         const totalMarketValue = livePositions.reduce((s, p) => s + p.marketValue, 0);
                         setBalance({
-                            cashAvailable: 0, // Will update below if balance endpoint is added
+                            cashAvailable: 0,
                             buyingPower: 0,
                             netLiquidation: totalMarketValue,
                         });
                         
-                        // Also try to get cash balance
+                        // Fetch live balances
                         try {
                             const balRes = await fetch(`/api/tastytrade/balances?accountNumber=${accountNumber}`);
                             if (balRes.ok) {
@@ -253,7 +258,7 @@ export default function PositionsPage() {
         } finally {
             setLoading(false);
         }
-    }, [activeStrategy, settings?.tastytrade?.refreshToken]);
+    }, [activeStrategy]);
 
     const fetchVirtualPositions = useCallback(async () => {
         let virtualBalance = 100000;

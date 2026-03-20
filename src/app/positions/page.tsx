@@ -10,7 +10,8 @@ import {
     Wallet,
     BarChart3,
     Edit2,
-    Info
+    Wifi,
+    WifiOff
 } from "lucide-react";
 import Link from "next/link";
 import { useStrategyContext } from "@/components/providers/StrategyContext";
@@ -45,6 +46,7 @@ export default function PositionsPage() {
     const [positions, setPositions] = useState<EquityPosition[]>([]);
     const [loading, setLoading] = useState(true);
     const [balance, setBalance] = useState<AccountBalance | null>(null);
+    const [isLive, setIsLive] = useState(false);
     const { settings } = useSettings();
     
     // Transfer modal state
@@ -171,62 +173,130 @@ export default function PositionsPage() {
         try {
             setLoading(true);
             setPositions([]);
-            
-            // 1. Fetch virtual balance from API
-            let virtualBalance = 100000;
-            let isDefault = false;
-            try {
-                const vBalRes = await fetch(`/api/virtual-accounts?strategy=${activeStrategy}`);
-                if (vBalRes.ok) {
-                    const vBalData = await vBalRes.json();
-                    virtualBalance = Number(vBalData.balance);
-                    isDefault = vBalData.isDefault;
-                }
-            } catch (e) {
-                console.error('Virtual balance fetch error', e);
-            }
-            
-            setBalance({
-                cashAvailable: virtualBalance,
-                buyingPower: virtualBalance, // For virtual accounts, buying power is roughly cash available
-                netLiquidation: virtualBalance, // Will update below by adding positions value
-            });
 
-            // 2. Fetch shadow positions
-            const shadowRes = await fetch(`/api/shadow-positions?strategy=${activeStrategy}`);
-            if (shadowRes.ok) {
-                const shadowData = await shadowRes.json();
-                const shadowEq: EquityPosition[] = (shadowData.positions || []).map((p: any) => {
-                    const qty = Number(p.quantity);
-                    const avgPrice = Number(p.avg_price);
-                    const lastPrice = avgPrice; // No live pricing without another API call right now
-                    const marketVal = qty * lastPrice;
-                    return {
-                        symbol: p.symbol,
-                        quantity: qty,
-                        averageOpenPrice: avgPrice,
-                        currentPrice: lastPrice,
-                        marketValue: marketVal,
-                        unrealizedPnl: 0,
-                        unrealizedPnlPct: 0,
-                        instrumentType: 'Equity',
-                        isVirtual: true,
-                    };
-                });
-                
-                const positionsValue = shadowEq.reduce((acc, p) => acc + p.marketValue, 0);
-                setBalance(prev => prev ? { ...prev, netLiquidation: prev.cashAvailable + positionsValue } : null);
-                
-                setPositions(shadowEq);
+            const hasTastytrade = !!(settings?.tastytrade?.refreshToken);
 
-                if (isDefault && shadowEq.length === 0) {
-                    setShowOnboarding(true);
+            if (hasTastytrade) {
+                // ── LIVE PATH: Fetch from Tastytrade ────────────────────────
+                setIsLive(true);
+                // account number lives in accounts[0]['account-number'] as returned by Tastytrade OAuth
+                const accountNumber = (settings?.tastytrade?.accounts?.[0] as any)?.['account-number']
+                    || (settings?.tastytrade?.accounts?.[0] as any)?.account_number
+                    || '';
+                
+                try {
+                    // Fetch real positions
+                    const posRes = await fetch(`/api/tastytrade/positions?accountNumber=${accountNumber}`);
+                    if (posRes.ok) {
+                        const posData = await posRes.json();
+                        const items = posData?.data?.items || [];
+                        const livePositions: EquityPosition[] = items
+                            .filter((p: any) => p.quantity !== 0)
+                            .map((p: any) => {
+                                const qty = Number(p.quantity);
+                                const avgPrice = Number(p['average-open-price'] || p.average_open_price || 0);
+                                const closePrice = Number(p['close-price'] || p.close_price || avgPrice);
+                                const marketVal = qty * closePrice;
+                                const unrealizedPnl = (closePrice - avgPrice) * qty;
+                                const costBasis = avgPrice * qty;
+                                const unrealizedPct = costBasis > 0 ? (unrealizedPnl / costBasis) * 100 : 0;
+                                return {
+                                    symbol: p.symbol,
+                                    quantity: qty,
+                                    averageOpenPrice: avgPrice,
+                                    currentPrice: closePrice,
+                                    marketValue: marketVal,
+                                    unrealizedPnl,
+                                    unrealizedPnlPct: unrealizedPct,
+                                    instrumentType: p['instrument-type'] || 'Equity',
+                                    isVirtual: false,
+                                };
+                            });
+                        setPositions(livePositions);
+                        
+                        // Set balance from positions data (TT doesn't have separate balance endpoint yet)
+                        const totalMarketValue = livePositions.reduce((s, p) => s + p.marketValue, 0);
+                        setBalance({
+                            cashAvailable: 0, // Will update below if balance endpoint is added
+                            buyingPower: 0,
+                            netLiquidation: totalMarketValue,
+                        });
+                        
+                        // Also try to get cash balance
+                        try {
+                            const balRes = await fetch(`/api/tastytrade/balances?accountNumber=${accountNumber}`);
+                            if (balRes.ok) {
+                                const balData = await balRes.json();
+                                const bd = balData?.data || {};
+                                const cash = Number(bd['cash-balance'] || bd.cash_balance || 0);
+                                const net = Number(bd['net-liquidating-value'] || bd.net_liquidating_value || totalMarketValue);
+                                const buying = Number(bd['derivative-buying-power'] || bd.buying_power || cash);
+                                setBalance({ cashAvailable: cash, buyingPower: buying, netLiquidation: net });
+                            }
+                        } catch (_) { /* balance endpoint optional */ }
+                    } else {
+                        throw new Error('TT positions fetch failed');
+                    }
+                } catch (ttErr) {
+                    console.warn('Live TT data failed, falling back to virtual:', ttErr);
+                    setIsLive(false);
+                    await fetchVirtualPositions();
                 }
+            } else {
+                // ── VIRTUAL PATH ─────────────────────────────────────────────
+                setIsLive(false);
+                await fetchVirtualPositions();
             }
         } catch (err) {
-            console.error('Error fetching virtual positions:', err);
+            console.error('Error fetching positions:', err);
         } finally {
             setLoading(false);
+        }
+    }, [activeStrategy, settings?.tastytrade?.refreshToken]);
+
+    const fetchVirtualPositions = useCallback(async () => {
+        let virtualBalance = 100000;
+        let isDefault = false;
+        try {
+            const vBalRes = await fetch(`/api/virtual-accounts?strategy=${activeStrategy}`);
+            if (vBalRes.ok) {
+                const vBalData = await vBalRes.json();
+                virtualBalance = Number(vBalData.balance);
+                isDefault = vBalData.isDefault;
+            }
+        } catch (e) { console.error('Virtual balance fetch error', e); }
+
+        setBalance({
+            cashAvailable: virtualBalance,
+            buyingPower: virtualBalance,
+            netLiquidation: virtualBalance,
+        });
+
+        const shadowRes = await fetch(`/api/shadow-positions?strategy=${activeStrategy}`);
+        if (shadowRes.ok) {
+            const shadowData = await shadowRes.json();
+            const shadowEq: EquityPosition[] = (shadowData.positions || []).map((p: any) => {
+                const qty = Number(p.quantity);
+                const avgPrice = Number(p.avg_price);
+                const marketVal = qty * avgPrice;
+                return {
+                    symbol: p.symbol,
+                    quantity: qty,
+                    averageOpenPrice: avgPrice,
+                    currentPrice: avgPrice,
+                    marketValue: marketVal,
+                    unrealizedPnl: 0,
+                    unrealizedPnlPct: 0,
+                    instrumentType: 'Equity',
+                    isVirtual: true,
+                };
+            });
+
+            const positionsValue = shadowEq.reduce((acc, p) => acc + p.marketValue, 0);
+            setBalance(prev => prev ? { ...prev, netLiquidation: prev.cashAvailable + positionsValue } : null);
+            setPositions(shadowEq);
+
+            if (isDefault && shadowEq.length === 0) setShowOnboarding(true);
         }
     }, [activeStrategy]);
 
@@ -274,7 +344,15 @@ export default function PositionsPage() {
                 <div className="flex-1">
                     <h1 className="text-xl font-bold flex items-center gap-2">
                         Positions
-                        <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-bold">VIRTUAL</span>
+                        {isLive ? (
+                            <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                                <Wifi className="w-2.5 h-2.5" /> LIVE
+                            </span>
+                        ) : (
+                            <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                                <WifiOff className="w-2.5 h-2.5" /> VIRTUAL
+                            </span>
+                        )}
                     </h1>
                     <p className="text-sm text-tm-muted">{filteredPositions.length} equity position{filteredPositions.length !== 1 ? 's' : ''}</p>
                 </div>
@@ -283,13 +361,6 @@ export default function PositionsPage() {
                 </button>
             </header>
 
-            {/* Virtual Mode Banner for non-connected users */}
-            {!settings?.tastytrade?.refreshToken && (
-                <div className="mx-6 mb-4 px-4 py-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-sm text-blue-300 flex items-center gap-2">
-                    <Info className="w-4 h-4 flex-shrink-0" />
-                    <span>You're in Virtual mode. Connect Tastytrade in Settings to trade live.</span>
-                </div>
-            )}
 
             {/* Strategy tabs */}
             <div className="px-6 mb-6">
@@ -301,13 +372,13 @@ export default function PositionsPage() {
                 />
             </div>
 
-            {/* Account Summary */}
-            {balance && (
-                <div className="px-6 mb-6">
-                    <div className="glass-card p-5">
-                        <div className="flex items-center gap-2 mb-4">
-                            <Wallet className="w-5 h-5 text-tm-purple" />
-                            <h3 className="font-bold">Account Overview</h3>
+            {/* Account Summary — always visible */}
+            <div className="px-6 mb-6">
+                <div className="glass-card p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Wallet className="w-5 h-5 text-tm-purple" />
+                        <h3 className="font-bold">Account Overview</h3>
+                        {!isLive && (
                             <div className="ml-auto flex gap-2">
                                 <button onClick={() => setShowTransferModal('deposit')} className="text-[10px] bg-green-500/20 text-green-400 px-3 py-1 rounded-full font-bold hover:bg-green-500/30 transition">
                                     DEPOSIT
@@ -316,30 +387,30 @@ export default function PositionsPage() {
                                     WITHDRAW
                                 </button>
                             </div>
+                        )}
+                    </div>
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                        <div>
+                            <p className="text-xs text-tm-muted">Total Value</p>
+                            <p className="text-lg font-bold font-mono text-tm-green">
+                                ${(balance?.netLiquidation || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            </p>
                         </div>
-                        <div className="grid grid-cols-3 gap-4 text-center">
-                            <div>
-                                <p className="text-xs text-tm-muted">Total Value</p>
-                                <p className="text-lg font-bold font-mono text-tm-green">
-                                    ${balance.netLiquidation.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-xs text-tm-muted">Positions Value</p>
-                                <p className="text-lg font-bold font-mono text-tm-purple">
-                                    ${(balance.netLiquidation - balance.cashAvailable).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-xs text-tm-muted">Cash Balance</p>
-                                <p className="text-lg font-bold font-mono">
-                                    ${balance.cashAvailable.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                </p>
-                            </div>
+                        <div>
+                            <p className="text-xs text-tm-muted">Positions Value</p>
+                            <p className="text-lg font-bold font-mono text-tm-purple">
+                                ${((balance?.netLiquidation || 0) - (balance?.cashAvailable || 0)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-tm-muted">Cash Balance</p>
+                            <p className="text-lg font-bold font-mono">
+                                ${(balance?.cashAvailable || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            </p>
                         </div>
                     </div>
                 </div>
-            )}
+            </div>
 
             {/* Transfer Modal */}
             {showTransferModal && (

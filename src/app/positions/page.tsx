@@ -9,7 +9,8 @@ import {
     RefreshCw,
     Wallet,
     BarChart3,
-    Edit2
+    Edit2,
+    Info
 } from "lucide-react";
 import Link from "next/link";
 import { useStrategyContext } from "@/components/providers/StrategyContext";
@@ -281,6 +282,14 @@ export default function PositionsPage() {
                     <RefreshCw className="w-4 h-4" />
                 </button>
             </header>
+
+            {/* Virtual Mode Banner for non-connected users */}
+            {!settings?.tastytrade?.refreshToken && (
+                <div className="mx-6 mb-4 px-4 py-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-sm text-blue-300 flex items-center gap-2">
+                    <Info className="w-4 h-4 flex-shrink-0" />
+                    <span>You're in Virtual mode. Connect Tastytrade in Settings to trade live.</span>
+                </div>
+            )}
 
             {/* Strategy tabs */}
             <div className="px-6 mb-6">

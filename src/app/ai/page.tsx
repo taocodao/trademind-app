@@ -6,7 +6,7 @@ import {
   Bot, ShieldCheck, Zap, Maximize, 
   Briefcase, ScanSearch, LineChart, Target,
   FileSearch, MessageSquare, Coffee, ShieldAlert,
-  Loader2, CheckCircle2
+  Loader2, CheckCircle2, ArrowLeft
 } from 'lucide-react';
 import { AIFeatureCard } from '@/components/ui/AIFeatureCard';
 import { usePrivy } from '@privy-io/react-auth';
@@ -58,9 +58,9 @@ export default function AIHubPage() {
       }
       
       if (json.method === 'paid') {
-          alert('Added to your Stripe subscription! ($5/mo)');
+          setError('Added to your Stripe subscription! ($5/mo)');
       } else {
-          alert('Feature added for free!');
+          setError('Feature added for free!');
       }
       
       await fetchFeatures();
@@ -88,7 +88,7 @@ export default function AIHubPage() {
         throw new Error(json.error || 'Failed to unsubscribe');
       }
       
-      alert('Feature removed.');
+      setError('Feature removed.');
       await fetchFeatures();
       
     } catch (err: any) {
@@ -113,14 +113,35 @@ export default function AIHubPage() {
     <div className="min-h-screen bg-tm-bg text-white pb-24">
       
       {/* Header section */}
-      <div className="px-5 pt-8 pb-6 bg-tm-surface/50 border-b border-tm-border">
-        <div className="flex items-center gap-3 mb-2 opacity-90">
-          <Bot className="text-tm-purple h-8 w-8" />
-          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">AI Copilot</h1>
+      <header className="px-5 pt-8 pb-6 bg-tm-surface/50 border-b border-tm-border">
+        <div className="flex items-center gap-4 mb-2">
+            <Link href="/dashboard" className="w-10 h-10 rounded-full bg-tm-surface flex items-center justify-center border border-white/5 shadow-sm hover:bg-tm-purple/20 transition-colors">
+                <ArrowLeft className="w-5 h-5 text-tm-muted hover:text-white" />
+            </Link>
+            <div className="flex items-center gap-3 opacity-90">
+                <Bot className="text-tm-purple h-8 w-8" />
+                <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">AI Copilot</h1>
+            </div>
         </div>
-        <p className="text-tm-muted text-sm max-w-sm mt-1 mb-4 leading-relaxed">
+        <p className="text-tm-muted text-sm max-w-sm mt-1 mb-4 leading-relaxed pl-[3.5rem]">
           Your personal market analyst powered by Perplexity Pro real-time engine. 
         </p>
+
+        {error && (
+            <div className="mb-4 ml-[3.5rem] p-4 rounded-xl bg-tm-surface border border-white/10 flex items-start gap-3">
+                {error.includes('added') || error.includes('removed') ? (
+                    <CheckCircle2 className="w-5 h-5 text-tm-green flex-shrink-0 mt-0.5" />
+                ) : (
+                    <ShieldAlert className="w-5 h-5 text-tm-red flex-shrink-0 mt-0.5" />
+                )}
+                <div className="flex-1">
+                    <p className={`text-sm ${error.includes('added') || error.includes('removed') ? 'text-tm-green' : 'text-tm-red'}`}>{error}</p>
+                </div>
+                <button onClick={() => setError(null)} className="text-tm-muted hover:text-white">
+                    &times;
+                </button>
+            </div>
+        )}
         
         {!isObserver && (
           <div className="bg-tm-purple/10 border border-tm-purple/30 rounded-xl p-4 flex flex-col gap-2">
@@ -150,7 +171,7 @@ export default function AIHubPage() {
              <Link href="/pricing" className="mt-2 text-tm-purple text-sm font-medium hover:underline">View Plans →</Link>
           </div>
         )}
-      </div>
+      </header>
 
       {isProcessing && (
         <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-tm-purple/30 overflow-hidden">

@@ -71,7 +71,10 @@ export async function POST(req: NextRequest) {
         );
         const subscriptionId = settingsResult.rows[0]?.stripe_subscription_id;
         if (!subscriptionId) {
-            return NextResponse.json({ error: 'No active subscription found' }, { status: 400 });
+            return NextResponse.json({ 
+                error: 'No Stripe subscription found. You must have an active TurboCore or Both Bundle plan to add paid features.',
+                code: 'NO_SUBSCRIPTION'
+            }, { status: 400 });
         }
 
         const addonPriceId = process.env.STRIPE_AI_ADDON_PRICE_ID;

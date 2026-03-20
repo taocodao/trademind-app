@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { CreditCard, CheckCircle, ArrowRight, Star, Zap, Layers, Clock, ExternalLink, Crown } from 'lucide-react';
+import { CreditCard, CheckCircle, ArrowRight, Star, Zap, Layers, Clock, ExternalLink, Crown, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePrivy } from '@privy-io/react-auth';
 
@@ -30,6 +30,10 @@ export function SubscriptionManager() {
     const [loading, setLoading] = useState<string | null>(null);
     const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('annual');
     const [portalLoading, setPortalLoading] = useState(false);
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const [cancelLoading, setCancelLoading] = useState(false);
+    const [cancelError, setCancelError] = useState<string | null>(null);
+    const [reactivateLoading, setReactivateLoading] = useState(false);
     const [membership, setMembership] = useState<MembershipInfo>({
         tier: 'observer', status: null, billingInterval: null,
         currentPeriodEnd: null, trialEnd: null, priceId: null,
@@ -37,18 +41,18 @@ export function SubscriptionManager() {
     });
     const { getAccessToken } = usePrivy();
 
+    const refreshMembership = async () => {
+        const token = await getAccessToken();
+        const res = await fetch('/api/settings/tier', {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        const d = await res.json();
+        if (d.tier) setMembership(d);
+    };
+
     // Fetch membership info on mount
     useEffect(() => {
-        getAccessToken().then(token => {
-            fetch('/api/settings/tier', {
-                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-            })
-                .then(r => r.json())
-                .then(d => {
-                    if (d.tier) setMembership(d);
-                })
-                .catch(console.error);
-        });
+        refreshMembership();
     }, []);
 
     const currentTier = membership.tier;
@@ -147,12 +151,43 @@ export function SubscriptionManager() {
         }
     };
 
-    const handleCancelClick = async () => {
-        const confirmed = window.confirm(
-            "Are you sure you want to cancel your subscription?\n\nYou will keep access until the end of your billing period, but you won't be charged again."
-        );
-        if (confirmed) {
-            await handleManageBilling();
+    const handleCancelConfirm = async () => {
+        setCancelLoading(true);
+        setCancelError(null);
+        try {
+            const token = await getAccessToken();
+            const res = await fetch('/api/stripe/cancel', {
+                method: 'POST',
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Cancellation failed');
+            setShowCancelModal(false);
+            await refreshMembership();
+        } catch (err: any) {
+            setCancelError(err.message);
+        } finally {
+            setCancelLoading(false);
+        }
+    };
+
+    const handleReactivate = async () => {
+        setReactivateLoading(true);
+        try {
+            const token = await getAccessToken();
+            const res = await fetch('/api/stripe/reactivate', {
+                method: 'POST',
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
+            if (!res.ok) {
+                const d = await res.json();
+                throw new Error(d.error || 'Reactivation failed');
+            }
+            await refreshMembership();
+        } catch (err: any) {
+            console.error('Reactivate error:', err.message);
+        } finally {
+            setReactivateLoading(false);
         }
     };
 
@@ -182,6 +217,7 @@ export function SubscriptionManager() {
         : null;
 
     return (
+        <>
         <section className="glass-card overflow-hidden relative">
             {isSubscribed && (
                 <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-tm-purple to-pink-500" />
@@ -249,13 +285,25 @@ export function SubscriptionManager() {
                                 )}
                             </div>
                             <div className="flex items-center gap-3">
-                                {!membership.cancelAtPeriodEnd && (
+                                {membership.cancelAtPeriodEnd ? (
                                     <button
-                                        onClick={handleCancelClick}
-                                        disabled={portalLoading}
-                                        className="text-tm-muted hover:text-white transition-colors"
+                                        onClick={handleReactivate}
+                                        disabled={reactivateLoading}
+                                        className="flex items-center gap-1 text-tm-green hover:text-green-300 transition-colors text-xs font-semibold"
                                     >
-                                        {portalLoading ? '...' : 'Cancel'}
+                                        {reactivateLoading ? (
+                                            <RefreshCw className="w-3 h-3 animate-spin" />
+                                        ) : (
+                                            <RefreshCw className="w-3 h-3" />
+                                        )}
+                                        {reactivateLoading ? 'Reactivating...' : 'Reactivate'}
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => { setCancelError(null); setShowCancelModal(true); }}
+                                        className="text-tm-muted hover:text-tm-red transition-colors text-xs"
+                                    >
+                                        Cancel Plan
                                     </button>
                                 )}
                                 <button
@@ -352,5 +400,45 @@ export function SubscriptionManager() {
                 </p>
             </div>
         </section>
+
+        {/* Cancel Confirmation Modal */}
+        {showCancelModal && (
+            <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 px-4 pb-8">
+                <div className="glass-card w-full max-w-md p-6 rounded-2xl border border-tm-red/20">
+                    <div className="flex items-start gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-full bg-tm-red/10 flex items-center justify-center flex-shrink-0">
+                            <AlertTriangle className="w-5 h-5 text-tm-red" />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-base">Cancel Subscription?</h3>
+                            <p className="text-s text-tm-muted mt-1 leading-relaxed">
+                                You'll keep full access until{' '}
+                                <strong className="text-white">{renewalDate || 'end of billing period'}</strong>.
+                                After that, your account moves to the free Observer tier and all AI add-ons are removed.
+                            </p>
+                        </div>
+                    </div>
+                    {cancelError && (
+                        <p className="text-tm-red text-xs mb-3 bg-tm-red/10 border border-tm-red/20 rounded-lg px-3 py-2">{cancelError}</p>
+                    )}
+                    <div className="flex gap-3 mt-5">
+                        <button
+                            onClick={() => setShowCancelModal(false)}
+                            className="flex-1 py-3 rounded-xl bg-tm-surface border border-white/10 text-sm font-semibold hover:bg-white/10 transition-colors"
+                        >
+                            Keep Plan
+                        </button>
+                        <button
+                            onClick={handleCancelConfirm}
+                            disabled={cancelLoading}
+                            className="flex-1 py-3 rounded-xl bg-tm-red/15 border border-tm-red/30 text-tm-red text-sm font-semibold hover:bg-tm-red/25 transition-colors"
+                        >
+                            {cancelLoading ? 'Canceling...' : 'Yes, Cancel Plan'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
     );
 }

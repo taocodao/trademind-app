@@ -37,11 +37,36 @@ export async function POST(
 
         // Get user's Tastytrade credentials from Redis
         const tokens = await getTastytradeTokens(userId);
-        if (!tokens || !tokens.refreshToken) {
-            return NextResponse.json(
-                { error: 'Not connected to Tastytrade. Please link your account first.' },
-                { status: 401 }
-            );
+        const hasTastytrade = tokens?.refreshToken;
+
+        // If no Tastytrade connection — execute virtually
+        if (!hasTastytrade) {
+            const signalData = body.signal || body.signalDetails || body;
+            const strategy = signalData.strategy || 'TQQQ_TURBOCORE';
+            const orders = buildVirtualOrdersFromSignal(signalData);
+
+            // Dynamically construct relative URL since Vercel env holds the baseUrl 
+            const protocol = request.headers.get('x-forwarded-proto') || 'http';
+            const host = request.headers.get('host');
+            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
+
+            const execRes = await fetch(`${baseUrl}/api/virtual-accounts/execute`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Cookie: request.headers.get('cookie') || '' },
+                body: JSON.stringify({ signalId: id, strategy, orders })
+            });
+
+            if (!execRes.ok) {
+                const err = await execRes.json().catch(() => ({}));
+                return NextResponse.json({ status: 'failed', error: err.error || 'Virtual execution failed' }, { status: 400 });
+            }
+            const execData = await execRes.json();
+            return NextResponse.json({
+                status: 'success',
+                virtual: true,
+                message: 'Trade executed virtually. Connect Tastytrade for live trading.',
+                balance: execData.balance
+            });
         }
 
         // Get OAuth credentials from environment (single source of truth!)
@@ -239,6 +264,22 @@ export async function POST(
                 console.error('⚠️ Failed to save position to database:', dbError);
             }
 
+            // After successful real trade execution — mirror to virtual account for UI display
+            try {
+                const orders = buildVirtualOrdersFromSignal(signalData);
+                const protocol = request.headers.get('x-forwarded-proto') || 'http';
+                const host = request.headers.get('host');
+                const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
+
+                await fetch(`${baseUrl}/api/virtual-accounts/execute`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Cookie: request.headers.get('cookie') || '' },
+                    body: JSON.stringify({ signalId: id + '_mirror', strategy: signalData.strategy || 'TQQQ_TURBOCORE', orders })
+                });
+            } catch (mirrorErr) {
+                console.warn('Mirror to virtual failed (non-critical):', mirrorErr);
+            }
+
             return NextResponse.json({
                 status: 'success',
                 signal: { id, ...signalData, status: 'executed' },
@@ -277,4 +318,27 @@ export async function POST(
             { status: 500 }
         );
     }
+}
+
+// Helper function to convert signal data into execution orders for the virtual ledger
+function buildVirtualOrdersFromSignal(signal: any) {
+    // For TURBOCORE rebalance signals
+    if (signal.type === 'REBALANCE' || String(signal.strategy).includes('TURBOCORE') || String(signal.strategy).includes('PRO')) {
+        const legs = signal.legs || signal.data?.legs || [];
+        return legs
+            .filter((leg: any) => leg.target_pct > 0 || leg.action === 'buy')
+            .map((leg: any) => ({
+                symbol: leg.symbol,
+                action: 'buy',
+                quantity: leg.target_pct ? leg.target_pct * 100 : leg.quantity || 1, // Store percentage or qty
+                price: signal.data?.price || signal.cost || 100
+            }));
+    }
+    // For individual equity/options signals
+    return [{
+        symbol: signal.symbol || 'UNKNOWN',
+        action: signal.direction === 'bearish' ? 'sell' : 'buy',
+        quantity: signal.contracts || 1,
+        price: signal.cost || signal.price || 0
+    }];
 }

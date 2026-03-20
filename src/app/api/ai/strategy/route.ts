@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
         'Content-Type': 'application/json'
       },
         body: JSON.stringify({
-        model: 'sonar-reasoning', // Use reasoning model for options math
+        model: 'sonar-pro', // sonar-reasoning is deprecated, sonar-pro is the current reasoning model
         messages: [{
           role: 'user',
           content: `You are an elite options structurer. TurboCore regime: ${turboRegime} (${turboConf}% conf).

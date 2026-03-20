@@ -360,12 +360,19 @@ function DashboardContent() {
 
     const [tastyUsername, setTastyUsername] = useState<string | null>(null);
 
-    // Filter by the currently active strategy's key
-    const coreSignals = allSignals.filter(s =>
-        s.strategy?.toUpperCase() === activeStrategy.toUpperCase() ||
-        // Temporary fallback for older 'rebalance' types that implicitly meant TQQQ_TURBOCORE
-        ((s as any).type === 'REBALANCE' && activeStrategy === 'TQQQ_TURBOCORE' && s.strategy === undefined)
-    ).slice(0, 1) as unknown as TurboCoreSignal[];
+    // Filter by the currently active strategy's key AND ensure it is from today
+    const coreSignals = allSignals.filter(s => {
+        const isMatch = s.strategy?.toUpperCase() === activeStrategy.toUpperCase() ||
+            // Temporary fallback for older 'rebalance' types that implicitly meant TQQQ_TURBOCORE
+            ((s as any).type === 'REBALANCE' && activeStrategy === 'TQQQ_TURBOCORE' && s.strategy === undefined);
+            
+        if (!isMatch) return false;
+
+        // Strictly enforce that the signal was generated today (local browser time)
+        const signalDate = new Date(s.createdAt || (s as any).timestamp || Date.now());
+        const today = new Date();
+        return signalDate.toDateString() === today.toDateString();
+    }).slice(0, 1) as unknown as TurboCoreSignal[];
 
     const [recentOrders, setRecentOrders] = useState<any[]>([]);
 
@@ -1018,10 +1025,7 @@ function DashboardContent() {
 
 
                 {/* Your Progress */}
-
-                <ProgressCard stats={gamStats} />
-
-
+                {/* <ProgressCard stats={gamStats} /> */}
 
                 {/* Auto-Approve Toggle */}
 

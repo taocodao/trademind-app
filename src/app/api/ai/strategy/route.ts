@@ -31,16 +31,14 @@ export async function POST(req: NextRequest) {
         'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
+        body: JSON.stringify({
         model: 'sonar-reasoning', // Use reasoning model for options math
         messages: [{
-          role: 'system',
-          content: `You are an elite options structurer. TurboCore regime: ${turboRegime} (${turboConf}% conf).`
-        }, {
           role: 'user',
-          content: `Build 3 realistic options strategies for ${upperTicker} based on this thesis: "${thesis}".
+          content: `You are an elite options structurer. TurboCore regime: ${turboRegime} (${turboConf}% conf).
+Build 3 realistic options strategies for ${upperTicker} based on this thesis: "${thesis}".
 Parameters: Timeframe ~${timeframe}, Max Risk Level: ${risk}.
-Return strict JSON array ONLY (no Markdown wrappers, just the raw array ` + "`[{...}]`" + `):
+Return strict JSON array ONLY (no Markdown wrappers, just the raw array \`[{...}]\`):
 [
   {
     "name": "Strategy Name (e.g. Bull Call Spread)",
@@ -55,8 +53,7 @@ Return strict JSON array ONLY (no Markdown wrappers, just the raw array ` + "`[{
   }
 ]
 Use current realistic estimates for strikes. Order by best fit first.`
-        }],
-        max_tokens: 800
+        }]
       })
     });
 

@@ -328,6 +328,8 @@ export default function PositionsPage() {
 
     // Positions are already isolated per strategy natively in the database.
     const filteredPositions = positions;
+    const optionPositions = filteredPositions.filter(p => p.instrumentType === 'Equity Option');
+    const equityPositions = filteredPositions.filter(p => p.instrumentType !== 'Equity Option');
 
     const totalValue = filteredPositions.reduce((s, p) => s + p.marketValue, 0);
     const totalPnl = filteredPositions.reduce((s, p) => s + p.unrealizedPnl, 0);
@@ -582,13 +584,13 @@ export default function PositionsPage() {
                     <div className="glass-card p-8 text-center">
                         <TrendingUp className="w-12 h-12 text-tm-purple mx-auto mb-4" />
                         <h3 className="font-semibold mb-2">No {activeStrategyConfig?.shortLabel || 'TurboCore'} positions</h3>
-                        <p className="text-sm text-tm-muted mb-4">Execute a signal to open equity positions</p>
+                        <p className="text-sm text-tm-muted mb-4">Execute a signal to open equity and option positions</p>
                         <Link href="/dashboard" className="btn-primary inline-block">
                             Go to Dashboard
                         </Link>
                     </div>
                 ) : (
-                    filteredPositions.map((pos) => (
+                    equityPositions.map((pos) => (
                         <div key={pos.symbol} className="relative group">
                             <EquityCard position={pos} totalValue={totalValue} />
                             <button
@@ -605,6 +607,18 @@ export default function PositionsPage() {
                     ))
                 )}
             </div>
+
+            {/* Option Positions */}
+            {optionPositions.length > 0 && (
+                <div className="px-6 mt-8 space-y-3">
+                    <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-amber-400"></span> Options
+                    </h2>
+                    {optionPositions.map((pos) => (
+                        <OptionCard key={pos.symbol} position={pos} totalValue={totalValue} />
+                    ))}
+                </div>
+            )}
 
             {/* Account Details Footer */}
             <div className="px-6 mt-6">
@@ -672,6 +686,91 @@ function EquityCard({
                 <div>
                     <p className="text-[10px] text-tm-muted mb-0.5">Allocation</p>
                     <p className="font-mono text-sm font-bold text-purple-400">{allocationPct.toFixed(1)}%</p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function parseOccSymbol(occ: string) {
+    if (occ.length < 21) {
+        return { underlying: occ, expiry: '', type: '', strike: 0 };
+    }
+    const underlying = occ.slice(0, 6).trim();           // "QQQ"
+    const expiry = `20${occ.slice(6, 12)}`;              // "20270620"
+    const type = occ[12] === 'C' ? 'Call' : 'Put';
+    const strike = parseInt(occ.slice(13)) / 1000;       // 450.000
+    
+    // Format expiry nicely (e.g. Jun 20, 2027)
+    let formattedExpiry = expiry;
+    try {
+        const year = expiry.slice(0, 4);
+        const month = expiry.slice(4, 6);
+        const day = expiry.slice(6, 8);
+        const d = new Date(`${year}-${month}-${day}T12:00:00Z`);
+        formattedExpiry = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch (e) { }
+
+    return { underlying, expiry: formattedExpiry, type, strike };
+}
+
+function OptionCard({
+    position,
+    totalValue
+}: {
+    position: EquityPosition;
+    totalValue: number;
+}) {
+    const isProfit = position.unrealizedPnl >= 0;
+    const allocationPct = totalValue > 0 ? (position.marketValue / totalValue) * 100 : 0;
+    const parsed = parseOccSymbol(position.symbol);
+
+    return (
+        <div className="glass-card p-5 border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-transparent">
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center border bg-amber-500/20 text-amber-400 border-amber-500/30">
+                        <span className="font-bold text-lg">C</span>
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-bold text-lg">{parsed.underlying} ${parsed.strike} {parsed.type}</h3>
+                            <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-bold border border-amber-500/30 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                                LEAPS
+                            </span>
+                        </div>
+                        <p className="text-xs text-tm-muted">
+                            Exp: {parsed.expiry} · {position.quantity} contracts
+                        </p>
+                    </div>
+                </div>
+                <div className="text-right">
+                    <p className={`text-lg font-bold font-mono ${isProfit ? 'text-tm-green' : 'text-tm-red'}`}>
+                        {isProfit ? '+' : ''}${position.unrealizedPnl.toFixed(2)}
+                    </p>
+                    <p className={`text-xs font-mono ${isProfit ? 'text-tm-green' : 'text-tm-red'}`}>
+                        {isProfit ? '+' : ''}{position.unrealizedPnlPct.toFixed(2)}%
+                    </p>
+                </div>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-4 gap-4 text-center bg-black/40 rounded-lg p-3 border border-white/5">
+                <div>
+                    <p className="text-[10px] text-tm-muted mb-0.5">Contracts</p>
+                    <p className="font-mono text-sm font-bold">{position.quantity}</p>
+                </div>
+                <div>
+                    <p className="text-[10px] text-tm-muted mb-0.5">Avg Open</p>
+                    <p className="font-mono text-sm font-bold">${position.averageOpenPrice.toFixed(2)}</p>
+                </div>
+                <div>
+                    <p className="text-[10px] text-tm-muted mb-0.5">Current Price</p>
+                    <p className="font-mono text-sm font-bold">${position.currentPrice.toFixed(2)}</p>
+                </div>
+                <div>
+                    <p className="text-[10px] text-tm-muted mb-0.5">Total Value</p>
+                    <p className="font-mono text-sm font-bold text-amber-400">${position.marketValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
                 </div>
             </div>
         </div>

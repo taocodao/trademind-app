@@ -29,7 +29,7 @@ export const STRATEGIES: StrategyConfig[] = [
         description: 'Enhanced allocation with advanced ML regime detection',
         icon: Zap,
         color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
-        managedSymbols: ['QQQ', 'QLD', 'TQQQ', 'SGOV'],
+        managedSymbols: ['QQQ', 'QLD', 'TQQQ', 'QQQ_LEAPS', 'SGOV'],
         signalCardType: 'turbocore',
     },
     // Future strategies can be added here

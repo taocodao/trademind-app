@@ -998,5 +998,141 @@ export async function executeNotionalEquityOrder(
         ],
     };
 
-    return submitOrder(accessToken, accountNumber, order);
+        return submitOrder(accessToken, accountNumber, order);
+}
+
+// ─── Option Chain Types & TQQQ LEAPS API ──────────────────────────────────────
+
+export interface OptionChainStrike {
+    strikePrice: number;
+    call: string | null;  // OCC option symbol e.g. "QQQ   270620C00450000"
+    put: string | null;
+}
+
+export interface OptionChainExpiration {
+    expirationDate: string;   // "YYYY-MM-DD"
+    daysToExpiration: number;
+    expirationStyle: string;   // "American"
+    strikes: OptionChainStrike[];
+}
+
+export interface OptionChainNested {
+    underlying: string;
+    expirations: OptionChainExpiration[];
+}
+
+export interface LeapsCandidate {
+    occSymbol: string;       // OCC symbol to trade
+    strikePrice: number;
+    expirationDate: string;
+    daysToExpiration: number;
+    bid: number;
+    ask: number;
+    mid: number;
+}
+
+/**
+ * Fetch all expirations + strikes for an underlying using the /nested endpoint.
+ * Endpoint: GET /option-chains/{symbol}/nested
+ */
+export async function getOptionChainNested(
+    accessToken: string,
+    underlyingSymbol: string
+): Promise<OptionChainNested> {
+    const url = `${TASTYTRADE_API_BASE}/option-chains/${underlyingSymbol}/nested`;
+    console.log(`📊 Fetching option chain for ${underlyingSymbol}: ${url}`);
+
+    const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Accept': 'application/json',
+            'User-Agent': 'TradeMind/1.0',
+        },
+    });
+
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Failed to fetch option chain for ${underlyingSymbol}: ${response.status} ${text}`);
+    }
+
+    const data = await response.json();
+    const items = data.data?.items || [];
+
+    const expirations: OptionChainExpiration[] = items.map((item: any) => ({
+        expirationDate: item['expiration-date'],
+        daysToExpiration: item['days-to-expiration'],
+        expirationStyle: item['expiration-type'] || 'American',
+        strikes: (item.strikes || []).map((s: any) => ({
+            strikePrice: parseFloat(s['strike-price']),
+            call: s.call || null,
+            put: s.put || null,
+        })),
+    }));
+
+    return { underlying: underlyingSymbol, expirations };
+}
+
+/**
+ * Select the best LEAPS call contract for QQQ based on:
+ *  - DTE: nearest to 15 months (target 360-540 days)
+ *  - Strike: ATM or slightly OTM (within 2% of underlying price)
+ */
+export async function getLeapsCandidate(
+    accessToken: string,
+    underlyingSymbol: string,
+    underlyingPrice: number
+): Promise<LeapsCandidate | null> {
+    const chain = await getOptionChainNested(accessToken, underlyingSymbol);
+
+    // 1. Filter expirations to LEAPS range: 360–540 DTE (12–18 months)
+    let leapsExpirations = chain.expirations.filter(
+        e => e.daysToExpiration >= 360 && e.daysToExpiration <= 540
+    );
+
+    if (leapsExpirations.length === 0) {
+        // Fallback: any expiration > 300 DTE
+        const fallback = chain.expirations
+            .filter(e => e.daysToExpiration >= 300)
+            .sort((a, b) => Math.abs(a.daysToExpiration - 450) - Math.abs(b.daysToExpiration - 450));
+        if (fallback.length === 0) {
+            console.error('No LEAPS expirations found for', underlyingSymbol);
+            return null;
+        }
+        leapsExpirations.push(fallback[0]);
+    }
+
+    // 2. Pick expiration nearest to 15 months (450 days)
+    const targetDTE = 450;
+    leapsExpirations.sort((a, b) => Math.abs(a.daysToExpiration - targetDTE) - Math.abs(b.daysToExpiration - targetDTE));
+    const expiration = leapsExpirations[0];
+
+    // 3. Find ATM strike: closest strike to current underlying price
+    const atmStrike = expiration.strikes.reduce((best, s) => {
+        return Math.abs(s.strikePrice - underlyingPrice) < Math.abs(best.strikePrice - underlyingPrice) ? s : best;
+    });
+
+    if (!atmStrike.call) {
+        console.error('No call symbol found at ATM strike', atmStrike.strikePrice);
+        return null;
+    }
+
+    // 4. Fetch current bid/ask for this contract
+    const quote = await getOptionQuote(accessToken, atmStrike.call);
+    if (!quote) {
+        console.error('Could not fetch quote for LEAPS contract', atmStrike.call);
+        return null;
+    }
+
+    console.log(`✅ LEAPS candidate: ${atmStrike.call} | Strike $${atmStrike.strikePrice} | DTE ${expiration.daysToExpiration} | Mid $${quote.mid.toFixed(2)}`);
+
+    return {
+        occSymbol: atmStrike.call,
+        strikePrice: atmStrike.strikePrice,
+        expirationDate: expiration.expirationDate,
+        daysToExpiration: expiration.daysToExpiration,
+        bid: quote.bid,
+        ask: quote.ask,
+        mid: quote.mid,
+    };
 }

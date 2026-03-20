@@ -66,6 +66,28 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
 
     const [previewOrders, setPreviewOrders] = useState<PreviewOrder[]>([]);
     const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+    const [livePrices, setLivePrices] = useState<Record<string, number>>({});
+    
+    // Extract multi-ticker target weights
+    const allocations = signal.legs || [];
+
+    // Fetch live prices for local order display
+    useEffect(() => {
+        const fetchPrices = async () => {
+            try {
+                const symbolsParam = allocations.filter(l => l.symbol !== 'SGOV').map(l => l.symbol).join(',');
+                if (!symbolsParam) return;
+                const res = await fetch(`/api/quotes?symbols=${symbolsParam}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setLivePrices(data);
+                }
+            } catch (e) {
+                console.error("Failed to fetch live prices", e);
+            }
+        };
+        fetchPrices();
+    }, [allocations]);
 
     // Fetch preview orders from API (live data from Tastytrade)
     useEffect(() => {
@@ -94,8 +116,6 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
         return () => clearTimeout(timeout);
     }, [isLinked, signal, accountData?.accountNumber, capitalBasis]);
 
-    // Extract multi-ticker target weights
-    const allocations = signal.legs || [];
     const getTarget = (sym: string) => {
         const leg = allocations.find(l => l.symbol === sym);
         return leg ? (leg.target_pct * 100).toFixed(0) : "0";
@@ -115,8 +135,8 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
             const pct = leg.target_pct;
             const dollarAmount = capitalBasis * pct;
             if (dollarAmount < 5) continue;
-            // Approximate share prices for display (market-close reference)
-            const refPrice = leg.symbol === 'QQQ' ? 490 : leg.symbol === 'QLD' ? 68 : 55;
+            // Use live price if available, otherwise fallback to old hardcoded estimates
+            const refPrice = livePrices[leg.symbol] || (leg.symbol === 'QQQ' ? 490 : leg.symbol === 'QLD' ? 68 : leg.symbol === 'TQQQ' ? 55 : 100);
             orders.push({
                 symbol: leg.symbol,
                 targetPct: pct,

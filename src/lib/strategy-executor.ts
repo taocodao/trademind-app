@@ -6,8 +6,15 @@
 import {
     executeCalendarSpread,
     executeThetaPut,
+    getAccountPositions,
+    getAccountBalance,
+    getEquityQuote,
+    submitOrder,
+    executeNotionalEquityOrder,
+    type OrderRequest,
     type OrderResponse
 } from './tastytrade-api';
+import { executeLeapsAllocation } from './leaps-executor';
 
 export interface SignalData {
     strategy?: string;
@@ -214,6 +221,41 @@ export const calculateTurboCoreOrders = async (
         if (a.action !== 'Sell' && b.action === 'Sell') return 1;
         return 0;
     });
+
+    // 5. Handle LEAPS Allocation internally (does not return an equity order object)
+    const leapsLeg = legs.find(l => l.symbol === 'QQQ_LEAPS');
+
+    if (leapsLeg) {
+        const leapsTargetPct = leapsLeg.target_pct;
+
+        // Fetch current QQQ price (underlying for the LEAPS)
+        const qqqQuote = await getEquityQuote(accessToken, 'QQQ');
+        const qqqPrice = qqqQuote?.last || qqqQuote?.mid || 0;
+
+        if (qqqPrice === 0) {
+            console.error('❌ LEAPS: Cannot fetch QQQ price. Skipping LEAPS allocation.');
+        } else {
+            // userId isn't typically passed in standard signals, but we need it for Redis state.
+            // Using accountNumber as proxy for userId if it's missing.
+            const userId = (signal as any).userId || accountNumber;
+
+            try {
+                const leapsResult = await executeLeapsAllocation({
+                    accessToken,
+                    accountNumber,
+                    userId,
+                    underlyingSymbol: 'QQQ',
+                    underlyingPrice: qqqPrice,
+                    targetAllocationPct: leapsTargetPct,
+                    portfolioNetLiq: netLiq,
+                });
+
+                console.log(`🏹 LEAPS execution: ${leapsResult.action} — ${leapsResult.message}`);
+            } catch (err) {
+                console.error(`❌ LEAPS allocation failed:`, err);
+            }
+        }
+    }
 
     return ordersToSubmit;
 };

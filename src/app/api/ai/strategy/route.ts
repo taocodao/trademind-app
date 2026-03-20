@@ -58,7 +58,9 @@ Use current realistic estimates for strikes. Order by best fit first.`
     });
 
     if (!res.ok) {
-        throw new Error(`Perplexity API Error: ${res.statusText}`);
+        const errText = await res.text();
+        console.error("Perplexity API Body:", errText);
+        throw new Error(`Perplexity API Error: ${res.statusText} - ${errText}`);
     }
 
     const data = await res.json();

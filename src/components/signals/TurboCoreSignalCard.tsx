@@ -198,27 +198,38 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
                 </div>
 
                 {/* Body: Multi-Asset Grid */}
-                <div className="grid grid-cols-4 gap-2 mb-4">
-                    <div className="bg-[#111] p-3 rounded-lg border border-white/5 text-center">
-                        <div className="text-[10px] text-white/50 mb-1">QQQ</div>
-                        <div className="font-mono text-sm font-bold text-white/90">{getTarget('QQQ')}%</div>
-                        <div className="font-mono text-[10px] text-white/40 mt-1">${(capitalBasis * (Number(getTarget('QQQ')) / 100)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                    </div>
-                    <div className="bg-[#111] p-3 rounded-lg border border-white/5 text-center">
-                        <div className="text-[10px] text-white/50 mb-1">QLD (2x)</div>
-                        <div className="font-mono text-sm font-bold text-blue-400">{getTarget('QLD')}%</div>
-                        <div className="font-mono text-[10px] text-white/40 mt-1">${(capitalBasis * (Number(getTarget('QLD')) / 100)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                    </div>
-                    <div className="bg-[#111] p-3 rounded-lg border border-white/5 text-center">
-                        <div className="text-[10px] text-white/50 mb-1">TQQQ (3x)</div>
-                        <div className="font-mono text-sm font-bold text-purple-400">{getTarget('TQQQ')}%</div>
-                        <div className="font-mono text-[10px] text-white/40 mt-1">${(capitalBasis * (Number(getTarget('TQQQ')) / 100)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                    </div>
-                    <div className="bg-[#111] p-3 rounded-lg border border-white/5 text-center">
-                        <div className="text-[10px] text-white/50 mb-1">SGOV</div>
-                        <div className="font-mono text-sm font-bold text-green-400">{getTarget('SGOV')}%</div>
-                        <div className="font-mono text-[10px] text-white/40 mt-1">${(capitalBasis * (Number(getTarget('SGOV')) / 100)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                    </div>
+                <div className={`grid ${allocations.length > 4 ? 'grid-cols-5' : 'grid-cols-4'} gap-2 mb-4`}>
+                    {['QQQ', 'QLD', 'TQQQ', 'QQQ_LEAPS', 'SGOV'].map((sym) => {
+                        const legObj = allocations.find(l => l.symbol === sym);
+                        // Only render legs that are actually part of the target OR if it's the core set
+                        if (!legObj && !['QQQ', 'QLD'].includes(sym)) return null;
+                        
+                        // For TurboCore standard, don't render LEAPS if 0. For Pro, render what we have.
+                        if (sym === 'QQQ_LEAPS' && !legObj) return null;
+                        if (sym === 'TQQQ' && signal.strategy?.toUpperCase().includes('PRO') && !legObj) return null;
+
+                        let colorClass = 'text-white/90';
+                        if (sym === 'QLD') colorClass = 'text-blue-400';
+                        if (sym === 'TQQQ') colorClass = 'text-purple-400';
+                        if (sym === 'SGOV') colorClass = 'text-green-400';
+                        if (sym === 'QQQ_LEAPS') colorClass = 'text-amber-400';
+
+                        let label = sym;
+                        if (sym === 'QLD') label = 'QLD (2x)';
+                        if (sym === 'TQQQ') label = 'TQQQ (3x)';
+                        if (sym === 'QQQ_LEAPS') label = 'LEAPS';
+
+                        const targetStr = getTarget(sym);
+                        const dollarAmount = capitalBasis * (Number(targetStr) / 100);
+
+                        return (
+                            <div key={sym} className="bg-[#111] p-3 rounded-lg border border-white/5 text-center">
+                                <div className="text-[10px] text-white/50 mb-1">{label}</div>
+                                <div className={`font-mono text-sm font-bold ${colorClass}`}>{targetStr}%</div>
+                                <div className="font-mono text-[10px] text-white/40 mt-1">${dollarAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                            </div>
+                        );
+                    })}
                 </div>
 
                 {/* Capital basis label (replaces slider) */}

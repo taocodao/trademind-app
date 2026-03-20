@@ -56,6 +56,7 @@ export default function PositionsPage() {
 
     const [showOnboarding, setShowOnboarding] = useState(false);
     const [onboardingAmount, setOnboardingAmount] = useState('');
+    const [realizedPnl, setRealizedPnl] = useState<number | null>(null);
 
     const handleOnboardingSubmit = async () => {
         if (!onboardingAmount) return;
@@ -318,6 +319,15 @@ export default function PositionsPage() {
 
             if (isDefault && shadowEq.length === 0) setShowOnboarding(true);
         }
+
+        // Fetch Realized P&L from virtual transactions (FIFO)
+        try {
+            const pnlRes = await fetch(`/api/virtual-accounts/realized-pnl?strategy=${activeStrategy}`);
+            if (pnlRes.ok) {
+                const pnlData = await pnlRes.json();
+                setRealizedPnl(pnlData.realizedPnl ?? null);
+            }
+        } catch (e) { console.warn('Failed to fetch realized P&L', e); }
     }, [activeStrategy]);
 
     useEffect(() => {
@@ -432,10 +442,15 @@ export default function PositionsPage() {
                         </div>
                         <div>
                             <p className="text-[10px] text-tm-muted uppercase tracking-wider font-semibold mb-1">Realized P&L</p>
-                            {/* Placeholder for Phase 6 */}
-                            <p className="text-lg font-bold font-mono text-tm-muted">
-                                --
-                            </p>
+                            {realizedPnl !== null ? (
+                                <p className={`text-lg font-bold font-mono ${
+                                    realizedPnl >= 0 ? 'text-emerald-400' : 'text-red-400'
+                                }`}>
+                                    {realizedPnl >= 0 ? '+' : ''}${realizedPnl.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                </p>
+                            ) : (
+                                <p className="text-lg font-bold font-mono text-tm-muted">--</p>
+                            )}
                         </div>
                     </div>
                 </div>

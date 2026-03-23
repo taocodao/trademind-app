@@ -132,7 +132,7 @@ export default function ChatPage() {
          <div ref={bottomRef} className="h-4" />
       </div>
 
-      <div className="p-4 bg-tm-bg border-t border-tm-border/50 pb-safe">
+      <div className="p-4 bg-tm-bg border-t border-tm-border/50 pb-24">
          <div className="relative flex items-end gap-2 bg-tm-surface p-2 rounded-2xl border border-tm-border focus-within:border-tm-purple/50 transition-colors">
             <textarea 
                value={input}

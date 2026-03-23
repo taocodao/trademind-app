@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Zap, TrendingUp, AlertTriangle, ChevronDown, CheckCircle, Brain, Target, Activity, DollarSign } from 'lucide-react';
+import { Shield, Zap, TrendingUp, AlertTriangle, ChevronDown, CheckCircle, Brain, Target, Activity, DollarSign, Clipboard, ClipboardCheck, BookOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 export interface TurboCoreSignal {
@@ -127,21 +127,56 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
         return "text-red-400 bg-red-400/10 border-red-400/20";
     };
 
-    // Compute local whole-share display using capitalBasis (real account or shadow balance)
-    const getLocalOrderDisplay = () => {
-        const orders: Array<{ symbol: string; targetPct: number; dollarAmount: number; approxShares: string }> = [];
+    // Compute manual order instructions for users without TastyTrade connected
+    const getManualOrderInstructions = () => {
+        const orders: Array<{
+            symbol: string;
+            label: string;
+            action: string;
+            dollarAmount: number;
+            approxShares: string;
+            approxPrice: string;
+            orderType: string;
+            isOption: boolean;
+            optionNote?: string;
+        }> = [];
+
         for (const leg of allocations) {
-            if (leg.symbol === 'SGOV') continue;
             const pct = leg.target_pct;
             const dollarAmount = capitalBasis * pct;
             if (dollarAmount < 5) continue;
-            // Use live price if available, otherwise fallback to old hardcoded estimates
-            const refPrice = livePrices[leg.symbol] || (leg.symbol === 'QQQ' ? 490 : leg.symbol === 'QLD' ? 68 : leg.symbol === 'TQQQ' ? 55 : 100);
+
+            if (leg.symbol === 'SGOV') continue; // cash sleeve â€” no order needed
+
+            if (leg.symbol === 'QQQ_LEAPS') {
+                const qqqPrice = livePrices['QQQ'] || 490;
+                const targetStrike = Math.round(qqqPrice * 0.65 / 5) * 5; // ~0.70 delta ITM â‰ˆ 35% ITM
+                const approxContracts = Math.floor(dollarAmount / (qqqPrice * 0.35 * 100));
+                orders.push({
+                    symbol: 'QQQ',
+                    label: 'QQQ LEAPS Call',
+                    action: 'BUY TO OPEN',
+                    dollarAmount,
+                    approxShares: `â‰ˆ${approxContracts} contract${approxContracts !== 1 ? 's' : ''}`,
+                    approxPrice: `~$${(qqqPrice * 0.35).toFixed(0)}/contract`,
+                    orderType: 'Limit (ask)',
+                    isOption: true,
+                    optionNote: `Strike â‰ˆ $${targetStrike} | ~12 months out | 0.70 delta ITM call`,
+                });
+                continue;
+            }
+
+            const refPrice = livePrices[leg.symbol] || (leg.symbol === 'QLD' ? 68 : leg.symbol === 'TQQQ' ? 55 : 100);
+            const approxShares = (dollarAmount / refPrice).toFixed(1);
             orders.push({
                 symbol: leg.symbol,
-                targetPct: pct,
+                label: leg.symbol === 'QLD' ? 'QLD (2x)' : leg.symbol,
+                action: 'BUY',
                 dollarAmount,
-                approxShares: `â‰ˆ${(dollarAmount / refPrice).toFixed(1)}`,
+                approxShares: `â‰ˆ${approxShares} sh`,
+                approxPrice: refPrice > 0 ? `~$${refPrice.toFixed(2)}/sh` : 'â€”',
+                orderType: 'Market',
+                isOption: false,
             });
         }
         return orders;
@@ -278,30 +313,7 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
                             </div>
                         )
                     ) : (
-                        (() => {
-                            const localOrders = getLocalOrderDisplay();
-                            return localOrders.length === 0 ? (
-                                <div className="text-xs text-white/40 italic text-center py-2">Set your shadow balance in Settings to see orders</div>
-                            ) : (
-                                <div className="space-y-1.5">
-                                    {localOrders.map((o, i) => (
-                                        <div key={i} className="flex justify-between items-center text-xs font-mono bg-black/40 p-2 rounded border border-white/5">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-bold px-1.5 py-0.5 rounded text-green-400 bg-green-400/10">BUY</span>
-                                                <span className="text-white/90 font-bold">{o.symbol}</span>
-                                            </div>
-                                            <div className="text-right">
-                                                <span className="text-white/70">${o.dollarAmount.toFixed(0)}</span>
-                                                <span className="text-white/30 ml-1">({o.approxShares} sh)</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    <div className="text-[10px] text-yellow-400/60 text-center pt-1">
-                                        ðŸ’¡ Connect Tastytrade for exact live pricing &amp; auto-execution
-                                    </div>
-                                </div>
-                            );
-                        })()
+                        <ManualOrderPanel orders={getManualOrderInstructions()} />
                     )}
                 </div>
 
@@ -371,6 +383,69 @@ export function TurboCoreSignalCard({ signal, onExecute, executingId, accountDat
                     </div>
                 )}
             </div>
+        </div>
+    );
+}
+// --- Manual Order Panel -----------------------------------------------------
+// Shown when user is NOT linked to Tastytrade.
+function ManualOrderPanel({ orders }: {
+    orders: Array<{
+        symbol: string;
+        label: string;
+        action: string;
+        dollarAmount: number;
+        approxShares: string;
+        approxPrice: string;
+        orderType: string;
+        isOption: boolean;
+        optionNote?: string;
+    }>;
+}) {
+    const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+    const copyRow = (o: typeof orders[0], i: number) => {
+        const text = o.isOption
+            ? `${o.action} ${o.approxShares} of QQQ LEAPS (${o.optionNote}) @ ${o.approxPrice} — ${o.orderType}`
+            : `${o.action} ${o.approxShares} of ${o.label} @ ${o.approxPrice} — ${o.orderType} — $${o.dollarAmount.toFixed(0)} notional`;
+        navigator.clipboard.writeText(text).then(() => {
+            setCopiedIndex(i);
+            setTimeout(() => setCopiedIndex(null), 2000);
+        });
+    };
+    if (orders.length === 0) {
+        return <div className="text-xs text-white/40 italic text-center py-2">Set your shadow balance in Settings to see orders</div>;
+    }
+    return (
+        <div className="space-y-2">
+            <div className="flex items-center gap-1.5 text-[10px] text-amber-400/80 font-semibold mb-1">
+                <BookOpen className="w-3 h-3" />
+                MANUAL ORDER INSTRUCTIONS — enter these in your broker
+            </div>
+            {orders.map((o, i) => (
+                <div key={i}>
+                    <div className="flex items-center justify-between text-xs font-mono bg-black/40 px-2 py-2 rounded border border-white/5">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <span className={`shrink-0 font-bold px-1.5 py-0.5 rounded text-[10px] ${o.action.includes('BUY') ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10'}`}>{o.action}</span>
+                            <div className="min-w-0">
+                                <span className={`font-bold ${o.isOption ? 'text-amber-300' : 'text-white/90'}`}>{o.label}</span>
+                                <span className="text-white/30 text-[10px] ml-1">· {o.orderType}</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <div className="text-right">
+                                <div className="text-white/80">${o.dollarAmount.toFixed(0)}</div>
+                                <div className="text-white/30 text-[10px]">{o.approxShares}</div>
+                            </div>
+                            <button onClick={() => copyRow(o, i)} className="w-7 h-7 flex items-center justify-center rounded bg-white/5 hover:bg-white/10 transition-colors" title="Copy order instructions">
+                                {copiedIndex === i ? <ClipboardCheck className="w-3.5 h-3.5 text-green-400" /> : <Clipboard className="w-3.5 h-3.5 text-white/30" />}
+                            </button>
+                        </div>
+                    </div>
+                    {o.isOption && o.optionNote && (
+                        <div className="text-[10px] text-amber-400/60 pl-2 pt-0.5 leading-tight">? {o.optionNote} · approx {o.approxPrice}</div>
+                    )}
+                </div>
+            ))}
+            <div className="text-[10px] text-yellow-400/50 text-center pt-1">?? Connect Tastytrade for live pricing &amp; one-click execution</div>
         </div>
     );
 }

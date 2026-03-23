@@ -163,6 +163,9 @@ export const calculateTurboCoreOrders = async (
     for (const leg of legs) {
         const symbol = leg.symbol;
         if (symbol === 'SGOV') continue;
+        // QQQ_LEAPS is a virtual label — not a real equity ticker.
+        // It is handled after this loop by executeLeapsAllocation().
+        if (symbol === 'QQQ_LEAPS') continue;
 
         const targetPct = leg.target_pct;
         const targetValue = netLiq * targetPct;

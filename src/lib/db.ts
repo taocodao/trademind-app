@@ -293,9 +293,9 @@ export async function getVirtualBalance(userId: string, strategy: string): Promi
         [userId, strategy]
     );
     if (result.rows.length === 0) {
-        // Initialize if doesn't exist (100k starting)
+        // Initialize if doesn't exist ($25k starting balance)
         const init = await query(
-            `INSERT INTO virtual_accounts (user_id, strategy, cash_balance) VALUES ($1, $2, 100000.00) RETURNING cash_balance`,
+            `INSERT INTO virtual_accounts (user_id, strategy, cash_balance) VALUES ($1, $2, 25000.00) RETURNING cash_balance`,
             [userId, strategy]
         );
         return { balance: parseFloat(init.rows[0].cash_balance), isDefault: true };
@@ -330,7 +330,7 @@ export async function updateVirtualBalance(
     // Upsert the balance
     const result = await query(
         `INSERT INTO virtual_accounts (user_id, strategy, cash_balance)
-         VALUES ($1, $2, 100000.00 + $3)
+         VALUES ($1, $2, 25000.00 + $3)
          ON CONFLICT (user_id, strategy) 
          DO UPDATE SET cash_balance = virtual_accounts.cash_balance + $3, updated_at = NOW()
          RETURNING cash_balance`,
@@ -761,7 +761,7 @@ export async function initializeUserTables(): Promise<void> {
                 id SERIAL PRIMARY KEY,
                 user_id VARCHAR(128) NOT NULL,
                 strategy VARCHAR(64) NOT NULL,
-                cash_balance DECIMAL(15, 2) DEFAULT 100000.00,
+                cash_balance DECIMAL(15, 2) DEFAULT 25000.00,
                 created_at TIMESTAMPTZ DEFAULT NOW(),
                 updated_at TIMESTAMPTZ DEFAULT NOW(),
                 UNIQUE(user_id, strategy)

@@ -113,11 +113,9 @@ export function TurboCoreSignalCard({
 
   const isLinked = !!accountData?.accountNumber;
 
-  // Capital basis: use live net liq if linked, shadow balance if virtual, fallback to principalSetting
-
-  const capitalBasis = isLinked
-    ? accountData?.netLiquidatingValue || principalSetting || 5000
-    : shadowBalance || principalSetting || 5000;
+  // Capital basis: ALWAYS use virtual balance for allocation (shadowBalance from DB-backed virtual account)
+  // shadowBalance is passed from dashboard which fetches /api/virtual-accounts
+  const capitalBasis = shadowBalance || principalSetting || 25000;
 
   // Parse Payload Defaults
 
@@ -450,7 +448,7 @@ export function TurboCoreSignalCard({
           <span className="text-white/50 flex items-center gap-1">
             <DollarSign className="w-3.5 h-3.5 text-purple-400" />
 
-            {isLinked ? "Account Net Liq" : "Shadow Balance"}
+            Virtual Balance
           </span>
 
           <span className="font-mono font-bold text-purple-400">

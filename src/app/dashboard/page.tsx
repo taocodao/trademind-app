@@ -384,6 +384,9 @@ function DashboardContent() {
 
     const [gamStats, setGamStats] = useState<GamStats>({ streak: 0, winRate: 0, rank: null, totalProfit: 0 });
 
+    // ── Virtual balance (always fetched from DB-backed virtual account) ──
+    const [virtualBalance, setVirtualBalance] = useState<number>(25000);
+
     // ── Membership info ──
     const [membership, setMembership] = useState<{
         tier: string; status: string | null; billingInterval: string | null;
@@ -399,6 +402,15 @@ function DashboardContent() {
         if (ready && !authenticated) router.push('/');
 
     }, [ready, authenticated, router]);
+
+    // ── Fetch virtual balance for signal card allocation ──
+    useEffect(() => {
+        if (!ready || !authenticated) return;
+        fetch(`/api/virtual-accounts?strategy=${activeStrategy}`)
+            .then(r => r.json())
+            .then(d => { if (d.balance) setVirtualBalance(Number(d.balance)); })
+            .catch(() => {});
+    }, [ready, authenticated, activeStrategy]);
 
 
 
@@ -968,60 +980,6 @@ function DashboardContent() {
                             </div>
                         </a>
 
-                        {/* Balance Card */}
-
-                {tastyLinked && (
-
-                    <div className="glass-card p-4">
-
-                        <div className="flex items-center justify-between mb-1">
-
-                            <div className="flex items-center gap-2 text-tm-muted">
-
-                                <Wallet className="w-4 h-4" />
-
-                                <span className="text-xs">{t('dashboard.net_liq')}</span>
-
-                            </div>
-
-                            {/* Win rate donut */}
-
-                            <div className="relative w-9 h-9">
-
-                                <svg className="w-9 h-9 -rotate-90">
-
-                                    <circle className="text-tm-surface" strokeWidth="3" stroke="currentColor" fill="transparent" r="14" cx="18" cy="18" />
-
-                                    <circle className="text-tm-green" strokeWidth="3" strokeDasharray={`${gamStats.winRate * 0.88} 100`} strokeLinecap="round" stroke="currentColor" fill="transparent" r="14" cx="18" cy="18" />
-
-                                </svg>
-
-                                <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold">{gamStats.winRate}%</span>
-
-                            </div>
-
-                        </div>
-
-                        <p className="text-2xl font-bold font-mono">
-
-                            {loading && !data
-
-                                ? <span className="animate-pulse text-tm-muted">{t('dashboard.toast.loading')}</span>
-
-                                : `$${(data?.netLiquidatingValue ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-
-                        </p>
-
-                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5 text-xs text-tm-muted">
-
-                            <span>Principal: <span className="text-tm-text font-semibold">${((settings.investmentPrincipal as unknown as Record<string, number>)[activeStrategy] || (settings.investmentPrincipal as unknown as Record<string, number>)['default'] || 25000).toLocaleString()}</span></span>
-
-                        </div>
-
-                    </div>
-
-                )}
-
 
 
                 {/* Your Progress */}
@@ -1101,8 +1059,8 @@ function DashboardContent() {
                                         executingId={executingId}
                                         isExecuted={signal.userExecution?.status === 'executed'}
                                         accountData={data}
-                                        principalSetting={(settings?.investmentPrincipal as unknown as Record<string, number>)?.[activeStrategy] || (settings?.investmentPrincipal as unknown as Record<string, number>)?.['default'] || 25000}
-                                        shadowBalance={(settings?.shadowLedger as unknown as Record<string, any>)?.[activeStrategy]?.balance || (settings?.shadowLedger as unknown as Record<string, any>)?.['default']?.balance}
+                                        principalSetting={25000}
+                                        shadowBalance={virtualBalance}
                                     />
                                 ))}
 

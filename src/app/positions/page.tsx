@@ -5,19 +5,15 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import {
     ArrowLeft,
-    TrendingUp,
     RefreshCw,
     Wallet,
-    BarChart3,
     Edit2,
-    Wifi,
     WifiOff
 } from "lucide-react";
 import Link from "next/link";
 import { useStrategyContext } from "@/components/providers/StrategyContext";
 import { StrategyTabs } from "@/components/ui/StrategyTabs";
 import { getStrategy } from "@/lib/strategies";
-import { useSettings } from "@/components/providers/SettingsProvider";
 
 interface EquityPosition {
     symbol: string;
@@ -37,8 +33,6 @@ interface AccountBalance {
     netLiquidation: number;
 }
 
-
-
 export default function PositionsPage() {
     const { ready, authenticated } = usePrivy();
     const router = useRouter();
@@ -46,9 +40,7 @@ export default function PositionsPage() {
     const [positions, setPositions] = useState<EquityPosition[]>([]);
     const [loading, setLoading] = useState(true);
     const [balance, setBalance] = useState<AccountBalance | null>(null);
-    const [isLive, setIsLive] = useState(false);
-    const { settings } = useSettings();
-    
+
     // Transfer modal state
     const [showTransferModal, setShowTransferModal] = useState<'deposit' | 'withdraw' | null>(null);
     const [transferAmount, setTransferAmount] = useState('');
@@ -60,13 +52,13 @@ export default function PositionsPage() {
 
     const handleOnboardingSubmit = async () => {
         if (!onboardingAmount) return;
-        const diff = parseFloat(onboardingAmount) - 100000;
+        const diff = parseFloat(onboardingAmount) - 25000;
         const action = diff > 0 ? 'deposit' : 'withdraw';
         const absoluteAmount = Math.abs(diff);
 
         if (absoluteAmount === 0) {
-           setShowOnboarding(false);
-           return;
+            setShowOnboarding(false);
+            return;
         }
 
         try {
@@ -77,7 +69,7 @@ export default function PositionsPage() {
             });
             if (res.ok) {
                 setShowOnboarding(false);
-                fetchAccountAndPositions();
+                fetchVirtualPositions();
             }
         } catch (e) {
             console.error(e);
@@ -100,7 +92,7 @@ export default function PositionsPage() {
             if (res.ok) {
                 setShowTransferModal(null);
                 setTransferAmount('');
-                fetchAccountAndPositions();
+                fetchVirtualPositions();
             } else {
                 alert('Transfer failed');
             }
@@ -126,7 +118,7 @@ export default function PositionsPage() {
 
             const currentQty = editPositionModal.quantity;
             const diff = newQty - currentQty;
-            
+
             if (diff === 0) {
                 setEditPositionModal(null);
                 setEditQuantity('');
@@ -135,8 +127,6 @@ export default function PositionsPage() {
 
             const action = diff > 0 ? 'buy' : 'sell';
             const absDiff = Math.abs(diff);
-            
-            // Dummy signal ID for manual adjustments to bypass idempotency logic but still track it
             const manualSignalId = `manual_adj_${Date.now()}`;
 
             const res = await fetch('/api/virtual-accounts/execute', {
@@ -148,7 +138,7 @@ export default function PositionsPage() {
                     orders: [{
                         symbol: editPositionModal.symbol,
                         quantity: absDiff,
-                        price: editPositionModal.currentPrice, // Using the loaded price as a proxy
+                        price: editPositionModal.currentPrice,
                         action: action
                     }]
                 })
@@ -157,7 +147,7 @@ export default function PositionsPage() {
             if (res.ok) {
                 setEditPositionModal(null);
                 setEditQuantity('');
-                fetchAccountAndPositions();
+                fetchVirtualPositions();
             } else {
                 const errData = await res.json();
                 alert(`Edit failed: ${errData.error || errData.message}`);
@@ -170,98 +160,9 @@ export default function PositionsPage() {
         }
     };
 
-    const fetchAccountAndPositions = useCallback(async () => {
-        try {
-            setLoading(true);
-            setPositions([]);
-
-            // ── LIVE DETECTION: Ask the server if TT is connected (same approach as dashboard) ──
-            let accountNumber = '';
-            try {
-                const acctRes = await fetch('/api/tastytrade/account');
-                if (acctRes.ok) {
-                    const acctJson = await acctRes.json();
-                    accountNumber = acctJson?.data?.items?.[0]?.account?.['account-number'] || '';
-                }
-            } catch (_) { /* Not connected */ }
-
-            const hasTastytrade = !!accountNumber;
-
-            if (hasTastytrade) {
-                // ── LIVE PATH: Fetch from Tastytrade ────────────────────────
-                setIsLive(true);
-                
-                try {
-                    // Fetch live positions
-                    const posRes = await fetch(`/api/tastytrade/positions?accountNumber=${accountNumber}`);
-                    if (posRes.ok) {
-                        const posData = await posRes.json();
-                        const items = posData?.data?.items || [];
-                        const livePositions: EquityPosition[] = items
-                            .filter((p: any) => p.quantity !== 0)
-                            .map((p: any) => {
-                                const qty = Number(p.quantity);
-                                const avgPrice = Number(p['average-open-price'] || p.average_open_price || 0);
-                                const closePrice = Number(p['close-price'] || p.close_price || avgPrice);
-                                const marketVal = qty * closePrice;
-                                const unrealizedPnl = (closePrice - avgPrice) * qty;
-                                const costBasis = avgPrice * qty;
-                                const unrealizedPct = costBasis > 0 ? (unrealizedPnl / costBasis) * 100 : 0;
-                                return {
-                                    symbol: p.symbol,
-                                    quantity: qty,
-                                    averageOpenPrice: avgPrice,
-                                    currentPrice: closePrice,
-                                    marketValue: marketVal,
-                                    unrealizedPnl,
-                                    unrealizedPnlPct: unrealizedPct,
-                                    instrumentType: p['instrument-type'] || 'Equity',
-                                    isVirtual: false,
-                                };
-                            });
-                        setPositions(livePositions);
-                        
-                        const totalMarketValue = livePositions.reduce((s, p) => s + p.marketValue, 0);
-                        setBalance({
-                            cashAvailable: 0,
-                            buyingPower: 0,
-                            netLiquidation: totalMarketValue,
-                        });
-                        
-                        // Fetch live balances
-                        try {
-                            const balRes = await fetch(`/api/tastytrade/balances?accountNumber=${accountNumber}`);
-                            if (balRes.ok) {
-                                const balData = await balRes.json();
-                                const bd = balData?.data || {};
-                                const cash = Number(bd['cash-balance'] || bd.cash_balance || 0);
-                                const net = Number(bd['net-liquidating-value'] || bd.net_liquidating_value || totalMarketValue);
-                                const buying = Number(bd['derivative-buying-power'] || bd.buying_power || cash);
-                                setBalance({ cashAvailable: cash, buyingPower: buying, netLiquidation: net });
-                            }
-                        } catch (_) { /* balance endpoint optional */ }
-                    } else {
-                        throw new Error('TT positions fetch failed');
-                    }
-                } catch (ttErr) {
-                    console.warn('Live TT data failed, falling back to virtual:', ttErr);
-                    setIsLive(false);
-                    await fetchVirtualPositions();
-                }
-            } else {
-                // ── VIRTUAL PATH ─────────────────────────────────────────────
-                setIsLive(false);
-                await fetchVirtualPositions();
-            }
-        } catch (err) {
-            console.error('Error fetching positions:', err);
-        } finally {
-            setLoading(false);
-        }
-    }, [activeStrategy]);
-
+    // Always fetch from virtual account — never Tastytrade
     const fetchVirtualPositions = useCallback(async () => {
-        let virtualBalance = 100000;
+        let virtualBalance = 25000;
         let isDefault = false;
         try {
             const vBalRes = await fetch(`/api/virtual-accounts?strategy=${activeStrategy}`);
@@ -272,6 +173,7 @@ export default function PositionsPage() {
             }
         } catch (e) { console.error('Virtual balance fetch error', e); }
 
+        // Initial balance state: cash = full virtual balance, positions will adjust it below
         setBalance({
             cashAvailable: virtualBalance,
             buyingPower: virtualBalance,
@@ -289,8 +191,8 @@ export default function PositionsPage() {
                     symbol: p.symbol,
                     quantity: qty,
                     averageOpenPrice: avgPrice,
-                    currentPrice: avgPrice, // Will be overridden by live quotes below
-                    marketValue: marketVal, // Will be overridden by live quotes below
+                    currentPrice: avgPrice,
+                    marketValue: marketVal,
                     unrealizedPnl: 0,
                     unrealizedPnlPct: 0,
                     instrumentType: 'Equity',
@@ -298,7 +200,7 @@ export default function PositionsPage() {
                 };
             });
 
-            // Phase 1 Fix: Fetch Live Quotes for Virtual Positions
+            // Fetch live quotes to get current market value
             if (shadowEq.length > 0) {
                 try {
                     const symbols = shadowEq.map(p => p.symbol).join(',');
@@ -318,6 +220,7 @@ export default function PositionsPage() {
                 }
             }
 
+            // Total value = virtual cash + positions market value
             const positionsValue = shadowEq.reduce((acc, p) => acc + p.marketValue, 0);
             setBalance(prev => prev ? { ...prev, netLiquidation: prev.cashAvailable + positionsValue } : null);
             setPositions(shadowEq);
@@ -334,6 +237,18 @@ export default function PositionsPage() {
             }
         } catch (e) { console.warn('Failed to fetch realized P&L', e); }
     }, [activeStrategy]);
+
+    const fetchAccountAndPositions = useCallback(async () => {
+        try {
+            setLoading(true);
+            setPositions([]);
+            await fetchVirtualPositions();
+        } catch (err) {
+            console.error('Error fetching positions:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, [fetchVirtualPositions]);
 
     useEffect(() => {
         if (ready && !authenticated) {
@@ -360,8 +275,6 @@ export default function PositionsPage() {
     }
 
     const activeStrategyConfig = getStrategy(activeStrategy);
-
-    // Positions are already isolated per strategy natively in the database.
     const filteredPositions = positions;
     const optionPositions = filteredPositions.filter(p => p.instrumentType === 'Equity Option');
     const equityPositions = filteredPositions.filter(p => p.instrumentType !== 'Equity Option');
@@ -381,15 +294,9 @@ export default function PositionsPage() {
                 <div className="flex-1">
                     <h1 className="text-xl font-bold flex items-center gap-2">
                         Positions
-                        {isLive ? (
-                            <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-                                <Wifi className="w-2.5 h-2.5" /> LIVE
-                            </span>
-                        ) : (
-                            <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-                                <WifiOff className="w-2.5 h-2.5" /> VIRTUAL
-                            </span>
-                        )}
+                        <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                            <WifiOff className="w-2.5 h-2.5" /> VIRTUAL
+                        </span>
                     </h1>
                     <p className="text-sm text-tm-muted">{filteredPositions.length} equity position{filteredPositions.length !== 1 ? 's' : ''}</p>
                 </div>
@@ -397,7 +304,6 @@ export default function PositionsPage() {
                     <RefreshCw className="w-4 h-4" />
                 </button>
             </header>
-
 
             {/* Strategy tabs */}
             <div className="px-6 mb-6">
@@ -409,22 +315,21 @@ export default function PositionsPage() {
                 />
             </div>
 
-            {/* Account Summary — always visible */}
+            {/* Account Summary */}
             <div className="px-6 mb-6">
                 <div className="glass-card p-5">
                     <div className="flex items-center gap-2 mb-4">
                         <Wallet className="w-5 h-5 text-tm-purple" />
                         <h3 className="font-bold border-b border-transparent">Account Overview</h3>
-                        {!isLive && (
-                            <div className="ml-auto flex gap-2">
-                                <button onClick={() => setShowTransferModal('deposit')} className="text-[10px] bg-green-500/20 text-green-400 px-3 py-1 rounded-full font-bold hover:bg-green-500/30 transition">
-                                    DEPOSIT
-                                </button>
-                                <button onClick={() => setShowTransferModal('withdraw')} className="text-[10px] bg-red-500/20 text-red-400 px-3 py-1 rounded-full font-bold hover:bg-red-500/30 transition">
-                                    WITHDRAW
-                                </button>
-                            </div>
-                        )}
+                        {/* Deposit / Withdraw — always visible for virtual account */}
+                        <div className="ml-auto flex gap-2">
+                            <button onClick={() => setShowTransferModal('deposit')} className="text-[10px] bg-green-500/20 text-green-400 px-3 py-1 rounded-full font-bold hover:bg-green-500/30 transition">
+                                DEPOSIT
+                            </button>
+                            <button onClick={() => setShowTransferModal('withdraw')} className="text-[10px] bg-red-500/20 text-red-400 px-3 py-1 rounded-full font-bold hover:bg-red-500/30 transition">
+                                WITHDRAW
+                            </button>
+                        </div>
                     </div>
                     <div className="grid grid-cols-4 gap-4 text-center">
                         <div>
@@ -448,9 +353,7 @@ export default function PositionsPage() {
                         <div>
                             <p className="text-[10px] text-tm-muted uppercase tracking-wider font-semibold mb-1">Realized P&L</p>
                             {realizedPnl !== null ? (
-                                <p className={`text-lg font-bold font-mono ${
-                                    realizedPnl >= 0 ? 'text-emerald-400' : 'text-red-400'
-                                }`}>
+                                <p className={`text-lg font-bold font-mono ${realizedPnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                                     {realizedPnl >= 0 ? '+' : ''}${realizedPnl.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                 </p>
                             ) : (
@@ -489,8 +392,8 @@ export default function PositionsPage() {
                                 onClick={handleTransfer}
                                 disabled={transferLoading || !transferAmount || parseFloat(transferAmount) <= 0}
                                 className={`flex-1 py-3 rounded-lg font-bold transition flex items-center justify-center
-                                    ${showTransferModal === 'deposit' 
-                                        ? 'bg-green-600 hover:bg-green-500 text-white' 
+                                    ${showTransferModal === 'deposit'
+                                        ? 'bg-green-600 hover:bg-green-500 text-white'
                                         : 'bg-red-600 hover:bg-red-500 text-white'
                                     } disabled:opacity-50`}
                             >
@@ -514,7 +417,7 @@ export default function PositionsPage() {
                         </div>
                         <h3 className="text-lg font-bold text-center mb-2">Set Your Starting Capital</h3>
                         <p className="text-xs text-tm-muted text-center mb-6 leading-relaxed">
-                            Enter the amount you're starting with. This initializes your virtual portfolio 
+                            Enter the amount you're starting with. This initializes your virtual portfolio
                             to mirror real position sizing from TurboCore signals.
                         </p>
                         <input
@@ -615,7 +518,7 @@ export default function PositionsPage() {
                                             'SGOV': 'text-emerald-400',
                                         };
                                         const color = symbolColors[pos.symbol] || 'text-white';
-                                        
+
                                         return (
                                             <tr key={pos.symbol} className="border-b border-white/5 hover:bg-white/[0.02] transition last:border-0 relative group">
                                                 <td className="px-4 py-3">
@@ -624,9 +527,6 @@ export default function PositionsPage() {
                                                         <span className="text-[10px] text-tm-muted font-mono bg-white/5 px-1.5 py-0.5 rounded">
                                                             x{pos.quantity}
                                                         </span>
-                                                        {pos.isVirtual && (
-                                                            <span className="text-[8px] bg-blue-500/20 text-blue-400 font-bold px-1 py-0.5 rounded border border-blue-500/30">V</span>
-                                                        )}
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3 text-right font-mono text-sm">
@@ -645,7 +545,7 @@ export default function PositionsPage() {
                                                     <p className={`font-mono text-[10px] ${isProfit ? 'text-tm-green/70' : 'text-tm-red/70'}`}>
                                                         {isProfit ? '+' : ''}{pos.unrealizedPnlPct.toFixed(2)}%
                                                     </p>
-                                                    
+
                                                     {/* Edit Button overlaid on hover */}
                                                     <button
                                                         onClick={() => {
@@ -687,12 +587,11 @@ function parseOccSymbol(occ: string) {
     if (occ.length < 21) {
         return { underlying: occ, expiry: '', type: '', strike: 0 };
     }
-    const underlying = occ.slice(0, 6).trim();           // "QQQ"
-    const expiry = `20${occ.slice(6, 12)}`;              // "20270620"
+    const underlying = occ.slice(0, 6).trim();
+    const expiry = `20${occ.slice(6, 12)}`;
     const type = occ[12] === 'C' ? 'Call' : 'Put';
-    const strike = parseInt(occ.slice(13)) / 1000;       // 450.000
-    
-    // Format expiry nicely (e.g. Jun 20, 2027)
+    const strike = parseInt(occ.slice(13)) / 1000;
+
     let formattedExpiry = expiry;
     try {
         const year = expiry.slice(0, 4);

@@ -384,8 +384,9 @@ function DashboardContent() {
 
     const [gamStats, setGamStats] = useState<GamStats>({ streak: 0, winRate: 0, rank: null, totalProfit: 0 });
 
-    // ── Virtual balance (always fetched from DB-backed virtual account) ──
+    // ── Virtual balance & positions (always fetched from DB-backed virtual account) ──
     const [virtualBalance, setVirtualBalance] = useState<number>(25000);
+    const [shadowPositions, setShadowPositions] = useState<Record<string, number>>({});
 
     // ── Membership info ──
     const [membership, setMembership] = useState<{
@@ -403,12 +404,22 @@ function DashboardContent() {
 
     }, [ready, authenticated, router]);
 
-    // ── Fetch virtual balance for signal card allocation ──
+    // ── Fetch virtual balance + shadow positions for signal card allocation ──
     useEffect(() => {
         if (!ready || !authenticated) return;
+        // Fetch virtual balance
         fetch(`/api/virtual-accounts?strategy=${activeStrategy}`)
             .then(r => r.json())
             .then(d => { if (d.balance) setVirtualBalance(Number(d.balance)); })
+            .catch(() => {});
+        // Fetch shadow positions for delta preview
+        fetch(`/api/shadow-positions?strategy=${activeStrategy}`)
+            .then(r => r.json())
+            .then(d => {
+                const map: Record<string, number> = {};
+                (d.positions || []).forEach((p: any) => { map[p.symbol] = Number(p.quantity); });
+                setShadowPositions(map);
+            })
             .catch(() => {});
     }, [ready, authenticated, activeStrategy]);
 
@@ -1061,6 +1072,7 @@ function DashboardContent() {
                                         accountData={data}
                                         principalSetting={25000}
                                         shadowBalance={virtualBalance}
+                                        shadowPositions={shadowPositions}
                                     />
                                 ))}
 

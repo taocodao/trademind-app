@@ -50,7 +50,7 @@ export async function POST(req: Request) {
                 [userId, strategy]
             );
             
-            let currentBalance = 100000.00;
+            let currentBalance = 25000.00;
             if (balanceRes.rows.length > 0) {
                 currentBalance = parseFloat(balanceRes.rows[0].cash_balance);
             } else {

@@ -91,9 +91,11 @@ interface Props {
 
   principalSetting?: number;
 
-  isExecuted?: boolean; // NEW: locks button after execution
+  isExecuted?: boolean;
 
-  shadowBalance?: number; // NEW: used when not linked to Tastytrade
+  shadowBalance?: number;
+
+  shadowPositions?: Record<string, number>; // symbol → current quantity from shadow_positions
 }
 
 export function TurboCoreSignalCard({
@@ -104,6 +106,7 @@ export function TurboCoreSignalCard({
   principalSetting,
   isExecuted,
   shadowBalance,
+  shadowPositions,
 }: Props) {
   const { t } = useTranslation();
 
@@ -124,10 +127,6 @@ export function TurboCoreSignalCard({
   const confidence = signal.confidence || 0;
 
   const isCrisis = regime.includes("BEAR");
-
-  const [previewOrders, setPreviewOrders] = useState<PreviewOrder[]>([]);
-
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
 
@@ -162,41 +161,9 @@ export function TurboCoreSignalCard({
     fetchPrices();
   }, [allocations]);
 
-  // Fetch preview orders from API (live data from Tastytrade)
-
-  useEffect(() => {
-    if (!isLinked) return;
-
-    setIsPreviewLoading(true);
-
-    const timeout = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/signals/${signal.id}/preview`, {
-          method: "POST",
-
-          headers: { "Content-Type": "application/json" },
-
-          body: JSON.stringify({
-            signalDetails: { ...signal, capital_required: capitalBasis },
-
-            accountNumber: accountData?.accountNumber,
-          }),
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-
-          setPreviewOrders(data.orders || []);
-        }
-      } catch (e) {
-        console.error("Failed to fetch preview orders", e);
-      } finally {
-        setIsPreviewLoading(false);
-      }
-    }, 600);
-
-    return () => clearTimeout(timeout);
-  }, [isLinked, signal, accountData?.accountNumber, capitalBasis]);
+  // Preview orders are ALWAYS computed locally from the virtual balance.
+  // The TT-based /api/signals/preview is intentionally NOT called, because
+  // allocation must reflect the virtual account, not TT real positions.
 
   const getTarget = (sym: string) => {
     const leg = allocations.find((l) => l.symbol === sym);
@@ -214,91 +181,74 @@ export function TurboCoreSignalCard({
     return "text-red-400 bg-red-400/10 border-red-400/20";
   };
 
-  // Compute manual order instructions for users without TastyTrade connected
+  // Compute virtual order preview — shows DELTA between current position and target
 
   const getManualOrderInstructions = () => {
     const orders: Array<{
       symbol: string;
-
       label: string;
-
       action: string;
-
       dollarAmount: number;
-
       approxShares: string;
-
       approxPrice: string;
-
       orderType: string;
-
       isOption: boolean;
-
       optionNote?: string;
     }> = [];
 
+    // Compute total portfolio value (cash + positions at market price)
+    let totalPortfolioValue = capitalBasis; // virtual cash
+    if (shadowPositions) {
+      for (const [sym, qty] of Object.entries(shadowPositions)) {
+        const price = livePrices[sym] || 100;
+        totalPortfolioValue += qty * price;
+      }
+    }
+
     for (const leg of allocations) {
       const pct = leg.target_pct;
+      const targetValue = totalPortfolioValue * pct;
 
-      const dollarAmount = capitalBasis * pct;
-
-      if (dollarAmount < 5) continue;
-
-      if (leg.symbol === "SGOV") continue; // cash sleeve — no order needed
-
-      if (leg.symbol === "QQQ_LEAPS") {
-        const qqqPrice = livePrices["QQQ"] || 490;
-
-        const targetStrike = Math.round((qqqPrice * 0.65) / 5) * 5; // ~0.70 delta ITM ≈ 35% ITM
-
-        const approxContracts = Math.floor(
-          dollarAmount / (qqqPrice * 0.35 * 100),
-        );
-
+      if (leg.symbol === 'QQQ_LEAPS') {
+        // Options — show full target (no delta logic for options)
+        if (targetValue < 5) continue;
+        const qqqPrice = livePrices['QQQ'] || 490;
+        const targetStrike = Math.round((qqqPrice * 0.65) / 5) * 5;
+        const approxContracts = Math.floor(targetValue / (qqqPrice * 0.35 * 100));
         orders.push({
-          symbol: "QQQ",
-
-          label: "QQQ LEAPS Call",
-
-          action: "BUY TO OPEN",
-
-          dollarAmount,
-
-          approxShares: `≈${approxContracts} contract${approxContracts !== 1 ? "s" : ""}`,
-
+          symbol: 'QQQ',
+          label: 'QQQ LEAPS Call',
+          action: 'BUY TO OPEN',
+          dollarAmount: targetValue,
+          approxShares: `\u2248${approxContracts} contract${approxContracts !== 1 ? 's' : ''}`,
           approxPrice: `~$${(qqqPrice * 0.35).toFixed(0)}/contract`,
-
-          orderType: "Limit (ask)",
-
+          orderType: 'Limit (ask)',
           isOption: true,
-
-          optionNote: `Strike ≈ $${targetStrike} | ~12 months out | 0.70 delta ITM call`,
+          optionNote: `Strike \u2248 $${targetStrike} | ~12 months out | 0.70 delta ITM call`,
         });
-
         continue;
       }
 
-      const refPrice =
-        livePrices[leg.symbol] ||
-        (leg.symbol === "QLD" ? 68 : leg.symbol === "TQQQ" ? 55 : 100);
+      // For equities: compute delta = target - current
+      const refPrice = livePrices[leg.symbol] || (leg.symbol === 'QLD' ? 68 : leg.symbol === 'TQQQ' ? 55 : leg.symbol === 'SGOV' ? 100 : 100);
+      const currentQty = shadowPositions?.[leg.symbol] || 0;
+      const currentValue = currentQty * refPrice;
+      const deltaValue = targetValue - currentValue;
 
-      const approxShares = (dollarAmount / refPrice).toFixed(1);
+      if (Math.abs(deltaValue) < 5) continue; // No meaningful change
+
+      const isBuy = deltaValue > 0;
+      const absDelta = Math.abs(deltaValue);
+      const approxShares = (absDelta / refPrice).toFixed(1);
 
       orders.push({
         symbol: leg.symbol,
-
-        label: leg.symbol === "QLD" ? "QLD (2x)" : leg.symbol,
-
-        action: "BUY",
-
-        dollarAmount,
-
-        approxShares: `≈${approxShares} sh`,
-
-        approxPrice: refPrice > 0 ? `~$${refPrice.toFixed(2)}/sh` : "—",
-
-        orderType: "Market",
-
+        label: leg.symbol === 'QLD' ? 'QLD (2x)' : leg.symbol,
+        action: isBuy ? 'BUY' : 'SELL',
+        dollarAmount: absDelta,
+        approxShares: `\u2248${approxShares} sh`,
+        approxPrice: refPrice > 0 ? `~$${refPrice.toFixed(2)}/sh` : '\u2014',
+        orderType: 'Market',
         isOption: false,
       });
     }
@@ -462,63 +412,11 @@ export function TurboCoreSignalCard({
           <div className="text-xs text-purple-400 font-semibold mb-2 flex justify-between items-center">
             <span className="flex items-center gap-1">
               <DollarSign className="w-3.5 h-3.5" />
-
-              {isLinked
-                ? "Live Order Preview (Notional)"
-                : "Order Details (Estimated)"}
+              Virtual Order Preview
             </span>
-
-            {isPreviewLoading && (
-              <div className="w-3 h-3 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin" />
-            )}
           </div>
-
-          {isLinked ? (
-            previewOrders.length === 0 && !isPreviewLoading ? (
-              <div className="text-xs text-white/40 italic text-center py-2">
-                No rebalance needed
-              </div>
-            ) : (
-              <div
-                className={`space-y-1.5 transition-opacity ${isPreviewLoading ? "opacity-50" : "opacity-100"}`}
-              >
-                {previewOrders.map((o, i) => (
-                  <div
-                    key={i}
-                    className="flex justify-between items-center text-xs font-mono bg-black/40 p-2 rounded border border-white/5"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`font-bold px-1.5 py-0.5 rounded ${o.action === "Buy" ? "text-green-400 bg-green-400/10" : "text-red-400 bg-red-400/10"}`}
-                      >
-                        {o.action.toUpperCase()}
-                      </span>
-
-                      <span className="text-white/90 font-bold">
-                        {o.symbol}
-                      </span>
-                    </div>
-
-                    <div className="text-right">
-                      <span className="text-white/70">
-                        ${o.diffValue?.toFixed(0)}
-                      </span>
-
-                      <span className="text-white/30 ml-1">
-                        (≈{o.exactShares?.toFixed(2)} sh)
-                      </span>
-                    </div>
-                  </div>
-                ))}
-
-                <div className="text-[10px] text-purple-400/60 text-center pt-1">
-                  ⚡ Notional Market orders · fractional shares enabled
-                </div>
-              </div>
-            )
-          ) : (
-            <ManualOrderPanel orders={getManualOrderInstructions()} />
-          )}
+          {/* Always use local virtual-balance calculation */}
+          <ManualOrderPanel orders={getManualOrderInstructions()} />
         </div>
 
         {/* Footer Controls & Execution */}
@@ -564,24 +462,14 @@ export function TurboCoreSignalCard({
                     Bear regime — 100% cash
                   </span>
                 </>
-              ) : isLinked ? (
-                <>
-                  <span className="flex items-center gap-1">
-                    <Zap className="w-4 h-4" /> EXECUTE NOTIONAL SYNC
-                  </span>
-
-                  <span className="text-[10px] font-normal opacity-70">
-                    Dollar-based · fractional shares
-                  </span>
-                </>
               ) : (
                 <>
                   <span className="flex items-center gap-1">
-                    <Shield className="w-4 h-4" /> EXECUTE VIRTUALLY
+                    <Zap className="w-4 h-4" /> EXECUTE VIRTUAL SYNC
                   </span>
 
                   <span className="text-[10px] font-normal opacity-70">
-                    Integer shares · market quotes
+                    Virtual · integer shares · market price
                   </span>
                 </>
               )}

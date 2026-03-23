@@ -340,13 +340,13 @@ async function buildVirtualOrdersFromSignal(signal: any, strategy: string, reque
         } catch(e) { console.warn('Failed to fetch Yahoo quotes for virtual sizes', e) }
 
         // 2. Fetch current virtual balance and shadow positions
-        let virtualBalance = 100000;
+        let virtualBalance = 25000;
         let shadowEq: any[] = [];
         try {
              const vBalRes = await fetch(`${baseUrl}/api/virtual-accounts?strategy=${strategy}`, {
                  headers: { Cookie: request.headers.get('cookie') || '' }
              });
-             if (vBalRes.ok) virtualBalance = Number((await vBalRes.json()).balance || 100000);
+             if (vBalRes.ok) virtualBalance = Number((await vBalRes.json()).balance || 25000);
              
              const shadowRes = await fetch(`${baseUrl}/api/shadow-positions?strategy=${strategy}`, {
                  headers: { Cookie: request.headers.get('cookie') || '' }
@@ -370,7 +370,7 @@ async function buildVirtualOrdersFromSignal(signal: any, strategy: string, reque
         const orders: any[] = [];
         for (const leg of legs) {
             const symbol = leg.symbol;
-            if (symbol === 'SGOV' || symbol === 'QQQ_LEAPS') continue;
+            if (symbol === 'QQQ_LEAPS') continue; // Options — no easy live price
             
             const livePrice = prices[symbol] || signal.data?.price || signal.cost || 100;
             const targetValue = netLiq * leg.target_pct;

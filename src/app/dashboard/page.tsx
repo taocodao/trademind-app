@@ -806,8 +806,8 @@ function DashboardContent() {
                                 // Priority: Privy linked account name > TT username > email > fallback
                                 const privyName = (user as any)?.google?.name
                                     || (user as any)?.apple?.name
-                                    || user?.linkedAccounts?.find((a: any) => a.type === 'google_oauth')?.name
-                                    || user?.linkedAccounts?.find((a: any) => a.type === 'apple_oauth')?.name
+                                    || (user?.linkedAccounts?.find((a: any) => a.type === 'google_oauth') as any)?.name
+                                    || (user?.linkedAccounts?.find((a: any) => a.type === 'apple_oauth') as any)?.name
                                     || user?.email?.address?.split('@')[0]
                                     || null;
                                 return tastyUsername || privyName || t('dashboard.trader');

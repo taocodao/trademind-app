@@ -138,22 +138,62 @@ export const calculateTurboCoreOrders = async (
     signal: SignalData
 ): Promise<TurboCoreOrder[]> => {
     // 🆕 Short-circuit: If the route handler pre-calculated orders from the virtual account,
-    // use those directly instead of re-fetching from Tastytrade (live balance ≠ virtual balance).
+    // use those directly — but cap SELL quantities against actual TT positions to prevent
+    // "cannot_close_more_than_existing_position" errors when virtual ≠ TT holdings.
     const preCalc = (signal as any)._preCalculatedOrders as Array<{ symbol: string; action: string; quantity: number; price?: number }> | undefined;
     if (preCalc && preCalc.length > 0) {
         console.log(`[TurboCore] Using ${preCalc.length} pre-calculated virtual orders (skip live TT fetch)`);
-        return preCalc.map(o => ({
-            symbol: o.symbol,
-            action: (o.action === 'buy' ? 'Buy' : 'Sell') as 'Buy' | 'Sell',
-            quantity: Math.abs(Number(o.quantity)),
-            exactShares: Math.abs(Number(o.quantity)),
-            diffValue: (o.price || 0) * Math.abs(Number(o.quantity)),
-            targetPct: 0,    // Not needed for execution
-            targetValue: 0,  // Not needed for execution
-            currentShares: 0,
-            currentValue: 0,
-            currentPrice: o.price || 0,
-        }));
+
+        // Fetch actual TT positions to cap SELL quantities
+        let ttPosMap = new Map<string, number>();
+        try {
+            const ttPositions = await getAccountPositions(accessToken, accountNumber);
+            for (const p of ttPositions) {
+                ttPosMap.set(p.symbol, Math.abs(p.quantity));
+            }
+            console.log(`[TurboCore] TT positions for cap check:`, Object.fromEntries(ttPosMap));
+        } catch (e) {
+            console.warn('[TurboCore] Could not fetch TT positions for sell cap — proceeding without cap:', e);
+        }
+
+        return preCalc
+            .filter(o => {
+                // Drop SELL orders where we hold nothing in TT
+                if (o.action.toLowerCase() === 'sell') {
+                    const ttHeld = ttPosMap.get(o.symbol) ?? null;
+                    if (ttHeld !== null && ttHeld <= 0) {
+                        console.log(`[TurboCore] Skipping SELL ${o.symbol} — TT holds 0 shares`);
+                        return false;
+                    }
+                }
+                return true;
+            })
+            .map(o => {
+                let qty = Math.abs(Number(o.quantity));
+                if (o.action.toLowerCase() === 'sell' && ttPosMap.size > 0) {
+                    const ttHeld = ttPosMap.get(o.symbol);
+                    if (ttHeld !== undefined) {
+                        const cappedQty = Math.min(qty, Math.floor(ttHeld));
+                        if (cappedQty !== qty) {
+                            console.log(`[TurboCore] Capping SELL ${o.symbol}: virtual=${qty} → TT cap=${cappedQty}`);
+                        }
+                        qty = cappedQty;
+                    }
+                }
+                return {
+                    symbol: o.symbol,
+                    action: (o.action === 'buy' ? 'Buy' : 'Sell') as 'Buy' | 'Sell',
+                    quantity: qty,
+                    exactShares: qty,
+                    diffValue: (o.price || 0) * qty,
+                    targetPct: 0,
+                    targetValue: 0,
+                    currentShares: 0,
+                    currentValue: 0,
+                    currentPrice: o.price || 0,
+                };
+            })
+            .filter(o => o.quantity > 0); // Drop any orders that became 0 after capping
     }
 
     const { getAccountBalance, getAccountPositions, getEquityQuote } = await import('./tastytrade-api');

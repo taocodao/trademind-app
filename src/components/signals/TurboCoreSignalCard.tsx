@@ -239,14 +239,17 @@ export function TurboCoreSignalCard({
 
       const isBuy = deltaValue > 0;
       const absDelta = Math.abs(deltaValue);
-      const approxShares = (absDelta / refPrice).toFixed(1);
+      // Whole shares only — floor buys (conservative), ceil sells (don't over-sell)
+      const wholeShares = isBuy ? Math.floor(absDelta / refPrice) : Math.ceil(absDelta / refPrice);
+      if (wholeShares === 0) continue;
+      const actualDollar = wholeShares * refPrice;
 
       orders.push({
         symbol: leg.symbol,
         label: leg.symbol === 'QLD' ? 'QLD (2x)' : leg.symbol,
         action: isBuy ? 'BUY' : 'SELL',
-        dollarAmount: absDelta,
-        approxShares: `\u2248${approxShares} sh`,
+        dollarAmount: actualDollar,
+        approxShares: `${wholeShares} sh`,
         approxPrice: refPrice > 0 ? `~$${refPrice.toFixed(2)}/sh` : '\u2014',
         orderType: 'Market',
         isOption: false,

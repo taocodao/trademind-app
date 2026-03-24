@@ -287,16 +287,24 @@ export interface VirtualAccount {
     updated_at: Date;
 }
 
+export function getDefaultVirtualBalance(strategy: string): number {
+    const strategyUpper = String(strategy).toUpperCase();
+    // Pro strategies start with $25,000; Core and others start with $5,000
+    const isProStrategy = strategyUpper.includes('PRO') || strategyUpper === 'TQQQ_TURBOCORE_PRO';
+    return isProStrategy ? 25000 : 5000;
+}
+
 export async function getVirtualBalance(userId: string, strategy: string): Promise<{ balance: number; isDefault: boolean }> {
     const result = await query(
         `SELECT cash_balance FROM virtual_accounts WHERE user_id = $1 AND strategy = $2`,
         [userId, strategy]
     );
     if (result.rows.length === 0) {
-        // Initialize if doesn't exist ($25k starting balance)
+        // Initialize based on strategy: Pro = $25k, Core = $5k
+        const defaultBalance = getDefaultVirtualBalance(strategy);
         const init = await query(
-            `INSERT INTO virtual_accounts (user_id, strategy, cash_balance) VALUES ($1, $2, 25000.00) RETURNING cash_balance`,
-            [userId, strategy]
+            `INSERT INTO virtual_accounts (user_id, strategy, cash_balance) VALUES ($1, $2, $3) RETURNING cash_balance`,
+            [userId, strategy, defaultBalance]
         );
         return { balance: parseFloat(init.rows[0].cash_balance), isDefault: true };
     }

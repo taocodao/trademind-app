@@ -220,7 +220,20 @@ export async function POST(
                 result = await proxyResp.json();
                 console.log(`✅ EC2 Proxy successful: Order ID ${result.orderId || result.order_id}`);
 
-                // Return immediately so we don't fall through to local execution!
+                // Mirror to virtual account (non-blocking) using already-computed preCalculatedOrders
+                try {
+                    const protocol = request.headers.get('x-forwarded-proto') || 'http';
+                    const host = request.headers.get('host');
+                    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
+                    await fetch(`${baseUrl}/api/virtual-accounts/execute`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Cookie: request.headers.get('cookie') || '' },
+                        body: JSON.stringify({ signalId: id, strategy: String(signalData.strategy || strategy), orders: preCalculatedOrders })
+                    });
+                } catch (mirrorErr) {
+                    console.warn('EC2 virtual mirror failed (non-critical):', mirrorErr);
+                }
+
                 return NextResponse.json(result);
 
             } else {
@@ -234,6 +247,24 @@ export async function POST(
                     console.log(`[TurboCore] Using ${virtualOrders.length} pre-calculated virtual orders for live TT execution`);
                     // Inject the pre-calculated orders into the signal so calculateTurboCoreOrders can use them
                     signalToExecute = { ...signalData, _preCalculatedOrders: virtualOrders };
+
+                    // After trade executes, mirror to virtual (non-blocking) — reuse virtualOrders, use real signalId
+                    const mirrorOrders = virtualOrders;
+                    request.headers.get('host'); // keep reference for closure
+                    const mirrorSignalId = id; // Real signalId, not id + '_mirror'
+                    const mirrorStrategy = strategy;
+                    setImmediate(async () => {
+                        try {
+                            const protocol = request.headers.get('x-forwarded-proto') || 'http';
+                            const host = request.headers.get('host');
+                            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
+                            await fetch(`${baseUrl}/api/virtual-accounts/execute`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', Cookie: request.headers.get('cookie') || '' },
+                                body: JSON.stringify({ signalId: mirrorSignalId, strategy: mirrorStrategy, orders: mirrorOrders })
+                            });
+                        } catch (e) { console.warn('Virtual mirror (post-TT) failed:', e); }
+                    });
                 }
 
                 // Execute trade using modular strategy executor (locally on Vercel)
@@ -281,22 +312,8 @@ export async function POST(
                 console.error('⚠️ Failed to save position to database:', dbError);
             }
 
-            // After successful real trade execution — mirror to virtual account for UI display
-            try {
-                const protocol = request.headers.get('x-forwarded-proto') || 'http';
-                const host = request.headers.get('host');
-                const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
-                const strategy = signalData.strategy || 'TQQQ_TURBOCORE';
-                const orders = await buildVirtualOrdersFromSignal(signalData, strategy, request);
-
-                await fetch(`${baseUrl}/api/virtual-accounts/execute`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', Cookie: request.headers.get('cookie') || '' },
-                    body: JSON.stringify({ signalId: id + '_mirror', strategy: strategy, orders })
-                });
-            } catch (mirrorErr) {
-                console.warn('Mirror to virtual failed (non-critical):', mirrorErr);
-            }
+            // After successful real trade execution — virtual mirror ALREADY scheduled above for TurboCore.
+            // For other strategies (theta, diagonal, etc.) mirror now.
 
             return NextResponse.json({
                 status: 'success',

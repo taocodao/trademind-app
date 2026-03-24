@@ -7,7 +7,8 @@ import pool, {
     createUserExecution,
     createOrderLines,
     OrderLineData,
-    getUserExecutionForSignal
+    getUserExecutionForSignal,
+    getDefaultVirtualBalance
 } from '@/lib/db';
 
 export async function POST(req: Request) {
@@ -50,7 +51,7 @@ export async function POST(req: Request) {
                 [userId, strategy]
             );
             
-            let currentBalance = 25000.00;
+            let currentBalance = getDefaultVirtualBalance(strategy); // Strategy-aware: Pro=$25k, Core=$5k
             if (balanceRes.rows.length > 0) {
                 currentBalance = parseFloat(balanceRes.rows[0].cash_balance);
             } else {

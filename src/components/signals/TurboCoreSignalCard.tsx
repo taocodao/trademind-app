@@ -468,7 +468,7 @@ export function TurboCoreSignalCard({
               ) : (
                 <>
                   <span className="flex items-center gap-1">
-                    <Zap className="w-4 h-4" /> EXECUTE VIRTUAL SYNC
+                    <Zap className="w-4 h-4" /> SUBMIT ORDER
                   </span>
 
                   <span className="text-[10px] font-normal opacity-70">

@@ -689,35 +689,11 @@ function DashboardContent() {
                 fetchOrders();
                 fetchAccountData(); // Immediately refresh positions matching user request
             } else {
-                // Tier 2b: Shadow Sync Calculation
-                // 1. Get virtual balance
-                const balRes = await fetch(`/api/virtual-accounts?strategy=${activeStrategy}`);
-                if (!balRes.ok) throw new Error('Failed to fetch virtual account balance');
-                const balData = await balRes.json();
-                const activeBalance = balData.balance || 100000;
-                
-                // 2. Get shadow positions
-                const posRes = await fetch(`/api/shadow-positions?strategy=${activeStrategy}`);
-                let activePositions = {};
-                if (posRes.ok) {
-                    const posData = await posRes.json();
-                    activePositions = (posData.positions || []).reduce((acc: any, p: any) => {
-                        acc[p.symbol] = Number(p.quantity);
-                        return acc;
-                    }, {});
-                }
-
-                const targetMatrix: Record<string, number> = {};
-                signal.legs?.forEach(leg => {
-                    targetMatrix[leg.symbol] = leg.target_pct;
-                });
-
-                const endpoint = '/api/calculate_delta_trade';
-                const payload = {
-                    targetMatrix,
-                    shadowBalance: activeBalance,
-                    shadowPositions: activePositions
-                };
+                // Tier 2b: Virtual Sync — no Tastytrade connected
+                // The approve route automatically detects missing TT tokens and runs
+                // buildVirtualOrdersFromSignal → /api/virtual-accounts/execute
+                const endpoint = `/api/signals/${signal.id}/approve`;
+                const payload = { signalDetails: signal };
 
                 const response = await fetch(endpoint, {
                     method: 'POST',
@@ -727,35 +703,16 @@ function DashboardContent() {
 
                 if (!response.ok) {
                     const errData = await response.json();
-                    throw new Error(errData.error || errData.message || 'Shadow calculation failed');
-                }
-
-                const result = await response.json();
-                console.log("Calculated Shadow Orders: ", result.orders);
-
-                // Commit the virtual trades to the new DB-backed execution route
-                const syncRes = await fetch('/api/virtual-accounts/execute', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        signalId: signal.id,
-                        strategy: activeStrategy,
-                        orders: result.orders || []
-                    }),
-                    headers: { 'Content-Type': 'application/json' }
-                });
-
-                if (!syncRes.ok) {
-                    const errData = await syncRes.json();
-                    if (errData.error === 'Already executed') {
+                    const errMsg = errData.message || errData.error || '';
+                    if (errMsg.includes('already executed') || errData.status === 'already_executed') {
                         setToast({ msg: 'Signal was already executed. Removing from dashboard.', ok: true });
                         await removeSignal(String(signal.id));
                         return;
                     }
-                    throw new Error(errData.error || errData.message || 'Failed to execute virtual trades');
+                    throw new Error(errMsg || 'Virtual execution failed');
                 }
 
-                setToast({ msg: `Virtual Execution Complete: Processed ${result.orders?.length || 0} trades.`, ok: true });
-                // We no longer manually manage executedIds because the signal object will re-render with userExecution.status = 'executed'
+                setToast({ msg: `Virtual Execution Complete — Positions updated!`, ok: true });
             }
         } catch (err: any) {
             console.error('Core Exec error:', err);

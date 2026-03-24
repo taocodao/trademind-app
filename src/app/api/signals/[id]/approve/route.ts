@@ -190,6 +190,9 @@ export async function POST(
             if (isServerManaged) {
                 console.log(`📡 Proxying ${strategy} approval to EC2 backend...`);
                 const ec2Url = process.env.TASTYTRADE_API_URL || 'http://34.235.119.67:8002';
+                
+                // Pre-calculate exact order sizes using virtual balance so live matches UI preview exactly
+                const preCalculatedOrders = await buildVirtualOrdersFromSignal(signalData, strategy, request);
 
                 const proxyResp = await fetch(`${ec2Url}/api/signals/${id}/approve`, {
                     method: 'POST',
@@ -199,7 +202,8 @@ export async function POST(
                         accountNumber: tokens.accountNumber,
                         userId: userId,
                         execute: true,
-                        signal: signalData // Pass the full signal data
+                        signal: signalData, // Pass the full signal data
+                        preCalculatedOrders: preCalculatedOrders // Pass exact orders so EC2 doesn't recalculate using TT Net Liq
                     })
                 });
 

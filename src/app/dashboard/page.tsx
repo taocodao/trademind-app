@@ -565,11 +565,17 @@ function DashboardContent() {
 
 
 
-            // Step 1: Get account number from the accounts endpoint
+            // Step 1: Get account number — skip silently if user has no TT tokens
 
             const acctRes = await fetch('/api/tastytrade/account');
 
             if (!acctRes.ok) {
+
+                if (acctRes.status === 401) {
+                    // No TT connection — this is normal for virtual-only users. Don't show error.
+                    setData(null);
+                    return;
+                }
 
                 const e = await acctRes.json();
 

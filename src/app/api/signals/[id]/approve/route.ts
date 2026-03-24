@@ -11,6 +11,7 @@ import { cookies } from 'next/headers';
 import { createSession, getAccountBalance } from '@/lib/tastytrade-api';
 import { executeSignal } from '@/lib/strategy-executor';
 import { createPosition, createUserExecution, getUserSettings } from '@/lib/db';
+import { executeVirtualOrders } from '@/lib/virtual-executor';
 
 export async function POST(
     request: Request,
@@ -39,34 +40,27 @@ export async function POST(
         const tokens = await getTastytradeTokens(userId);
         const hasTastytrade = tokens?.refreshToken;
 
-        // If no Tastytrade connection — execute virtually
+        // If no Tastytrade connection — execute virtually using the shared helper (no HTTP round-trip)
         if (!hasTastytrade) {
             const signalData = body.signal || body.signalDetails || body;
             const strategy = signalData.strategy || 'TQQQ_TURBOCORE';
             const orders = await buildVirtualOrdersFromSignal(signalData, strategy, request);
 
-            // Dynamically construct relative URL since Vercel env holds the baseUrl 
-            const protocol = request.headers.get('x-forwarded-proto') || 'http';
-            const host = request.headers.get('host');
-            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
-
-            const execRes = await fetch(`${baseUrl}/api/virtual-accounts/execute`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Cookie: request.headers.get('cookie') || '' },
-                body: JSON.stringify({ signalId: id, strategy, orders })
-            });
-
-            if (!execRes.ok) {
-                const err = await execRes.json().catch(() => ({}));
-                return NextResponse.json({ status: 'failed', error: err.error || 'Virtual execution failed' }, { status: 400 });
+            try {
+                const execResult = await executeVirtualOrders(userId, id, strategy, orders);
+                if (execResult.alreadyExecuted) {
+                    return NextResponse.json({ status: 'already_executed', error: 'Already executed' }, { status: 409 });
+                }
+                return NextResponse.json({
+                    status: 'success',
+                    virtual: true,
+                    message: 'Trade executed virtually. Connect Tastytrade for live trading.',
+                    balance: execResult.balance
+                });
+            } catch (execErr) {
+                console.error('Virtual execution failed:', execErr);
+                return NextResponse.json({ status: 'failed', error: 'Virtual execution failed' }, { status: 500 });
             }
-            const execData = await execRes.json();
-            return NextResponse.json({
-                status: 'success',
-                virtual: true,
-                message: 'Trade executed virtually. Connect Tastytrade for live trading.',
-                balance: execData.balance
-            });
         }
 
         // Get OAuth credentials from environment (single source of truth!)
@@ -248,21 +242,13 @@ export async function POST(
                     // Inject the pre-calculated orders into the signal so calculateTurboCoreOrders can use them
                     signalToExecute = { ...signalData, _preCalculatedOrders: virtualOrders };
 
-                    // After trade executes, mirror to virtual (non-blocking) — reuse virtualOrders, use real signalId
+                    // After trade executes, mirror to virtual — reuse virtualOrders, use real signalId
                     const mirrorOrders = virtualOrders;
-                    request.headers.get('host'); // keep reference for closure
-                    const mirrorSignalId = id; // Real signalId, not id + '_mirror'
+                    const mirrorSignalId = id;
                     const mirrorStrategy = strategy;
                     setImmediate(async () => {
                         try {
-                            const protocol = request.headers.get('x-forwarded-proto') || 'http';
-                            const host = request.headers.get('host');
-                            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
-                            await fetch(`${baseUrl}/api/virtual-accounts/execute`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json', Cookie: request.headers.get('cookie') || '' },
-                                body: JSON.stringify({ signalId: mirrorSignalId, strategy: mirrorStrategy, orders: mirrorOrders })
-                            });
+                            await executeVirtualOrders(userId, mirrorSignalId, mirrorStrategy, mirrorOrders);
                         } catch (e) { console.warn('Virtual mirror (post-TT) failed:', e); }
                     });
                 }

@@ -376,7 +376,12 @@ const executeTurboCoreStrategy: StrategyExecutor = async (
 
     console.log(`🚀 Submitting ${ordersToSubmit.length} notional rebalance orders...`);
 
-    const { executeNotionalEquityOrder, executeEquityOrder } = await import('./tastytrade-api');
+    const { executeNotionalEquityOrder, executeEquityOrder, cancelWorkingOrders } = await import('./tastytrade-api');
+
+    // Cancel any pending working orders for these symbols FIRST to prevent
+    // "illegal_buy_and_sell_on_same_symbol" TT rejection from prior failed attempts
+    const symbolsToRebalance = ordersToSubmit.map(o => o.symbol);
+    await cancelWorkingOrders(accessToken, accountNumber, symbolsToRebalance);
 
     let lastOrderId = 'unknown';
     for (const order of ordersToSubmit) {

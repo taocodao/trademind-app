@@ -104,15 +104,33 @@ export async function executeVirtualOrders(
 
             // Shadow positions upsert
             if (isBuy) {
-                await client.query(
-                    `INSERT INTO shadow_positions (user_id, strategy, symbol, quantity, avg_price, signal_id, executed_at)
-                     VALUES ($1, $2, $3, $4, $5, $6, NOW())
-                     ON CONFLICT (user_id, strategy, symbol) DO UPDATE SET
-                        quantity = shadow_positions.quantity + $4,
-                        avg_price = ((shadow_positions.quantity * shadow_positions.avg_price) + ($4 * $5)) / (shadow_positions.quantity + $4),
-                        signal_id = $6, executed_at = NOW()`,
-                    [userId, strategy, line.symbol, line.quantity, line.price, signalId]
-                );
+                // For rebalance strategies: SET the target quantity (not additive +=).
+                // Additive upserts cause virtual balance to drift to zero when the same
+                // rebalance signal is executed multiple times.
+                const isRebalance = strategy.toUpperCase().includes('TURBOCORE') || strategy.toUpperCase() === 'REBALANCE';
+                if (isRebalance) {
+                    await client.query(
+                        `INSERT INTO shadow_positions (user_id, strategy, symbol, quantity, avg_price, signal_id, executed_at)
+                         VALUES ($1, $2, $3, $4, $5, $6, NOW())
+                         ON CONFLICT (user_id, strategy, symbol) DO UPDATE SET
+                            quantity   = $4,
+                            avg_price  = $5,
+                            signal_id  = $6, executed_at = NOW()`,
+                        [userId, strategy, line.symbol, line.quantity, line.price, signalId]
+                    );
+                } else {
+                    // Non-rebalance (theta/options): additive — each execution adds a new position
+                    await client.query(
+                        `INSERT INTO shadow_positions (user_id, strategy, symbol, quantity, avg_price, signal_id, executed_at)
+                         VALUES ($1, $2, $3, $4, $5, $6, NOW())
+                         ON CONFLICT (user_id, strategy, symbol) DO UPDATE SET
+                            quantity   = shadow_positions.quantity + $4,
+                            avg_price  = ((shadow_positions.quantity * shadow_positions.avg_price) + ($4 * $5)) / (shadow_positions.quantity + $4),
+                            signal_id  = $6, executed_at = NOW()`,
+                        [userId, strategy, line.symbol, line.quantity, line.price, signalId]
+                    );
+                }
+
             } else {
                 // Reduce position; delete row entirely when quantity hits zero or below
                 await client.query(

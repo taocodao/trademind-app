@@ -1136,3 +1136,35 @@ export async function getLeapsCandidate(
         mid: quote.mid,
     };
 }
+
+
+/**
+ * Cancel all working (pending) orders for the specified symbols.
+ * Called before a rebalance to prevent 'illegal_buy_and_sell_on_same_symbol'.
+ */
+export async function cancelWorkingOrders(
+    accessToken: string,
+    accountNumber: string,
+    symbols: string[]
+): Promise<void> {
+    if (symbols.length === 0) return;
+    try {
+        const resp = await fetch(
+            `/accounts//orders?status=working`,
+            { headers: { Authorization: `Bearer `, 'User-Agent': 'TradeMind/1.0' } }
+        );
+        if (!resp.ok) { console.warn('[cancelWorkingOrders] Could not fetch working orders:', resp.status); return; }
+        const data = await resp.json();
+        const orders: any[] = data?.data?.items ?? [];
+        const symbolSet = new Set(symbols.map(s => s.toUpperCase()));
+        for (const order of orders) {
+            const orderSymbols: string[] = (order.legs ?? []).map((l: any) => String(l.symbol ?? '').toUpperCase());
+            if (!orderSymbols.some(s => symbolSet.has(s))) continue;
+            const delResp = await fetch(
+                `/accounts//orders/`,
+                { method: 'DELETE', headers: { Authorization: `Bearer `, 'User-Agent': 'TradeMind/1.0' } }
+            );
+            console.log(`[cancelWorkingOrders]  order  ()`);
+        }
+    } catch (e) { console.warn('[cancelWorkingOrders] Failed (non-fatal):', e); }
+}

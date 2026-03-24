@@ -224,11 +224,23 @@ export async function POST(
                 return NextResponse.json(result);
 
             } else {
+                // For TurboCore strategies, pre-calculate virtual orders so live TT trade
+                // sizes match the UI Preview (which uses virtual $25k balance, not TT Net Liq)
+                const isTurboCore = ['TQQQ_TURBOCORE', 'TQQQ_TURBOCORE_PRO', 'REBALANCE'].includes(strategy);
+                let signalToExecute = signalData;
+
+                if (isTurboCore) {
+                    const virtualOrders = await buildVirtualOrdersFromSignal(signalData, strategy, request);
+                    console.log(`[TurboCore] Using ${virtualOrders.length} pre-calculated virtual orders for live TT execution`);
+                    // Inject the pre-calculated orders into the signal so calculateTurboCoreOrders can use them
+                    signalToExecute = { ...signalData, _preCalculatedOrders: virtualOrders };
+                }
+
                 // Execute trade using modular strategy executor (locally on Vercel)
                 result = await executeSignal(
                     accessToken,
                     accountNumber,
-                    signalData,
+                    signalToExecute,
                     {
                         front: defaultFrontExpiry,
                         back: defaultFrontExpiry, // Using same for default vertical/theta

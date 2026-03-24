@@ -137,6 +137,25 @@ export const calculateTurboCoreOrders = async (
     accountNumber: string,
     signal: SignalData
 ): Promise<TurboCoreOrder[]> => {
+    // 🆕 Short-circuit: If the route handler pre-calculated orders from the virtual account,
+    // use those directly instead of re-fetching from Tastytrade (live balance ≠ virtual balance).
+    const preCalc = (signal as any)._preCalculatedOrders as Array<{ symbol: string; action: string; quantity: number; price?: number }> | undefined;
+    if (preCalc && preCalc.length > 0) {
+        console.log(`[TurboCore] Using ${preCalc.length} pre-calculated virtual orders (skip live TT fetch)`);
+        return preCalc.map(o => ({
+            symbol: o.symbol,
+            action: (o.action === 'buy' ? 'Buy' : 'Sell') as 'Buy' | 'Sell',
+            quantity: Math.abs(Number(o.quantity)),
+            exactShares: Math.abs(Number(o.quantity)),
+            diffValue: (o.price || 0) * Math.abs(Number(o.quantity)),
+            targetPct: 0,    // Not needed for execution
+            targetValue: 0,  // Not needed for execution
+            currentShares: 0,
+            currentValue: 0,
+            currentPrice: o.price || 0,
+        }));
+    }
+
     const { getAccountBalance, getAccountPositions, getEquityQuote } = await import('./tastytrade-api');
 
     // 1. Fetch live Net Liq

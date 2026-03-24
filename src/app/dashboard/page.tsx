@@ -772,11 +772,8 @@ function DashboardContent() {
 
 
 
-    // ── Not linked → show link screen ──
-
-    if (tastyLinked === false && coreSignals.length === 0) {
-        return <TastytradeLink onLinked={() => setTastyLinked(true)} />;
-    }
+    // Note: Users without Tastytrade see the dashboard with virtual account features.
+    // They can connect Tastytrade from Settings at any time.
 
     const refreshAll = () => { fetchAccountData(); };
 

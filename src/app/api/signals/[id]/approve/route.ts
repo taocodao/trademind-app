@@ -5,13 +5,14 @@
  * This eliminates the need for EC2 and credential synchronization.
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getTastytradeTokens, storeTastytradeTokens } from '@/lib/redis';
-import { cookies } from 'next/headers';
 import { createSession, getAccountBalance } from '@/lib/tastytrade-api';
 import { executeSignal } from '@/lib/strategy-executor';
 import { createPosition, createUserExecution, getUserSettings } from '@/lib/db';
 import { executeVirtualOrders } from '@/lib/virtual-executor';
+import { getPrivyUserId } from '@/lib/auth-helpers';
+import pool from '@/lib/db';
 
 export async function POST(
     request: Request,
@@ -21,19 +22,10 @@ export async function POST(
         const { id } = await params;
         const body = await request.json().catch(() => ({}));
 
-        // Get user ID from Privy token
-        const cookieStore = await cookies();
-        const privyToken = cookieStore.get("privy-token")?.value;
-
-        let userId = "default-user";
-        if (privyToken) {
-            try {
-                const payload = privyToken.split(".")[1];
-                const decoded = JSON.parse(Buffer.from(payload, "base64").toString());
-                userId = decoded.sub || decoded.userId || "default-user";
-            } catch (err) {
-                console.warn("Could not decode Privy token", err);
-            }
+        // Resolve Privy user ID — never fall back to a shared default key
+        const userId = await getPrivyUserId(request as NextRequest);
+        if (!userId) {
+            return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
         }
 
         // Get user's Tastytrade credentials from Redis
@@ -44,7 +36,7 @@ export async function POST(
         if (!hasTastytrade) {
             const signalData = body.signal || body.signalDetails || body;
             const strategy = signalData.strategy || 'TQQQ_TURBOCORE';
-            const orders = await buildVirtualOrdersFromSignal(signalData, strategy, request);
+            const orders = await buildVirtualOrdersFromSignal(signalData, strategy, userId);
 
             try {
                 const execResult = await executeVirtualOrders(userId, id, strategy, orders);
@@ -186,7 +178,7 @@ export async function POST(
                 const ec2Url = process.env.TASTYTRADE_API_URL || 'http://34.235.119.67:8002';
                 
                 // Pre-calculate exact order sizes using virtual balance so live matches UI preview exactly
-                const preCalculatedOrders = await buildVirtualOrdersFromSignal(signalData, strategy, request);
+                const preCalculatedOrders = await buildVirtualOrdersFromSignal(signalData, strategy, userId);
 
                 const proxyResp = await fetch(`${ec2Url}/api/signals/${id}/approve`, {
                     method: 'POST',
@@ -237,30 +229,65 @@ export async function POST(
                 let signalToExecute = signalData;
 
                 if (isTurboCore) {
-                    const virtualOrders = await buildVirtualOrdersFromSignal(signalData, strategy, request);
+                    const virtualOrders = await buildVirtualOrdersFromSignal(signalData, strategy, userId);
                     console.log(`[TurboCore] Using ${virtualOrders.length} pre-calculated virtual orders for live TT execution`);
                     // Inject the pre-calculated orders into the signal so calculateTurboCoreOrders can use them
                     signalToExecute = { ...signalData, _preCalculatedOrders: virtualOrders };
 
-                    // After trade executes, mirror to virtual — reuse virtualOrders, use real signalId
-                    const mirrorOrders = virtualOrders;
-                    const mirrorSignalId = id;
-                    const mirrorStrategy = strategy;
-                    setImmediate(async () => {
-                        try {
-                            await executeVirtualOrders(userId, mirrorSignalId, mirrorStrategy, mirrorOrders);
-                        } catch (e) { console.warn('Virtual mirror (post-TT) failed:', e); }
+                    // Execute trade on Tastytrade first, then mirror to virtual (awaited to prevent loss on serverless teardown)
+                    result = await executeSignal(
+                        accessToken,
+                        accountNumber,
+                        signalToExecute,
+                        {
+                            front: defaultFrontExpiry,
+                            back: defaultFrontExpiry,
+                        }
+                    );
+
+                    // Mirror to virtual — await to guarantee it runs before function exits
+                    try {
+                        await executeVirtualOrders(userId, id, strategy, virtualOrders);
+                    } catch (e) { console.warn('Virtual mirror (post-TT) failed:', e); }
+
+                    // Skip the second executeSignal call below
+                    const orderId = result.orderId || (result as any).order_id || 'unknown';
+                    console.log(`✅ Trade processed: Order ID ${orderId}`);
+                    try {
+                        const userSettings = await getUserSettings(userId);
+                        await createPosition({
+                            id: orderId, userId, signalId: id,
+                            symbol: (signalData.legs?.map((l: any) => l.symbol).join(',')) || signalData.symbol || 'REBALANCE',
+                            strategy: signalData.strategy || 'theta',
+                            strike: signalData.strike || 0,
+                            expiration: signalData.frontExpiry || signalData.expiry || defaultFrontExpiry,
+                            backExpiry: signalData.backExpiry || defaultBackExpiry,
+                            contracts: signalData.contracts || 1,
+                            entryPrice: signalData.entry_price || signalData.price || signalData.cost || 0,
+                            capitalRequired: signalData.cost || (signalData.strike || 0) * 100 * (signalData.contracts || 1),
+                            riskLevel: (await getUserSettings(userId))?.risk_level || 'moderate',
+                            direction: signalData.direction,
+                        });
+                        await createUserExecution(userId, id, 'executed', orderId, body.source || 'manual');
+                    } catch (dbError) { console.error('Failed to save position:', dbError); }
+
+                    return NextResponse.json({
+                        status: 'success',
+                        signal: { id, ...signalData, status: 'executed' },
+                        orderId,
+                        positionId: orderId,
+                        message: `Trade processed successfully! Order ID: ${orderId}`,
                     });
                 }
 
-                // Execute trade using modular strategy executor (locally on Vercel)
+                // Non-TurboCore: execute trade using modular strategy executor (locally on Vercel)
                 result = await executeSignal(
                     accessToken,
                     accountNumber,
                     signalToExecute,
                     {
                         front: defaultFrontExpiry,
-                        back: defaultFrontExpiry, // Using same for default vertical/theta
+                        back: defaultFrontExpiry,
                     }
                 );
             }
@@ -341,100 +368,129 @@ export async function POST(
     }
 }
 
-// Helper function to convert signal data into execution orders for the virtual ledger
-async function buildVirtualOrdersFromSignal(signal: any, strategy: string, request: Request) {
-    if (signal.type === 'REBALANCE' || String(signal.strategy).includes('TURBOCORE') || String(signal.strategy).includes('PRO')) {
-        const legs = signal.legs || signal.data?.legs || [];
-        
-        const protocol = request.headers.get('x-forwarded-proto') || 'http';
-        const host = request.headers.get('host');
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
-        
-        // 1. Fetch live quotes purely to cost virtual orders correctly
-        let prices: Record<string, number> = {};
-        try {
-            const symbols = legs.map((l: any) => l.symbol).join(',');
-            const res = await fetch(`${baseUrl}/api/quotes?symbols=${symbols}`);
-            if (res.ok) prices = await res.json();
-        } catch(e) { console.warn('Failed to fetch Yahoo quotes for virtual sizes', e) }
-
-        // 2. Fetch current virtual balance and shadow positions
-        let virtualBalance = 25000;
-        let shadowEq: any[] = [];
-        try {
-             const vBalRes = await fetch(`${baseUrl}/api/virtual-accounts?strategy=${strategy}`, {
-                 headers: { Cookie: request.headers.get('cookie') || '' }
-             });
-             if (vBalRes.ok) virtualBalance = Number((await vBalRes.json()).balance || 25000);
-             
-             const shadowRes = await fetch(`${baseUrl}/api/shadow-positions?strategy=${strategy}`, {
-                 headers: { Cookie: request.headers.get('cookie') || '' }
-             });
-             if (shadowRes.ok) shadowEq = (await shadowRes.json()).positions || [];
-        } catch(e) { console.warn('Failed to fetch virtual state', e) }
-
-        let netLiq = virtualBalance;
-        const posMap = new Map<string, number>();
-        for (const p of shadowEq) {
-            const qty = Number(p.quantity);
-            const livePrice = prices[p.symbol] || p.avg_price || 100;
-            netLiq += qty * livePrice;
-            posMap.set(p.symbol, qty);
-        }
-
-        if (signal.capital_required) {
-            netLiq = Number(signal.capital_required); 
-        }
-
-        const orders: any[] = [];
-        for (const leg of legs) {
-            const symbol = leg.symbol;
-            if (symbol === 'QQQ_LEAPS') continue; // Options — no easy live price
-            
-            const livePrice = prices[symbol] || signal.data?.price || signal.cost || 100;
-            const targetValue = netLiq * leg.target_pct;
-            const currentShares = posMap.get(symbol) || 0;
-            const currentValue = currentShares * livePrice;
-            
-            const diffValue = targetValue - currentValue;
-            const action = diffValue > 0 ? 'buy' : 'sell';
-            let orderDollarValue = Math.abs(diffValue);
-            
-            if (action === 'sell') {
-                const maxSellValue = currentValue;
-                if (orderDollarValue > maxSellValue) orderDollarValue = maxSellValue;
-            }
-            
-            const exactShares = orderDollarValue / livePrice;
-            let wholeShares = action === 'buy' ? Math.floor(exactShares) : Math.ceil(exactShares);
-            if (action === 'sell' && wholeShares > currentShares) wholeShares = currentShares;
-            
-            if (wholeShares > 0 && orderDollarValue >= 5) {
-               orders.push({
-                   symbol,
-                   action,
-                   quantity: wholeShares,
-                   price: livePrice
-               });
-            } else if (leg.target_pct === 0 && currentShares > 0) {
-               orders.push({ symbol, action: 'sell', quantity: currentShares, price: livePrice });
-            }
-        }
-        
-        orders.sort((a,b) => {
-            if (a.action === 'sell' && b.action !== 'sell') return -1;
-            if (a.action !== 'sell' && b.action === 'sell') return 1;
-            return 0;
-        });
-        
-        return orders;
+/**
+ * Build virtual orders from a signal.
+ * Fetches virtual state directly from DB (never via HTTP cookie-forwarding — that fails on serverless).
+ * Handles: equity rebalance legs, LEAPS (tracked as placeholder option position), and legacy signals.
+ */
+async function buildVirtualOrdersFromSignal(signal: any, strategy: string, userId: string): Promise<any[]> {
+    const isTurboCore = signal.type === 'REBALANCE' || String(signal.strategy).includes('TURBOCORE') || String(signal.strategy).includes('PRO');
+    if (!isTurboCore) {
+        // Individual equity/options signals (legacy/theta/zebra)
+        return [{
+            symbol: signal.symbol || 'UNKNOWN',
+            action: signal.direction === 'bearish' ? 'sell' : 'buy',
+            quantity: signal.contracts || 1,
+            price: signal.cost || signal.price || 0
+        }];
     }
 
-    // Individual equity/options signals (legacy/theta/zebra)
-    return [{
-        symbol: signal.symbol || 'UNKNOWN',
-        action: signal.direction === 'bearish' ? 'sell' : 'buy',
-        quantity: signal.contracts || 1,
-        price: signal.cost || signal.price || 0
-    }];
+    const legs = signal.legs || signal.data?.legs || [];
+
+    // 1. Fetch live Yahoo quotes for real equity symbols
+    let prices: Record<string, number> = {};
+    try {
+        const equitySymbols = legs.map((l: any) => l.symbol).filter((s: string) => s !== 'QQQ_LEAPS').join(',');
+        if (equitySymbols) {
+            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.trademind.bot';
+            const res = await fetch(`${baseUrl}/api/quotes?symbols=${equitySymbols}`, { cache: 'no-store' });
+            if (res.ok) prices = await res.json();
+        }
+    } catch(e) { console.warn('[buildVirtualOrders] Failed to fetch Yahoo quotes:', e); }
+
+    // 2. Fetch virtual balance and shadow positions DIRECTLY from DB
+    //    (avoids cookie-forwarding failures on Vercel serverless)
+    let cashBalance = 25000;
+    const posMap = new Map<string, { qty: number; avgPrice: number }>();
+    try {
+        const [balRes, posRes] = await Promise.all([
+            pool.query(
+                `SELECT cash_balance FROM virtual_accounts WHERE user_id = $1 AND strategy = $2`,
+                [userId, strategy]
+            ),
+            pool.query(
+                `SELECT symbol, quantity, avg_price FROM shadow_positions WHERE user_id = $1 AND strategy = $2`,
+                [userId, strategy]
+            ),
+        ]);
+        if (balRes.rows.length > 0) cashBalance = parseFloat(balRes.rows[0].cash_balance);
+        for (const row of posRes.rows) {
+            posMap.set(row.symbol, { qty: Number(row.quantity), avgPrice: Number(row.avg_price) });
+        }
+    } catch(e) { console.warn('[buildVirtualOrders] Failed to fetch virtual state from DB:', e); }
+
+    // 3. Compute Net Liq from cash + current position values
+    let netLiq = cashBalance;
+    for (const [sym, pos] of posMap.entries()) {
+        const livePrice = prices[sym] || pos.avgPrice || 100;
+        netLiq += pos.qty * livePrice;
+    }
+
+    // Override with capital_required if explicitly set on signal
+    if (signal.capital_required) netLiq = Number(signal.capital_required);
+
+    console.log(`[buildVirtualOrders] NetLiq=$${netLiq.toFixed(0)}, Cash=$${cashBalance.toFixed(0)}, Positions:`, Object.fromEntries(posMap));
+
+    // 4. Generate buy/sell orders for each leg
+    const orders: any[] = [];
+    for (const leg of legs) {
+        const symbol = leg.symbol;
+
+        // LEAPS: track as a virtual option position using signal-embedded cost or estimate
+        if (symbol === 'QQQ_LEAPS') {
+            const targetValue = netLiq * leg.target_pct;
+            const leaspsPrice = signal.leaps_price || signal.cost || 205; // approx $205/contract from signal card
+            const contracts = Math.floor(targetValue / (leaspsPrice * 100));
+            if (contracts > 0) {
+                orders.push({
+                    symbol: 'QQQ_LEAPS',
+                    action: 'buy',
+                    quantity: contracts,
+                    price: leaspsPrice * 100, // notional per contract
+                    instrument_type: 'option'
+                });
+            }
+            continue;
+        }
+
+        const livePrice = prices[symbol] || signal.cost || 100;
+        const targetValue = netLiq * leg.target_pct;
+        const pos = posMap.get(symbol);
+        const currentShares = pos?.qty || 0;
+        const currentValue = currentShares * livePrice;
+
+        const diffValue = targetValue - currentValue;
+        const action = diffValue > 0 ? 'buy' : 'sell';
+        let orderDollarValue = Math.abs(diffValue);
+
+        // Cap sell at what we actually hold
+        if (action === 'sell') {
+            const maxSellValue = currentShares * livePrice;
+            if (orderDollarValue > maxSellValue) orderDollarValue = maxSellValue;
+        }
+
+        // If target is 0% and we hold shares, sell everything
+        if (leg.target_pct === 0 && currentShares > 0) {
+            orders.push({ symbol, action: 'sell', quantity: currentShares, price: livePrice });
+            continue;
+        }
+
+        const exactShares = orderDollarValue / livePrice;
+        let wholeShares = action === 'buy' ? Math.floor(exactShares) : Math.ceil(exactShares);
+        if (action === 'sell' && wholeShares > currentShares) wholeShares = currentShares;
+
+        if (wholeShares > 0 && orderDollarValue >= 5) {
+            orders.push({ symbol, action, quantity: wholeShares, price: livePrice });
+        }
+    }
+
+    // SELLs first to free cash before BUYs
+    orders.sort((a, b) => {
+        if (a.action === 'sell' && b.action !== 'sell') return -1;
+        if (a.action !== 'sell' && b.action === 'sell') return 1;
+        return 0;
+    });
+
+    console.log(`[buildVirtualOrders] Generated ${orders.length} orders:`, orders.map(o => `${o.action} ${o.quantity} ${o.symbol} @ $${o.price}`));
+    return orders;
 }

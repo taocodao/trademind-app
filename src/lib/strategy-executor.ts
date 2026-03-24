@@ -137,6 +137,8 @@ export const calculateTurboCoreOrders = async (
     accountNumber: string,
     signal: SignalData
 ): Promise<TurboCoreOrder[]> => {
+    const { getAccountBalance, getAccountPositions, getEquityQuote } = await import('./tastytrade-api');
+
     // 🆕 Short-circuit: If the route handler pre-calculated orders from the virtual account,
     // use those directly — but cap SELL quantities against actual TT positions to prevent
     // "cannot_close_more_than_existing_position" errors when virtual ≠ TT holdings.
@@ -195,9 +197,6 @@ export const calculateTurboCoreOrders = async (
             })
             .filter(o => o.quantity > 0); // Drop any orders that became 0 after capping
     }
-
-    const { getAccountBalance, getAccountPositions, getEquityQuote } = await import('./tastytrade-api');
-
     // 1. Fetch live Net Liq
     const balance = await getAccountBalance(accessToken, accountNumber);
     const netLiq = signal.capital_required ? Number(signal.capital_required) : balance.netLiquidatingValue;

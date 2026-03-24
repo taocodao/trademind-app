@@ -174,11 +174,7 @@ export function SubscriptionManager() {
     const handleReactivate = async () => {
         setReactivateLoading(true);
         try {
-            const token = await getAccessToken();
-            const res = await fetch('/api/stripe/reactivate', {
-                method: 'POST',
-                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-            });
+            const res = await fetch('/api/stripe/cancel', { method: 'PUT' });
             if (!res.ok) {
                 const d = await res.json();
                 throw new Error(d.error || 'Reactivation failed');

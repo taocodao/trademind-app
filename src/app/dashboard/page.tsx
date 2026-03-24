@@ -391,8 +391,9 @@ function DashboardContent() {
     // ── Membership info ──
     const [membership, setMembership] = useState<{
         tier: string; status: string | null; billingInterval: string | null;
-        currentPeriodEnd: string | null; trialEnd: string | null; fetched: boolean;
-    }>({ tier: 'observer', status: null, billingInterval: null, currentPeriodEnd: null, trialEnd: null, fetched: false });
+        currentPeriodEnd: string | null; trialEnd: string | null;
+        cancelAtPeriodEnd: boolean; cancelAt: string | null; fetched: boolean;
+    }>({ tier: 'observer', status: null, billingInterval: null, currentPeriodEnd: null, trialEnd: null, cancelAtPeriodEnd: false, cancelAt: null, fetched: false });
 
 
 
@@ -801,7 +802,16 @@ function DashboardContent() {
 
                         <h1 className="text-base font-bold truncate">
 
-                            {tastyUsername || user?.email?.address || t('dashboard.trader')}
+                            {(() => {
+                                // Priority: Privy linked account name > TT username > email > fallback
+                                const privyName = (user as any)?.google?.name
+                                    || (user as any)?.apple?.name
+                                    || user?.linkedAccounts?.find((a: any) => a.type === 'google_oauth')?.name
+                                    || user?.linkedAccounts?.find((a: any) => a.type === 'apple_oauth')?.name
+                                    || user?.email?.address?.split('@')[0]
+                                    || null;
+                                return tastyUsername || privyName || t('dashboard.trader');
+                            })()}
 
                         </h1>
 
@@ -938,9 +948,31 @@ function DashboardContent() {
                                             membership.status === 'active' ? 'text-tm-green' :
                                             membership.status === 'trialing' ? 'text-yellow-400' : 'text-tm-red'
                                         }`}>
-                                            {membership.status === 'active' ? 'Active' :
-                                             membership.status === 'trialing' ? `Trial · ${Math.max(0, Math.ceil((new Date(membership.trialEnd || '').getTime() - Date.now()) / 86400000))}d left` :
-                                             membership.status === 'past_due' ? 'Past Due' : membership.status || ''}
+                                        {(() => {
+                                            const daysLeft = membership.trialEnd
+                                                ? Math.max(0, Math.ceil((new Date(membership.trialEnd).getTime() - Date.now()) / 86400000))
+                                                : 0;
+                                            const renewDate = membership.currentPeriodEnd
+                                                ? new Date(membership.currentPeriodEnd).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                                                : '';
+                                            const cancelDate = (membership.cancelAt || membership.currentPeriodEnd)
+                                                ? new Date((membership.cancelAt || membership.currentPeriodEnd)!).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                                                : '';
+
+                                            if (membership.status === 'trialing') {
+                                                return membership.cancelAtPeriodEnd
+                                                    ? `Trial ends ${cancelDate}`
+                                                    : `Trial · ${daysLeft}d left`;
+                                            }
+                                            if (membership.status === 'active') {
+                                                return membership.cancelAtPeriodEnd
+                                                    ? `Cancels ${cancelDate}`
+                                                    : `Active · Renews ${renewDate}`;
+                                            }
+                                            if (membership.status === 'past_due') return 'Past Due';
+                                            return membership.status || '';
+                                        })()
+                                        }
                                         </span>
                                     </div>
                                 </div>

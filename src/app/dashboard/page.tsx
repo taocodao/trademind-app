@@ -950,7 +950,7 @@ function DashboardContent() {
                                         }`}>
                                         {(() => {
                                             const daysLeft = membership.trialEnd
-                                                ? Math.max(0, Math.ceil((new Date(membership.trialEnd).getTime() - Date.now()) / 86400000))
+                                                ? Math.max(0, Math.round((new Date(membership.trialEnd).getTime() - Date.now()) / 86400000))
                                                 : 0;
                                             const renewDate = membership.currentPeriodEnd
                                                 ? new Date(membership.currentPeriodEnd).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })

@@ -1,33 +1,12 @@
-/**
- * Disconnect Tastytrade API Route
- * Removes the user's Tastytrade tokens from Redis
- */
-
 import { NextResponse } from 'next/server';
 import { unlinkTastytrade } from '@/lib/redis';
-import { cookies } from 'next/headers';
+import { getPrivyUserId } from '@/lib/auth-helpers';
 
 export async function POST() {
     try {
-        // Get user ID from Privy token
-        const cookieStore = await cookies();
-        const privyToken = cookieStore.get("privy-token")?.value;
-
-        if (!privyToken) {
-            return NextResponse.json(
-                { error: 'Not authenticated' },
-                { status: 401 }
-            );
-        }
-
-        // Decode Privy token to get user ID
-        let userId = "default-user";
-        try {
-            const payload = privyToken.split(".")[1];
-            const decoded = JSON.parse(Buffer.from(payload, "base64").toString());
-            userId = decoded.sub || decoded.userId || "default-user";
-        } catch (err) {
-            console.warn("Could not decode Privy token", err);
+        const userId = await getPrivyUserId();
+        if (!userId) {
+            return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
         }
 
         // Delete tokens from Redis

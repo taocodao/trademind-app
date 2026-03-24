@@ -28,19 +28,30 @@ export async function GET(request: NextRequest) {
         const tokenResponse = await exchangeCodeForTokens(code);
 
         // Extract user ID from state parameter (encoded by /api/tastytrade/oauth/url)
-        // This is the reliable way to pass user ID through cross-origin OAuth redirects
-        let userId = "default-user";
-        if (state) {
-            try {
-                const stateData = JSON.parse(Buffer.from(state, "base64url").toString());
-                userId = stateData.userId || "default-user";
-                console.log("[OAuth Callback] Decoded userId from state:", userId);
-            } catch (err) {
-                console.warn("[OAuth Callback] Could not decode state, using default-user", err);
-            }
-        } else {
-            console.warn("[OAuth Callback] No state parameter, using default-user");
+        // SECURITY: if we can't identify the user, abort — do NOT fall back to a shared key.
+        if (!state) {
+            console.error("[OAuth Callback] No state parameter — cannot identify user. Aborting.");
+            return NextResponse.redirect(
+                new URL("/dashboard?error=missing_state", request.url)
+            );
         }
+
+        let userId: string;
+        try {
+            const stateData = JSON.parse(Buffer.from(state, "base64url").toString());
+            const resolvedId = stateData.userId;
+            if (!resolvedId || resolvedId === "default-user") {
+                throw new Error("Invalid userId in state");
+            }
+            userId = resolvedId;
+            console.log("[OAuth Callback] Decoded userId from state:", userId);
+        } catch (err) {
+            console.error("[OAuth Callback] Could not decode valid userId from state:", err);
+            return NextResponse.redirect(
+                new URL("/dashboard?error=invalid_state", request.url)
+            );
+        }
+
 
         // Fetch account info and username to store with tokens
         let accountNumber: string | undefined;

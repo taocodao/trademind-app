@@ -1,11 +1,7 @@
-/**
- * Tastytrade Positions API Route
- * Fetches all active positions for a given account
- */
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getTastytradeTokens, storeTastytradeTokens } from '@/lib/redis';
 import { TASTYTRADE_CONFIG, refreshAccessToken } from '@/lib/tastytrade-oauth';
-import { cookies } from 'next/headers';
+import { getPrivyUserId } from '@/lib/auth-helpers';
 
 export async function GET(request: Request) {
     try {
@@ -16,18 +12,9 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'accountNumber is required' }, { status: 400 });
         }
 
-        const cookieStore = await cookies();
-        const privyToken = cookieStore.get("privy-token")?.value;
-
-        let userId = 'default-user';
-        if (privyToken) {
-            try {
-                const payload = privyToken.split('.')[1];
-                const decoded = JSON.parse(Buffer.from(payload, 'base64').toString());
-                userId = decoded.sub || decoded.userId || 'default-user';
-            } catch (err) {
-                // fall back to default
-            }
+        const userId = await getPrivyUserId(request as NextRequest);
+        if (!userId) {
+            return NextResponse.json({ error: 'Not connected to Tastytrade' }, { status: 401 });
         }
 
         const tokens = await getTastytradeTokens(userId);

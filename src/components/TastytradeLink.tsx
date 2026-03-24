@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Link2, ExternalLink, AlertCircle, Loader2 } from "lucide-react";
+import { usePrivy } from "@privy-io/react-auth";
 
 interface TastytradeLinkProps {
     onLinked?: () => void;
@@ -11,14 +12,19 @@ interface TastytradeLinkProps {
 export function TastytradeLink({ onLinked, onSkip }: TastytradeLinkProps) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { getAccessToken } = usePrivy();
 
     const handleConnect = async () => {
         try {
             setLoading(true);
             setError(null);
 
-            // Get OAuth URL from backend
-            const response = await fetch("/api/tastytrade/oauth/url");
+            // Pass Bearer token so the server embeds the correct Privy user ID in OAuth state.
+            // Without this, the server-side cookie may be absent and the user ID cannot be resolved.
+            const token = await getAccessToken();
+            const response = await fetch("/api/tastytrade/oauth/url", {
+                headers: token ? { "Authorization": `Bearer ${token}` } : {}
+            });
             const data = await response.json();
 
             if (data.url) {
@@ -32,6 +38,7 @@ export function TastytradeLink({ onLinked, onSkip }: TastytradeLinkProps) {
             setLoading(false);
         }
     };
+
 
     return (
         <main className="min-h-screen flex items-center justify-center p-6">

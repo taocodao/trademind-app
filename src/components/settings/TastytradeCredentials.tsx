@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Link2, Link2Off, RefreshCw, Loader2, CheckCircle, ExternalLink } from 'lucide-react';
+import { usePrivy } from '@privy-io/react-auth';
 
 interface TastytradeStatus {
     linked: boolean;
@@ -15,6 +16,7 @@ export function TastytradeCredentials() {
     const [loading, setLoading] = useState(true);
     const [disconnecting, setDisconnecting] = useState(false);
     const [reconnecting, setReconnecting] = useState(false);
+    const { getAccessToken } = usePrivy();
 
     // Fetch link status on mount
     useEffect(() => {
@@ -53,7 +55,12 @@ export function TastytradeCredentials() {
     const handleReconnect = async () => {
         try {
             setReconnecting(true);
-            const res = await fetch('/api/tastytrade/oauth/url');
+            // Always pass Bearer token so the server reliably embeds the Privy user ID in the OAuth state.
+            // Without this, if the privy-token cookie is absent on the server, all users share one state key.
+            const token = await getAccessToken();
+            const res = await fetch('/api/tastytrade/oauth/url', {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
             const data = await res.json();
             if (data.url) {
                 window.location.href = data.url;

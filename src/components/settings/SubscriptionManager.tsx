@@ -205,7 +205,7 @@ export function SubscriptionManager() {
         membership.status === 'canceled' ? 'Canceled' : '';
 
     const trialDaysLeft = membership.trialEnd
-        ? Math.max(0, Math.ceil((new Date(membership.trialEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+        ? Math.max(0, Math.round((new Date(membership.trialEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
         : null;
 
     const renewalDate = membership.currentPeriodEnd

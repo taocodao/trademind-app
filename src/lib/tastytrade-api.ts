@@ -1168,3 +1168,83 @@ export async function cancelWorkingOrders(
         }
     } catch (e) { console.warn('[cancelWorkingOrders] Failed (non-fatal):', e); }
 }
+/**
+ * Submit a multi-leg options order (CSP, ZEBRA, CCS, etc.)
+ * Used by the IV-Switching Composite strategy order approval route.
+ *
+ * Action mapping from Python daily_order_generator:
+ *   BUY_TO_OPEN  -> "Buy to Open"
+ *   SELL_TO_OPEN -> "Sell to Open"
+ *   BUY_TO_CLOSE -> "Buy to Close"
+ *   SELL_TO_CLOSE -> "Sell to Close"
+ *   BUY  -> "Buy"
+ *   SELL -> "Sell"
+ */
+export async function submitOptionsOrder(
+    accessToken: string,
+    accountNumber: string,
+    orderLegs: Array<{
+        action: string;
+        symbol: string;
+        qty: number;
+        instrument_type: string;
+    }>,
+    limitPrice: number | null,
+    orderType: 'Limit' | 'Market' = 'Limit'
+): Promise<OrderResponse> {
+    const actionMap: Record<string, string> = {
+        BUY_TO_OPEN:   'Buy to Open',
+        SELL_TO_OPEN:  'Sell to Open',
+        BUY_TO_CLOSE:  'Buy to Close',
+        SELL_TO_CLOSE: 'Sell to Close',
+        BUY:           'Buy',
+        SELL:          'Sell',
+    };
+    const legs = orderLegs.map(leg => ({
+        'instrument-type': leg.instrument_type || 'Equity Option',
+        'symbol':          leg.symbol.trim(),
+        'quantity':        String(Math.abs(leg.qty)),
+        'action':          actionMap[leg.action.toUpperCase()] || leg.action,
+    }));
+    // Determine price effect from legs:
+    // Credit spreads (CSP, CCS have SELL_TO_OPEN) -> Credit
+    // Debit spreads (ZEBRA has BUY_TO_OPEN dominant) -> Debit
+    const hasSellToOpen = orderLegs.some(l => l.action.toUpperCase() === 'SELL_TO_OPEN');
+    const hasBuyToOpen  = orderLegs.some(l => l.action.toUpperCase() === 'BUY_TO_OPEN');
+    const priceEffect = hasSellToOpen && !hasBuyToOpen ? 'Credit'
+                      : hasBuyToOpen  && !hasSellToOpen ? 'Debit'
+                      : hasBuyToOpen  ? 'Debit'  // ZEBRA has both; net debit
+                      : 'Credit';
+    const orderBody: Record<string, any> = {
+        'time-in-force': 'Day',
+        'order-type':    orderType,
+        'legs':          legs,
+        'price-effect':  priceEffect,
+    };
+    if (orderType === 'Limit' && limitPrice != null) {
+        orderBody['price'] = String(Math.abs(limitPrice).toFixed(2));
+    }
+    console.log(`[submitOptionsOrder] Submitting ${orderLegs.length}-leg ${priceEffect} order to account ${accountNumber}`, JSON.stringify(orderBody, null, 2));
+    const resp = await fetch(
+        `${TASTYTRADE_API_BASE}/accounts/${accountNumber}/orders`,
+        {
+            method: 'POST',
+            headers: {
+                Authorization:  `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                'User-Agent':   'TradeMind/1.0',
+            },
+            body: JSON.stringify(orderBody),
+        }
+    );
+    const data = await resp.json();
+    if (!resp.ok) {
+        const errMsg = data?.error?.message || data?.errors?.[0]?.message || JSON.stringify(data);
+        throw new Error(`[submitOptionsOrder] TT rejected options order: ${errMsg}`);
+    }
+    const order = data?.data?.order || data?.data || data;
+    const orderId = String(order?.id || order?.['order-id'] || 'unknown');
+    const status  = String(order?.status || order?.['status'] || 'Filled');
+    console.log(`[submitOptionsOrder] Success. TT orderId=${orderId} status=${status}`);
+    return { orderId, status };
+}

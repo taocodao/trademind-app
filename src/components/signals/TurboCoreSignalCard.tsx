@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { useTranslation } from "react-i18next";
+import { IVSwitchingSignalCard } from "./IVSwitchingSignalCard";
 
 export interface TurboCoreSignal {
   id: number;
@@ -98,6 +99,7 @@ interface Props {
   shadowPositions?: Record<string, number>; // symbol → current quantity from shadow_positions
 }
 
+
 export function TurboCoreSignalCard({
   signal,
   onExecute,
@@ -111,6 +113,25 @@ export function TurboCoreSignalCard({
   const { t } = useTranslation();
 
   const isExecuting = executingId === String(signal.id);
+
+  // ── Signal type router ────────────────────────────────────────────────
+  // IV-Switching signals (CSP/ZEBRA/CCS) carry an iv_switching_order_id
+  // or have an action like OPEN_CSP, OPEN_ZEBRA, OPEN_CCS, OPEN_SQQQ.
+  // Route these to the dedicated IVSwitchingSignalCard.
+  const ivSwitchingAction = (signal as any).iv_switching_order_id ||
+    (signal.action && /^(OPEN_|NO_ACTION$)/.test(signal.action));
+  if (ivSwitchingAction) {
+    return (
+      <IVSwitchingSignalCard
+        signal={signal as any}
+        onExecute={onExecute}
+        executingId={executingId}
+        accountData={accountData}
+        isExecuted={isExecuted}
+      />
+    );
+  }
+  // ── End of signal router ──────────────────────────────────────────────
 
   const [expanded, setExpanded] = useState(false);
 

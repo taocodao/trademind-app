@@ -140,8 +140,10 @@ export async function POST(
         // 6. Execute options legs as multi-leg limit order
         if (optionsLegs.length > 0) {
             try {
-                const limitPrice: number | null = capitalRequired > 0
-                    ? capitalRequired / 100
+                // sigData.cost = net credit/debit per contract (e.g. $4.43 for CCS)
+                // capital_required = collateral/max-loss — NOT the order price
+                const limitPrice: number | null = sigData.cost && parseFloat(sigData.cost) > 0
+                    ? parseFloat(sigData.cost)
                     : null;
 
                 results.options = await submitOptionsOrder(accessToken, accountNumber, optionsLegs, limitPrice, 'Limit');

@@ -1206,15 +1206,13 @@ export async function submitOptionsOrder(
         'quantity':        String(Math.abs(leg.qty)),
         'action':          actionMap[leg.action.toUpperCase()] || leg.action,
     }));
-    // Determine price effect from legs:
-    // Credit spreads (CSP, CCS have SELL_TO_OPEN) -> Credit
-    // Debit spreads (ZEBRA has BUY_TO_OPEN dominant) -> Debit
-    const hasSellToOpen = orderLegs.some(l => l.action.toUpperCase() === 'SELL_TO_OPEN');
-    const hasBuyToOpen  = orderLegs.some(l => l.action.toUpperCase() === 'BUY_TO_OPEN');
-    const priceEffect = hasSellToOpen && !hasBuyToOpen ? 'Credit'
-                      : hasBuyToOpen  && !hasSellToOpen ? 'Debit'
-                      : hasBuyToOpen  ? 'Debit'  // ZEBRA has both; net debit
-                      : 'Credit';
+    // Determine price effect from the PRIMARY (first) leg action:
+    //   CCS  → first leg is SELL_TO_OPEN → Credit  (you collect premium)
+    //   ZEBRA→ first leg is BUY_TO_OPEN  → Debit   (you pay net debit)
+    //   CSP  → single SELL_TO_OPEN       → Credit
+    const primaryAction = (orderLegs[0]?.action || '').toUpperCase();
+    const priceEffect = primaryAction === 'SELL_TO_OPEN' ? 'Credit' : 'Debit';
+
     const orderBody: Record<string, any> = {
         'time-in-force': 'Day',
         'order-type':    orderType,

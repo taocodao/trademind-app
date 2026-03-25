@@ -135,9 +135,9 @@ export async function executeVirtualOrders(
                 // Reduce position; delete row entirely when quantity hits zero or below
                 await client.query(
                     `UPDATE shadow_positions
-                     SET quantity = GREATEST(0, quantity - $4), signal_id = $6, executed_at = NOW()
+                     SET quantity = GREATEST(0, quantity - $4), signal_id = $5, executed_at = NOW()
                      WHERE user_id = $1 AND strategy = $2 AND symbol = $3`,
-                    [userId, strategy, line.symbol, line.quantity, line.price, signalId]
+                    [userId, strategy, line.symbol, line.quantity, signalId]  // no price — $5 unused in UPDATE would cause PG type error
                 );
                 await client.query(
                     `DELETE FROM shadow_positions WHERE user_id = $1 AND strategy = $2 AND symbol = $3 AND quantity <= 0`,

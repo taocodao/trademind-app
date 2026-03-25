@@ -136,43 +136,101 @@ export function IVSwitchingSignalCard({ signal, onExecute, executingId, accountD
         {meta.description}
       </div>
 
-      {/* Order legs */}
-      {legs.length > 0 && (
-        <div style={{ marginBottom: "16px" }}>
-          <div style={{ color: "#6b7280", fontSize: "11px", fontWeight: 600, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-            ORDER LEGS
-          </div>
-          {legs.map((leg: any, i: number) => {
-            const af = formatAction(leg.action);
-            const sym = (leg.symbol || "").trim();
-            const copyKey = `${signal.id}-${i}`;
-            return (
-              <div key={i} style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                background: "rgba(255,255,255,0.03)", borderRadius: "8px", padding: "10px 14px",
-                marginBottom: "6px", border: "1px solid rgba(255,255,255,0.06)",
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <span style={{ fontSize: "11px", fontWeight: 700, padding: "2px 8px", borderRadius: "5px" }} className={af.color}>
-                    {af.label}
-                  </span>
-                  <span style={{ color: "#e5e7eb", fontWeight: 600, fontSize: "14px", fontFamily: "monospace" }}>{sym}</span>
-                  {leg.qty && (
-                    <span style={{ color: "#6b7280", fontSize: "12px" }}>×{leg.qty}</span>
-                  )}
+      {/* ── Legs display ─────────────────────────────────────────── */}
+      {legs.length > 0 && (() => {
+        const equityLegs = legs.filter((l: any) => l.leg_type === 'equity' || l.target_pct !== undefined);
+        const optionsLegs = legs.filter((l: any) => l.leg_type === 'options' || (l.action?.includes('TO_OPEN') || l.action?.includes('TO_CLOSE')));
+        return (
+          <div style={{ marginBottom: '16px' }}>
+            {/* Equity allocation */}
+            {equityLegs.length > 0 && (
+              <div style={{ marginBottom: '10px' }}>
+                <div style={{ color: '#6b7280', fontSize: '11px', fontWeight: 600, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  EQUITY ALLOCATION
                 </div>
-                <button
-                  onClick={() => handleCopy(sym, copyKey)}
-                  style={{ background: "none", border: "none", cursor: "pointer", color: "#6b7280", padding: "4px" }}
-                  title="Copy symbol"
-                >
-                  {copied === copyKey ? <ClipboardCheck size={14} color="#a855f7" /> : <Clipboard size={14} />}
-                </button>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
+                  {equityLegs.map((leg: any, i: number) => {
+                    const sym = (leg.symbol || '').trim().replace('_', '');
+                    const pct = leg.target_pct !== undefined ? Math.round(leg.target_pct * 100) : null;
+                    return (
+                      <div key={i} style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        background: 'rgba(139,92,246,0.06)', borderRadius: '8px', padding: '8px 12px',
+                        border: '1px solid rgba(139,92,246,0.12)',
+                      }}>
+                        <span style={{ color: '#e5e7eb', fontWeight: 600, fontSize: '13px' }}>{sym}</span>
+                        {pct !== null && (
+                          <span style={{ color: '#a855f7', fontWeight: 700, fontSize: '13px' }}>{pct}%</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            );
-          })}
-        </div>
-      )}
+            )}
+
+            {/* Options overlay */}
+            {optionsLegs.length > 0 && (
+              <div>
+                <div style={{ color: '#6b7280', fontSize: '11px', fontWeight: 600, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  OPTIONS OVERLAY
+                </div>
+                {optionsLegs.map((leg: any, i: number) => {
+                  const af = formatAction(leg.action);
+                  const sym = (leg.symbol || '').trim();
+                  const copyKey = `${signal.id}-opt-${i}`;
+                  return (
+                    <div key={i} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '10px 14px',
+                      marginBottom: '6px', border: '1px solid rgba(255,255,255,0.06)',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '5px' }} className={af.color}>
+                          {af.label}
+                        </span>
+                        <span style={{ color: '#e5e7eb', fontWeight: 600, fontSize: '13px', fontFamily: 'monospace' }}>{sym}</span>
+                        {leg.qty && <span style={{ color: '#6b7280', fontSize: '12px' }}>×{leg.qty}</span>}
+                      </div>
+                      <button
+                        onClick={() => handleCopy(sym, copyKey)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '4px' }}
+                        title="Copy symbol"
+                      >
+                        {copied === copyKey ? <ClipboardCheck size={14} color="#a855f7" /> : <Clipboard size={14} />}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Fallback — no leg_type markers */}
+            {equityLegs.length === 0 && optionsLegs.length === 0 && legs.map((leg: any, i: number) => {
+              const af = formatAction(leg.action);
+              const sym = (leg.symbol || '').trim();
+              const copyKey = `${signal.id}-${i}`;
+              return (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '10px 14px',
+                  marginBottom: '6px', border: '1px solid rgba(255,255,255,0.06)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '5px' }} className={af.color}>{af.label}</span>
+                    <span style={{ color: '#e5e7eb', fontWeight: 600, fontSize: '14px', fontFamily: 'monospace' }}>{sym}</span>
+                    {leg.qty && <span style={{ color: '#6b7280', fontSize: '12px' }}>×{leg.qty}</span>}
+                  </div>
+                  <button onClick={() => handleCopy(sym, copyKey)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '4px' }}>
+                    {copied === copyKey ? <ClipboardCheck size={14} color="#a855f7" /> : <Clipboard size={14} />}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
 
       {/* Rationale & pricing info */}
       {signal.rationale && (

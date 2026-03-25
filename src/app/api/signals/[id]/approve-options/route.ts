@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTastytradeTokens, storeTastytradeTokens } from '@/lib/redis';
 import { createSession, getAccounts, submitOptionsOrder } from '@/lib/tastytrade-api';
 import { getPrivyUserId } from '@/lib/auth-helpers';
-import pool from '@/lib/db';
+import { query } from '@/lib/db';
 
 const TT_API = process.env.TASTYTRADE_API_BASE || 'https://api.tastyworks.com';
 
@@ -61,11 +61,11 @@ export async function POST(
         if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
         // 1. Load signal from the signals table (all data is in the 'data' JSON column)
-        const sigRes = await pool.query(
+        const sigRes = await query(
             `SELECT data FROM signals WHERE id = $1`,
             [id]
         );
-        if (sigRes.rowCount === 0) {
+        if (!sigRes.rowCount || sigRes.rowCount === 0) {
             return NextResponse.json({ error: 'Signal not found' }, { status: 404 });
         }
         const sigData: any = sigRes.rows[0].data || {};
@@ -81,9 +81,9 @@ export async function POST(
         const tokens = await getTastytradeTokens(userId);
         if (!tokens?.refreshToken) {
             // Virtual execution — just record it
-            await pool.query(
-                `INSERT INTO user_signal_executions (user_id, signal_id, created_at)
-                 VALUES ($1, $2, NOW()) ON CONFLICT (user_id, signal_id) DO NOTHING`,
+            await query(
+                `INSERT INTO user_signal_executions (user_id, signal_id, status, created_at)
+                 VALUES ($1, $2, 'executed', NOW()) ON CONFLICT (user_id, signal_id) DO NOTHING`,
                 [userId, id]
             );
             return NextResponse.json({ status: 'success', virtual: true, message: 'Tracked virtually. Connect Tastytrade for live execution.' });
@@ -154,9 +154,10 @@ export async function POST(
         }
 
         // 7. Record execution
-        await pool.query(
-            `INSERT INTO user_signal_executions (user_id, signal_id, created_at)
-             VALUES ($1, $2, NOW()) ON CONFLICT (user_id, signal_id) DO NOTHING`,
+        await query(
+            `INSERT INTO user_signal_executions (user_id, signal_id, status, created_at)
+             VALUES ($1, $2, 'executed', NOW()) ON CONFLICT (user_id, signal_id)
+             DO UPDATE SET status = 'executed', executed_at = NOW()`,
             [userId, id]
         );
 

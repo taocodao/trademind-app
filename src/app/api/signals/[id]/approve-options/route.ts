@@ -131,10 +131,38 @@ export async function POST(
 
             try {
                 const r = await submitEquityLeg(accessToken, accountNumber, sym, shares, 'Buy to Open');
-                results.equity.push({ symbol: sym, shares: Math.floor(shares), ttOrderId: r?.id || r?.['order-id'] });
+                const fillPrice = parseFloat(r?.['average-fill-price'] || r?.['fill-price'] || r?.price || approxPrice) || approxPrice;
+                results.equity.push({ symbol: sym, shares: Math.floor(shares), fillPrice, ttOrderId: r?.id || r?.['order-id'] });
             } catch (e: any) {
                 console.warn(`[approve-options] Equity leg skipped for ${sym}: ${e.message}`);
             }
+        }
+
+        // 5b. Replace shadow positions for Pro (rebalance = clear + set, not accumulate)
+        try {
+            // Clear old shadow positions for this strategy, then insert fresh ones
+            await query(
+                `DELETE FROM shadow_positions WHERE user_id = $1 AND strategy = $2`,
+                [userId, 'TQQQ_TURBOCORE_PRO']
+            );
+            for (const r of results.equity) {
+                // Use the actual fill price reported by TT, or fall back to approxPrice
+                const fillPrice = r.fillPrice || (
+                    r.symbol === 'QQQ' ? 587 :
+                    r.symbol === 'QLD' ? 63  :
+                    r.symbol === 'SGOV' ? 100 : 100
+                );
+                await query(
+                    `INSERT INTO shadow_positions (user_id, strategy, symbol, quantity, avg_price, signal_id, executed_at)
+                     VALUES ($1, $2, $3, $4, $5, $6, NOW())
+                     ON CONFLICT (user_id, strategy, symbol)
+                     DO UPDATE SET quantity = $4, avg_price = $5, executed_at = NOW()`,
+                    [userId, 'TQQQ_TURBOCORE_PRO', r.symbol, r.shares, fillPrice, id]
+                );
+            }
+            console.log(`[approve-options] Shadow positions replaced for ${userId} Pro: ${results.equity.map((r:any)=>r.symbol).join(',')}`);
+        } catch (shadowErr: any) {
+            console.warn('[approve-options] Shadow position update failed (non-fatal):', shadowErr.message);
         }
 
         // 6. Execute options legs as multi-leg limit order

@@ -238,60 +238,17 @@ export default function PositionsPage() {
         } catch (e) { console.warn('Failed to fetch realized P&L', e); }
     }, [activeStrategy]);
 
-    const fetchTastytradePositions = useCallback(async (): Promise<boolean> => {
-        try {
-            const res = await fetch('/api/tastytrade/live-positions');
-            if (!res.ok) return false;
-            const data = await res.json();
-            if (!data.connected || !data.positions) return false;
-
-            const mapped: EquityPosition[] = data.positions.map((p: any) => ({
-                symbol:           p.symbol,
-                quantity:         p.quantity,
-                averageOpenPrice: p.averageOpenPrice,
-                currentPrice:     p.currentPrice,
-                marketValue:      p.marketValue,
-                unrealizedPnl:    p.unrealizedPnl,
-                unrealizedPnlPct: p.unrealizedPnlPct,
-                instrumentType:   p.instrumentType,
-                isVirtual:        false,
-            }));
-
-            setPositions(mapped);
-            if (data.balance) {
-                setBalance({
-                    cashAvailable:  data.balance.cashAvailable,
-                    buyingPower:    data.balance.buyingPower,
-                    netLiquidation: data.balance.netLiquidation,
-                });
-            }
-            return true;
-        } catch (e) {
-            console.warn('[Pro] Live TT positions fetch failed, falling back to virtual:', e);
-            return false;
-        }
-    }, []);
-
     const fetchAccountAndPositions = useCallback(async () => {
         try {
             setLoading(true);
             setPositions([]);
-
-            const isPro = activeStrategy === 'TQQQ_TURBOCORE_PRO';
-            if (isPro) {
-                // Pro tab: try live TT positions first, fall back to virtual
-                const gotLivePositions = await fetchTastytradePositions();
-                if (!gotLivePositions) await fetchVirtualPositions();
-            } else {
-                // Core and other tabs: always use virtual ledger
-                await fetchVirtualPositions();
-            }
+            await fetchVirtualPositions();
         } catch (err) {
             console.error('Error fetching positions:', err);
         } finally {
             setLoading(false);
         }
-    }, [activeStrategy, fetchVirtualPositions, fetchTastytradePositions]);
+    }, [fetchVirtualPositions]);
 
     useEffect(() => {
         if (ready && !authenticated) {

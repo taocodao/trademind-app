@@ -60,15 +60,19 @@ export async function POST(
         const userId = await getPrivyUserId(request as NextRequest);
         if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
-        // 1. Load signal legs from the signals table
+        // 1. Load signal from the signals table (all data is in the 'data' JSON column)
         const sigRes = await pool.query(
-            `SELECT legs, capital_required FROM signals WHERE id = $1`,
+            `SELECT data FROM signals WHERE id = $1`,
             [id]
         );
         if (sigRes.rowCount === 0) {
             return NextResponse.json({ error: 'Signal not found' }, { status: 404 });
         }
-        const rawLegs: any[] = sigRes.rows[0].legs || [];
+        const sigData: any = sigRes.rows[0].data || {};
+        const rawLegs: any[] = sigData.legs || [];
+        const capitalRequired: number = parseFloat(sigData.capital_required) || 1000;
+
+        console.log(`[approve-options] Signal ${id}: ${rawLegs.length} legs, capital_required=${capitalRequired}`);
 
         const equityLegs  = rawLegs.filter(l => l.leg_type === 'equity'  || (l.target_pct !== undefined && !l.action?.includes('TO_')));
         const optionsLegs = rawLegs.filter(l => l.leg_type === 'options' || l.action?.includes('TO_OPEN') || l.action?.includes('TO_CLOSE'));
@@ -136,8 +140,8 @@ export async function POST(
         // 6. Execute options legs as multi-leg limit order
         if (optionsLegs.length > 0) {
             try {
-                const limitPrice: number | null = sigRes.rows[0]?.capital_required
-                    ? parseFloat(sigRes.rows[0].capital_required) / 100
+                const limitPrice: number | null = capitalRequired > 0
+                    ? capitalRequired / 100
                     : null;
 
                 results.options = await submitOptionsOrder(accessToken, accountNumber, optionsLegs, limitPrice, 'Limit');

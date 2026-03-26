@@ -112,6 +112,10 @@ export function IVSwitchingSignalCard({ signal, onExecute, executingId, accountD
       const data = await resp.json();
       if (!resp.ok) throw new Error(data?.error || `HTTP ${resp.status}`);
       setDone(true);
+      // Surface options rejection if equity filled but options failed
+      if (data.optionsError) {
+        setError(`⚠️ Equity filled. Options rejected: ${data.optionsError}`);
+      }
     } catch (e: any) {
       setError(e.message || "Submission failed");
     } finally {

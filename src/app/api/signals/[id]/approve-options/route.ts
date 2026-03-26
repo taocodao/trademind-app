@@ -117,7 +117,29 @@ export async function POST(
 
         let accessToken = tokens?.accessToken ?? '';
         let accountNumber = '';
-        let nlv = virtualNlv;
+
+        // Fetch virtual balance for this strategy (sizing basis = virtual $25K, NOT the real TT NLV)
+        // The app controls a virtual allocation; TT is just the execution venue.
+        let virtualCash = virtualNlv;
+        try {
+            const vRes = await query(
+                `SELECT cash_balance FROM virtual_accounts WHERE user_id = $1 AND strategy = $2`,
+                [userId, 'TQQQ_TURBOCORE_PRO']
+            );
+            if (vRes.rows.length > 0) virtualCash = parseFloat(vRes.rows[0].cash_balance);
+        } catch { /* use default */ }
+
+        // NLV for order sizing = virtual cash + existing shadow positions value
+        const posRes = await query(
+            `SELECT symbol, quantity, avg_price FROM shadow_positions WHERE user_id = $1 AND strategy = $2`,
+            [userId, 'TQQQ_TURBOCORE_PRO']
+        ).catch(() => ({ rows: [] as any[] }));
+        let shadowValue = 0;
+        for (const row of posRes.rows) {
+            shadowValue += Number(row.quantity) * Number(row.avg_price);
+        }
+        const nlv = virtualCash + shadowValue;
+        console.log(`[approve-options] Virtual NLV: cash=${virtualCash} positions=${shadowValue} total=${nlv}`);
 
         if (hasTT) {
             // Refresh token if expired
@@ -130,13 +152,6 @@ export async function POST(
             }
             const accounts = await getAccounts(accessToken);
             accountNumber  = accounts[0]?.accountNumber ?? '';
-            if (accountNumber) {
-                const balResp = await fetch(`${TT_API}/accounts/${accountNumber}/balances`, {
-                    headers: { Authorization: `Bearer ${accessToken}`, 'User-Agent': 'TradeMind/1.0' },
-                });
-                const balData = await balResp.json();
-                nlv = parseFloat(balData?.data?.['net-liquidating-value'] || virtualNlv.toString()) || virtualNlv;
-            }
         }
 
         // Build equity order list using real NLV + live prices
@@ -173,20 +188,25 @@ export async function POST(
                     const limitPrice: number | null = sigData.cost && parseFloat(sigData.cost) > 0
                         ? parseFloat(sigData.cost)
                         : null;
+                    // Log full options payload for debugging TT rejection
+                    console.log('[approve-options] Options legs to submit:', JSON.stringify(optionsLegs, null, 2));
                     results.options = await submitOptionsOrder(accessToken, accountNumber, optionsLegs, limitPrice, 'Limit');
                     console.log(`[approve-options] Options order submitted: ${JSON.stringify(results.options)}`);
                 } catch (e: any) {
-                    console.error('[approve-options] Options order failed:', e.message);
+                    console.error('[approve-options] Options order FAILED:', e.message);
                     results.optionsError = e.message;
                     // Continue — don't abort, equity already filled
                 }
+            } else {
+                console.warn('[approve-options] No options legs found. Signal legs:', JSON.stringify(rawLegs.map(l => ({ leg_type: l.leg_type, action: l.action, symbol: l.symbol }))));
             }
         } else {
             // Virtual only: fill equity with market prices
             results.equity = equityOrders.map(o => ({ ...o, fillPrice: o.price }));
         }
 
-        // 6. ALWAYS replace shadow positions (virtual portfolio at market prices)
+        // 6. ALWAYS replace shadow positions (virtual portfolio at virtual NLV prices)
+        const deployedCash = equityOrders.reduce((s, o) => s + o.shares * o.price, 0);
         try {
             await query(
                 `DELETE FROM shadow_positions WHERE user_id = $1 AND strategy = $2`,
@@ -201,7 +221,13 @@ export async function POST(
                     [userId, 'TQQQ_TURBOCORE_PRO', order.symbol, order.shares, order.price, id]
                 );
             }
-            console.log(`[approve-options] Shadow positions replaced: ${equityOrders.map(o => `${o.symbol}×${o.shares}@${o.price}`).join(', ')}`);
+            // Deduct deployed cash from virtual account
+            await query(
+                `INSERT INTO virtual_accounts (user_id, strategy, cash_balance) VALUES ($1, $2, $3)
+                 ON CONFLICT (user_id, strategy) DO UPDATE SET cash_balance = $3, updated_at = NOW()`,
+                [userId, 'TQQQ_TURBOCORE_PRO', Math.max(0, virtualCash - deployedCash)]
+            );
+            console.log(`[approve-options] Shadow positions replaced: ${equityOrders.map(o => `${o.symbol}×${o.shares}@${o.price.toFixed(2)}`).join(', ')} | cash: ${virtualCash.toFixed(0)} → ${(virtualCash - deployedCash).toFixed(0)}`);
         } catch (shadowErr: any) {
             console.warn('[approve-options] Shadow position update failed (non-fatal):', shadowErr.message);
         }

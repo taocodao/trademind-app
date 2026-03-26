@@ -7,7 +7,9 @@ import {
     ArrowLeft,
     RefreshCw,
     Wallet,
-    Edit2,
+    Pencil,
+    Trash2,
+    PlusCircle,
     WifiOff
 } from "lucide-react";
 import Link from "next/link";
@@ -103,61 +105,71 @@ export default function PositionsPage() {
         }
     };
 
-    // Edit Position modal state
+    // ── Edit/Delete/Add position ──────────────────────────────────────────────
+    // editPositionModal = null → closed
+    // editPositionModal = existing EquityPosition → editing existing
+    // editPositionModal = NEW_POSITION sentinel → adding new
+    const NEW_POSITION: EquityPosition = { symbol: '', quantity: 0, averageOpenPrice: 0, currentPrice: 0, marketValue: 0, unrealizedPnl: 0, unrealizedPnlPct: 0, instrumentType: 'Equity', isVirtual: true };
     const [editPositionModal, setEditPositionModal] = useState<EquityPosition | null>(null);
-    const [editQuantity, setEditQuantity] = useState('');
-    const [editLoading, setEditLoading] = useState(false);
+    const [editQuantity, setEditQuantity]           = useState('');
+    const [editAvgPrice, setEditAvgPrice]           = useState('');
+    const [editLoading, setEditLoading]             = useState(false);
+    const [editError, setEditError]                 = useState<string | null>(null);
+    // add-position form
+    const [addSymbol, setAddSymbol] = useState('');
 
-    const handleEditPosition = async () => {
-        if (!editPositionModal || !editQuantity) return;
+    const openEditModal = (pos: EquityPosition) => {
+        setEditPositionModal(pos);
+        setEditQuantity(String(pos.quantity));
+        setEditAvgPrice(String(pos.averageOpenPrice));
+        setEditError(null);
+    };
+
+    const openAddModal = () => {
+        setEditPositionModal(NEW_POSITION);
+        setAddSymbol('');
+        setEditQuantity('');
+        setEditAvgPrice('');
+        setEditError(null);
+    };
+
+    const handleSavePosition = async () => {
+        if (!editPositionModal) return;
+        const isNew = editPositionModal === NEW_POSITION || editPositionModal.symbol === '';
+        const sym   = isNew ? addSymbol.trim().toUpperCase() : editPositionModal.symbol;
+        if (!sym || !editQuantity || !editAvgPrice) { setEditError('All fields required'); return; }
         setEditLoading(true);
-
+        setEditError(null);
         try {
-            const newQty = parseInt(editQuantity, 10);
-            if (isNaN(newQty) || newQty < 0) throw new Error("Invalid quantity");
-
-            const currentQty = editPositionModal.quantity;
-            const diff = newQty - currentQty;
-
-            if (diff === 0) {
-                setEditPositionModal(null);
-                setEditQuantity('');
-                return;
-            }
-
-            const action = diff > 0 ? 'buy' : 'sell';
-            const absDiff = Math.abs(diff);
-            const manualSignalId = `manual_adj_${Date.now()}`;
-
-            const res = await fetch('/api/virtual-accounts/execute', {
-                method: 'POST',
+            const res = await fetch('/api/shadow-positions', {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    signalId: manualSignalId,
                     strategy: activeStrategy,
-                    orders: [{
-                        symbol: editPositionModal.symbol,
-                        quantity: absDiff,
-                        price: editPositionModal.currentPrice,
-                        action: action
-                    }]
-                })
+                    symbol: sym,
+                    quantity: parseFloat(editQuantity),
+                    avgPrice: parseFloat(editAvgPrice),
+                }),
             });
-
-            if (res.ok) {
-                setEditPositionModal(null);
-                setEditQuantity('');
-                fetchVirtualPositions();
-            } else {
-                const errData = await res.json();
-                alert(`Edit failed: ${errData.error || errData.message}`);
+            if (!res.ok) {
+                const d = await res.json();
+                throw new Error(d.error || 'Failed to save');
             }
-        } catch (e) {
-            console.error('Position Edit Error:', e);
-            alert('Failed to edit position.');
+            setEditPositionModal(null);
+            fetchVirtualPositions();
+        } catch (e: any) {
+            setEditError(e.message);
         } finally {
             setEditLoading(false);
         }
+    };
+
+    const handleDeletePosition = async (sym: string) => {
+        if (!confirm(`Remove ${sym} from your shadow ledger?`)) return;
+        try {
+            await fetch(`/api/shadow-positions?strategy=${activeStrategy}&symbol=${sym}`, { method: 'DELETE' });
+            fetchVirtualPositions();
+        } catch (e) { console.error('Delete failed', e); }
     };
 
     // Always fetch from virtual account — never Tastytrade
@@ -441,43 +453,85 @@ export default function PositionsPage() {
                 </div>
             )}
 
-            {/* Edit Position Modal */}
-            {editPositionModal && (
+            {/* Add / Edit Position Modal */}
+            {editPositionModal !== null && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
                     <div className="bg-[#111] border border-white/10 p-5 rounded-xl w-full max-w-sm">
-                        <h3 className="text-lg font-bold mb-4">Edit {editPositionModal.symbol}</h3>
+                        {/* Title */}
+                        <h3 className="text-lg font-bold mb-1">
+                            {editPositionModal.symbol === '' ? 'Add Position' : `Edit ${editPositionModal.symbol}`}
+                        </h3>
                         <p className="text-xs text-tm-muted mb-4">
-                            Adjust virtual position quantity. Cash balance will automatically update using the last price (${editPositionModal.currentPrice.toFixed(2)}). Set to 0 to close.
+                            {editPositionModal.symbol === ''
+                                ? 'Manually record a position in your shadow ledger.'
+                                : 'Update quantity or cost basis. Set qty to 0 to remove.'}
                         </p>
-                        <div className="mb-4">
-                            <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">New Target Quantity (Shares)</label>
+
+                        {/* Symbol (add only) */}
+                        {editPositionModal.symbol === '' && (
+                            <div className="mb-3">
+                                <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">Symbol</label>
+                                <input
+                                    type="text"
+                                    value={addSymbol}
+                                    onChange={(e) => setAddSymbol(e.target.value.toUpperCase())}
+                                    placeholder="e.g. QQQ"
+                                    className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-tm-purple font-mono uppercase"
+                                />
+                            </div>
+                        )}
+
+                        {/* Quantity */}
+                        <div className="mb-3">
+                            <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">Quantity (Shares)</label>
                             <input
-                                type="number"
-                                min="0"
-                                step="1"
+                                type="number" min="0" step="1"
                                 value={editQuantity}
                                 onChange={(e) => setEditQuantity(e.target.value)}
-                                placeholder={`Current: ${editPositionModal.quantity}`}
+                                placeholder="e.g. 23"
                                 className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-tm-purple font-mono"
                             />
                         </div>
+
+                        {/* Avg Price */}
+                        <div className="mb-4">
+                            <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">Avg Cost / Share ($)</label>
+                            <input
+                                type="number" min="0" step="0.01"
+                                value={editAvgPrice}
+                                onChange={(e) => setEditAvgPrice(e.target.value)}
+                                placeholder="e.g. 575.82"
+                                className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-tm-purple font-mono"
+                            />
+                        </div>
+
+                        {editError && <p className="text-red-400 text-xs mb-3">{editError}</p>}
+
                         <div className="flex gap-3">
                             <button
-                                onClick={() => { setEditPositionModal(null); setEditQuantity(''); }}
+                                onClick={() => setEditPositionModal(null)}
                                 className="flex-1 py-3 rounded-lg font-bold bg-white/5 hover:bg-white/10 transition"
                             >
                                 Cancel
                             </button>
+                            {editPositionModal.symbol !== '' && (
+                                <button
+                                    onClick={() => { setEditPositionModal(null); handleDeletePosition(editPositionModal.symbol); }}
+                                    className="px-4 py-3 rounded-lg font-bold bg-red-600/20 text-red-400 hover:bg-red-600/40 transition"
+                                    title="Remove position"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            )}
                             <button
-                                onClick={handleEditPosition}
-                                disabled={editLoading || editQuantity === ''}
+                                onClick={handleSavePosition}
+                                disabled={editLoading}
                                 className="flex-1 py-3 rounded-lg font-bold bg-purple-600 hover:bg-purple-500 text-white transition flex items-center justify-center disabled:opacity-50"
                             >
-                                {editLoading ? (
-                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                ) : (
-                                    'Update'
-                                )}
+                                {editLoading
+                                    ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    : editPositionModal.symbol === '' ? 'Add' : 'Save'
+                                }
                             </button>
                         </div>
                     </div>
@@ -486,7 +540,15 @@ export default function PositionsPage() {
 
             {/* Equity Positions Table */}
             <div className="px-6">
-                <h2 className="text-sm font-bold text-tm-muted uppercase tracking-wider mb-3">Equity Holdings</h2>
+                <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-sm font-bold text-tm-muted uppercase tracking-wider">Equity Holdings</h2>
+                    <button
+                        onClick={openAddModal}
+                        className="flex items-center gap-1.5 text-xs text-tm-purple hover:text-white transition font-bold"
+                    >
+                        <PlusCircle className="w-3.5 h-3.5" /> Add Position
+                    </button>
+                </div>
                 <div className="glass-card overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse min-w-[500px]">
@@ -497,16 +559,17 @@ export default function PositionsPage() {
                                     <th className="px-4 py-3 text-[10px] uppercase font-bold text-tm-muted text-right">Cost/sh</th>
                                     <th className="px-4 py-3 text-[10px] uppercase font-bold text-tm-muted text-right">Market Value</th>
                                     <th className="px-4 py-3 text-[10px] uppercase font-bold text-tm-muted text-right">Unrealized G/L</th>
+                                    <th className="px-4 py-3 text-[10px] uppercase font-bold text-tm-muted text-center w-16"></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {loading && equityPositions.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="px-4 py-8 text-center text-tm-muted text-xs animate-pulse">Loading positions...</td>
+                                        <td colSpan={6} className="px-4 py-8 text-center text-tm-muted text-xs animate-pulse">Loading positions...</td>
                                     </tr>
                                 ) : equityPositions.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="px-4 py-8 text-center text-tm-muted text-xs">No active equity positions.</td>
+                                        <td colSpan={6} className="px-4 py-8 text-center text-tm-muted text-xs">No active equity positions.</td>
                                     </tr>
                                 ) : (
                                     equityPositions.map((pos) => {
@@ -520,7 +583,7 @@ export default function PositionsPage() {
                                         const color = symbolColors[pos.symbol] || 'text-white';
 
                                         return (
-                                            <tr key={pos.symbol} className="border-b border-white/5 hover:bg-white/[0.02] transition last:border-0 relative group">
+                                            <tr key={pos.symbol} className="border-b border-white/5 hover:bg-white/[0.02] transition last:border-0">
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center gap-2">
                                                         <span className={`font-bold font-mono ${color}`}>{pos.symbol}</span>
@@ -545,18 +608,25 @@ export default function PositionsPage() {
                                                     <p className={`font-mono text-[10px] ${isProfit ? 'text-tm-green/70' : 'text-tm-red/70'}`}>
                                                         {isProfit ? '+' : ''}{pos.unrealizedPnlPct.toFixed(2)}%
                                                     </p>
-
-                                                    {/* Edit Button overlaid on hover */}
-                                                    <button
-                                                        onClick={() => {
-                                                            setEditPositionModal(pos);
-                                                            setEditQuantity(pos.quantity.toString());
-                                                        }}
-                                                        className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 bg-[#1a1a1a] border border-white/10 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/10 hover:text-tm-purple backdrop-blur-md"
-                                                        title="Edit target quantity"
-                                                    >
-                                                        <Edit2 className="w-3.5 h-3.5" />
-                                                    </button>
+                                                </td>
+                                                {/* Edit / Delete actions */}
+                                                <td className="px-2 py-3 text-center">
+                                                    <div className="flex items-center justify-center gap-1">
+                                                        <button
+                                                            onClick={() => openEditModal(pos)}
+                                                            className="p-1.5 rounded hover:bg-white/10 text-tm-muted hover:text-tm-purple transition"
+                                                            title="Edit position"
+                                                        >
+                                                            <Pencil className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeletePosition(pos.symbol)}
+                                                            className="p-1.5 rounded hover:bg-white/10 text-tm-muted hover:text-red-400 transition"
+                                                            title="Remove position"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         );

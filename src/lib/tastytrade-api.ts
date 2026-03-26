@@ -53,6 +53,40 @@ export interface OrderResponse {
     message?: string;
 }
 
+/**
+ * Fetch current equity positions from a TT account.
+ * Returns a map of { upperCaseSymbol → quantity } for symbols in the provided list.
+ */
+export async function getTTPositions(
+    accessToken: string,
+    accountNumber: string,
+    symbols: string[]
+): Promise<Record<string, number>> {
+    const result: Record<string, number> = {};
+    try {
+        const resp = await fetch(
+            `${TASTYTRADE_API_BASE}/accounts/${accountNumber}/positions`,
+            { headers: { Authorization: `Bearer ${accessToken}`, 'User-Agent': 'TradeMind/1.0' } }
+        );
+        if (!resp.ok) return result;
+        const data = await resp.json();
+        const items: any[] = data?.data?.items || [];
+        const upperSymbols = new Set(symbols.map(s => s.toUpperCase()));
+        for (const pos of items) {
+            const sym = (pos?.symbol || '').toUpperCase();
+            if (upperSymbols.has(sym)) {
+                const rawQty = parseFloat(pos?.quantity ?? '0') || 0;
+                const dir    = (pos?.['quantity-direction'] || 'Long') as string;
+                result[sym]  = dir === 'Short' ? -rawQty : rawQty;
+            }
+        }
+    } catch (e) {
+        console.warn('[getTTPositions] Failed:', e);
+    }
+    return result;
+}
+
+
 export interface OptionQuote {
     symbol: string;
     bid: number;

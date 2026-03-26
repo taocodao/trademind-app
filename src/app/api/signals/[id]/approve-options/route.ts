@@ -1,30 +1,35 @@
 /**
  * Execute All — IV-Switching Composite Signal (TurboCore Pro)
  *
- * Unified execution path for BOTH TT-linked and virtual users:
- *   1. Fetch live market prices (Yahoo Finance / last close if market closed)
- *   2. Compute share quantities from real prices
- *   3. If TT linked: submit equity + options orders to Tastytrade
- *   4. ALWAYS: replace shadow_positions with current allocation at real prices
- *   5. Record execution in user_signal_executions
+ * Delta-based execution for BOTH TT-linked and virtual users:
+ *   1. Compute TARGET quantities (virtual $25K NLV × target_pct / live price)
+ *   2. Fetch CURRENT positions:
+ *        TT user  → live Tastytrade account positions
+ *        Virtual  → shadow_positions table
+ *   3. Compute DELTA (target − current) per symbol
+ *   4. Submit delta equity orders to TT (sells first, buys second)
+ *   5. Submit options CCS/CSP order (TT users only)
+ *   6. REPLACE shadow_positions with full target state
+ *   7. Update virtual_accounts cash (net delta cost)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getTastytradeTokens, storeTastytradeTokens } from '@/lib/redis';
-import { createSession, getAccounts, submitOptionsOrder } from '@/lib/tastytrade-api';
+import { createSession, getAccounts, getTTPositions, submitOptionsOrder } from '@/lib/tastytrade-api';
 import { getPrivyUserId } from '@/lib/auth-helpers';
 import { query } from '@/lib/db';
 
 const TT_API = process.env.TASTYTRADE_API_BASE || 'https://api.tastyworks.com';
+const STRATEGY = 'TQQQ_TURBOCORE_PRO';
 
-// ── Live price fetch (Yahoo Finance — works for market hours and after-hours/close) ──────
+// ── Live price fetch (Yahoo Finance) ──────────────────────────────────────────
 async function fetchMarketPrices(symbols: string[]): Promise<Record<string, number>> {
-    const prices: Record<string, number> = {};
     const fallbacks: Record<string, number> = {
-        'QQQ': 480, 'QLD': 63, 'SGOV': 100, 'TQQQ': 50, 'QQQ_LEAPS': 0,
+        'QQQ': 480, 'QLD': 63, 'SGOV': 100, 'TQQQ': 50,
     };
+    const prices: Record<string, number> = {};
     await Promise.allSettled(symbols.map(async (sym) => {
-        if (sym === 'QQQ_LEAPS' || sym.includes('LEAPS')) return;
+        if (sym.includes('LEAPS')) return;
         try {
             const url = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`;
             const res = await fetch(url, {
@@ -38,50 +43,55 @@ async function fetchMarketPrices(symbols: string[]): Promise<Record<string, numb
             if (price && price > 0) prices[sym] = price;
         } catch { /* ignore */ }
     }));
-    // Fill in any missing symbols with fallbacks
     for (const sym of symbols) {
         if (!prices[sym] && fallbacks[sym]) prices[sym] = fallbacks[sym];
     }
     return prices;
 }
 
-// ── Submit a single equity market order to TT ──────────────────────────────────────────
-async function submitEquityLeg(
+// ── Submit a single notional market equity order to TT ────────────────────────
+async function submitEquityOrder(
     accessToken: string,
     accountNumber: string,
     symbol: string,
-    shares: number,
-    action: 'Buy to Open' | 'Sell to Close'
-) {
-    const body = {
+    qty: number,         // positive = buy, negative = sell
+): Promise<{ orderId: string; status: string }> {
+    const action = qty > 0 ? 'Buy to Open' : 'Sell to Close';
+    const orderBody = {
         'time-in-force': 'Day',
         'order-type':    'Market',
-        'legs': [{
+        legs: [{
             'instrument-type': 'Equity',
-            'symbol':           symbol.replace(/_/g, ''),
-            'quantity':         String(Math.max(1, Math.floor(shares))),
-            'action':           action,
+            symbol,
+            quantity: String(Math.abs(qty)),
+            action,
         }],
     };
+    console.log(`[submitEquityOrder] ${action} ${Math.abs(qty)} ${symbol}`);
     const resp = await fetch(`${TT_API}/accounts/${accountNumber}/orders`, {
-        method:  'POST',
+        method: 'POST',
         headers: {
             Authorization:  `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
             'User-Agent':   'TradeMind/1.0',
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(orderBody),
     });
     const data = await resp.json();
     if (!resp.ok) {
-        const msg = data?.error?.message || data?.errors?.[0]?.message || JSON.stringify(data);
-        throw new Error(`Equity order failed for ${symbol}: ${msg}`);
+        const errMsg = data?.error?.message || data?.errors?.[0]?.message || JSON.stringify(data);
+        throw new Error(`TT rejected ${action} ${symbol}: ${errMsg}`);
     }
-    return data?.data?.order || data;
+    const order = data?.data?.order || data?.data || data;
+    return {
+        orderId: String(order?.id || order?.['order-id'] || 'unknown'),
+        status:  String(order?.status || 'Live'),
+    };
 }
 
+// ── Main handler ──────────────────────────────────────────────────────────────
 export async function POST(
-    request: Request,
+    request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
@@ -89,7 +99,7 @@ export async function POST(
         const userId = await getPrivyUserId(request as NextRequest);
         if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
-        // 1. Load signal from signals table
+        // 1. Load signal
         const sigRes = await query(`SELECT data FROM signals WHERE id = $1`, [id]);
         if (!sigRes.rowCount || sigRes.rowCount === 0) {
             return NextResponse.json({ error: 'Signal not found' }, { status: 404 });
@@ -97,52 +107,69 @@ export async function POST(
         const sigData: any = sigRes.rows[0].data || {};
         const rawLegs: any[] = sigData.legs || [];
 
-        console.log(`[approve-options] Signal ${id}: ${rawLegs.length} legs`);
+        const equityLegs  = rawLegs.filter(l =>
+            l.leg_type === 'equity' || (l.target_pct !== undefined && !['BUY_TO_OPEN','SELL_TO_OPEN','BUY_TO_CLOSE','SELL_TO_CLOSE'].includes((l.action||'').toUpperCase()))
+        );
+        const optionsLegs = rawLegs.filter(l =>
+            l.leg_type === 'options' || ['BUY_TO_OPEN','SELL_TO_OPEN','BUY_TO_CLOSE','SELL_TO_CLOSE'].includes((l.action||'').toUpperCase())
+        );
 
-        const equityLegs  = rawLegs.filter(l => l.leg_type === 'equity'  || (l.target_pct !== undefined && !l.action?.includes('TO_')));
-        const optionsLegs = rawLegs.filter(l => l.leg_type === 'options' || l.action?.includes('TO_OPEN') || l.action?.includes('TO_CLOSE'));
+        console.log(`[approve-options] Signal ${id}: ${equityLegs.length} equity, ${optionsLegs.length} options legs`);
 
-        // 2. Fetch live market prices for all equity symbols
-        const equitySymbols = equityLegs.map(l => (l.symbol || '').replace(/_/g, '').toUpperCase()).filter(s => !s.includes('LEAPS'));
+        // 2. Fetch live prices for equity symbols
+        const equitySymbols = equityLegs
+            .map(l => (l.symbol || '').replace(/_/g, '').toUpperCase())
+            .filter(s => !s.includes('LEAPS') && s.length > 0);
         const livePrices = await fetchMarketPrices(equitySymbols);
         console.log(`[approve-options] Live prices:`, livePrices);
 
-        // 3. Compute share quantities using real market prices
-        const equityOrders: Array<{ symbol: string; shares: number; price: number; pct: number }> = [];
-        const virtualNlv = 25000; // Default notional for virtual accounts
-
-        // 4. Get TT tokens (determines whether we submit real orders or virtual only)
-        const tokens = await getTastytradeTokens(userId);
-        const hasTT  = !!(tokens?.refreshToken);
-
-        let accessToken = tokens?.accessToken ?? '';
-        let accountNumber = '';
-
-        // Fetch virtual balance for this strategy (sizing basis = virtual $25K, NOT the real TT NLV)
-        // The app controls a virtual allocation; TT is just the execution venue.
-        let virtualCash = virtualNlv;
+        // 3. Virtual NLV = cash + existing shadow position values
+        let virtualCash = 25000;
         try {
             const vRes = await query(
                 `SELECT cash_balance FROM virtual_accounts WHERE user_id = $1 AND strategy = $2`,
-                [userId, 'TQQQ_TURBOCORE_PRO']
+                [userId, STRATEGY]
             );
             if (vRes.rows.length > 0) virtualCash = parseFloat(vRes.rows[0].cash_balance);
         } catch { /* use default */ }
 
-        // NLV for order sizing = virtual cash + existing shadow positions value
-        const posRes = await query(
+        const existingShadow = await query(
             `SELECT symbol, quantity, avg_price FROM shadow_positions WHERE user_id = $1 AND strategy = $2`,
-            [userId, 'TQQQ_TURBOCORE_PRO']
+            [userId, STRATEGY]
         ).catch(() => ({ rows: [] as any[] }));
+
         let shadowValue = 0;
-        for (const row of posRes.rows) {
-            shadowValue += Number(row.quantity) * Number(row.avg_price);
+        const shadowMap: Record<string, number> = {}; // symbol → qty in shadow
+        for (const row of existingShadow.rows) {
+            const sym = row.symbol.toUpperCase();
+            const qty = Number(row.quantity);
+            shadowMap[sym] = qty;
+            shadowValue += qty * (livePrices[sym] || Number(row.avg_price));
         }
-        const nlv = virtualCash + shadowValue;
-        console.log(`[approve-options] Virtual NLV: cash=${virtualCash} positions=${shadowValue} total=${nlv}`);
+        const virtualNlv = virtualCash + shadowValue;
+        console.log(`[approve-options] Virtual NLV: cash=${virtualCash.toFixed(0)} positions=${shadowValue.toFixed(0)} total=${virtualNlv.toFixed(0)}`);
+
+        // 4. Compute TARGET quantities from virtual NLV
+        const targetMap: Record<string, number> = {}; // symbol → target qty
+        const priceMap:  Record<string, number> = {}; // symbol → live price (for cost calc)
+        for (const leg of equityLegs) {
+            const sym   = (leg.symbol || '').replace(/_/g, '').toUpperCase();
+            if (!sym || sym.includes('LEAPS')) continue;
+            const pct    = parseFloat(leg.target_pct) || 0;
+            const price  = livePrices[sym] || 100;
+            const target = Math.floor((virtualNlv * pct) / price);
+            targetMap[sym] = target;
+            priceMap[sym]  = price;
+        }
+        console.log(`[approve-options] Target:`, targetMap, '| Shadow current:', shadowMap);
+
+        // 5. TT tokens
+        const tokens = await getTastytradeTokens(userId);
+        const hasTT  = !!(tokens?.refreshToken);
+        let accessToken   = tokens?.accessToken ?? '';
+        let accountNumber = '';
 
         if (hasTT) {
-            // Refresh token if expired
             const clientId     = process.env.TASTYTRADE_CLIENT_ID!;
             const clientSecret = process.env.TASTYTRADE_CLIENT_SECRET!;
             if (!tokens!.expiresAt || tokens!.expiresAt <= Date.now()) {
@@ -154,85 +181,109 @@ export async function POST(
             accountNumber  = accounts[0]?.accountNumber ?? '';
         }
 
-        // Build equity order list using real NLV + live prices
-        for (const leg of equityLegs) {
-            const sym  = (leg.symbol || '').replace(/_/g, '').toUpperCase();
-            if (sym.includes('LEAPS')) continue;
-            const pct   = parseFloat(leg.target_pct) || 0;
-            const price = livePrices[sym] || 100;
-            const shares = Math.floor((nlv * pct) / price);
-            if (shares <= 0) continue;
-            equityOrders.push({ symbol: sym, shares, price, pct });
+        // 6. Fetch CURRENT positions for delta computation
+        let currentMap: Record<string, number> = {}; // symbol → current qty
+        if (hasTT && accountNumber) {
+            // TT user: get actual live positions
+            currentMap = await getTTPositions(accessToken, accountNumber, Object.keys(targetMap));
+            console.log(`[approve-options] TT live positions:`, currentMap);
+        } else {
+            // Virtual user: shadow_positions IS the current state
+            currentMap = { ...shadowMap };
+            console.log(`[approve-options] Virtual current positions:`, currentMap);
         }
 
-        const results: any = { equity: [], options: null, virtual: !hasTT };
+        // 7. Compute delta per symbol
+        const deltaOrders: Array<{symbol: string; delta: number; price: number; targetQty: number}> = [];
+        for (const sym of Object.keys(targetMap)) {
+            const target  = targetMap[sym] ?? 0;
+            const current = currentMap[sym]  ?? 0;
+            const delta   = target - current;
+            if (delta === 0) {
+                console.log(`[approve-options] ${sym}: no change (target=${target} current=${current})`);
+                continue;
+            }
+            deltaOrders.push({ symbol: sym, delta, price: priceMap[sym], targetQty: target });
+        }
 
-        // 5. Submit real orders if TT connected
+        // Also handle symbols we hold but target is 0 (full exits)
+        for (const sym of Object.keys(currentMap)) {
+            if (!(sym in targetMap) && currentMap[sym] > 0) {
+                deltaOrders.push({ symbol: sym, delta: -currentMap[sym], price: livePrices[sym] || priceMap[sym] || 100, targetQty: 0 });
+            }
+        }
+
+        // SELLS before BUYS
+        deltaOrders.sort((a, b) => (a.delta < 0 ? -1 : 1) - (b.delta < 0 ? -1 : 1));
+        console.log(`[approve-options] Delta orders:`, deltaOrders.map(o => `${o.delta > 0 ? 'BUY' : 'SELL'} ${Math.abs(o.delta)} ${o.symbol}`));
+
+        const results: any = { equity: [], options: null, optionsError: null, virtual: !hasTT };
+
+        // 8. Submit equity delta orders
         if (hasTT && accountNumber) {
-            for (const order of equityOrders) {
+            for (const order of deltaOrders) {
                 try {
-                    const r = await submitEquityLeg(accessToken, accountNumber, order.symbol, order.shares, 'Buy to Open');
-                    // Try to capture the actual fill price from TT order response
-                    const fillPrice = parseFloat(r?.['average-fill-price'] || r?.['fill-price'] || order.price.toString()) || order.price;
-                    results.equity.push({ ...order, fillPrice, ttOrderId: r?.id || r?.['order-id'] });
-                    order.price = fillPrice; // Update with actual fill for shadow position
+                    const r = await submitEquityOrder(accessToken, accountNumber, order.symbol, order.delta);
+                    results.equity.push({ ...order, ttOrderId: r.orderId, status: r.status });
                 } catch (e: any) {
-                    console.warn(`[approve-options] Equity submission failed for ${order.symbol}: ${e.message}`);
-                    results.equity.push({ ...order, fillPrice: order.price, error: e.message });
+                    console.warn(`[approve-options] Equity order failed for ${order.symbol}:`, e.message);
+                    results.equity.push({ ...order, error: e.message });
                 }
             }
 
-            // Submit options legs if any
+            // 9. Submit options order (TT only)
             if (optionsLegs.length > 0) {
                 try {
                     const limitPrice: number | null = sigData.cost && parseFloat(sigData.cost) > 0
                         ? parseFloat(sigData.cost)
                         : null;
-                    // Log full options payload for debugging TT rejection
                     console.log('[approve-options] Options legs to submit:', JSON.stringify(optionsLegs, null, 2));
                     results.options = await submitOptionsOrder(accessToken, accountNumber, optionsLegs, limitPrice, 'Limit');
-                    console.log(`[approve-options] Options order submitted: ${JSON.stringify(results.options)}`);
+                    console.log(`[approve-options] Options submitted:`, results.options);
                 } catch (e: any) {
                     console.error('[approve-options] Options order FAILED:', e.message);
                     results.optionsError = e.message;
-                    // Continue — don't abort, equity already filled
                 }
             } else {
-                console.warn('[approve-options] No options legs found. Signal legs:', JSON.stringify(rawLegs.map(l => ({ leg_type: l.leg_type, action: l.action, symbol: l.symbol }))));
+                console.warn('[approve-options] No options legs found in signal. rawLegs structure:', JSON.stringify(rawLegs.map(l => ({leg_type: l.leg_type, action: l.action, symbol: l.symbol}))));
             }
         } else {
-            // Virtual only: fill equity with market prices
-            results.equity = equityOrders.map(o => ({ ...o, fillPrice: o.price }));
+            // Virtual: record delta for tracking (no real order)
+            results.equity = deltaOrders.map(o => ({ ...o, virtual: true }));
         }
 
-        // 6. ALWAYS replace shadow positions (virtual portfolio at virtual NLV prices)
-        const deployedCash = equityOrders.reduce((s, o) => s + o.shares * o.price, 0);
+        // 10. REPLACE shadow_positions with full TARGET state
+        const netCashDelta = deltaOrders.reduce((acc, o) => acc - o.delta * o.price, 0);
         try {
             await query(
                 `DELETE FROM shadow_positions WHERE user_id = $1 AND strategy = $2`,
-                [userId, 'TQQQ_TURBOCORE_PRO']
+                [userId, STRATEGY]
             );
-            for (const order of equityOrders) {
+            for (const sym of Object.keys(targetMap)) {
+                const qty = targetMap[sym];
+                if (qty <= 0) continue; // don't insert zero-qty rows
+                const price = priceMap[sym];
                 await query(
                     `INSERT INTO shadow_positions (user_id, strategy, symbol, quantity, avg_price, signal_id, executed_at)
                      VALUES ($1, $2, $3, $4, $5, $6, NOW())
                      ON CONFLICT (user_id, strategy, symbol)
                      DO UPDATE SET quantity = $4, avg_price = $5, signal_id = $6, executed_at = NOW()`,
-                    [userId, 'TQQQ_TURBOCORE_PRO', order.symbol, order.shares, order.price, id]
+                    [userId, STRATEGY, sym, qty, price, id]
                 );
             }
-            // Deduct deployed cash from virtual account
+            // Update virtual cash
+            const newCash = Math.max(0, virtualCash + netCashDelta);
             await query(
                 `INSERT INTO virtual_accounts (user_id, strategy, cash_balance) VALUES ($1, $2, $3)
                  ON CONFLICT (user_id, strategy) DO UPDATE SET cash_balance = $3, updated_at = NOW()`,
-                [userId, 'TQQQ_TURBOCORE_PRO', Math.max(0, virtualCash - deployedCash)]
+                [userId, STRATEGY, newCash]
             );
-            console.log(`[approve-options] Shadow positions replaced: ${equityOrders.map(o => `${o.symbol}×${o.shares}@${o.price.toFixed(2)}`).join(', ')} | cash: ${virtualCash.toFixed(0)} → ${(virtualCash - deployedCash).toFixed(0)}`);
+            console.log(`[approve-options] Shadow→target. Cash: ${virtualCash.toFixed(0)} → ${newCash.toFixed(0)} (Δ${netCashDelta.toFixed(0)})`);
         } catch (shadowErr: any) {
-            console.warn('[approve-options] Shadow position update failed (non-fatal):', shadowErr.message);
+            console.warn('[approve-options] Shadow update failed:', shadowErr.message);
         }
 
-        // 7. Record execution
+        // 11. Record execution
         await query(
             `INSERT INTO user_signal_executions (user_id, signal_id, status, created_at)
              VALUES ($1, $2, 'executed', NOW()) ON CONFLICT (user_id, signal_id)
@@ -242,11 +293,12 @@ export async function POST(
 
         return NextResponse.json({
             status:  results.optionsError ? 'partial' : 'success',
-            message: hasTT ? 'Orders submitted to Tastytrade' : 'Virtual positions recorded at market price',
+            message: hasTT ? 'Delta orders submitted to Tastytrade' : 'Virtual shadow positions updated to target',
             virtual: !hasTT,
             equity:  results.equity,
             options: results.options,
             optionsError: results.optionsError || null,
+            deltas: deltaOrders.map(o => `${o.delta > 0 ? '+' : ''}${o.delta} ${o.symbol}`),
         });
 
     } catch (err: any) {

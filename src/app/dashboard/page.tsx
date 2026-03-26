@@ -411,7 +411,7 @@ function DashboardContent() {
         // Fetch virtual balance
         fetch(`/api/virtual-accounts?strategy=${activeStrategy}`)
             .then(r => r.json())
-            .then(d => { if (d.balance) setVirtualBalance(Number(d.balance)); })
+            .then(d => { if (d.nlv || d.balance) setVirtualBalance(Number(d.nlv || d.balance)); })
             .catch(() => {});
         // Fetch shadow positions for delta preview
         fetch(`/api/shadow-positions?strategy=${activeStrategy}`)

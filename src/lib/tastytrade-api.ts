@@ -1237,8 +1237,17 @@ export async function submitOptionsOrder(
     );
     const data = await resp.json();
     if (!resp.ok) {
-        const errMsg = data?.error?.message || data?.errors?.[0]?.message || JSON.stringify(data);
-        throw new Error(`[submitOptionsOrder] TT rejected options order: ${errMsg}`);
+        // Log the full TT response to Vercel logs for debugging
+        console.error('[submitOptionsOrder] Full TT error response:', JSON.stringify(data, null, 2));
+        const topMsg   = data?.error?.message || data?.errors?.[0]?.message || 'Unknown error';
+        // Extract individual preflight failures (TT returns an array)
+        const preflightChecks: any[] = data?.error?.['preflight-checks'] || data?.errors?.[0]?.['preflight-checks'] || [];
+        const failedChecks = preflightChecks
+            .filter((c: any) => c.status === 'fail' || c.status === 'Error')
+            .map((c: any) => `${c.code || c.reason || '?'}: ${c.message || c.description || '?'}`)
+            .join('; ');
+        const detail = failedChecks ? ` | preflight: ${failedChecks}` : '';
+        throw new Error(`[submitOptionsOrder] TT rejected: ${topMsg}${detail}`);
     }
     const order = data?.data?.order || data?.data || data;
     const orderId = String(order?.id || order?.['order-id'] || 'unknown');

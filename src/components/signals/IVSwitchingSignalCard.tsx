@@ -39,6 +39,12 @@ const MODE_META: Record<string, { label: string; color: string; description: str
     description: "Buy SQQQ shares as crash hedge — extreme VIX backwardation detected.",
     icon: <AlertTriangle size={14} />,
   },
+  CLOSE_POSITIONS: {
+    label: "Exit · Close Position",
+    color: "text-blue-400 bg-blue-400/10 border-blue-400/20",
+    description: "Exit condition triggered (Profit Target, Stop-Loss, or Expiry). Close position now.",
+    icon: <Target size={14} />,
+  },
   NO_ACTION: {
     label: "Hold · No New Position",
     color: "text-zinc-400 bg-zinc-400/10 border-zinc-400/20",

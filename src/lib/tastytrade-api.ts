@@ -1269,7 +1269,85 @@ export async function submitOptionsOrder(
 
     console.log(`[submitOptionsOrder] Submitting ${orderLegs.length}-leg ${priceEffect} order to account ${accountNumber}`, JSON.stringify(orderBody, null, 2));
 
-    // ── Dry-run preflight ──────────────────────────────────────────────────────
+    // ── Fetch live quotes to determine market mid for the spread ────────────────
+    let marketMid: number | null = null;
+    try {
+        const quoteSymbols = legs.map(l => l['symbol']);
+        const quoteResults: Record<string, { bid: number; ask: number }> = {};
+        for (const sym of quoteSymbols) {
+            const quoteUrl = `${TASTYTRADE_API_BASE}/market-data/options/quotes`;
+            const qResp = await fetch(quoteUrl, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'TradeMind/1.0',
+                },
+                body: JSON.stringify({ symbols: [sym] }),
+            });
+            if (qResp.ok) {
+                const qData = await qResp.json();
+                const q = qData.data?.items?.[0];
+                if (q) {
+                    quoteResults[sym] = {
+                        bid: parseFloat(q.bid || '0'),
+                        ask: parseFloat(q.ask || '0'),
+                    };
+                }
+            }
+        }
+
+        // Calculate net spread price from live quotes
+        if (Object.keys(quoteResults).length === legs.length) {
+            let netMid = 0;
+            for (const leg of legs) {
+                const q = quoteResults[leg['symbol']];
+                if (!q) break;
+                const action = String(leg['action']).toLowerCase();
+                const mid = (q.bid + q.ask) / 2;
+                if (action.includes('sell')) {
+                    netMid += mid;  // selling = receiving
+                } else {
+                    netMid -= mid;  // buying = paying
+                }
+            }
+            // For credit spreads netMid is positive (net credit), for debit spreads it's negative
+            marketMid = Math.round(Math.abs(netMid) * 100) / 100;
+            console.log(`[submitOptionsOrder] 📊 Live market mid: $${marketMid.toFixed(2)} ${priceEffect} | Signal price: $${orderBody['price'] ?? 'none'}`);
+        } else {
+            console.warn(`[submitOptionsOrder] Could not fetch all quotes — using signal price`);
+        }
+    } catch (quoteErr) {
+        console.warn('[submitOptionsOrder] Quote fetch failed:', quoteErr);
+    }
+
+    // ── Price ladder: start at market mid, adjust by $0.05/step ─────────────────
+    // For CREDIT spreads: start at mid, step DOWN (accept less credit)
+    // For DEBIT spreads: start at mid, step UP (pay more)
+    const LADDER_STEPS = 4;
+    const STEP_SIZE = 0.05;  // $0.05 per step
+    const WAIT_SECONDS = 15; // Seconds between ladder steps
+
+    const startPrice = marketMid ?? (orderBody['price'] ? Number(orderBody['price']) : null);
+    if (!startPrice || startPrice <= 0) {
+        throw new Error('[submitOptionsOrder] No valid price — neither market quotes nor signal price available');
+    }
+
+    // Build price ladder
+    const priceLadder: number[] = [];
+    for (let step = 0; step < LADDER_STEPS; step++) {
+        if (priceEffect === 'Credit') {
+            // Credit: start at mid, step down (accept less credit to get filled)
+            priceLadder.push(Math.max(0.01, Math.round((startPrice - step * STEP_SIZE) * 100) / 100));
+        } else {
+            // Debit: start at mid, step up (pay more to get filled)
+            priceLadder.push(Math.round((startPrice + step * STEP_SIZE) * 100) / 100);
+        }
+    }
+    console.log(`[submitOptionsOrder] Price ladder (${priceEffect}): ${priceLadder.map(p => `$${p.toFixed(2)}`).join(' → ')}`);
+
+    // ── Dry-run preflight at the starting price ────────────────────────────────
+    orderBody['price'] = priceLadder[0];
     try {
         const dryRunResp = await fetch(
             `${TASTYTRADE_API_BASE}/accounts/${accountNumber}/orders/dry-run`,
@@ -1286,7 +1364,6 @@ export async function submitOptionsOrder(
         if (!dryRunResp.ok) {
             const dryRunData = await dryRunResp.json().catch(() => null);
             console.error('[submitOptionsOrder] Dry-run FAILED:', JSON.stringify(dryRunData, null, 2));
-            // If dry-run gives a clean 422 error, throw it immediately — don't retry
             if (dryRunResp.status === 422) {
                 const errMsg = dryRunData?.error?.message || dryRunData?.errors?.[0]?.message || 'Dry-run validation failed';
                 const preflightChecks: any[] = dryRunData?.error?.['preflight-checks'] || [];
@@ -1296,21 +1373,22 @@ export async function submitOptionsOrder(
                     .join('; ');
                 throw new Error(`[submitOptionsOrder] Dry-run rejected: ${errMsg}${failedChecks ? ` | ${failedChecks}` : ''}`);
             }
-            // 500 on dry-run = server-side issue, log but continue to attempt live
             console.warn(`[submitOptionsOrder] Dry-run returned ${dryRunResp.status}, proceeding cautiously...`);
         } else {
             console.log('[submitOptionsOrder] ✅ Dry-run passed — order is valid');
         }
     } catch (dryErr) {
-        if (dryErr instanceof Error && dryErr.message.includes('Dry-run rejected')) {
-            throw dryErr;
-        }
+        if (dryErr instanceof Error && dryErr.message.includes('Dry-run rejected')) throw dryErr;
         console.warn('[submitOptionsOrder] Dry-run inconclusive:', dryErr);
     }
 
-    // ── Submit live order (with 1 retry on transient 500) ──────────────────────
-    const MAX_ATTEMPTS = 2;
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    // ── Price ladder execution loop ────────────────────────────────────────────
+    for (let step = 0; step < priceLadder.length; step++) {
+        const price = priceLadder[step];
+        orderBody['price'] = price;
+
+        console.log(`[submitOptionsOrder] Step ${step + 1}/${priceLadder.length}: submitting at $${price.toFixed(2)} ${priceEffect}`);
+
         const resp = await fetch(
             `${TASTYTRADE_API_BASE}/accounts/${accountNumber}/orders`,
             {
@@ -1324,32 +1402,96 @@ export async function submitOptionsOrder(
             }
         );
         const data = await resp.json();
-        if (!resp.ok) {
-            console.error(`[submitOptionsOrder] Attempt ${attempt}/${MAX_ATTEMPTS} failed (HTTP ${resp.status}):`, JSON.stringify(data, null, 2));
 
-            // On 500 (server error), retry once after a short delay
-            if (resp.status >= 500 && attempt < MAX_ATTEMPTS) {
-                console.warn(`[submitOptionsOrder] Transient 500 — retrying in 2s...`);
+        if (!resp.ok) {
+            console.error(`[submitOptionsOrder] Submit failed (HTTP ${resp.status}):`, JSON.stringify(data, null, 2));
+            // On 500, try next price step
+            if (resp.status >= 500 && step < priceLadder.length - 1) {
+                console.warn(`[submitOptionsOrder] Server error — trying next price step...`);
                 await new Promise(r => setTimeout(r, 2000));
                 continue;
             }
-
-            const topMsg   = data?.error?.message || data?.errors?.[0]?.message || 'Unknown error';
+            const topMsg = data?.error?.message || data?.errors?.[0]?.message || 'Unknown error';
             const preflightChecks: any[] = data?.error?.['preflight-checks'] || data?.errors?.[0]?.['preflight-checks'] || [];
             const failedChecks = preflightChecks
                 .filter((c: any) => c.status === 'fail' || c.status === 'Error')
                 .map((c: any) => `${c.code || c.reason || '?'}: ${c.message || c.description || '?'}`)
                 .join('; ');
-            const detail = failedChecks ? ` | preflight: ${failedChecks}` : '';
-            throw new Error(`[submitOptionsOrder] TT rejected: ${topMsg}${detail}`);
+            throw new Error(`[submitOptionsOrder] TT rejected: ${topMsg}${failedChecks ? ` | preflight: ${failedChecks}` : ''}`);
         }
+
         const order = data?.data?.order || data?.data || data;
         const orderId = String(order?.id || order?.['order-id'] || 'unknown');
-        const status  = String(order?.status || order?.['status'] || 'Filled');
-        console.log(`[submitOptionsOrder] Success. TT orderId=${orderId} status=${status}`);
-        return { orderId, status };
+        const status  = String(order?.status || order?.['status'] || 'unknown');
+        console.log(`[submitOptionsOrder] Order placed: orderId=${orderId} status=${status} price=$${price.toFixed(2)}`);
+
+        // If filled immediately, return
+        if (status === 'Filled') {
+            console.log(`[submitOptionsOrder] ✅ Filled immediately at $${price.toFixed(2)}`);
+            return { orderId, status };
+        }
+
+        // Last step — leave the order working, don't cancel
+        if (step === priceLadder.length - 1) {
+            console.log(`[submitOptionsOrder] ✅ Final step — leaving order working at $${price.toFixed(2)}`);
+            return { orderId, status: status || 'Working' };
+        }
+
+        // Wait and check if filled
+        console.log(`[submitOptionsOrder] Waiting ${WAIT_SECONDS}s for fill...`);
+        await new Promise(r => setTimeout(r, WAIT_SECONDS * 1000));
+
+        // Check order status
+        try {
+            const statusResp = await fetch(
+                `${TASTYTRADE_API_BASE}/accounts/${accountNumber}/orders/${orderId}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        'User-Agent': 'TradeMind/1.0',
+                    },
+                }
+            );
+            if (statusResp.ok) {
+                const statusData = await statusResp.json();
+                const currentStatus = statusData?.data?.status || statusData?.data?.order?.status || '';
+                console.log(`[submitOptionsOrder] Order ${orderId} status after ${WAIT_SECONDS}s: ${currentStatus}`);
+
+                if (currentStatus === 'Filled') {
+                    console.log(`[submitOptionsOrder] ✅ Filled at $${price.toFixed(2)}`);
+                    return { orderId, status: 'Filled' };
+                }
+
+                // Not filled — cancel and try next price
+                if (currentStatus === 'Live' || currentStatus === 'Received') {
+                    console.log(`[submitOptionsOrder] Not filled — cancelling order ${orderId} to adjust price...`);
+                    try {
+                        await fetch(
+                            `${TASTYTRADE_API_BASE}/accounts/${accountNumber}/orders/${orderId}`,
+                            {
+                                method: 'DELETE',
+                                headers: {
+                                    Authorization: `Bearer ${accessToken}`,
+                                    'User-Agent': 'TradeMind/1.0',
+                                },
+                            }
+                        );
+                        console.log(`[submitOptionsOrder] Cancelled order ${orderId}`);
+                        // Brief pause for cancel to process
+                        await new Promise(r => setTimeout(r, 1000));
+                    } catch (cancelErr) {
+                        console.warn(`[submitOptionsOrder] Cancel failed (may have filled):`, cancelErr);
+                        // If cancel failed, the order may have filled — return it
+                        return { orderId, status: currentStatus };
+                    }
+                }
+            }
+        } catch (statusErr) {
+            console.warn(`[submitOptionsOrder] Status check failed:`, statusErr);
+            // Can't determine status — leave order and return
+            return { orderId, status: 'Working' };
+        }
     }
 
-    // Should never reach here, but TypeScript needs a return
-    throw new Error('[submitOptionsOrder] All attempts exhausted');
+    throw new Error('[submitOptionsOrder] Price ladder exhausted without fill');
 }

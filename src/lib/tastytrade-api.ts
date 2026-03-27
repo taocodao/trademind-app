@@ -1234,10 +1234,12 @@ export async function submitOptionsOrder(
         BUY:           'Buy',
         SELL:          'Sell',
     };
+    // FIX: Do NOT .trim() OCC symbols — padding spaces are required (e.g. "QQQ   260515C00612000")
+    // FIX: Send quantity as integer, not string — TT expects numeric type
     const legs = orderLegs.map(leg => ({
         'instrument-type': leg.instrument_type || 'Equity Option',
-        'symbol':          leg.symbol.trim(),
-        'quantity':        String(Math.abs(leg.qty)),
+        'symbol':          leg.symbol,
+        'quantity':        Math.abs(leg.qty),
         'action':          actionMap[leg.action.toUpperCase()] || leg.action,
     }));
     // Determine price effect from the PRIMARY (first) leg action:
@@ -1253,39 +1255,101 @@ export async function submitOptionsOrder(
         'legs':          legs,
         'price-effect':  priceEffect,
     };
+    // FIX: Send price as number, not string — TT schema expects Decimal
     if (orderType === 'Limit' && limitPrice != null) {
-        orderBody['price'] = String(Math.abs(limitPrice).toFixed(2));
+        orderBody['price'] = Math.round(Math.abs(limitPrice) * 100) / 100;
     }
-    console.log(`[submitOptionsOrder] Submitting ${orderLegs.length}-leg ${priceEffect} order to account ${accountNumber}`, JSON.stringify(orderBody, null, 2));
-    const resp = await fetch(
-        `${TASTYTRADE_API_BASE}/accounts/${accountNumber}/orders`,
-        {
-            method: 'POST',
-            headers: {
-                Authorization:  `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-                'User-Agent':   'TradeMind/1.0',
-            },
-            body: JSON.stringify(orderBody),
+
+    // Validate OCC symbol lengths (must be 21 chars for equity options)
+    for (const leg of legs) {
+        if ((leg['instrument-type'] === 'Equity Option') && leg['symbol'].length !== 21) {
+            console.warn(`[submitOptionsOrder] ⚠️ OCC symbol length=${leg['symbol'].length} (expected 21): "${leg['symbol']}"`);
         }
-    );
-    const data = await resp.json();
-    if (!resp.ok) {
-        // Log the full TT response to Vercel logs for debugging
-        console.error('[submitOptionsOrder] Full TT error response:', JSON.stringify(data, null, 2));
-        const topMsg   = data?.error?.message || data?.errors?.[0]?.message || 'Unknown error';
-        // Extract individual preflight failures (TT returns an array)
-        const preflightChecks: any[] = data?.error?.['preflight-checks'] || data?.errors?.[0]?.['preflight-checks'] || [];
-        const failedChecks = preflightChecks
-            .filter((c: any) => c.status === 'fail' || c.status === 'Error')
-            .map((c: any) => `${c.code || c.reason || '?'}: ${c.message || c.description || '?'}`)
-            .join('; ');
-        const detail = failedChecks ? ` | preflight: ${failedChecks}` : '';
-        throw new Error(`[submitOptionsOrder] TT rejected: ${topMsg}${detail}`);
     }
-    const order = data?.data?.order || data?.data || data;
-    const orderId = String(order?.id || order?.['order-id'] || 'unknown');
-    const status  = String(order?.status || order?.['status'] || 'Filled');
-    console.log(`[submitOptionsOrder] Success. TT orderId=${orderId} status=${status}`);
-    return { orderId, status };
+
+    console.log(`[submitOptionsOrder] Submitting ${orderLegs.length}-leg ${priceEffect} order to account ${accountNumber}`, JSON.stringify(orderBody, null, 2));
+
+    // ── Dry-run preflight ──────────────────────────────────────────────────────
+    try {
+        const dryRunResp = await fetch(
+            `${TASTYTRADE_API_BASE}/accounts/${accountNumber}/orders/dry-run`,
+            {
+                method: 'POST',
+                headers: {
+                    Authorization:  `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                    'User-Agent':   'TradeMind/1.0',
+                },
+                body: JSON.stringify(orderBody),
+            }
+        );
+        if (!dryRunResp.ok) {
+            const dryRunData = await dryRunResp.json().catch(() => null);
+            console.error('[submitOptionsOrder] Dry-run FAILED:', JSON.stringify(dryRunData, null, 2));
+            // If dry-run gives a clean 422 error, throw it immediately — don't retry
+            if (dryRunResp.status === 422) {
+                const errMsg = dryRunData?.error?.message || dryRunData?.errors?.[0]?.message || 'Dry-run validation failed';
+                const preflightChecks: any[] = dryRunData?.error?.['preflight-checks'] || [];
+                const failedChecks = preflightChecks
+                    .filter((c: any) => c.status === 'fail' || c.status === 'Error')
+                    .map((c: any) => `${c.code || c.reason || '?'}: ${c.message || c.description || '?'}`)
+                    .join('; ');
+                throw new Error(`[submitOptionsOrder] Dry-run rejected: ${errMsg}${failedChecks ? ` | ${failedChecks}` : ''}`);
+            }
+            // 500 on dry-run = server-side issue, log but continue to attempt live
+            console.warn(`[submitOptionsOrder] Dry-run returned ${dryRunResp.status}, proceeding cautiously...`);
+        } else {
+            console.log('[submitOptionsOrder] ✅ Dry-run passed — order is valid');
+        }
+    } catch (dryErr) {
+        if (dryErr instanceof Error && dryErr.message.includes('Dry-run rejected')) {
+            throw dryErr;
+        }
+        console.warn('[submitOptionsOrder] Dry-run inconclusive:', dryErr);
+    }
+
+    // ── Submit live order (with 1 retry on transient 500) ──────────────────────
+    const MAX_ATTEMPTS = 2;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        const resp = await fetch(
+            `${TASTYTRADE_API_BASE}/accounts/${accountNumber}/orders`,
+            {
+                method: 'POST',
+                headers: {
+                    Authorization:  `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                    'User-Agent':   'TradeMind/1.0',
+                },
+                body: JSON.stringify(orderBody),
+            }
+        );
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error(`[submitOptionsOrder] Attempt ${attempt}/${MAX_ATTEMPTS} failed (HTTP ${resp.status}):`, JSON.stringify(data, null, 2));
+
+            // On 500 (server error), retry once after a short delay
+            if (resp.status >= 500 && attempt < MAX_ATTEMPTS) {
+                console.warn(`[submitOptionsOrder] Transient 500 — retrying in 2s...`);
+                await new Promise(r => setTimeout(r, 2000));
+                continue;
+            }
+
+            const topMsg   = data?.error?.message || data?.errors?.[0]?.message || 'Unknown error';
+            const preflightChecks: any[] = data?.error?.['preflight-checks'] || data?.errors?.[0]?.['preflight-checks'] || [];
+            const failedChecks = preflightChecks
+                .filter((c: any) => c.status === 'fail' || c.status === 'Error')
+                .map((c: any) => `${c.code || c.reason || '?'}: ${c.message || c.description || '?'}`)
+                .join('; ');
+            const detail = failedChecks ? ` | preflight: ${failedChecks}` : '';
+            throw new Error(`[submitOptionsOrder] TT rejected: ${topMsg}${detail}`);
+        }
+        const order = data?.data?.order || data?.data || data;
+        const orderId = String(order?.id || order?.['order-id'] || 'unknown');
+        const status  = String(order?.status || order?.['status'] || 'Filled');
+        console.log(`[submitOptionsOrder] Success. TT orderId=${orderId} status=${status}`);
+        return { orderId, status };
+    }
+
+    // Should never reach here, but TypeScript needs a return
+    throw new Error('[submitOptionsOrder] All attempts exhausted');
 }

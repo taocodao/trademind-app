@@ -1270,30 +1270,40 @@ export async function submitOptionsOrder(
     console.log(`[submitOptionsOrder] Submitting ${orderLegs.length}-leg ${priceEffect} order to account ${accountNumber}`, JSON.stringify(orderBody, null, 2));
 
     // ── Fetch live quotes to determine market mid for the spread ────────────────
+    // TT endpoint: GET /instruments/equity-options?symbol[]=OCC_SYMBOL
+    // Returns items[].{bid, ask, mark} for each symbol
     let marketMid: number | null = null;
     try {
-        const quoteSymbols = legs.map(l => l['symbol']);
         const quoteResults: Record<string, { bid: number; ask: number }> = {};
-        for (const sym of quoteSymbols) {
-            const quoteUrl = `${TASTYTRADE_API_BASE}/market-data/options/quotes`;
+        for (const leg of legs) {
+            const sym = leg['symbol'];
+            // URL-encode the OCC symbol (spaces → %20)
+            const encodedSym = encodeURIComponent(sym);
+            const quoteUrl = `${TASTYTRADE_API_BASE}/instruments/equity-options?symbol[]=${encodedSym}`;
             const qResp = await fetch(quoteUrl, {
-                method: 'POST',
+                method: 'GET',
                 headers: {
                     Authorization: `Bearer ${accessToken}`,
                     'Content-Type': 'application/json',
                     'User-Agent': 'TradeMind/1.0',
                 },
-                body: JSON.stringify({ symbols: [sym] }),
             });
             if (qResp.ok) {
                 const qData = await qResp.json();
-                const q = qData.data?.items?.[0];
-                if (q) {
-                    quoteResults[sym] = {
-                        bid: parseFloat(q.bid || '0'),
-                        ask: parseFloat(q.ask || '0'),
-                    };
+                const item = qData?.data?.items?.[0];
+                if (item) {
+                    // TT equity-option fields: bid, ask (or mark for mid)
+                    const bid = parseFloat(item.bid ?? item['bid-price'] ?? '0');
+                    const ask = parseFloat(item.ask ?? item['ask-price'] ?? '0');
+                    if (ask > 0) {
+                        quoteResults[sym] = { bid, ask };
+                        console.log(`[submitOptionsOrder] Quote ${sym}: bid=${bid} ask=${ask}`);
+                    } else {
+                        console.warn(`[submitOptionsOrder] Zero ask for ${sym} — quote may be stale`);
+                    }
                 }
+            } else {
+                console.warn(`[submitOptionsOrder] Quote fetch ${sym} returned ${qResp.status}`);
             }
         }
 
@@ -1306,20 +1316,21 @@ export async function submitOptionsOrder(
                 const action = String(leg['action']).toLowerCase();
                 const mid = (q.bid + q.ask) / 2;
                 if (action.includes('sell')) {
-                    netMid += mid;  // selling = receiving
+                    netMid += mid;  // selling = receiving credit
                 } else {
-                    netMid -= mid;  // buying = paying
+                    netMid -= mid;  // buying = paying debit
                 }
             }
-            // For credit spreads netMid is positive (net credit), for debit spreads it's negative
+            // For credit spreads netMid is positive, debit is negative
             marketMid = Math.round(Math.abs(netMid) * 100) / 100;
             console.log(`[submitOptionsOrder] 📊 Live market mid: $${marketMid.toFixed(2)} ${priceEffect} | Signal price: $${orderBody['price'] ?? 'none'}`);
         } else {
-            console.warn(`[submitOptionsOrder] Could not fetch all quotes — using signal price`);
+            console.warn(`[submitOptionsOrder] Could not fetch all quotes (got ${Object.keys(quoteResults).length}/${legs.length}) — using signal price`);
         }
     } catch (quoteErr) {
         console.warn('[submitOptionsOrder] Quote fetch failed:', quoteErr);
     }
+
 
     // ── Price ladder: start at market mid, adjust by $0.05/step ─────────────────
     // For CREDIT spreads: start at mid, step DOWN (accept less credit)

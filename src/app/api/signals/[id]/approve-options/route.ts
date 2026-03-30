@@ -110,9 +110,18 @@ export async function POST(
         const equityLegs  = rawLegs.filter(l =>
             l.leg_type === 'equity' || (l.target_pct !== undefined && !['BUY_TO_OPEN','SELL_TO_OPEN','BUY_TO_CLOSE','SELL_TO_CLOSE'].includes((l.action||'').toUpperCase()))
         );
-        const optionsLegs = rawLegs.filter(l =>
+        const allOptionsLegs = rawLegs.filter(l =>
             l.leg_type === 'options' || ['BUY_TO_OPEN','SELL_TO_OPEN','BUY_TO_CLOSE','SELL_TO_CLOSE'].includes((l.action||'').toUpperCase())
         );
+
+        // SQQQ (and similar short ETFs) are stocks, not options contracts.
+        // OCC option symbols are always ≥10 chars (e.g. "QQQ   260515C00612000").
+        // Plain ticker legs (≤5 chars) in the IV-Switching options array are equity orders.
+        const isOccSymbol = (sym: string) => sym.replace(/\s+/g,'').length > 6;
+        const trueOptionsLegs   = allOptionsLegs.filter(l => isOccSymbol(l.symbol || ''));
+        const equityInOptLegs   = allOptionsLegs.filter(l => !isOccSymbol(l.symbol || ''));
+        // Merge equity-instrument legs from the options array into equity execution path
+        const optionsLegs = trueOptionsLegs;
 
         console.log(`[approve-options] Signal ${id}: ${equityLegs.length} equity, ${optionsLegs.length} options legs`);
 
@@ -228,6 +237,21 @@ export async function POST(
                 } catch (e: any) {
                     console.warn(`[approve-options] Equity order failed for ${order.symbol}:`, e.message);
                     results.equity.push({ ...order, error: e.message });
+                }
+            }
+
+            // 8b. Submit equity-instrument legs that were in the options array (e.g. SQQQ shares)
+            for (const leg of equityInOptLegs) {
+                const sym = (leg.symbol || '').trim().toUpperCase();
+                const qty = Math.abs(leg.qty || leg.quantity || 0);
+                if (!sym || qty <= 0) continue;
+                try {
+                    const r = await submitEquityOrder(accessToken, accountNumber, sym, qty);
+                    results.equity.push({ symbol: sym, delta: qty, ttOrderId: r.orderId, status: r.status, note: 'equity-in-options-leg' });
+                    console.log(`[approve-options] Equity-in-options-leg submitted: BUY ${qty} ${sym}`);
+                } catch (e: any) {
+                    console.warn(`[approve-options] Equity-in-options-leg failed for ${sym}:`, e.message);
+                    results.equity.push({ symbol: sym, delta: qty, error: e.message });
                 }
             }
 

@@ -114,7 +114,12 @@ export function TurboCoreSignalCard({
 
   const isExecuting = executingId === String(signal.id);
 
-  // ── Signal type router ────────────────────────────────────────────────
+  // If the backend flagged this as a partial (ML-regime) signal that is still
+  // waiting for the IV-Switching overlay to compute, show a pending state
+  // instead of the premature RISK OFF button.
+  const ivPending = !!(signal as any).iv_switching_pending;
+
+  // ── Signal type router ──────────────────────────────────────────────────────
   // IV-Switching signals (CSP/ZEBRA/CCS) carry an iv_switching_order_id
   // or have an action like OPEN_CSP, OPEN_ZEBRA, OPEN_CCS, OPEN_SQQQ.
   // Route these to the dedicated IVSwitchingSignalCard.
@@ -448,11 +453,18 @@ export function TurboCoreSignalCard({
         <div className="flex gap-2">
           {isExecuted ? (
             // Locked executed state
-
             <div className="flex-1 py-3 px-4 rounded-lg font-bold flex items-center justify-center gap-2 bg-green-500/10 border border-green-500/30 text-green-400 cursor-default">
               <CheckCircle className="w-4 h-4" />
-
               <span>Executed</span>
+            </div>
+          ) : ivPending ? (
+            // IV-Switching overlay is still computing — show a waiting state
+            <div className="flex-1 py-3 px-4 rounded-lg flex items-center justify-center gap-2 bg-purple-500/5 border border-purple-500/20 text-purple-400/70 cursor-default">
+              <div className="w-4 h-4 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+              <div className="flex flex-col items-center">
+                <span className="text-sm font-semibold">Computing IV-Switching overlay…</span>
+                <span className="text-[10px] opacity-60">Signal will update in a few seconds</span>
+              </div>
             </div>
           ) : (
             <button

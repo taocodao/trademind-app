@@ -160,6 +160,12 @@ export const calculateTurboCoreOrders = async (
 
         return preCalc
             .filter(o => {
+                // QQQ_LEAPS is a virtual tracking placeholder — not a real TT symbol.
+                // It is handled separately by executeLeapsAllocation() in the non-preCalc path.
+                if ((o.symbol || '').includes('LEAPS')) {
+                    console.log(`[TurboCore] Skipping ${o.symbol} — virtual placeholder, not a tradeable TT instrument`);
+                    return false;
+                }
                 // Drop SELL orders where we hold nothing in TT
                 if (o.action.toLowerCase() === 'sell') {
                     const ttHeld = ttPosMap.get(o.symbol) ?? null;

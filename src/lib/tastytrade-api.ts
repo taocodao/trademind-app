@@ -1269,6 +1269,38 @@ export async function submitOptionsOrder(
 
     console.log(`[submitOptionsOrder] Submitting ${orderLegs.length}-leg ${priceEffect} order to account ${accountNumber}`, JSON.stringify(orderBody, null, 2));
 
+    // ── 0. Pre-validate: check OCC symbols exist in TT's instrument catalog ──
+    // Prevents wasted dry-run on strikes that are too far OTM to be listed.
+    // Endpoint: GET /instruments/equity-options?symbol[]=OCC returns empty items[] if unknown.
+    try {
+        for (const leg of legs) {
+            const sym = leg['symbol'];
+            const encoded = encodeURIComponent(sym);
+            const instrUrl = `${TASTYTRADE_API_BASE}/instruments/equity-options?symbol[]=${encoded}`;
+            const instrResp = await fetch(instrUrl, {
+                headers: { Authorization: `Bearer ${accessToken}`, 'User-Agent': 'TradeMind/1.0' },
+            });
+            if (instrResp.ok) {
+                const instrData = await instrResp.json();
+                const items = instrData?.data?.items ?? [];
+                if (items.length === 0) {
+                    throw new Error(
+                        `[submitOptionsOrder] Instrument not found in TT catalog: "${sym.trim()}" — ` +
+                        `strike may be outside the listed range for current market price. ` +
+                        `Regenerate the signal with today's live QQQ price.`
+                    );
+                }
+                console.log(`[submitOptionsOrder] ✅ Instrument valid: ${sym.trim()}`);
+            } else {
+                console.warn(`[submitOptionsOrder] Instrument check returned ${instrResp.status} for ${sym.trim()} — proceeding`);
+            }
+        }
+    } catch (instrErr: any) {
+        // Re-throw only if it's our own validation error
+        if (instrErr.message?.includes('Instrument not found')) throw instrErr;
+        console.warn('[submitOptionsOrder] Instrument pre-check failed (non-fatal):', instrErr.message);
+    }
+
     // ── Fetch live quotes via /market-data/by-type (correct endpoint for bid/ask) ────
     // Format: GET /market-data/by-type?equity-option[]=OCC_SYMBOL&equity-option[]=...
     // Spaces in OCC symbols must be %20-encoded (encodeURIComponent handles this).

@@ -296,9 +296,11 @@ export async function POST(
                 );
             }
 
-            // 10b. Replace options shadow positions with the legs from this signal
-            // Saved for ALL users (TT and virtual) so both see the spread in Positions tab
-            if (optionsLegs.length > 0) {
+            // 10b. Persist options legs to shadow_positions:
+            //   - TT users:      only if the options order actually succeeded (no error)
+            //   - Virtual users: always save for Positions tab tracking
+            const optionsSucceeded = hasTT ? !results.optionsError : true;
+            if (optionsLegs.length > 0 && optionsSucceeded) {
                 await query(
                     `DELETE FROM shadow_positions WHERE user_id = $1 AND strategy = $2 AND instrument_type = 'options'`,
                     [userId, STRATEGY]
@@ -308,7 +310,7 @@ export async function POST(
                 for (const leg of optionsLegs) {
                     const occSym = (leg.symbol || '').trim();
                     const qty    = Math.abs(leg.qty || leg.quantity || 1);
-                    const action = (leg.action || '').toUpperCase(); // SELL_TO_OPEN / BUY_TO_OPEN
+                    const action = (leg.action || '').toUpperCase();
                     await query(
                         `INSERT INTO shadow_positions
                             (user_id, strategy, symbol, quantity, avg_price, signal_id, executed_at, instrument_type, leg_action)
@@ -318,6 +320,9 @@ export async function POST(
                         [userId, STRATEGY, occSym, qty, limitPrice, id, action]
                     );
                 }
+                console.log(`[approve-options] Saved ${optionsLegs.length} options legs to shadow_positions`);
+            } else if (optionsLegs.length > 0) {
+                console.log(`[approve-options] Skipping options shadow save — TT order failed, no phantom position created`);
             }
 
             // Update virtual cash

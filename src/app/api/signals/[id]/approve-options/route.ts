@@ -296,9 +296,9 @@ export async function POST(
                 );
             }
 
-            // 10b. Replace options shadow positions with the legs that were submitted
-            // Store each OCC leg as a separate shadow_positions row with instrument_type='options'
-            if (hasTT && optionsLegs.length > 0) {
+            // 10b. Replace options shadow positions with the legs from this signal
+            // Saved for ALL users (TT and virtual) so both see the spread in Positions tab
+            if (optionsLegs.length > 0) {
                 await query(
                     `DELETE FROM shadow_positions WHERE user_id = $1 AND strategy = $2 AND instrument_type = 'options'`,
                     [userId, STRATEGY]

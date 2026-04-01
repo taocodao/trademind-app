@@ -276,25 +276,50 @@ export async function POST(
             results.equity = deltaOrders.map(o => ({ ...o, virtual: true }));
         }
 
-        // 10. REPLACE shadow_positions with full TARGET state
+        // 10. REPLACE shadow_positions with full TARGET state (equity)
         const netCashDelta = deltaOrders.reduce((acc, o) => acc - o.delta * o.price, 0);
         try {
             await query(
-                `DELETE FROM shadow_positions WHERE user_id = $1 AND strategy = $2`,
+                `DELETE FROM shadow_positions WHERE user_id = $1 AND strategy = $2 AND instrument_type = 'equity'`,
                 [userId, STRATEGY]
             );
             for (const sym of Object.keys(targetMap)) {
                 const qty = targetMap[sym];
-                if (qty <= 0) continue; // don't insert zero-qty rows
+                if (qty <= 0) continue;
                 const price = priceMap[sym];
                 await query(
-                    `INSERT INTO shadow_positions (user_id, strategy, symbol, quantity, avg_price, signal_id, executed_at)
-                     VALUES ($1, $2, $3, $4, $5, $6, NOW())
+                    `INSERT INTO shadow_positions (user_id, strategy, symbol, quantity, avg_price, signal_id, executed_at, instrument_type)
+                     VALUES ($1, $2, $3, $4, $5, $6, NOW(), 'equity')
                      ON CONFLICT (user_id, strategy, symbol)
-                     DO UPDATE SET quantity = $4, avg_price = $5, signal_id = $6, executed_at = NOW()`,
+                     DO UPDATE SET quantity = $4, avg_price = $5, signal_id = $6, executed_at = NOW(), instrument_type = 'equity'`,
                     [userId, STRATEGY, sym, qty, price, id]
                 );
             }
+
+            // 10b. Replace options shadow positions with the legs that were submitted
+            // Store each OCC leg as a separate shadow_positions row with instrument_type='options'
+            if (hasTT && optionsLegs.length > 0) {
+                await query(
+                    `DELETE FROM shadow_positions WHERE user_id = $1 AND strategy = $2 AND instrument_type = 'options'`,
+                    [userId, STRATEGY]
+                );
+                const limitPrice: number = sigData.cost && parseFloat(sigData.cost) > 0
+                    ? parseFloat(sigData.cost) : 0;
+                for (const leg of optionsLegs) {
+                    const occSym = (leg.symbol || '').trim();
+                    const qty    = Math.abs(leg.qty || leg.quantity || 1);
+                    const action = (leg.action || '').toUpperCase(); // SELL_TO_OPEN / BUY_TO_OPEN
+                    await query(
+                        `INSERT INTO shadow_positions
+                            (user_id, strategy, symbol, quantity, avg_price, signal_id, executed_at, instrument_type, leg_action)
+                         VALUES ($1, $2, $3, $4, $5, $6, NOW(), 'options', $7)
+                         ON CONFLICT (user_id, strategy, symbol)
+                         DO UPDATE SET quantity=$4, avg_price=$5, signal_id=$6, executed_at=NOW(), instrument_type='options', leg_action=$7`,
+                        [userId, STRATEGY, occSym, qty, limitPrice, id, action]
+                    );
+                }
+            }
+
             // Update virtual cash
             const newCash = Math.max(0, virtualCash + netCashDelta);
             await query(
@@ -306,6 +331,7 @@ export async function POST(
         } catch (shadowErr: any) {
             console.warn('[approve-options] Shadow update failed:', shadowErr.message);
         }
+
 
         // 11. Record execution
         await query(

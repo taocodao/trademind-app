@@ -1269,42 +1269,40 @@ export async function submitOptionsOrder(
 
     console.log(`[submitOptionsOrder] Submitting ${orderLegs.length}-leg ${priceEffect} order to account ${accountNumber}`, JSON.stringify(orderBody, null, 2));
 
-    // ── Fetch live quotes to determine market mid for the spread ────────────────
-    // TT endpoint: GET /instruments/equity-options?symbol[]=OCC_SYMBOL
-    // Returns items[].{bid, ask, mark} for each symbol
+    // ── Fetch live quotes via /market-data/by-type (correct endpoint for bid/ask) ────
+    // Format: GET /market-data/by-type?equity-option[]=OCC_SYMBOL&equity-option[]=...
+    // Spaces in OCC symbols must be %20-encoded (encodeURIComponent handles this).
     let marketMid: number | null = null;
     try {
         const quoteResults: Record<string, { bid: number; ask: number }> = {};
-        for (const leg of legs) {
-            const sym = leg['symbol'];
-            // URL-encode the OCC symbol (spaces → %20)
-            const encodedSym = encodeURIComponent(sym);
-            const quoteUrl = `${TASTYTRADE_API_BASE}/instruments/equity-options?symbol[]=${encodedSym}`;
-            const qResp = await fetch(quoteUrl, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                    'Content-Type': 'application/json',
-                    'User-Agent': 'TradeMind/1.0',
-                },
-            });
-            if (qResp.ok) {
-                const qData = await qResp.json();
-                const item = qData?.data?.items?.[0];
-                if (item) {
-                    // TT equity-option fields: bid, ask (or mark for mid)
-                    const bid = parseFloat(item.bid ?? item['bid-price'] ?? '0');
-                    const ask = parseFloat(item.ask ?? item['ask-price'] ?? '0');
-                    if (ask > 0) {
-                        quoteResults[sym] = { bid, ask };
-                        console.log(`[submitOptionsOrder] Quote ${sym}: bid=${bid} ask=${ask}`);
-                    } else {
-                        console.warn(`[submitOptionsOrder] Zero ask for ${sym} — quote may be stale`);
-                    }
+        const query = legs
+            .map(l => `equity-option[]=${encodeURIComponent(l['symbol'])}`)
+            .join('&');
+        const quoteUrl = `${TASTYTRADE_API_BASE}/market-data/by-type?${query}`;
+        const qResp = await fetch(quoteUrl, {
+            method: 'GET',
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                'User-Agent': 'TradeMind/1.0',
+            },
+        });
+        if (qResp.ok) {
+            const qData = await qResp.json();
+            const items: any[] = qData?.data?.items || [];
+            for (const item of items) {
+                const sym = item.symbol;
+                const bid = parseFloat(item.bid ?? '0');
+                const ask = parseFloat(item.ask ?? '0');
+                if (ask > 0) {
+                    quoteResults[sym] = { bid, ask };
+                    console.log(`[submitOptionsOrder] Quote ${sym}: bid=${bid} ask=${ask}`);
+                } else {
+                    console.warn(`[submitOptionsOrder] Zero ask for ${sym} — quote may be stale or market closed`);
                 }
-            } else {
-                console.warn(`[submitOptionsOrder] Quote fetch ${sym} returned ${qResp.status}`);
             }
+        } else {
+            console.warn(`[submitOptionsOrder] /market-data/by-type returned ${qResp.status}`);
         }
 
         // Calculate net spread price from live quotes
@@ -1376,11 +1374,11 @@ export async function submitOptionsOrder(
             const dryRunData = await dryRunResp.json().catch(() => null);
             console.error('[submitOptionsOrder] Dry-run FAILED:', JSON.stringify(dryRunData, null, 2));
             if (dryRunResp.status === 422) {
-                const errMsg = dryRunData?.error?.message || dryRunData?.errors?.[0]?.message || 'Dry-run validation failed';
-                const preflightChecks: any[] = dryRunData?.error?.['preflight-checks'] || [];
-                const failedChecks = preflightChecks
-                    .filter((c: any) => c.status === 'fail' || c.status === 'Error')
-                    .map((c: any) => `${c.code || c.reason || '?'}: ${c.message || c.description || '?'}`)
+                // Correct path per TT docs: error.errors[] each has {code, message}
+                const errMsg = dryRunData?.error?.message || 'Dry-run validation failed';
+                const preflightErrors: any[] = dryRunData?.error?.errors ?? [];
+                const failedChecks = preflightErrors
+                    .map((e: any) => `${e.code || '?'}: ${e.message || '?'}`)
                     .join('; ');
                 throw new Error(`[submitOptionsOrder] Dry-run rejected: ${errMsg}${failedChecks ? ` | ${failedChecks}` : ''}`);
             }

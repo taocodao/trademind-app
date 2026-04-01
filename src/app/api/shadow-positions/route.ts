@@ -23,8 +23,23 @@ export async function GET(request: Request) {
         const userId = await getUserId();
         const { searchParams } = new URL(request.url);
         const strategy = searchParams.get('strategy') || undefined;
-        const positions = await getShadowPositions(userId, strategy);
-        return NextResponse.json({ positions, status: 'success' });
+
+        // Raw query so we can pick up instrument_type + leg_action columns
+        // (added via migration — COALESCE guards pre-migration rows)
+        let queryText = `
+            SELECT id, user_id, strategy, symbol, quantity, avg_price, signal_id, executed_at,
+                   COALESCE(instrument_type, 'equity') AS instrument_type,
+                   leg_action
+            FROM shadow_positions WHERE user_id = $1`;
+        const params: unknown[] = [userId];
+        if (strategy) {
+            queryText += ` AND strategy = $2`;
+            params.push(strategy);
+        }
+        queryText += ` ORDER BY instrument_type DESC, symbol ASC`; // options rows first
+
+        const result = await query(queryText, params);
+        return NextResponse.json({ positions: result.rows, status: 'success' });
     } catch (error) {
         console.error('Failed to get shadow positions:', error);
         return NextResponse.json({ error: 'Failed to retrieve shadow positions' }, { status: 500 });

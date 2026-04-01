@@ -746,6 +746,12 @@ export async function initializeUserTables(): Promise<void> {
             ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'manual'
         `);
 
+        // ── shadow_positions: options spread columns ───────────────────────
+        // instrument_type: 'equity' (default) | 'options'
+        // leg_action:      SELL_TO_OPEN | BUY_TO_OPEN | BUY_TO_CLOSE | SELL_TO_CLOSE
+        await query(`ALTER TABLE shadow_positions ADD COLUMN IF NOT EXISTS instrument_type VARCHAR(20) DEFAULT 'equity'`);
+        await query(`ALTER TABLE shadow_positions ADD COLUMN IF NOT EXISTS leg_action VARCHAR(30)`);
+
         // ── Signal Execution Order Lines (Itemized) ───────────────────────
         await query(`
             CREATE TABLE IF NOT EXISTS user_order_lines (

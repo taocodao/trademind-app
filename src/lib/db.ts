@@ -529,7 +529,7 @@ export async function initializeUserTables(): Promise<void> {
                 id SERIAL PRIMARY KEY,
                 user_id VARCHAR(128) NOT NULL,
                 strategy VARCHAR(64) NOT NULL,
-                symbol VARCHAR(20) NOT NULL,
+                symbol VARCHAR(64) NOT NULL,
                 quantity DECIMAL(15, 6) DEFAULT 0,
                 avg_price DECIMAL(15, 4) DEFAULT 0,
                 signal_id VARCHAR(128),
@@ -537,6 +537,7 @@ export async function initializeUserTables(): Promise<void> {
                 UNIQUE(user_id, strategy, symbol)
             )
         `);
+        await query(`ALTER TABLE virtual_transactions ALTER COLUMN symbol TYPE VARCHAR(64)`);
 
         // AI COPILOT: Compliance conversation log
         await query(`
@@ -751,6 +752,7 @@ export async function initializeUserTables(): Promise<void> {
         // leg_action:      SELL_TO_OPEN | BUY_TO_OPEN | BUY_TO_CLOSE | SELL_TO_CLOSE
         await query(`ALTER TABLE shadow_positions ADD COLUMN IF NOT EXISTS instrument_type VARCHAR(20) DEFAULT 'equity'`);
         await query(`ALTER TABLE shadow_positions ADD COLUMN IF NOT EXISTS leg_action VARCHAR(30)`);
+        await query(`ALTER TABLE shadow_positions ALTER COLUMN symbol TYPE VARCHAR(64)`);
 
         // ── Signal Execution Order Lines (Itemized) ───────────────────────
         await query(`
@@ -758,7 +760,7 @@ export async function initializeUserTables(): Promise<void> {
                 id SERIAL PRIMARY KEY,
                 execution_id INTEGER NOT NULL REFERENCES user_signal_executions(id) ON DELETE CASCADE,
                 user_id VARCHAR(128) NOT NULL,
-                symbol VARCHAR(20) NOT NULL,
+                symbol VARCHAR(64) NOT NULL,
                 action VARCHAR(10) NOT NULL,           -- 'buy' or 'sell'
                 quantity DECIMAL(15, 6) NOT NULL,      -- Can be fractional for TastyTrade, forced integer for Virtual
                 notional_value DECIMAL(15, 2),         -- dollar amount
@@ -770,6 +772,8 @@ export async function initializeUserTables(): Promise<void> {
         `);
 
         // ── Virtual Accounts (DB-backed balances) ─────────────────────────
+        await query(`ALTER TABLE user_order_lines ALTER COLUMN symbol TYPE VARCHAR(64)`);
+
         await query(`
             CREATE TABLE IF NOT EXISTS virtual_accounts (
                 id SERIAL PRIMARY KEY,
@@ -789,7 +793,7 @@ export async function initializeUserTables(): Promise<void> {
                 user_id VARCHAR(128) NOT NULL,
                 strategy VARCHAR(64) NOT NULL,
                 type VARCHAR(20) NOT NULL,    -- 'buy', 'sell', 'deposit', 'withdraw'
-                symbol VARCHAR(20),
+                symbol VARCHAR(64),
                 quantity DECIMAL(15, 6),
                 price DECIMAL(15, 4),
                 amount DECIMAL(15, 2) NOT NULL,

@@ -39,6 +39,8 @@ export async function GET(request: Request) {
         queryText += ` ORDER BY instrument_type DESC, symbol ASC`; // options rows first
 
         const result = await query(queryText, params);
+        console.log(`[shadow-positions] Returning ${result.rows.length} rows for user ${userId}, strategy ${strategy}`);
+        if (result.rows.length > 0) console.log(JSON.stringify(result.rows, null, 2));
         return NextResponse.json({ positions: result.rows, status: 'success' });
     } catch (error) {
         console.error('Failed to get shadow positions:', error);

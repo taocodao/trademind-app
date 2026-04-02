@@ -654,6 +654,8 @@ export async function initializeUserTables(): Promise<void> {
                 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(128);
                 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS first_name VARCHAR(64);
                 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS last_name VARCHAR(64);
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS email VARCHAR(256);
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS email_signal_alerts BOOLEAN DEFAULT true;
 
                 -- New Stripe columns (billing detail + fraud prevention + env flag)
                 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS stripe_price_id VARCHAR(128);

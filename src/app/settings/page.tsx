@@ -12,6 +12,7 @@ import { TQQQAutoApproveSettings } from '@/components/settings/TQQQAutoApproveSe
 import { TurboBounceAllocationSettings } from '@/components/settings/TurboBounceAllocationSettings';
 import { SubscriptionManager } from '@/components/settings/SubscriptionManager';
 import { MyStrategies } from '@/components/settings/MyStrategies';
+import { SignalEmailAlertsSettings } from '@/components/settings/SignalEmailAlertsSettings';
 import { StrategyTabs } from '@/components/ui/StrategyTabs';
 import { useStrategyContext } from '@/components/providers/StrategyContext';
 
@@ -89,6 +90,9 @@ export default function SettingsPage() {
 
                 {/* TurboBounce Multi-Ticker Setup */}
                 <TurboBounceAllocationSettings />
+                
+                {/* Email Alerts Setup */}
+                <SignalEmailAlertsSettings />
                 
                 {/* Strategy Summary */}
                 <section className="glass-card p-4">

@@ -348,7 +348,31 @@ function DashboardContent() {
 
     const activeStrategyConfig = getStrategy(activeStrategy);
 
+    // Sync user email on dashboard load
+    useEffect(() => {
+        if (!ready || !authenticated || !user) return;
+        const emailSynced = sessionStorage.getItem('tm_email_synced');
+        if (emailSynced === '1') return;
 
+        // Try getting exact email from Privy user object
+        const userEmail = 
+            user.email?.address || 
+            (user as any).google?.email || 
+            (user as any).apple?.email ||
+            (user.linkedAccounts?.find((a: any) => a.type === 'google_oauth') as any)?.email ||
+            (user.linkedAccounts?.find((a: any) => a.type === 'apple_oauth') as any)?.email ||
+            (user.linkedAccounts?.find((a: any) => a.type === 'email') as any)?.address;
+
+        if (userEmail) {
+            fetch('/api/settings/notifications', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: userEmail }),
+            })
+            .then(res => { if (res.ok) sessionStorage.setItem('tm_email_synced', '1'); })
+            .catch(() => {});
+        }
+    }, [ready, authenticated, user]);
 
     const [data, setData] = useState<AccountData | null>(null);
 

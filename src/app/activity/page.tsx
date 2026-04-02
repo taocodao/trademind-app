@@ -347,7 +347,7 @@ export default function ActivityPage() {
                                             </div>
                                             <p className="text-sm text-tm-muted capitalize">
                                                 {isTT ? `${tt.action} · ${tt.quantity} ${tt.strategy === 'TurboCore' ? 'shares' : 'contracts'} @ $${Number(tt.price || 0).toFixed(2)}` 
-                                                : isVirt ? `${virt.type} ${virt.quantity ? `· ${virt.quantity} shares @ $${virt.price?.toFixed(2)}` : ''}`
+                                                : isVirt ? `${virt.type} ${virt.quantity ? `· ${virt.quantity} shares @ $${Number(virt.price || 0).toFixed(2)}` : ''}`
                                                 : (tm.status || '').replace('_', ' ')}
                                             </p>
                                         </div>

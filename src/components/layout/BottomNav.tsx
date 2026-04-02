@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Bot, Activity, Bell, Settings } from 'lucide-react';
+import { Home, Bot, Activity, Bell, Settings, LogOut } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -19,6 +19,7 @@ export function BottomNav() {
 
     // useMemo MUST be called before any early returns (Rules of Hooks)
     const navItems = useMemo(() => [
+        { name: 'Home', href: '/dashboard', icon: Home },
         { name: 'AI', href: '/ai', icon: Bot },
         { name: t('dashboard.nav.positions'), href: '/positions', icon: Activity },
         { name: t('dashboard.nav.activity'), href: '/activity', icon: Bell },
@@ -35,13 +36,13 @@ export function BottomNav() {
         <nav className="fixed bottom-0 left-0 right-0 z-50 bg-tm-surface/90 backdrop-blur-md border-t border-tm-border pb-safe">
             <div className="flex items-center justify-around px-2 py-2">
                 {navItems.map((item) => {
-                    const isActive = pathname.startsWith(item.href);
+                    const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
                     const Icon = item.icon;
                     return (
                         <Link
                             key={item.href}
                             href={item.href}
-                            className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-colors ${isActive ? 'text-tm-purple' : 'text-tm-muted hover:text-white'
+                            className={`flex flex-col items-center justify-center w-14 h-12 rounded-xl transition-colors ${isActive ? 'text-tm-purple' : 'text-tm-muted hover:text-white'
                                 }`}
                         >
                             <Icon className={`w-5 h-5 mb-1 ${isActive ? 'fill-tm-purple/20' : ''}`} />
@@ -51,9 +52,9 @@ export function BottomNav() {
                 })}
                 <button
                     onClick={() => logout()}
-                    className="flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-colors text-tm-red/80 hover:text-tm-red"
+                    className="flex flex-col items-center justify-center w-14 h-12 rounded-xl transition-colors text-tm-red/80 hover:text-tm-red"
                 >
-                    <Home className="w-5 h-5 mb-1" />
+                    <LogOut className="w-5 h-5 mb-1" />
                     <span className="text-[10px] font-medium">{t('dashboard.nav.exit', 'Exit')}</span>
                 </button>
             </div>

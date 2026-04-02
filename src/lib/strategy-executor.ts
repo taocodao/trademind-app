@@ -146,16 +146,20 @@ export const calculateTurboCoreOrders = async (
     if (preCalc && preCalc.length > 0) {
         console.log(`[TurboCore] Using ${preCalc.length} pre-calculated virtual orders (skip live TT fetch)`);
 
-        // Fetch actual TT positions to cap SELL quantities
+        // Fetch actual TT positions to cap SELL quantities.
+        // If this fetch fails, we MUST skip all SELL orders — proceeding without a cap risks
+        // submitting virtual quantities (e.g. 66 shares) that exceed real TT holdings (e.g. 5).
         let ttPosMap = new Map<string, number>();
+        let ttPosFetchOk = false;
         try {
             const ttPositions = await getAccountPositions(accessToken, accountNumber);
             for (const p of ttPositions) {
                 ttPosMap.set(p.symbol, Math.abs(p.quantity));
             }
+            ttPosFetchOk = true;
             console.log(`[TurboCore] TT positions for cap check:`, Object.fromEntries(ttPosMap));
         } catch (e) {
-            console.warn('[TurboCore] Could not fetch TT positions for sell cap — proceeding without cap:', e);
+            console.warn('[TurboCore] Could not fetch TT positions — SELL orders will be skipped to prevent oversell:', e);
         }
 
         return preCalc
@@ -166,11 +170,16 @@ export const calculateTurboCoreOrders = async (
                     console.log(`[TurboCore] Skipping ${o.symbol} — virtual placeholder, not a tradeable TT instrument`);
                     return false;
                 }
-                // Drop SELL orders where we hold nothing in TT
                 if (o.action.toLowerCase() === 'sell') {
-                    const ttHeld = ttPosMap.get(o.symbol) ?? null;
-                    if (ttHeld !== null && ttHeld <= 0) {
-                        console.log(`[TurboCore] Skipping SELL ${o.symbol} — TT holds 0 shares`);
+                    // If TT position fetch failed, skip all sells — we have no way to safely cap them.
+                    if (!ttPosFetchOk) {
+                        console.log(`[TurboCore] Skipping SELL ${o.symbol} — TT position fetch failed, cannot verify holdings`);
+                        return false;
+                    }
+                    // If TT holds 0 (or symbol not found), skip the sell.
+                    const ttHeld = ttPosMap.get(o.symbol) ?? 0;
+                    if (ttHeld <= 0) {
+                        console.log(`[TurboCore] Skipping SELL ${o.symbol} — TT holds ${ttHeld} shares`);
                         return false;
                     }
                 }
@@ -178,15 +187,14 @@ export const calculateTurboCoreOrders = async (
             })
             .map(o => {
                 let qty = Math.abs(Number(o.quantity));
-                if (o.action.toLowerCase() === 'sell' && ttPosMap.size > 0) {
-                    const ttHeld = ttPosMap.get(o.symbol);
-                    if (ttHeld !== undefined) {
-                        const cappedQty = Math.min(qty, Math.floor(ttHeld));
-                        if (cappedQty !== qty) {
-                            console.log(`[TurboCore] Capping SELL ${o.symbol}: virtual=${qty} → TT cap=${cappedQty}`);
-                        }
-                        qty = cappedQty;
+                if (o.action.toLowerCase() === 'sell') {
+                    // Always cap SELL qty to what TT actually holds — virtual qty can diverge.
+                    const ttHeld = ttPosMap.get(o.symbol) ?? 0;
+                    const cappedQty = Math.min(qty, Math.floor(ttHeld));
+                    if (cappedQty !== qty) {
+                        console.log(`[TurboCore] Capping SELL ${o.symbol}: virtual=${qty} → TT cap=${cappedQty}`);
                     }
+                    qty = cappedQty;
                 }
                 return {
                     symbol: o.symbol,
@@ -394,18 +402,16 @@ const executeTurboCoreStrategy: StrategyExecutor = async (
         try {
             let resp;
 
-            // 🛡️ Full liquidation (targetPct = 0, Sell action): use exact share-count order.
-            // Notional orders get converted by Tastytrade at the live execution price, which
-            // is always slightly different from our quote, causing "cannot_close_more_than_existing_position".
-            // Selling by exact share count (e.g., "Sell 1.0 shares") is always safe.
-            const isFullLiquidation = order.action === 'Sell' && order.targetPct === 0 && order.currentShares > 0;
-
-            if (isFullLiquidation) {
-                console.log(`   🏳️ Full liquidation of ${order.symbol}: selling exact ${order.currentShares} shares (share-count order)`);
+            // 🛡️ SELL orders always use exact share-count (executeEquityOrder), NOT notional dollar-value.
+            // Notional SELL orders get converted by Tastytrade at the live execution price, which can
+            // differ from our quote and trigger "cannot_close_more_than_existing_position".
+            // Selling by exact share count is deterministic and always safe.
+            if (order.action === 'Sell') {
+                console.log(`   🔻 SELL ${order.symbol}: exact ${order.quantity} shares (share-count order)`);
                 resp = await executeEquityOrder(accessToken, accountNumber, {
                     symbol: order.symbol,
                     action: 'Sell',
-                    quantity: order.currentShares, // Exact position size — no rounding risk
+                    quantity: order.quantity, // Already capped to TT holdings in calculateTurboCoreOrders
                 });
             } else {
                 resp = await executeNotionalEquityOrder(accessToken, accountNumber, {
@@ -418,7 +424,7 @@ const executeTurboCoreStrategy: StrategyExecutor = async (
             lastOrderId = resp.orderId;
             console.log(`   ✅ ${order.action} of ${order.symbol} submitted: ${resp.orderId}`);
         } catch (err) {
-            console.error(`   ❌ Failed to ${order.action} $${order.diffValue.toFixed(2)} of ${order.symbol}:`, err);
+            console.error(`   ❌ Failed to ${order.action} ${order.symbol}:`, err);
             throw new Error(`Rebalance failed on ${order.symbol}: ${err instanceof Error ? err.message : String(err)}`);
         }
     }

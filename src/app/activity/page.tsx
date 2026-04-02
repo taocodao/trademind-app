@@ -196,7 +196,7 @@ export default function ActivityPage() {
         const isLegacyRebalance = (item.source === 'trademind' && (item as TradeMindItem).status === 'REBALANCE' && rawStrat === '');
         const stratKey = rawStrat || (isLegacyRebalance ? 'tqqq_turbocore' : '');
 
-        const status = item.source === 'trademind' ? (item as TradeMindItem).status.toLowerCase() : 'executed';
+        const status = item.source === 'trademind' ? ((item as TradeMindItem).status || '').toLowerCase() : 'executed';
         const q = filter.toLowerCase();
 
         // Check search filter
@@ -346,9 +346,9 @@ export default function ActivityPage() {
                                                 )}
                                             </div>
                                             <p className="text-sm text-tm-muted capitalize">
-                                                {isTT ? `${tt.action} · ${tt.quantity} ${tt.strategy === 'TurboCore' ? 'shares' : 'contracts'} @ $${tt.price?.toFixed(2)}` 
+                                                {isTT ? `${tt.action} · ${tt.quantity} ${tt.strategy === 'TurboCore' ? 'shares' : 'contracts'} @ $${Number(tt.price || 0).toFixed(2)}` 
                                                 : isVirt ? `${virt.type} ${virt.quantity ? `· ${virt.quantity} shares @ $${virt.price?.toFixed(2)}` : ''}`
-                                                : tm.status.replace('_', ' ')}
+                                                : (tm.status || '').replace('_', ' ')}
                                             </p>
                                         </div>
                                     </div>
@@ -357,14 +357,14 @@ export default function ActivityPage() {
                                             <>
                                                 <p className="text-xs text-tm-muted font-mono">Order: {tt.order_id}</p>
                                                 <p className="text-xs text-tm-green">
-                                                    {tt.value > 0 ? `+$${tt.value.toFixed(2)}` : `-$${Math.abs(tt.value).toFixed(2)}`}
+                                                    {Number(tt.value) > 0 ? `+$${Number(tt.value).toFixed(2)}` : `-$${Math.abs(Number(tt.value)).toFixed(2)}`}
                                                 </p>
                                             </>
                                         ) : isVirt ? (
                                             <>
                                                 <p className="text-xs text-tm-muted font-mono">Virtual</p>
                                                 <p className={`text-xs ${virt.type === 'withdraw' || virt.type === 'buy' ? 'text-tm-red' : 'text-tm-green'}`}>
-                                                    {virt.type === 'withdraw' || virt.type === 'buy' ? '-' : '+'}${Number(virt.amount).toFixed(2)}
+                                                    {virt.type === 'withdraw' || virt.type === 'buy' ? '-' : '+'}${Number(virt.amount || 0).toFixed(2)}
                                                 </p>
                                             </>
                                         ) : (

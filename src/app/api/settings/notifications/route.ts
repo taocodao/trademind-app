@@ -34,8 +34,8 @@ export async function PATCH(req: NextRequest) {
 
         if (body.email !== undefined) {
              await query(
-                 `UPDATE user_settings SET email = $1 WHERE user_id = $2 AND email IS NULL`,
-                 [body.email, userId]
+                 `UPDATE user_settings SET email = $1 WHERE user_id = $2`,
+                 [body.email || null, userId]
              );
         }
 

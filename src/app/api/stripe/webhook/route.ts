@@ -60,13 +60,14 @@ async function processWebhookEvent(event: Stripe.Event) {
             const priceId = subscription.items.data[0].price.id;
             const tier = determineTierFromPrice(priceId);
             const billingInterval = subscription.items.data[0].price.recurring?.interval ?? "month";
+            const email = session.customer_details?.email || null;
 
             const sub = subscription as any;
             await pool.query(
                 `INSERT INTO user_settings (
                     user_id, subscription_tier, stripe_customer_id, stripe_subscription_id, 
-                    stripe_price_id, subscription_status, billing_interval, current_period_end, trial_end, livemode, updated_at
-                 ) VALUES ($10, $1, $2, $3, $4, $5, $6, to_timestamp($7), $8, $9, NOW())
+                    stripe_price_id, subscription_status, billing_interval, current_period_end, trial_end, livemode, updated_at, email, email_signal_alerts
+                 ) VALUES ($10, $1, $2, $3, $4, $5, $6, to_timestamp($7), $8, $9, NOW(), $11, true)
                  ON CONFLICT (user_id) DO UPDATE 
                  SET subscription_tier = EXCLUDED.subscription_tier,
                      stripe_customer_id = EXCLUDED.stripe_customer_id,
@@ -77,6 +78,7 @@ async function processWebhookEvent(event: Stripe.Event) {
                      current_period_end = EXCLUDED.current_period_end,
                      trial_end = EXCLUDED.trial_end,
                      livemode = EXCLUDED.livemode,
+                     email = COALESCE(user_settings.email, EXCLUDED.email),
                      updated_at = EXCLUDED.updated_at`,
                 [
                     tier,
@@ -89,6 +91,7 @@ async function processWebhookEvent(event: Stripe.Event) {
                     sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
                     isLive,
                     userId,
+                    email
                 ]
             );
 

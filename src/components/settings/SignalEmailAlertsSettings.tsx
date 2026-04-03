@@ -1,14 +1,16 @@
 'use client';
 
-import { Mail, AlertTriangle } from 'lucide-react';
+import { Mail, Loader2, CheckCircle2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
-import { useSettings } from '@/components/providers/SettingsProvider';
 
 export function SignalEmailAlertsSettings() {
-    const { ready, authenticated, user } = usePrivy();
+    const { ready, authenticated } = usePrivy();
     const [emailEnabled, setEmailEnabled] = useState<boolean>(true);
+    const [email, setEmail] = useState<string>('');
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
 
     useEffect(() => {
         if (!ready || !authenticated) return;
@@ -16,6 +18,7 @@ export function SignalEmailAlertsSettings() {
             .then(res => res.json())
             .then(data => {
                 setEmailEnabled(data.emailSignalAlerts !== false); // default true
+                if (data.email) setEmail(data.email);
             })
             .catch(() => {})
             .finally(() => setLoading(false));
@@ -31,6 +34,24 @@ export function SignalEmailAlertsSettings() {
             });
         } catch (e) {
             console.error('Failed to update email alerts', e);
+        }
+    };
+
+    const handleEmailSave = async () => {
+        setSaving(true);
+        setSaved(false);
+        try {
+            await fetch('/api/settings/notifications', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+            });
+            setSaved(true);
+            setTimeout(() => setSaved(false), 2000);
+        } catch (e) {
+            console.error('Failed to update email', e);
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -61,6 +82,31 @@ export function SignalEmailAlertsSettings() {
                         }`} />
                 </button>
             </div>
+
+            {emailEnabled && (
+                <div className="mt-4 pt-4 border-t border-white/5 flex gap-2 items-center">
+                    <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="your@email.com"
+                        className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-tm-purple/50 transition-colors"
+                    />
+                    <button
+                        onClick={handleEmailSave}
+                        disabled={saving || !email}
+                        className="bg-tm-purple/20 hover:bg-tm-purple/30 text-tm-purple border border-tm-purple/50 rounded-xl px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex flex-shrink-0 items-center justify-center min-w-[80px]"
+                    >
+                        {saving ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : saved ? (
+                            <CheckCircle2 className="w-4 h-4" />
+                        ) : (
+                            'Save'
+                        )}
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

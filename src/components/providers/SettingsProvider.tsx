@@ -111,18 +111,26 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
     // Sync with DB
     useEffect(() => {
-        fetch('/api/settings/tier')
-            .then(res => res.json())
-            .then(data => {
-                if (data.globalAutoApprove !== undefined) {
-                    setSettings(prev => {
-                        const updated = { ...prev, autoApproval: data.globalAutoApprove };
-                        localStorage.setItem('tm_settings', JSON.stringify(updated));
-                        return updated;
-                    });
-                }
-            })
-            .catch(() => {});
+        const fetchRemoteSync = () => {
+            fetch('/api/settings/tier')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.globalAutoApprove !== undefined) {
+                        setSettings(prev => {
+                            // Only update if it actually changed to avoid unnecessary renders
+                            if (prev.autoApproval === data.globalAutoApprove) return prev;
+                            const updated = { ...prev, autoApproval: data.globalAutoApprove };
+                            localStorage.setItem('tm_settings', JSON.stringify(updated));
+                            return updated;
+                        });
+                    }
+                })
+                .catch(() => {});
+        };
+
+        fetchRemoteSync();
+        window.addEventListener('focus', fetchRemoteSync);
+        return () => window.removeEventListener('focus', fetchRemoteSync);
     }, []);
 
     const setAutoApproval = (enabled: boolean) => {

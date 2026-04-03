@@ -120,13 +120,14 @@ export function TQQQAutoApproveSettings() {
                     onClick={() => {
                         setAutoApproval(!settings.autoApproval);
                     }}
-                    className={`relative w-12 h-6 rounded-full transition-colors duration-200 flex-shrink-0 ${
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 flex-shrink-0 ${
                         settings.autoApproval ? 'bg-tm-purple' : 'bg-tm-surface'
                     }`}
                     aria-label="Toggle auto-approval"
                 >
-                    <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${settings.autoApproval ? 'translate-x-7' : 'translate-x-1'
-                        }`} />
+                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${
+                        settings.autoApproval ? 'translate-x-[22px]' : 'translate-x-[2px]'
+                    }`} />
                 </button>
             </div>
 

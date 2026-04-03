@@ -14,18 +14,25 @@ export function SignalEmailAlertsSettings() {
 
     useEffect(() => {
         if (!ready || !authenticated) return;
-        fetch('/api/settings/tier')
-            .then(res => res.json())
-            .then(data => {
-                // Now defaults to false per user request
-                setEmailEnabled(data.emailSignalAlerts === true); 
-                if (data.email) {
-                    const parsed = data.email.split(',').map((e: string) => e.trim()).filter(Boolean);
-                    if (parsed.length > 0) setEmails(parsed);
-                }
-            })
-            .catch(() => {})
-            .finally(() => setLoading(false));
+        
+        const fetchSettings = () => {
+            fetch('/api/settings/tier')
+                .then(res => res.json())
+                .then(data => {
+                    // Now defaults to false per user request
+                    setEmailEnabled(data.emailSignalAlerts === true); 
+                    if (data.email) {
+                        const parsed = data.email.split(',').map((e: string) => e.trim()).filter(Boolean);
+                        if (parsed.length > 0) setEmails(parsed);
+                    }
+                })
+                .catch(() => {})
+                .finally(() => setLoading(false));
+        };
+
+        fetchSettings();
+        window.addEventListener('focus', fetchSettings);
+        return () => window.removeEventListener('focus', fetchSettings);
     }, [ready, authenticated]);
 
     const handleToggle = async (val: boolean) => {
@@ -96,12 +103,12 @@ export function SignalEmailAlertsSettings() {
                 <button
                     onClick={() => !loading && handleToggle(!emailEnabled)}
                     disabled={loading}
-                    className={`relative w-12 h-6 rounded-full transition-colors duration-200 flex-shrink-0 ${loading ? 'bg-tm-surface opacity-50 cursor-not-allowed' :
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 flex-shrink-0 ${loading ? 'bg-tm-surface opacity-50 cursor-not-allowed' :
                         emailEnabled ? 'bg-tm-purple' : 'bg-tm-surface'
                         }`}
                     aria-label="Toggle email alerts"
                 >
-                    <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${emailEnabled ? 'translate-x-7' : 'translate-x-1'
+                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${emailEnabled ? 'translate-x-[22px]' : 'translate-x-[2px]'
                         }`} />
                 </button>
             </div>

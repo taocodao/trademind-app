@@ -101,14 +101,17 @@ export function SignalEmailAlertsSettings() {
                 </div>
 
                 <button
+                    type="button"
                     onClick={() => !loading && handleToggle(!emailEnabled)}
                     disabled={loading}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 flex-shrink-0 ${loading ? 'bg-tm-surface opacity-50 cursor-not-allowed' :
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${loading ? 'bg-tm-surface opacity-50 cursor-not-allowed' :
                         emailEnabled ? 'bg-tm-purple' : 'bg-tm-surface'
                         }`}
-                    aria-label="Toggle email alerts"
+                    role="switch"
+                    aria-checked={emailEnabled}
                 >
-                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${emailEnabled ? 'translate-x-[22px]' : 'translate-x-[2px]'
+                    <span className="sr-only">Toggle email alerts</span>
+                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${emailEnabled ? 'translate-x-5' : 'translate-x-0'
                         }`} />
                 </button>
             </div>

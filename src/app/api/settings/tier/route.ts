@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
         const result = await pool.query(
             `SELECT subscription_tier, subscription_status, billing_interval,
                     current_period_end, trial_end, stripe_price_id, cancel_at_period_end,
-                    cancel_at, email_signal_alerts, email
+                    cancel_at, email_signal_alerts, email, has_completed_onboarding, global_auto_approve
              FROM user_settings WHERE user_id = $1`,
             [userId]
         );

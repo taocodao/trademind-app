@@ -27,28 +27,32 @@ export async function PATCH(req: NextRequest) {
 
         if (body.email_signal_alerts !== undefined) {
              await query(
-                 `UPDATE user_settings SET email_signal_alerts = $1 WHERE user_id = $2`,
+                 `INSERT INTO user_settings (user_id, email_signal_alerts) VALUES ($2, $1) 
+                  ON CONFLICT (user_id) DO UPDATE SET email_signal_alerts = $1`,
                  [body.email_signal_alerts, userId]
              );
         }
 
         if (body.email !== undefined) {
              await query(
-                 `UPDATE user_settings SET email = $1 WHERE user_id = $2`,
+                 `INSERT INTO user_settings (user_id, email) VALUES ($2, $1) 
+                  ON CONFLICT (user_id) DO UPDATE SET email = $1`,
                  [body.email || null, userId]
              );
         }
 
         if (body.global_auto_approve !== undefined) {
              await query(
-                 `UPDATE user_settings SET global_auto_approve = $1 WHERE user_id = $2`,
+                 `INSERT INTO user_settings (user_id, global_auto_approve) VALUES ($2, $1) 
+                  ON CONFLICT (user_id) DO UPDATE SET global_auto_approve = $1`,
                  [body.global_auto_approve, userId]
              );
         }
 
         if (body.has_completed_onboarding !== undefined) {
              await query(
-                 `UPDATE user_settings SET has_completed_onboarding = $1 WHERE user_id = $2`,
+                 `INSERT INTO user_settings (user_id, has_completed_onboarding) VALUES ($2, $1) 
+                  ON CONFLICT (user_id) DO UPDATE SET has_completed_onboarding = $1`,
                  [body.has_completed_onboarding, userId]
              );
         }

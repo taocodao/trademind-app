@@ -46,8 +46,10 @@ export async function GET(req: NextRequest) {
                 priceId: null,
                 cancelAtPeriodEnd: false,
                 cancelAt: null,
-                emailSignalAlerts: true,
+                emailSignalAlerts: false,
                 email: null,
+                hasCompletedOnboarding: false,
+                globalAutoApprove: true,
             });
         }
 
@@ -61,8 +63,10 @@ export async function GET(req: NextRequest) {
             priceId: row.stripe_price_id || null,
             cancelAtPeriodEnd: row.cancel_at_period_end || false,
             cancelAt: row.cancel_at || null,
-            emailSignalAlerts: row.email_signal_alerts !== false,
+            emailSignalAlerts: row.email_signal_alerts === true,
             email: row.email || null,
+            hasCompletedOnboarding: row.has_completed_onboarding ?? false,
+            globalAutoApprove: row.global_auto_approve !== false,
         });
     } catch (error) {
         console.error('Error fetching subscription tier:', error);

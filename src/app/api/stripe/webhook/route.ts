@@ -67,7 +67,7 @@ async function processWebhookEvent(event: Stripe.Event) {
                 `INSERT INTO user_settings (
                     user_id, subscription_tier, stripe_customer_id, stripe_subscription_id, 
                     stripe_price_id, subscription_status, billing_interval, current_period_end, trial_end, livemode, updated_at, email, email_signal_alerts
-                 ) VALUES ($10, $1, $2, $3, $4, $5, $6, to_timestamp($7), $8, $9, NOW(), $11, true)
+                 ) VALUES ($10, $1, $2, $3, $4, $5, $6, to_timestamp($7), $8, $9, NOW(), $11, false)
                  ON CONFLICT (user_id) DO UPDATE 
                  SET subscription_tier = EXCLUDED.subscription_tier,
                      stripe_customer_id = EXCLUDED.stripe_customer_id,

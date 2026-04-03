@@ -109,8 +109,30 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         persist({ ...settings, riskLevel: level });
     };
 
+    // Sync with DB
+    useEffect(() => {
+        fetch('/api/settings/tier')
+            .then(res => res.json())
+            .then(data => {
+                if (data.globalAutoApprove !== undefined) {
+                    setSettings(prev => {
+                        const updated = { ...prev, autoApproval: data.globalAutoApprove };
+                        localStorage.setItem('tm_settings', JSON.stringify(updated));
+                        return updated;
+                    });
+                }
+            })
+            .catch(() => {});
+    }, []);
+
     const setAutoApproval = (enabled: boolean) => {
         persist({ ...settings, autoApproval: enabled });
+        // Push state to backend
+        fetch('/api/settings/notifications', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ global_auto_approve: enabled }),
+        }).catch(err => console.error('Failed to sync auto config', err));
     };
 
     const setTurboBounceMode = (mode: 'MODE_A' | 'MODE_B') => {

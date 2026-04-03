@@ -62,6 +62,8 @@ import { useStrategyContext } from '@/components/providers/StrategyContext';
 
 import { StrategyTabs } from '@/components/ui/StrategyTabs';
 
+import { OnboardingWelcomeModal } from '@/components/dashboard/OnboardingWelcomeModal';
+
 import { getStrategy } from '@/lib/strategies';
 
 import { TastytradeLink } from '@/components/TastytradeLink';
@@ -807,6 +809,8 @@ function DashboardContent() {
     return (
 
         <main className="min-h-screen pb-24 max-w-4xl mx-auto w-full border-x border-white/5 bg-tm-bg shadow-2xl relative flex flex-col">
+
+            <OnboardingWelcomeModal />
 
             {/* TOP NAV */}
 

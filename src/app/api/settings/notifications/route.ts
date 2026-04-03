@@ -39,6 +39,20 @@ export async function PATCH(req: NextRequest) {
              );
         }
 
+        if (body.global_auto_approve !== undefined) {
+             await query(
+                 `UPDATE user_settings SET global_auto_approve = $1 WHERE user_id = $2`,
+                 [body.global_auto_approve, userId]
+             );
+        }
+
+        if (body.has_completed_onboarding !== undefined) {
+             await query(
+                 `UPDATE user_settings SET has_completed_onboarding = $1 WHERE user_id = $2`,
+                 [body.has_completed_onboarding, userId]
+             );
+        }
+
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Error updating notification settings:', error);

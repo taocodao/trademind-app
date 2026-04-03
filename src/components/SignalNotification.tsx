@@ -22,6 +22,10 @@ export function SignalNotification({ signal, onClose, onView }: SignalNotificati
 
     useEffect(() => {
         if (signal) {
+            const cacheKey = `viewed_signal_${signal.id}`;
+            if (localStorage.getItem(cacheKey)) return;
+            localStorage.setItem(cacheKey, 'true');
+
             setIsVisible(true);
             // Auto-hide after 10 seconds
             const timer = setTimeout(() => {

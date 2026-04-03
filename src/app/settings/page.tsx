@@ -9,7 +9,6 @@ import { TastytradeCredentials } from '@/components/settings/TastytradeCredentia
 import { InvestmentPrincipal } from '@/components/dashboard/InvestmentPrincipal';
 import { ShadowLedgerPanel } from '@/components/dashboard/ShadowLedgerPanel';
 import { TQQQAutoApproveSettings } from '@/components/settings/TQQQAutoApproveSettings';
-import { TurboBounceAllocationSettings } from '@/components/settings/TurboBounceAllocationSettings';
 import { SubscriptionManager } from '@/components/settings/SubscriptionManager';
 import { MyStrategies } from '@/components/settings/MyStrategies';
 import { SignalEmailAlertsSettings } from '@/components/settings/SignalEmailAlertsSettings';
@@ -88,33 +87,9 @@ export default function SettingsPage() {
                     </div>
                 </div>
 
-                {/* TurboBounce Multi-Ticker Setup */}
-                <TurboBounceAllocationSettings />
-                
                 {/* Email Alerts Setup */}
                 <SignalEmailAlertsSettings />
                 
-                {/* Strategy Summary */}
-                <section className="glass-card p-4">
-                    <h3 className="font-semibold mb-3 text-sm">Strategy Summary</h3>
-                    <div className="space-y-2 text-sm">
-                        {[
-                            ['Strategy', 'TQQQ Dual-Sided Spread'],
-                            ['Put Side', 'VIX-Adaptive Credit Spreads'],
-                            ['Call Side', 'Bear Call Spreads (HIGH_VOL + CRISIS)'],
-                            ['Backtest Return', '+98.3% (Scenario B)'],
-                            ['Sharpe Ratio', '6.01'],
-                            ['Max Drawdown', '-10.4%'],
-                            ['VIX Protection', 'Enabled'],
-                        ].map(([label, val]) => (
-                            <div key={label} className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
-                                <span className="text-tm-muted">{label}</span>
-                                <span className="font-semibold text-right max-w-[55%] text-xs">{val}</span>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-
                 {/* Tastytrade Credentials */}
                 <TastytradeCredentials />
 

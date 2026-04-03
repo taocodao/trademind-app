@@ -27,6 +27,11 @@ export function OnboardingWelcomeModal() {
                 .finally(() => setLoading(false));
         };
         checkStatus();
+
+        // Listen for manual trigger
+        const handleManualOpen = () => setIsOpen(true);
+        window.addEventListener('open-onboarding', handleManualOpen);
+        return () => window.removeEventListener('open-onboarding', handleManualOpen);
     }, [getAccessToken]);
 
     const handleComplete = async () => {
@@ -60,11 +65,9 @@ export function OnboardingWelcomeModal() {
                     <div className="flex items-center gap-2 mt-4 text-xs font-semibold">
                         <span className={step >= 1 ? 'text-tm-purple' : 'text-tm-muted'}>Emails</span>
                         <div className="w-4 h-[1px] bg-white/10" />
-                        <span className={step >= 2 ? 'text-tm-purple' : 'text-tm-muted'}>Principal</span>
+                        <span className={step >= 2 ? 'text-tm-purple' : 'text-tm-muted'}>Auto-Approve</span>
                         <div className="w-4 h-[1px] bg-white/10" />
-                        <span className={step >= 3 ? 'text-tm-purple' : 'text-tm-muted'}>Auto-Approve</span>
-                        <div className="w-4 h-[1px] bg-white/10" />
-                        <span className={step >= 4 ? 'text-tm-purple' : 'text-tm-muted'}>Broker</span>
+                        <span className={step >= 3 ? 'text-tm-purple' : 'text-tm-muted'}>Broker</span>
                     </div>
                 </div>
 
@@ -81,17 +84,7 @@ export function OnboardingWelcomeModal() {
 
                     {step === 2 && (
                         <div className="animate-in slide-in-from-right-4 duration-300 fade-in">
-                            <h3 className="font-semibold mb-3 text-tm-purple">Step 2: Investment Principal</h3>
-                            <p className="text-sm text-zinc-300 mb-4">
-                                Set the base capital you'd like to dedicate per strategy. This is used strictly for position sizing math and trailing stops.
-                            </p>
-                            <InvestmentPrincipal />
-                        </div>
-                    )}
-
-                    {step === 3 && (
-                        <div className="animate-in slide-in-from-right-4 duration-300 fade-in">
-                            <h3 className="font-semibold mb-3 text-tm-purple">Step 3: Auto-Approval Settings</h3>
+                            <h3 className="font-semibold mb-3 text-tm-purple">Step 2: Auto-Approval Settings</h3>
                             <p className="text-sm text-zinc-300 mb-4">
                                 Configure how aggressively the system automatically approves trades matching your strategies. Leave it universally enabled for a hands-off experience!
                             </p>
@@ -99,7 +92,7 @@ export function OnboardingWelcomeModal() {
                         </div>
                     )}
 
-                    {step === 4 && (
+                    {step === 3 && (
                         <div className="animate-in slide-in-from-right-4 duration-300 fade-in h-full flex flex-col justify-center text-center px-4">
                             <div className="w-16 h-16 rounded-full bg-tm-purple/20 flex items-center justify-center mx-auto mb-4">
                                 <span className="text-3xl">🏦</span>
@@ -122,7 +115,7 @@ export function OnboardingWelcomeModal() {
                          </button>
                      )}
                      
-                     {step < 4 ? (
+                     {step < 3 ? (
                         <button
                             onClick={() => setStep(step + 1)}
                             className="px-6 py-2 bg-tm-purple text-white rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-tm-purple/80 transition-all shadow-lg shadow-tm-purple/20"

@@ -61,31 +61,8 @@ export default function SettingsPage() {
                 {/* My Strategies Subscription */}
                 <MyStrategies />
                 
-                {/* Strategy-Specific Settings */}
-                <div className="glass-card p-4">
-                    <h3 className="font-semibold mb-3 text-sm">Strategy Configuration</h3>
-                    <div className="mb-4">
-                        <StrategyTabs
-                            strategies={enabledStrategies}
-                            activeKey={activeStrategy}
-                            onChange={setActiveStrategy}
-                        />
-                    </div>
-                    
-                    <div className="space-y-4">
-                        {/* Investment Principal */}
-                        <InvestmentPrincipal strategy={activeStrategy} />
-
-                        {/* Shadow Ledger — now managed in the Positions tab */}
-                        <div className="flex items-center gap-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-xs text-blue-300">
-                            <span className="text-lg">💼</span>
-                            <span>Shadow Ledger balance &amp; virtual positions are managed in the <strong>Positions</strong> tab.</span>
-                        </div>
-
-                        {/* Auto-Approve Settings */}
-                        <TQQQAutoApproveSettings />
-                    </div>
-                </div>
+                {/* Strategy-Specific Settings (Auto-Approve & Risk) */}
+                <TQQQAutoApproveSettings />
 
                 {/* Email Alerts Setup */}
                 <SignalEmailAlertsSettings />

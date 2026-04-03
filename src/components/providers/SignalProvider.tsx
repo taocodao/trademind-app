@@ -4,6 +4,7 @@ import { createContext, useContext, useCallback, useState, useEffect, ReactNode,
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { SignalNotification } from '@/components/SignalNotification';
+import { useSettings } from '@/components/providers/SettingsProvider';
 
 // Types from DB schema
 interface AutoApproveSettings {
@@ -149,7 +150,8 @@ interface SignalProviderProps {
 
 export function SignalProvider({ children }: SignalProviderProps) {
     const router = useRouter();
-    const { authenticated } = usePrivy();
+    const { settings: localSettings } = useSettings();
+
     const [isMounted, setIsMounted] = useState(false);
     const [notificationSignal, setNotificationSignal] = useState<Signal | null>(null);
     const [allSignalsState, _setAllSignals] = useState<Signal[]>([]);
@@ -213,34 +215,39 @@ export function SignalProvider({ children }: SignalProviderProps) {
     const processedSignalIds = useRef(new Set<string>());
 
     const attemptAutoApprove = useCallback(async (signal: Signal) => {
-        if (!autoSettings?.enabled) return;
         if (signal.status !== 'pending') return;
         // Only skip if already submitted for execution (not just checked)
         if (processedSignalIds.current.has(signal.id)) return;
 
-        // Determine strategy configuration
         const strategy = (signal.strategy || '').toLowerCase();
-        let strategyKey: string;
-        if (strategy.includes('theta') || strategy.includes('put')) {
-            strategyKey = 'theta';
-        } else if (strategy.includes('zebra')) {
-            strategyKey = 'zebra';
-        } else if (strategy.includes('dvo') || strategy.includes('value')) {
-            strategyKey = 'dvo';
-        } else {
-            strategyKey = 'diagonal';
+        
+        let isAutoApprovePermitted = false;
+        
+        // Check if the global bundle setting is turned on.
+        if (localSettings?.autoApproval) {
+            // If it's turbocore/turbobounce, the global bundle setting is sufficient
+            if (strategy.includes('turbocore') || strategy.includes('turbobounce')) {
+                isAutoApprovePermitted = true;
+            }
+        }
+        
+        // If not enabled globally, check Gamification DB config
+        if (!isAutoApprovePermitted && autoSettings?.enabled) {
+            let strategyKey: string;
+            if (strategy.includes('theta') || strategy.includes('put')) strategyKey = 'theta';
+            else if (strategy.includes('zebra')) strategyKey = 'zebra';
+            else if (strategy.includes('dvo') || strategy.includes('value')) strategyKey = 'dvo';
+            else strategyKey = 'diagonal';
+            
+            const config = autoSettings[strategyKey] as any;
+            if (config?.enabled) {
+                isAutoApprovePermitted = true;
+            }
         }
 
-        // Cast to ensure TS knows the shape of the config object
-        const config = autoSettings[strategyKey] as {
-            enabled: boolean;
-            riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
-            customOverrides: Record<string, number>;
-        } | undefined;
+        if (!isAutoApprovePermitted) return;
 
-        if (!config?.enabled) return;
-
-        console.log(`🤖 Checking auto-approve for ${signal.symbol} (${strategyKey})...`);
+        console.log(`🤖 Auto-approve permitted for ${signal.symbol}. Linking brokerage status...`);
 
         // Check 0: Account must have buying power (Only if connected to a brokerage)
         // If the user hasn't successfully fetched account data (buyingPower is 0),
@@ -253,20 +260,35 @@ export function SignalProvider({ children }: SignalProviderProps) {
                 return;
             }
 
+            // Find risk level config if possible
+            let riskLevelConfig = 'MEDIUM';
+            if (autoSettings?.enabled) {
+                let strategyKey = 'diagonal';
+                if (strategy.includes('theta') || strategy.includes('put')) strategyKey = 'theta';
+                else if (strategy.includes('zebra')) strategyKey = 'zebra';
+                else if (strategy.includes('dvo') || strategy.includes('value')) strategyKey = 'dvo';
+                
+                const c = autoSettings[strategyKey] as any;
+                if (c?.riskLevel) riskLevelConfig = c.riskLevel;
+            }
+
             // Check 1: Risk Limits
-            const limits = RISK_LIMITS[config.riskLevel] || RISK_LIMITS.MEDIUM;
+            const limits = RISK_LIMITS[riskLevelConfig as keyof typeof RISK_LIMITS] || RISK_LIMITS.MEDIUM;
             const confidence = signal.confidence || 0;
             const capitalReq = signal.capital_required || signal.cost || 0;
 
-            if (confidence < limits.minConfidence) {
-                console.log(`❌ Auto-approve skipped: Confidence ${confidence}% < ${limits.minConfidence}%`);
-                return;
-            }
+            // Wait, TurboCore strategy may bypass gamification confidence checks
+            if (!strategy.includes('turbocore')) {
+                if (confidence < limits.minConfidence) {
+                    console.log(`❌ Auto-approve skipped: Confidence ${confidence}% < ${limits.minConfidence}%`);
+                    return;
+                }
 
-            // Check 2: Capital Requirements
-            if (capitalReq > limits.maxCapital) {
-                console.log(`❌ Auto-approve skipped: Capital $${capitalReq} > limit $${limits.maxCapital}`);
-                return;
+                // Check 2: Capital Requirements
+                if (capitalReq > limits.maxCapital) {
+                    console.log(`❌ Auto-approve skipped: Capital $${capitalReq} > limit $${limits.maxCapital}`);
+                    return;
+                }
             }
 
             if (capitalReq > 0 && capitalReq > buyingPower) {
@@ -275,13 +297,12 @@ export function SignalProvider({ children }: SignalProviderProps) {
             }
 
             // Check 3: Position Limits
-            if (openPositionCount >= limits.maxPositions) {
+            if (!strategy.includes('turbocore') && openPositionCount >= limits.maxPositions) {
                 console.log(`❌ Auto-approve skipped: Max positions reached (${openPositionCount} >= ${limits.maxPositions})`);
                 return;
             }
         } else {
-            console.log(`ℹ️ Auto-approve skipped: No brokerage linked (Signal-only mode)`);
-            return;
+            console.log(`ℹ️ Auto-approve executing virtually: No brokerage linked (Signal-only mode)`);
         }
 
         // ✅ All checks passed — mark as processed and execute

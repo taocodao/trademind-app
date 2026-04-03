@@ -115,38 +115,35 @@ export function TQQQAutoApproveSettings() {
                                 : 'Manually approve each signal before execution'}
                         </p>
                     </div>
-                    {/* Toggle switch */}
-                    <button
-                        onClick={() => {
-                            if (settings.tastytrade?.refreshToken) {
-                                setAutoApproval(!settings.autoApproval);
-                            }
-                        }}
-                        disabled={!settings.tastytrade?.refreshToken}
-                        className={`relative w-12 h-6 rounded-full transition-colors duration-200 flex-shrink-0 ${!settings.tastytrade?.refreshToken ? 'bg-tm-surface opacity-50 cursor-not-allowed' :
-                            settings.autoApproval ? 'bg-tm-purple' : 'bg-tm-surface'
-                            }`}
-                        aria-label="Toggle auto-approval"
-                    >
-                        <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${settings.autoApproval ? 'translate-x-7' : 'translate-x-1'
-                            }`} />
-                    </button>
-                </div>
+                {/* Toggle switch */}
+                <button
+                    onClick={() => {
+                        setAutoApproval(!settings.autoApproval);
+                    }}
+                    className={`relative w-12 h-6 rounded-full transition-colors duration-200 flex-shrink-0 ${
+                        settings.autoApproval ? 'bg-tm-purple' : 'bg-tm-surface'
+                    }`}
+                    aria-label="Toggle auto-approval"
+                >
+                    <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${settings.autoApproval ? 'translate-x-7' : 'translate-x-1'
+                        }`} />
+                </button>
+            </div>
 
-                {!settings.tastytrade?.refreshToken ? (
-                    <div className="mt-3 pt-3 border-t border-white/5">
-                        <p className="text-[11px] text-tm-muted flex items-start gap-1">
-                            <AlertTriangle className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                            <span>Link Tastytrade in settings below to enable auto-execute. You can still track signals manually.</span>
-                        </p>
-                    </div>
-                ) : settings.autoApproval ? (
-                    <div className="mt-3 pt-3 border-t border-white/5">
-                        <p className="text-[11px] text-yellow-400/80">
-                            ⚠️ Auto-approval requires a linked Tastytrade account. Signals will be submitted as limit orders at mid-price.
-                        </p>
-                    </div>
-                ) : null}
+            {!settings.tastytrade?.refreshToken ? (
+                <div className="mt-3 pt-3 border-t border-white/5">
+                    <p className="text-[11px] text-tm-muted flex items-start gap-1">
+                        <AlertTriangle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                        <span>Link Tastytrade in settings below to enable live auto-execute. Signals will execute virtually on the shadow ledger.</span>
+                    </p>
+                </div>
+            ) : settings.autoApproval ? (
+                <div className="mt-3 pt-3 border-t border-white/5">
+                    <p className="text-[11px] text-yellow-400/80">
+                        ⚠️ Auto-approval is active. Qualifying signals will be securely submitted to Tastytrade as limit orders at mid-price.
+                    </p>
+                </div>
+            ) : null}
             </div>
         </div>
     );

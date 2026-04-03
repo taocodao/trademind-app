@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 
 export function SignalEmailAlertsSettings() {
-    const { ready, authenticated } = usePrivy();
+    const { ready, authenticated, getAccessToken } = usePrivy();
     const [emailEnabled, setEmailEnabled] = useState<boolean>(false);
     const [emails, setEmails] = useState<string[]>(['']);
     const [loading, setLoading] = useState(true);
@@ -15,8 +15,11 @@ export function SignalEmailAlertsSettings() {
     useEffect(() => {
         if (!ready || !authenticated) return;
         
-        const fetchSettings = () => {
-            fetch('/api/settings/tier')
+        const fetchSettings = async () => {
+            const token = await getAccessToken();
+            fetch('/api/settings/tier', {
+                headers: token ? { Authorization: `Bearer ${token}` } : {}
+            })
                 .then(res => res.json())
                 .then(data => {
                     // Now defaults to false per user request
@@ -33,14 +36,18 @@ export function SignalEmailAlertsSettings() {
         fetchSettings();
         window.addEventListener('focus', fetchSettings);
         return () => window.removeEventListener('focus', fetchSettings);
-    }, [ready, authenticated]);
+    }, [ready, authenticated, getAccessToken]);
 
     const handleToggle = async (val: boolean) => {
         setEmailEnabled(val);
         try {
+            const token = await getAccessToken();
             await fetch('/api/settings/notifications', {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                },
                 body: JSON.stringify({ email_signal_alerts: val }),
             });
         } catch (e) {
@@ -52,10 +59,14 @@ export function SignalEmailAlertsSettings() {
         setSaving(true);
         setSaved(false);
         try {
+            const token = await getAccessToken();
             const joinedEmails = emails.filter(e => e.trim() !== '').join(',');
             await fetch('/api/settings/notifications', {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                },
                 body: JSON.stringify({ email: joinedEmails }),
             });
             setSaved(true);

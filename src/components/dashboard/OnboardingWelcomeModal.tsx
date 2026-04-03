@@ -8,31 +8,37 @@ import { X, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 
 export function OnboardingWelcomeModal() {
-    const { ready, authenticated } = usePrivy();
-    const [isOpen, setIsOpen] = useState(false);
+    const { getAccessToken } = usePrivy();
     const [step, setStep] = useState(1);
+    const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!ready || !authenticated) return;
-        
-        fetch('/api/settings/tier')
-            .then(res => res.json())
-            .then(data => {
-                if (data.hasCompletedOnboarding === false) {
-                    setIsOpen(true);
-                }
+        const checkStatus = async () => {
+            const token = await getAccessToken();
+            fetch('/api/settings/tier', {
+                headers: token ? { Authorization: `Bearer ${token}` } : {}
             })
-            .catch(console.error)
-            .finally(() => setLoading(false));
-    }, [ready, authenticated]);
+                .then(res => res.json())
+                .then(data => {
+                    if (data.hasCompletedOnboarding === false) setIsOpen(true);
+                })
+                .catch(() => {})
+                .finally(() => setLoading(false));
+        };
+        checkStatus();
+    }, [getAccessToken]);
 
     const handleComplete = async () => {
         setIsOpen(false);
         try {
+            const token = await getAccessToken();
             await fetch('/api/settings/notifications', {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                },
                 body: JSON.stringify({ has_completed_onboarding: true }),
             });
         } catch (e) {

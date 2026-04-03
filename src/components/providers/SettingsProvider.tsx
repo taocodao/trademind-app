@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { usePrivy } from '@privy-io/react-auth';
 
 type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
 
@@ -61,6 +62,7 @@ export function useSettings() {
 }
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
+    const { getAccessToken } = usePrivy();
     const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
 
     // Load from localStorage on mount
@@ -111,8 +113,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
     // Sync with DB
     useEffect(() => {
-        const fetchRemoteSync = () => {
-            fetch('/api/settings/tier')
+        const fetchRemoteSync = async () => {
+            const token = await getAccessToken();
+            fetch('/api/settings/tier', {
+                headers: token ? { Authorization: `Bearer ${token}` } : {}
+            })
                 .then(res => res.json())
                 .then(data => {
                     if (data.globalAutoApprove !== undefined) {
@@ -131,16 +136,24 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         fetchRemoteSync();
         window.addEventListener('focus', fetchRemoteSync);
         return () => window.removeEventListener('focus', fetchRemoteSync);
-    }, []);
+    }, [getAccessToken]);
 
-    const setAutoApproval = (enabled: boolean) => {
+    const setAutoApproval = async (enabled: boolean) => {
         persist({ ...settings, autoApproval: enabled });
         // Push state to backend
-        fetch('/api/settings/notifications', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ global_auto_approve: enabled }),
-        }).catch(err => console.error('Failed to sync auto config', err));
+        try {
+            const token = await getAccessToken();
+            await fetch('/api/settings/notifications', {
+                method: 'PATCH',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify({ global_auto_approve: enabled }),
+            });
+        } catch (err) {
+            console.error('Failed to sync auto config', err);
+        }
     };
 
     const setTurboBounceMode = (mode: 'MODE_A' | 'MODE_B') => {

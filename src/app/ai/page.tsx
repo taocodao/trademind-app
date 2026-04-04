@@ -168,7 +168,7 @@ export default function AIHubPage() {
              <ShieldAlert className="h-6 w-6 text-amber-500 mb-1" />
              <h3 className="font-semibold text-white">Unlock AI Copilot</h3>
              <p className="text-xs text-tm-muted">Subscribe to a base plan to unlock free AI features and the $5/mo add-ons.</p>
-             <Link href="/pricing" className="mt-2 text-tm-purple text-sm font-medium hover:underline">View Plans →</Link>
+             <Link href="/#pricing" className="mt-2 text-tm-purple text-sm font-medium hover:underline">View Plans →</Link>
           </div>
         )}
       </header>

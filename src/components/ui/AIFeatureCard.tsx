@@ -65,7 +65,7 @@ export function AIFeatureCard({
         <div className="text-white font-semibold text-sm leading-tight">{title}</div>
         <div className="text-tm-muted text-xs mt-1.5 leading-relaxed flex-grow">{description}</div>
         <div className="mt-3 pt-2">
-            <Link href="/pricing" className="text-tm-purple text-xs font-semibold hover:underline">Subscribe to unlock</Link>
+            <Link href="/#pricing" className="text-tm-purple text-xs font-semibold hover:underline">Subscribe to unlock</Link>
         </div>
       </div>
     );

@@ -29,6 +29,13 @@ export default function SinglePageMarketing() {
                 router.push('/dashboard');
             } else {
                 setShouldRender(true);
+                // Explicitly scroll to hash after render because loading spinner blocks native browser jump
+                if (window.location.hash) {
+                    setTimeout(() => {
+                        const el = document.getElementById(window.location.hash.substring(1));
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }, 200);
+                }
             }
         }
     }, [ready, authenticated, router]);

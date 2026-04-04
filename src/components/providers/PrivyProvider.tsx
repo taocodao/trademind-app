@@ -11,7 +11,7 @@ export function PrivyProvider({ children }: { children: React.ReactNode }) {
                     theme: "dark",
                     accentColor: "#7C3AED",
                 },
-                loginMethods: ["email", "google", "apple"],
+                loginMethods: ["email", "google"],
             }}
         >
             {children}

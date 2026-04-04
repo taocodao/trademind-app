@@ -546,7 +546,7 @@ function DashboardContent() {
 
             // Fetch membership and auto-start trial for new users
             getAccessToken().then(token => {
-                const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+                const authHeader: Record<string, string> = token ? { 'Authorization': `Bearer ${token}` } : {};
                 fetch('/api/settings/tier', { headers: authHeader })
                     .then(r => r.json())
                     .then(d => {
@@ -1031,7 +1031,7 @@ function DashboardContent() {
                                 <button
                                     onClick={async () => {
                                         const token = await getAccessToken();
-                                        const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+                                        const authHeader: Record<string, string> = token ? { 'Authorization': `Bearer ${token}` } : {};
                                         const r = await fetch('/api/settings/start-trial', {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json', ...authHeader },

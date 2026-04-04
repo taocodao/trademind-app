@@ -9,6 +9,7 @@ const FREE_FEATURE_LIMITS: Record<string, number> = {
     'turbocore': 1,
     'turbocore_pro': 1,
     'both_bundle': 2,
+    'app_trial': 2,
 };
 
 const ALL_FEATURES = [
@@ -22,6 +23,33 @@ const ALL_FEATURES = [
 export async function GET(req: NextRequest) {
     try {
         const user = await getUserFromRequest(req);
+
+        // Fetch deep user profile for trial status
+        const settingsResult = await query(
+            `SELECT app_trial_started_at, app_trial_2_started_at, app_trial_tier FROM user_settings WHERE user_id = $1`,
+            [user.privyDid]
+        );
+        const row = settingsResult.rows[0];
+        
+        let appTrialStatus = null;
+        let appTrialEnd = null;
+        let appTrialTier = 'both_bundle';
+        const TRIAL_DAYS = parseInt(process.env.FREE_TRIAL_DAYS || '14', 10);
+
+        if (row) {
+            const trial2Start = row.app_trial_2_started_at ? new Date(row.app_trial_2_started_at) : null;
+            const trial1Start = row.app_trial_started_at ? new Date(row.app_trial_started_at) : null;
+            const activeTrial = trial2Start ?? trial1Start;
+            
+            if (activeTrial) {
+                const trialEndDate = new Date(activeTrial.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
+                if (new Date() < trialEndDate) {
+                    appTrialStatus = trial2Start ? 'second_trial_active' : 'active';
+                    appTrialEnd = trialEndDate.toISOString();
+                    appTrialTier = row.app_trial_tier || 'both_bundle';
+                }
+            }
+        }
 
         // Get user's active feature subscriptions
         const subsResult = await query(
@@ -38,6 +66,9 @@ export async function GET(req: NextRequest) {
 
         return NextResponse.json({
             tier: user.tier,
+            appTrialStatus,
+            appTrialEnd,
+            appTrialTier,
             features: ALL_FEATURES.map(f => ({
                 ...f,
                 isActive: activeFeatures.some((a: any) => a.feature_key === f.key),

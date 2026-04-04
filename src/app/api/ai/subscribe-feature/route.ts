@@ -68,11 +68,34 @@ export async function POST(req: NextRequest) {
 
         // Paid — add Stripe subscription item
         const settingsResult = await query(
-            `SELECT stripe_subscription_id FROM user_settings WHERE user_id = $1`,
+            `SELECT stripe_subscription_id, app_trial_tier, app_trial_started_at, app_trial_2_started_at, app_trial_count FROM user_settings WHERE user_id = $1`,
             [user.privyDid]
         );
-        const subscriptionId = settingsResult.rows[0]?.stripe_subscription_id;
+        const row = settingsResult.rows[0];
+        const subscriptionId = row?.stripe_subscription_id;
+
         if (!subscriptionId) {
+            // Determine if they are on a free trial
+            const TRIAL_DAYS = parseInt(process.env.FREE_TRIAL_DAYS || '14', 10);
+            const trial2Start = row?.app_trial_2_started_at ? new Date(row.app_trial_2_started_at) : null;
+            const trial1Start = row?.app_trial_started_at ? new Date(row.app_trial_started_at) : null;
+            const activeTrial = trial2Start ?? trial1Start;
+            
+            let isOnTrial = false;
+            if (activeTrial) {
+                const trialEndDate = new Date(activeTrial.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
+                if (new Date() < trialEndDate) {
+                    isOnTrial = true;
+                }
+            }
+
+            if (isOnTrial) {
+                return NextResponse.json({ 
+                    error: 'You are currently on a free trial and have used your free AI picks. To purchase additional add-ons, please wait until your trial period is over to subscribe.',
+                    code: 'TRIAL_ACTIVE_NO_STRIPE'
+                }, { status: 400 });
+            }
+
             return NextResponse.json({ 
                 error: 'No Stripe subscription found. You must have an active TurboCore or Both Bundle plan to add paid features.',
                 code: 'NO_SUBSCRIPTION'

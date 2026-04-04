@@ -106,8 +106,12 @@ export default function AIHubPage() {
     );
   }
 
-  const { tier, features, freeRemaining, freeLimit, chatIncluded } = data || {};
+  const { tier, features, freeRemaining, freeLimit, chatIncluded, appTrialStatus, appTrialEnd, appTrialTier } = data || {};
   const isObserver = tier === 'observer';
+
+  const trialActive = appTrialStatus === 'active' || appTrialStatus === 'second_trial_active';
+  const trialDaysLeft = trialActive && appTrialEnd ? Math.max(0, Math.ceil((new Date(appTrialEnd).getTime() - Date.now()) / 86400000)) : 0;
+  const trialNum = appTrialStatus === 'second_trial_active' ? 2 : 1;
 
   return (
     <div className="min-h-screen bg-tm-bg text-white pb-24">
@@ -143,6 +147,21 @@ export default function AIHubPage() {
             </div>
         )}
         
+        {trialActive && (
+            <div className="mb-4 glass-card p-3 flex items-center gap-3 border-tm-purple/30 bg-gradient-to-r from-tm-purple/10 to-blue-500/10">
+                <div className="w-8 h-8 rounded-full bg-tm-purple/20 flex items-center justify-center shrink-0">
+                    <span className="text-sm">🎉</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-white">Free Trial #{trialNum} — {(appTrialTier || '').replace('_', ' ')} Access</p>
+                    <p className="text-[10px] text-tm-muted">
+                        {trialDaysLeft > 0 ? `${trialDaysLeft} day${trialDaysLeft !== 1 ? 's' : ''} remaining · No credit card needed yet` : 'Expires today!'}
+                    </p>
+                </div>
+                <a href="/#pricing" className="text-[10px] font-bold text-tm-purple hover:underline whitespace-nowrap shrink-0">Choose a Plan →</a>
+            </div>
+        )}
+
         {!isObserver && (
           <div className="bg-tm-purple/10 border border-tm-purple/30 rounded-xl p-4 flex flex-col gap-2">
             <div className="flex justify-between items-center w-full">
@@ -157,7 +176,9 @@ export default function AIHubPage() {
                 <p className="text-xs text-tm-muted">You have unused free AI feature picks. Add a feature below for free!</p>
             )}
             {freeRemaining === 0 && freeLimit > 0 && (
-                <p className="text-xs text-tm-muted">You have used your free picks. Additional features are $5/mo.</p>
+                <p className="text-xs text-tm-muted">
+                  {trialActive ? 'You have used your free trial picks. To buy more add-ons, wait until your trial period is over.' : 'You have used your free picks. Additional features are $5/mo.'}
+                </p>
             )}
           </div>
         )}

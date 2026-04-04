@@ -822,9 +822,9 @@ function DashboardContent() {
 
                 {/* Welcome header */}
 
-                <div className="glass-card p-4 flex flex-wrap items-center gap-3">
+                <div className="glass-card p-4 flex flex-wrap sm:flex-nowrap items-center gap-3">
 
-                    <div className="flex-[1_1_150px] min-w-0">
+                    <div className="flex-[1_1_150px] sm:flex-none min-w-0 mr-auto">
 
                         <p className="text-tm-muted text-xs">{t('dashboard.welcome')}</p>
 
@@ -845,7 +845,7 @@ function DashboardContent() {
 
                     </div>
 
-                    <div className="w-full sm:w-auto order-3 sm:order-2 sm:ml-auto flex justify-center mt-1 sm:mt-0">
+                    <div className="w-full sm:w-auto order-3 sm:order-2 flex justify-center mt-1 sm:mt-0">
                         {/* Onboard Guide Manual Trigger */}
                         <button
                             onClick={() => window.dispatchEvent(new Event('open-onboarding'))}

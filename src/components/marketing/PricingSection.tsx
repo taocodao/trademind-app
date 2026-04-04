@@ -84,7 +84,7 @@ export function PricingSection() {
         if (!authenticated) {
             if (typeof window !== 'undefined') {
                 // Store the actual priceId (not tier.id) so dashboard can call checkout directly
-                sessionStorage.setItem('pendingTierUrl', priceId);
+                sessionStorage.setItem('pendingTierUrl', tier.id);
                 sessionStorage.setItem('pendingTierAnnual', String(isAnnual));
             }
             login();
@@ -95,6 +95,27 @@ export function PricingSection() {
         try {
             // Get Privy JWT — works immediately after login without waiting for cookie
             const token = await getAccessToken();
+
+            // Always verify if user already has an active subscription
+            const tierRes = await fetch('/api/settings/tier', {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
+            const tierData = await tierRes.json();
+
+            // If user is already subscribed, route to billing portal instead of checkout
+            if (tierData.tier && tierData.tier !== 'observer') {
+                const portalRes = await fetch('/api/stripe/portal', { 
+                    method: 'POST',
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {} 
+                });
+                const portalData = await portalRes.json();
+                if (portalData.url) {
+                    window.location.href = portalData.url;
+                    return;
+                }
+            }
+
+            // Not subscribed, proceed to fresh checkout session
             const res = await fetch('/api/stripe/checkout', {
                 method: 'POST',
                 headers: {

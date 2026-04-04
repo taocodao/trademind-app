@@ -62,6 +62,27 @@ async function processWebhookEvent(event: Stripe.Event) {
             const billingInterval = subscription.items.data[0].price.recurring?.interval ?? "month";
             const email = session.customer_details?.email || null;
 
+            // ── FAILSAFE: Prevent Orphaned Subscriptions ──
+            // If the user already had an active subscription, cancel it in Stripe 
+            // before overwriting it in our database so they aren't double billed.
+            const existingUserRes = await pool.query(
+                `SELECT stripe_subscription_id FROM user_settings WHERE user_id = $1`,
+                [userId]
+            );
+            const existingSubscriptionId = existingUserRes.rows[0]?.stripe_subscription_id;
+            
+            if (existingSubscriptionId && existingSubscriptionId !== subscriptionId) {
+                console.log(`⚠️ User ${userId} completed new checkout session but already has subscription ${existingSubscriptionId}. Canceling orphaned subscription to prevent duplicate billing.`);
+                try {
+                    await stripe.subscriptions.cancel(existingSubscriptionId);
+                } catch (cancelErr: any) {
+                    // Ignore 404s if it was already canceled
+                    if (cancelErr.code !== 'resource_missing') {
+                        console.error(`Failed to automatically cancel orphaned subscription ${existingSubscriptionId}:`, cancelErr);
+                    }
+                }
+            }
+
             const sub = subscription as any;
             await pool.query(
                 `INSERT INTO user_settings (

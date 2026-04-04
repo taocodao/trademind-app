@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import Stripe from "stripe";
 import pool from "@/lib/db";
+import { extendReferrerSubscription } from "@/lib/stripe-extend";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs'; // Required for raw body access in App Router
@@ -307,6 +308,8 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
                  VALUES ($1, 'annual_bonus', 150, 'Annual bonus: $150 credit — friend joined annual plan')`,
                 [ref.id]
             );
+            // Also extend the referrer's subscription renewal by the equivalent free days
+            await extendReferrerSubscription(ref.referrer_user_id, 150, ref.id, 'Annual referral bonus');
             console.log(`💰 $150 annual referral bonus issued to ${referrerStripeId}`);
         } else if (!ref.stage1_paid) {
             // Monthly plan: $50 stage 1
@@ -325,6 +328,8 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
                  VALUES ($1, 'stage1_paid', 50, 'Stage 1: $50 credit — friend paid first month')`,
                 [ref.id]
             );
+            // Also extend the referrer's subscription renewal by the equivalent free days
+            await extendReferrerSubscription(ref.referrer_user_id, 50, ref.id, 'Stage 1 referral reward');
             console.log(`💰 $50 referral Stage 1 issued to ${referrerStripeId}`);
         }
     }
@@ -346,6 +351,8 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
              VALUES ($1, 'stage2_paid', 50, 'Stage 2: $50 credit — friend completed second month')`,
             [ref.id]
         );
+        // Also extend the referrer's subscription renewal by the equivalent free days
+        await extendReferrerSubscription(ref.referrer_user_id, 50, ref.id, 'Stage 2 referral reward');
         console.log(`💰 $50 referral Stage 2 issued to ${referrerStripeId}`);
     }
 }

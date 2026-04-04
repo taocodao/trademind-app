@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Gift, ArrowRight } from 'lucide-react';
+import { Gift, ArrowRight, CalendarDays, DollarSign, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 export function ReferralPromoSection() {
@@ -15,23 +15,55 @@ export function ReferralPromoSection() {
                     <Gift className="w-8 h-8 text-tm-purple" />
                 </div>
 
-                <h2 className="text-3xl font-bold text-white mb-3 z-10">{t('referral.title', 'Invite Friends, Earn Credits')}</h2>
-                <div className="text-tm-muted max-w-2xl mx-auto mb-8 z-10 space-y-4">
-                    <p>
-                        {t('referral.desc', 'Share your unique link. When a friend signs up for a paid plan after their trial, you earn account credits automatically applied to your next bill.')}
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left mt-6">
-                        <div className="bg-white/5 p-4 rounded-xl border border-white/10">
-                            <h4 className="font-bold text-white mb-1">{t('referral.stage1_title', 'Stage 1: The Trial Conversion')}</h4>
-                            <p className="text-sm" dangerouslySetInnerHTML={{ __html: t('referral.stage1_desc', 'Get $50 credit when they pay for their first month after the 14-day trial.') }} />
+                <h2 className="text-3xl font-bold text-white mb-3 z-10">{t('referral.title', 'Invite Friends — Earn Cash & Free Days')}</h2>
+                <p className="text-tm-muted max-w-2xl mx-auto mb-2 z-10">
+                    {t('referral.desc', 'Share your unique link. When a friend converts from their free trial to a paid plan, you earn both a cash account credit and free subscription extension days automatically.')}
+                </p>
+                <p className="text-xs text-tm-muted mb-8 z-10">
+                    e.g. on TurboCore Monthly ($29/mo), a $50 reward = <strong className="text-white">~52 extra free days</strong> before your next charge.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left mb-8 w-full z-10">
+                    <div className="bg-white/5 p-5 rounded-xl border border-white/10 flex flex-col gap-2">
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="w-7 h-7 rounded-full bg-tm-purple/20 flex items-center justify-center text-tm-purple font-bold text-sm shrink-0">1</div>
+                            <h4 className="font-bold text-white text-sm">{t('referral.stage1_title', 'Stage 1 — Trial Conversion')}</h4>
                         </div>
-                        <div className="bg-white/5 p-4 rounded-xl border border-white/10">
-                            <h4 className="font-bold text-white mb-1">{t('referral.stage2_title', 'Stage 2: The Second Month')}</h4>
-                            <p className="text-sm" dangerouslySetInnerHTML={{ __html: t('referral.stage2_desc', 'Get another $50 credit when they complete their second paid month.') }} />
+                        <div className="flex items-center gap-2">
+                            <DollarSign className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span className="text-xs text-tm-muted"><strong className="text-white">$50 cash credit</strong> on your next invoice</span>
                         </div>
-                        <div className="bg-tm-purple/10 p-4 rounded-xl border border-tm-purple/30">
-                            <h4 className="font-bold text-tm-purple mb-1">{t('referral.annual_title', 'Annual Bonus Bypass')}</h4>
-                            <p className="text-sm" dangerouslySetInnerHTML={{ __html: t('referral.annual_desc', 'Get a <strong>$150 credit instantly</strong> if they bypass monthly and sign up for an Annual Plan!') }} />
+                        <div className="flex items-center gap-2">
+                            <CalendarDays className="w-4 h-4 text-tm-purple shrink-0" />
+                            <span className="text-xs text-tm-muted"><strong className="text-tm-purple">Free days added</strong> to your renewal date (≈52 days on TurboCore)</span>
+                        </div>
+                    </div>
+                    <div className="bg-white/5 p-5 rounded-xl border border-white/10 flex flex-col gap-2">
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="w-7 h-7 rounded-full bg-tm-purple/20 flex items-center justify-center text-tm-purple font-bold text-sm shrink-0">2</div>
+                            <h4 className="font-bold text-white text-sm">{t('referral.stage2_title', 'Stage 2 — Second Month')}</h4>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <DollarSign className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span className="text-xs text-tm-muted">Another <strong className="text-white">$50 cash credit</strong> when month 2 completes</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <CalendarDays className="w-4 h-4 text-tm-purple shrink-0" />
+                            <span className="text-xs text-tm-muted">More <strong className="text-tm-purple">free days</strong> stacked on top automatically</span>
+                        </div>
+                    </div>
+                    <div className="bg-tm-purple/10 p-5 rounded-xl border border-tm-purple/30 flex flex-col gap-2">
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="w-7 h-7 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold text-sm shrink-0">★</div>
+                            <h4 className="font-bold text-tm-purple text-sm">{t('referral.annual_title', 'Annual Bonus Bypass')}</h4>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <DollarSign className="w-4 h-4 text-amber-400 shrink-0" />
+                            <span className="text-xs text-tm-muted"><strong className="text-white">$150 instant credit</strong> if friend goes annual</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <CalendarDays className="w-4 h-4 text-amber-400 shrink-0" />
+                            <span className="text-xs text-tm-muted"><strong className="text-amber-400">Up to 155+ free days</strong> depending on your plan</span>
                         </div>
                     </div>
                 </div>
@@ -43,3 +75,4 @@ export function ReferralPromoSection() {
         </section>
     );
 }
+

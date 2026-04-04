@@ -23,6 +23,9 @@ interface MembershipInfo {
     priceId: string | null;
     cancelAtPeriodEnd?: boolean;
     cancelAt?: string | null;
+    appTrialStatus?: string | null;
+    appTrialEnd?: string | null;
+    appTrialTier?: string | null;
 }
 
 export function SubscriptionManager() {
@@ -187,19 +190,25 @@ export function SubscriptionManager() {
         }
     };
 
+    const trialActive = membership.appTrialStatus === 'active' || membership.appTrialStatus === 'second_trial_active';
+    const trialDaysLeft2 = trialActive && membership.appTrialEnd ? Math.max(0, Math.ceil((new Date(membership.appTrialEnd).getTime() - Date.now()) / 86400000)) : 0;
+    const trialNum = membership.appTrialStatus === 'second_trial_active' ? 2 : 1;
+    
+    const isPayingSubscriber = membership.appTrialStatus === 'converted';
+
     // Compute display values
-    const statusColor = membership.status === 'active' ? 'text-tm-green' :
+    const statusColor = (membership.status === 'active' || membership.status === 'second_trial_active') ? 'text-tm-green' :
         membership.status === 'trialing' ? 'text-yellow-400' :
         membership.status === 'past_due' ? 'text-tm-red' :
         membership.status === 'canceled' ? 'text-tm-red' : 'text-tm-muted';
 
-    const statusBgColor = membership.status === 'active' ? 'bg-tm-green/10 border-tm-green/20' :
+    const statusBgColor = (membership.status === 'active' || membership.status === 'second_trial_active') ? 'bg-tm-green/10 border-tm-green/20' :
         membership.status === 'trialing' ? 'bg-yellow-400/10 border-yellow-400/20' :
         membership.status === 'past_due' ? 'bg-tm-red/10 border-tm-red/20' :
         'bg-tm-surface/50 border-white/5';
 
     const statusLabel = membership.cancelAtPeriodEnd ? 'Canceling' :
-        membership.status === 'active' ? 'Active' :
+        (membership.status === 'active' || membership.status === 'second_trial_active') ? 'Active' :
         membership.status === 'trialing' ? 'Trial' :
         membership.status === 'past_due' ? 'Past Due' :
         membership.status === 'canceled' ? 'Canceled' : '';
@@ -224,6 +233,24 @@ export function SubscriptionManager() {
                     <CreditCard className="w-5 h-5 text-tm-purple" />
                     <h3 className="font-semibold text-sm">Subscription Plan</h3>
                 </div>
+
+                {/* Trial Banner matching Dashboard/AI Hub */}
+                {trialActive && !isPayingSubscriber && (
+                    <div className="mb-4 rounded-xl p-3 flex items-center gap-3 border border-tm-purple/30 bg-gradient-to-r from-tm-purple/10 to-blue-500/10">
+                        <div className="w-8 h-8 rounded-full bg-tm-purple/20 flex items-center justify-center shrink-0">
+                            <span className="text-sm">🎉</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-white">Free Trial #{trialNum} — {(membership.appTrialTier || '').replace('_', ' ')} Access</p>
+                            <p className="text-[10px] text-tm-muted">
+                                {trialDaysLeft2 > 0 ? `${trialDaysLeft2} day${trialDaysLeft2 !== 1 ? 's' : ''} remaining · No credit card needed yet` : 'Expires today!'}
+                            </p>
+                        </div>
+                        <a href="/#pricing" className="text-[10px] font-bold text-tm-purple hover:underline whitespace-nowrap shrink-0">
+                            Choose a Plan →
+                        </a>
+                    </div>
+                )}
 
                 {/* Enhanced Membership Display */}
                 <div className={`rounded-xl p-4 mb-4 border ${statusBgColor}`}>
@@ -265,7 +292,7 @@ export function SubscriptionManager() {
                     </div>
 
                     {/* Billing details row */}
-                    {isSubscribed && (
+                    {isPayingSubscriber && (
                         <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between text-xs">
                             <div className="flex items-center gap-3 text-tm-muted">
                                 {membership.billingInterval && (
@@ -307,93 +334,22 @@ export function SubscriptionManager() {
                                     disabled={portalLoading}
                                     className="flex items-center gap-1 text-tm-purple hover:text-purple-300 transition-colors font-semibold"
                                 >
-                                    {portalLoading ? 'Opening...' : 'Manage'}
+                                    {portalLoading ? 'Opening...' : 'Manage Billing'}
                                     <ExternalLink className="w-3 h-3" />
                                 </button>
                             </div>
                         </div>
                     )}
 
-                    {!isSubscribed && (
-                        <p className="text-xs text-tm-muted mt-2">Upgrade to unlock automated trading and full signals.</p>
+                    {!isPayingSubscriber && !trialActive && (
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
+                             <p className="text-xs text-tm-muted">Upgrade to unlock automated trading and full signals.</p>
+                             <a href="/#pricing" className="btn-primary text-xs px-4 py-2 shrink-0">
+                                 Choose a Plan
+                             </a>
+                        </div>
                     )}
                 </div>
-
-                {/* Billing Toggle */}
-                <div className="flex items-center justify-center gap-1 mb-4 p-1 bg-tm-surface/50 rounded-full border border-white/5">
-                    <button
-                        onClick={() => setBillingPeriod('monthly')}
-                        className={`flex-1 text-center text-xs font-bold py-1.5 rounded-full transition-all ${
-                            billingPeriod === 'monthly' ? 'bg-tm-purple text-white' : 'text-tm-muted'
-                        }`}
-                    >
-                        {t('pricing.monthly_tab', 'Monthly')}
-                    </button>
-                    <button
-                        onClick={() => setBillingPeriod('annual')}
-                        className={`flex-1 text-center text-xs font-bold py-1.5 rounded-full transition-all flex items-center justify-center gap-1 ${
-                            billingPeriod === 'annual' ? 'bg-tm-purple text-white' : 'text-tm-muted'
-                        }`}
-                    >
-                        {t('pricing.annual_tab', 'Annual')} <span className="text-[8px] bg-tm-green/20 text-tm-green px-1 rounded">{t('pricing.save_badge', 'SAVE')}</span>
-                    </button>
-                </div>
-
-                {/* Plan Cards */}
-                <div className="space-y-3">
-                    {PLANS.map(plan => {
-                        const isCurrentPlan = currentTier === plan.tier;
-                        const priceId = billingPeriod === 'annual' ? plan.annualPriceId : plan.monthlyPriceId;
-                        const price = billingPeriod === 'annual' ? plan.annualPrice : plan.monthlyPrice;
-                        const period = billingPeriod === 'annual' ? '/yr' : '/mo';
-                        const Icon = plan.icon;
-
-                        return (
-                            <div key={plan.id} className={`bg-tm-bg/50 border rounded-xl p-4 flex items-center justify-between transition-all ${
-                                plan.recommended ? 'border-tm-purple/40 bg-tm-purple/5' : 'border-white/5'
-                            } ${isCurrentPlan ? 'ring-1 ring-tm-green/30' : ''}`}>
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center bg-${plan.color}-500/10 border border-${plan.color}-500/20`}>
-                                        <Icon className={`w-5 h-5 text-${plan.color}-400`} />
-                                    </div>
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <h4 className="font-bold text-sm">{plan.name}</h4>
-                                            {plan.recommended && (
-                                                <span className="text-[8px] bg-tm-purple/20 text-tm-purple px-1.5 py-0.5 rounded font-bold uppercase">Best Value</span>
-                                            )}
-                                        </div>
-                                        <p className="text-lg font-black font-mono mt-0.5">
-                                            {price}<span className="text-xs font-normal text-tm-muted">{period}</span>
-                                        </p>
-                                        {billingPeriod === 'annual' && (
-                                            <p className="text-[10px] text-tm-green font-semibold">{plan.annualSave}</p>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {isCurrentPlan ? (
-                                    <span className="text-xs font-bold text-tm-green px-3 py-1.5 bg-tm-green/10 rounded-lg">
-                                        Current
-                                    </span>
-                                ) : (
-                                    <button
-                                        onClick={() => isSubscribed ? handleManageBilling() : handleCheckout(priceId, billingPeriod === 'annual')}
-                                        disabled={loading !== null || portalLoading}
-                                        className="btn-primary text-xs flex items-center gap-1 px-4 py-2"
-                                    >
-                                        {loading === priceId ? 'Loading...' : isSubscribed ? 'Switch via Portal' : 'Subscribe'}
-                                        {isSubscribed ? <ExternalLink className="w-3 h-3" /> : <ArrowRight className="w-3 h-3" />}
-                                    </button>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-
-                <p className="text-[10px] text-tm-muted text-center mt-3">
-                    {t('pricing.trial_notice_sub', 'All plans include a 14-day free trial. Cancel anytime.')}
-                </p>
             </div>
         </section>
 

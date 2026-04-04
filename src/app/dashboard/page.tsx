@@ -826,7 +826,14 @@ function DashboardContent() {
 
                     <div className="flex-[1_1_150px] sm:flex-none min-w-0 mr-auto">
 
-                        <p className="text-tm-muted text-xs">{t('dashboard.welcome')}</p>
+                        <p className="hidden sm:block text-tm-muted text-xs">{t('dashboard.welcome')}</p>
+                        <button
+                            onClick={() => window.dispatchEvent(new Event('open-onboarding'))}
+                            className="flex sm:hidden items-center gap-1.5 px-2.5 py-1 mb-1 rounded-full bg-gradient-to-r from-blue-500 to-tm-purple text-white hover:opacity-90 transition-all text-[10px] font-bold border border-white/20 shadow-md whitespace-nowrap w-fit"
+                        >
+                            <Bell className="w-3 h-3" />
+                            <span>Onboarding</span>
+                        </button>
 
                         <h1 className="text-base font-bold truncate">
 
@@ -845,13 +852,13 @@ function DashboardContent() {
 
                     </div>
 
-                    <div className="w-full sm:w-auto order-3 sm:order-2 flex justify-center mt-1 sm:mt-0">
+                    <div className="hidden sm:flex w-auto order-2 flex-col justify-center">
                         {/* Onboard Guide Manual Trigger */}
                         <button
                             onClick={() => window.dispatchEvent(new Event('open-onboarding'))}
-                            className="flex items-center justify-center w-full sm:w-auto gap-1.5 px-4 py-2 sm:py-1.5 rounded-full bg-gradient-to-r from-blue-500 to-tm-purple text-white hover:opacity-90 transition-all text-sm font-bold border border-white/20 shadow-lg shadow-tm-purple/30 whitespace-nowrap shrink-0"
+                            className="flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-blue-500 to-tm-purple text-white hover:opacity-90 transition-all text-sm font-bold border border-white/20 shadow-lg shadow-tm-purple/30 whitespace-nowrap shrink-0"
                         >
-                            <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            <Bell className="w-4 h-4" />
                             <span>Setup Guide</span>
                         </button>
 

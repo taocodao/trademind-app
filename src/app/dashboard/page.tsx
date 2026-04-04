@@ -849,10 +849,10 @@ function DashboardContent() {
                         {/* Onboard Guide Manual Trigger */}
                         <button
                             onClick={() => window.dispatchEvent(new Event('open-onboarding'))}
-                            className="hidden sm:flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-blue-500 to-tm-purple text-white hover:opacity-90 transition-all text-sm font-bold border border-white/20 shadow-lg shadow-tm-purple/30"
+                            className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full bg-gradient-to-r from-blue-500 to-tm-purple text-white hover:opacity-90 transition-all text-xs sm:text-sm font-bold border border-white/20 shadow-lg shadow-tm-purple/30 whitespace-nowrap shrink-0"
                         >
-                            <Bell className="w-4 h-4" />
-                            Setup Guide
+                            <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            <span>Setup Guide</span>
                         </button>
 
                     {/* Language Selector */}

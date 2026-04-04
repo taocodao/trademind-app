@@ -5,6 +5,7 @@ import { SignalProvider } from "@/components/providers/SignalProvider";
 import { SettingsProvider } from "@/components/providers/SettingsProvider";
 import { StrategyProvider } from "@/components/providers/StrategyContext";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { SupportChatWidget } from "@/components/ui/SupportChatWidget";
 import { MarketingProviders } from "@/components/marketing/MarketingProviders";
 import Script from "next/script";
 
@@ -49,6 +50,7 @@ export default function RootLayout({
                                         {children}
                                     </div>
                                     <BottomNav />
+                                    <SupportChatWidget />
                                 </StrategyProvider>
                             </SignalProvider>
                         </SettingsProvider>

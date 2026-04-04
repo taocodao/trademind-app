@@ -849,9 +849,9 @@ function DashboardContent() {
                         {/* Onboard Guide Manual Trigger */}
                         <button
                             onClick={() => window.dispatchEvent(new Event('open-onboarding'))}
-                            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-tm-purple/20 text-tm-purple hover:bg-tm-purple/30 transition-colors text-xs font-semibold border border-tm-purple/30"
+                            className="hidden sm:flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-blue-500 to-tm-purple text-white hover:opacity-90 transition-all text-sm font-bold border border-white/20 shadow-lg shadow-tm-purple/30"
                         >
-                            <Bell className="w-3.5 h-3.5" />
+                            <Bell className="w-4 h-4" />
                             Setup Guide
                         </button>
 

@@ -12,6 +12,7 @@ import { TQQQAutoApproveSettings } from '@/components/settings/TQQQAutoApproveSe
 import { SubscriptionManager } from '@/components/settings/SubscriptionManager';
 import { MyStrategies } from '@/components/settings/MyStrategies';
 import { SignalEmailAlertsSettings } from '@/components/settings/SignalEmailAlertsSettings';
+import { SupportContact } from '@/components/settings/SupportContact';
 import { StrategyTabs } from '@/components/ui/StrategyTabs';
 import { useStrategyContext } from '@/components/providers/StrategyContext';
 
@@ -69,6 +70,9 @@ export default function SettingsPage() {
                 
                 {/* Tastytrade Credentials */}
                 <TastytradeCredentials />
+
+                {/* Support & Help */}
+                <SupportContact />
 
                 {/* Risk Warning */}
                 <section className="glass-card p-4 border border-yellow-500/20">

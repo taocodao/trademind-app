@@ -822,9 +822,9 @@ function DashboardContent() {
 
                 {/* Welcome header */}
 
-                <div className="glass-card p-4 flex items-center justify-between">
+                <div className="glass-card p-4 flex flex-wrap items-center gap-3">
 
-                    <div>
+                    <div className="flex-[1_1_150px] min-w-0">
 
                         <p className="text-tm-muted text-xs">{t('dashboard.welcome')}</p>
 
@@ -845,11 +845,11 @@ function DashboardContent() {
 
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="w-full sm:w-auto order-3 sm:order-2 sm:ml-auto flex justify-center mt-1 sm:mt-0">
                         {/* Onboard Guide Manual Trigger */}
                         <button
                             onClick={() => window.dispatchEvent(new Event('open-onboarding'))}
-                            className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full bg-gradient-to-r from-blue-500 to-tm-purple text-white hover:opacity-90 transition-all text-xs sm:text-sm font-bold border border-white/20 shadow-lg shadow-tm-purple/30 whitespace-nowrap shrink-0"
+                            className="flex items-center justify-center w-full sm:w-auto gap-1.5 px-4 py-2 sm:py-1.5 rounded-full bg-gradient-to-r from-blue-500 to-tm-purple text-white hover:opacity-90 transition-all text-sm font-bold border border-white/20 shadow-lg shadow-tm-purple/30 whitespace-nowrap shrink-0"
                         >
                             <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             <span>Setup Guide</span>
@@ -857,7 +857,7 @@ function DashboardContent() {
 
                     {/* Language Selector */}
 
-                    <div className="flex items-center gap-1 p-1 rounded-full bg-black/40 border border-white/5 shadow-inner">
+                    <div className="flex items-center gap-1 p-1 rounded-full bg-black/40 border border-white/5 shadow-inner shrink-0 ml-auto order-2 sm:order-3">
 
                         <button
 
@@ -895,7 +895,6 @@ function DashboardContent() {
 
                         </button>
 
-                    </div>
                     </div>
 
                 </div>

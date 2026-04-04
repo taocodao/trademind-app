@@ -21,7 +21,7 @@ export function LegalFooter() {
                             <span className="text-white font-bold mb-1">{t('footer.company') || 'Company'}</span>
                             <Link href="/about" className="text-tm-muted hover:text-white transition-colors">{t('footer.about') || 'About Us'}</Link>
                             <Link href="/#education" className="text-tm-muted hover:text-white transition-colors">{t('footer.education') || 'Education Center'}</Link>
-                            <Link href="/#pricing" className="text-tm-muted hover:text-white transition-colors">{t('footer.pricing') || 'Pricing'}</Link>
+                            <Link href="https://www.trademind.bot/#pricing" className="text-tm-muted hover:text-white transition-colors">{t('footer.pricing') || 'Pricing'}</Link>
                         </div>
                         <div className="flex flex-col gap-3">
                             <span className="text-white font-bold mb-1">{t('footer.legal') || 'Legal'}</span>

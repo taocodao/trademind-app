@@ -1014,7 +1014,7 @@ function DashboardContent() {
                                         {daysLeft > 0 ? `${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining · No credit card needed yet` : 'Expires today!'}
                                     </p>
                                 </div>
-                                <a href="/#pricing" className="text-[10px] font-bold text-tm-purple hover:underline whitespace-nowrap shrink-0">Choose a Plan →</a>
+                                <a href="https://www.trademind.bot/#pricing" className="text-[10px] font-bold text-tm-purple hover:underline whitespace-nowrap shrink-0">Choose a Plan →</a>
                             </div>
                         );
                     })() : null;
@@ -1048,7 +1048,7 @@ function DashboardContent() {
                                 >
                                     🎁 Claim My Second Free Trial
                                 </button>
-                                <a href="/#pricing" className="text-xs text-tm-muted text-center hover:text-white transition-colors">Or subscribe now →</a>
+                                <a href="https://www.trademind.bot/#pricing" className="text-xs text-tm-muted text-center hover:text-white transition-colors">Or subscribe now →</a>
                             </div>
                         </div>
                     ) : null;
@@ -1063,7 +1063,7 @@ function DashboardContent() {
                             <p className="text-sm text-tm-muted mb-6 max-w-sm">
                                 You've used your free trials. Subscribe to keep access to AI-powered signals, real-time targets, and portfolio backtests.
                             </p>
-                            <a href="/#pricing" className="btn-primary flex items-center gap-2 px-6 py-3 w-full justify-center text-sm">
+                            <a href="https://www.trademind.bot/#pricing" className="btn-primary flex items-center gap-2 px-6 py-3 w-full justify-center text-sm">
                                 View Subscription Plans
                                 <ArrowRight className="w-4 h-4 text-white/50" />
                             </a>

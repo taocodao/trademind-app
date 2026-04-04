@@ -246,7 +246,7 @@ export function SubscriptionManager() {
                                 {trialDaysLeft2 > 0 ? `${trialDaysLeft2} day${trialDaysLeft2 !== 1 ? 's' : ''} remaining · No credit card needed yet` : 'Expires today!'}
                             </p>
                         </div>
-                        <a href="/#pricing" className="text-[10px] font-bold text-tm-purple hover:underline whitespace-nowrap shrink-0">
+                        <a href="https://www.trademind.bot/#pricing" className="text-[10px] font-bold text-tm-purple hover:underline whitespace-nowrap shrink-0">
                             Choose a Plan →
                         </a>
                     </div>
@@ -344,7 +344,7 @@ export function SubscriptionManager() {
                     {!isPayingSubscriber && !trialActive && (
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
                              <p className="text-xs text-tm-muted">Upgrade to unlock automated trading and full signals.</p>
-                             <a href="/#pricing" className="btn-primary text-xs px-4 py-2 shrink-0">
+                             <a href="https://www.trademind.bot/#pricing" className="btn-primary text-xs px-4 py-2 shrink-0">
                                  Choose a Plan
                              </a>
                         </div>

@@ -677,6 +677,15 @@ export async function initializeUserTables(): Promise<void> {
                 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS debrief_enabled BOOLEAN DEFAULT true;
 
                 -- AI Feature system columns  
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS card_fingerprint VARCHAR(64);
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS livemode BOOLEAN DEFAULT FALSE;
+
+                -- In-app free trial tracking (up to 2 trials per unique email)
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS app_trial_count INTEGER DEFAULT 0;
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS app_trial_started_at TIMESTAMPTZ;
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS app_trial_tier VARCHAR(32) DEFAULT 'both_bundle';
+                ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS app_trial_2_started_at TIMESTAMPTZ;
+
                 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS free_features_selected INTEGER DEFAULT 0;
                 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS free_features_limit INTEGER DEFAULT 0;
 

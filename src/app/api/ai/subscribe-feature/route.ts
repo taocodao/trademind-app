@@ -14,6 +14,8 @@ const FREE_FEATURE_LIMITS: Record<string, number> = {
     'turbocore': 1,
     'turbocore_pro': 1,
     'both_bundle': 2,
+    // Trial tiers mirror their base tier limits
+    'app_trial': 2,  // both_bundle equivalent during trial
 };
 
 const VALID_FEATURES = ['screenshot', 'deepdive', 'briefing', 'strategy', 'debrief'];

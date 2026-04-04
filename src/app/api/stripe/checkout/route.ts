@@ -99,16 +99,7 @@ export async function POST(req: NextRequest) {
                 userId,          // For webhook → link account
                 referralCode: referralCode || "",
             },
-            // ── Trial: session-level (not price-level) to allow abuse prevention ──
-            ...(!hasHadTrial ? {
-                subscription_data: {
-                    trial_period_days: 14,
-                    trial_settings: {
-                        end_behavior: { missing_payment_method: "cancel" as const },
-                    },
-                    metadata: { privy_did: userId },
-                },
-            } : {}),
+            // No Stripe trial — users already receive a free in-app trial before reaching checkout
         };
 
         // Pass referral client_reference_id for Rewardful tracking

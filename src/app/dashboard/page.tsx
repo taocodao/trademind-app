@@ -419,7 +419,19 @@ function DashboardContent() {
         tier: string; status: string | null; billingInterval: string | null;
         currentPeriodEnd: string | null; trialEnd: string | null;
         cancelAtPeriodEnd: boolean; cancelAt: string | null; fetched: boolean;
-    }>({ tier: 'observer', status: null, billingInterval: null, currentPeriodEnd: null, trialEnd: null, cancelAtPeriodEnd: false, cancelAt: null, fetched: false });
+        // Trial fields
+        appTrialStatus: string | null;
+        appTrialEnd: string | null;
+        appTrialAvailable: boolean;
+        appTrialCount: number;
+        appTrialTier: string;
+        trialDaysTotal: number;
+    }>({
+        tier: 'observer', status: null, billingInterval: null, currentPeriodEnd: null, trialEnd: null,
+        cancelAtPeriodEnd: false, cancelAt: null, fetched: false,
+        appTrialStatus: null, appTrialEnd: null, appTrialAvailable: false,
+        appTrialCount: 0, appTrialTier: 'both_bundle', trialDaysTotal: 14,
+    });
 
 
 
@@ -532,13 +544,36 @@ function DashboardContent() {
 
                 .catch(() => setTastyLinked(false));
 
-            // Also fetch membership
+            // Fetch membership and auto-start trial for new users
             getAccessToken().then(token => {
-                fetch('/api/settings/tier', {
-                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-                })
+                const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+                fetch('/api/settings/tier', { headers: authHeader })
                     .then(r => r.json())
-                    .then(d => { setMembership(prev => ({ ...prev, ...d, fetched: true })); })
+                    .then(d => {
+                        setMembership(prev => ({ ...prev, ...d, fetched: true }));
+                        // Auto-start the first free trial if not yet started and no Stripe sub
+                        if (
+                            (d.appTrialStatus === 'not_started' || !d.appTrialStatus) &&
+                            d.appTrialAvailable &&
+                            d.tier === 'observer'
+                        ) {
+                            fetch('/api/settings/start-trial', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', ...authHeader },
+                                body: JSON.stringify({ isSecondTrial: false }),
+                            })
+                                .then(r => r.json())
+                                .then(trialData => {
+                                    if (trialData.success) {
+                                        // Refresh membership with new trial state
+                                        fetch('/api/settings/tier', { headers: authHeader })
+                                            .then(r => r.json())
+                                            .then(d2 => setMembership(prev => ({ ...prev, ...d2, fetched: true })));
+                                    }
+                                })
+                                .catch(e => console.error('Trial auto-start failed:', e));
+                        }
+                    })
                     .catch(e => { console.error(e); setMembership(prev => ({ ...prev, fetched: true })); });
             });
 
@@ -959,21 +994,103 @@ function DashboardContent() {
                     <div className="flex flex-col items-center justify-center py-10">
                         <div className="w-8 h-8 rounded-full border-2 border-tm-purple/30 border-t-tm-purple animate-spin" />
                     </div>
-                ) : membership.tier === 'observer' ? (
-                    <div className="glass-card p-6 flex flex-col items-center justify-center text-center mt-4 border-tm-purple/20">
-                        <div className="w-16 h-16 rounded-full bg-tm-purple/10 flex items-center justify-center mb-4 border border-tm-purple/20">
-                            <Target className="w-8 h-8 text-tm-purple" />
+                ) : (() => {
+                    const trialActive = membership.appTrialStatus === 'active' || membership.appTrialStatus === 'second_trial_active';
+                    const trialExpired = membership.appTrialStatus === 'expired';
+                    const isSubscribed = !['observer', null].includes(membership.tier) || trialActive;
+
+                    // ── Trial countdown banner ────────────────────────────────
+                    const TrialBanner = trialActive && membership.appTrialEnd ? (() => {
+                        const daysLeft = Math.max(0, Math.ceil((new Date(membership.appTrialEnd).getTime() - Date.now()) / 86400000));
+                        const trialNum = membership.appTrialStatus === 'second_trial_active' ? 2 : 1;
+                        return (
+                            <div className="glass-card p-3 flex items-center gap-3 border-tm-purple/30 bg-gradient-to-r from-tm-purple/10 to-blue-500/10">
+                                <div className="w-8 h-8 rounded-full bg-tm-purple/20 flex items-center justify-center shrink-0">
+                                    <span className="text-sm">🎉</span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-bold text-white">Free Trial #{trialNum} — {membership.appTrialTier.replace('_', ' ')} Access</p>
+                                    <p className="text-[10px] text-tm-muted">
+                                        {daysLeft > 0 ? `${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining · No credit card needed yet` : 'Expires today!'}
+                                    </p>
+                                </div>
+                                <a href="/#pricing" className="text-[10px] font-bold text-tm-purple hover:underline whitespace-nowrap shrink-0">Choose a Plan →</a>
+                            </div>
+                        );
+                    })() : null;
+
+                    // ── Trial expired but second trial available ───────────────
+                    const SecondTrialCTA = trialExpired && membership.appTrialAvailable ? (
+                        <div className="glass-card p-5 flex flex-col items-center justify-center text-center border-yellow-500/20 bg-yellow-500/5">
+                            <span className="text-2xl mb-2">⏳</span>
+                            <h2 className="text-base font-bold mb-1">Your Free Trial Has Ended</h2>
+                            <p className="text-xs text-tm-muted mb-4 max-w-sm">
+                                Welcome back! As a special offer, you're eligible for one more {membership.trialDaysTotal}-day free trial — no credit card required.
+                            </p>
+                            <div className="flex flex-col gap-2 w-full">
+                                <button
+                                    onClick={async () => {
+                                        const token = await getAccessToken();
+                                        const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+                                        const r = await fetch('/api/settings/start-trial', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json', ...authHeader },
+                                            body: JSON.stringify({ isSecondTrial: true }),
+                                        });
+                                        const data = await r.json();
+                                        if (data.success) {
+                                            const tierRes = await fetch('/api/settings/tier', { headers: authHeader });
+                                            const tierData = await tierRes.json();
+                                            setMembership(prev => ({ ...prev, ...tierData, fetched: true }));
+                                        }
+                                    }}
+                                    className="btn-primary flex items-center gap-2 px-6 py-2.5 w-full justify-center text-sm"
+                                >
+                                    🎁 Claim My Second Free Trial
+                                </button>
+                                <a href="/#pricing" className="text-xs text-tm-muted text-center hover:text-white transition-colors">Or subscribe now →</a>
+                            </div>
                         </div>
-                        <h2 className="text-xl font-bold mb-2">Unlock TradeMind Signals</h2>
-                        <p className="text-sm text-tm-muted mb-6 max-w-sm">
-                            Subscribe to access AI-powered automated trading signals, real-time targets, and portfolio backtests.
-                        </p>
-                        <a href="/#pricing" className="btn-primary flex items-center gap-2 px-6 py-3 w-full justify-center text-sm">
-                            View Subscription Plans
-                            <ArrowRight className="w-4 h-4 text-white/50" />
-                        </a>
-                    </div>
-                ) : (
+                    ) : null;
+
+                    // ── Hard paywall: both trials expired & no subscription ────
+                    const HardPaywall = trialExpired && !membership.appTrialAvailable ? (
+                        <div className="glass-card p-6 flex flex-col items-center justify-center text-center mt-4 border-tm-purple/20">
+                            <div className="w-16 h-16 rounded-full bg-tm-purple/10 flex items-center justify-center mb-4 border border-tm-purple/20">
+                                <Target className="w-8 h-8 text-tm-purple" />
+                            </div>
+                            <h2 className="text-xl font-bold mb-2">Continue with TradeMind</h2>
+                            <p className="text-sm text-tm-muted mb-6 max-w-sm">
+                                You've used your free trials. Subscribe to keep access to AI-powered signals, real-time targets, and portfolio backtests.
+                            </p>
+                            <a href="/#pricing" className="btn-primary flex items-center gap-2 px-6 py-3 w-full justify-center text-sm">
+                                View Subscription Plans
+                                <ArrowRight className="w-4 h-4 text-white/50" />
+                            </a>
+                        </div>
+                    ) : null;
+
+                    // ── First-time observer with trial not yet started ─────────
+                    // (shouldn't normally show — auto-start handles this — but fallback)
+                    const NotStartedCTA = !trialActive && !trialExpired && membership.tier === 'observer' ? (
+                        <div className="glass-card p-6 flex flex-col items-center justify-center text-center mt-4 border-tm-purple/20">
+                            <div className="w-16 h-16 rounded-full bg-tm-purple/10 flex items-center justify-center mb-4 border border-tm-purple/20">
+                                <Target className="w-8 h-8 text-tm-purple" />
+                            </div>
+                            <h2 className="text-xl font-bold mb-2">Starting Your Free Trial…</h2>
+                            <p className="text-sm text-tm-muted mb-4">Hold on one moment while we set up your {membership.trialDaysTotal}-day free access.</p>
+                            <div className="w-6 h-6 rounded-full border-2 border-tm-purple/30 border-t-tm-purple animate-spin" />
+                        </div>
+                    ) : null;
+
+                    return (
+                        <>
+                            {TrialBanner}
+                            {SecondTrialCTA}
+                            {HardPaywall}
+                            {NotStartedCTA}
+                            {/* Rest of dashboard only shown when user has access */}
+                            {isSubscribed && !trialExpired && !SecondTrialCTA && !HardPaywall ? (
                     <>
                         {/* Subscription Badge */}
                         <a href="/settings" className="glass-card p-3 flex items-center justify-between group">
@@ -1124,8 +1241,11 @@ function DashboardContent() {
                     </div>
                 </div>
 
-                </>
-                )}
+                    </>
+                    ) : null}
+                        </>
+                    );
+                })()}
 
             </div>
 

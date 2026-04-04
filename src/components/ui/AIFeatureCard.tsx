@@ -64,13 +64,8 @@ export function AIFeatureCard({
         <div className="text-2xl mb-2 opacity-50">{icon}</div>
         <div className="text-white font-semibold text-sm leading-tight">{title}</div>
         <div className="text-tm-muted text-xs mt-1.5 leading-relaxed flex-grow">{description}</div>
-        <div className="absolute inset-0 bg-tm-bg/60 backdrop-blur-[2px] flex items-center justify-center rounded-2xl z-20">
-            <div className="bg-tm-card/90 border border-tm-purple/30 p-4 rounded-xl text-center max-w-[80%] shadow-lg">
-                <Crown className="w-6 h-6 text-tm-purple mx-auto mb-2" />
-                <p className="text-white text-sm font-bold mb-1">Upgrade Required</p>
-                <p className="text-tm-muted text-xs mb-3">Available on paid plans</p>
-                <Link href="https://www.trademind.bot/#pricing" className="text-tm-purple text-xs font-semibold hover:underline">Subscribe to unlock</Link>
-            </div>
+        <div className="mt-3 pt-2">
+            <Link href="https://www.trademind.bot/#pricing" className="text-tm-purple text-xs font-semibold hover:underline">Subscribe to unlock</Link>
         </div>
       </div>
     );

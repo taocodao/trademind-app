@@ -861,6 +861,7 @@ function DashboardContent() {
                             <Bell className="w-4 h-4" />
                             <span>Setup Guide</span>
                         </button>
+                    </div>
 
                     {/* Language Selector */}
 

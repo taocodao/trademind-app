@@ -52,11 +52,12 @@ export async function POST(req: NextRequest) {
 
         // ── Fetch or create Stripe customer keyed to Privy DID ──────────────
         const userResult = await pool.query(
-            `SELECT stripe_customer_id, has_had_trial FROM user_settings WHERE user_id = $1`,
+            `SELECT stripe_customer_id, has_had_trial,
+                    app_trial_started_at, app_trial_2_started_at
+             FROM user_settings WHERE user_id = $1`,
             [userId]
         );
         let customerId: string | undefined = userResult.rows[0]?.stripe_customer_id;
-        const hasHadTrial: boolean = userResult.rows[0]?.has_had_trial ?? false;
 
         if (!customerId) {
             // Create Stripe customer and store DID in metadata (per guide Section Privy ↔ Stripe)
@@ -73,6 +74,24 @@ export async function POST(req: NextRequest) {
             );
         }
 
+        // ── Calculate Remaining Trial Days ──────────────────────────────────
+        let remainingTrialDays = 0;
+        const row = userResult.rows[0];
+        if (row) {
+            const FREE_TRIAL_DAYS = parseInt(process.env.FREE_TRIAL_DAYS || '14', 10);
+            const trial1Start = row.app_trial_started_at ? new Date(row.app_trial_started_at) : null;
+            const trial2Start = row.app_trial_2_started_at ? new Date(row.app_trial_2_started_at) : null;
+            const activeTrial = trial2Start ?? trial1Start;
+            
+            if (activeTrial) {
+                const now = new Date();
+                const trialEndDate = new Date(activeTrial.getTime() + FREE_TRIAL_DAYS * 24 * 60 * 60 * 1000);
+                if (now < trialEndDate) {
+                    remainingTrialDays = Math.max(1, Math.ceil((trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+                }
+            }
+        }
+
         // ── Build Checkout Session ───────────────────────────────────────────
         // Klarna supported on annual subscriptions; Afterpay NOT supported (no recurring)
         const annualPriceIds = [
@@ -82,8 +101,9 @@ export async function POST(req: NextRequest) {
         ].filter(Boolean);
 
         const paymentMethods: Stripe.Checkout.SessionCreateParams.PaymentMethodType[] = ["card"];
-        if (isAnnual && annualPriceIds.includes(priceId)) {
-            paymentMethods.push("klarna"); // Klarna only — Afterpay doesn't support recurring
+        // Klarna requires an immediate payment, incompatible with `trial_period_days`
+        if (isAnnual && annualPriceIds.includes(priceId) && remainingTrialDays === 0) {
+            paymentMethods.push("klarna"); 
         }
 
         const sessionPayload: Stripe.Checkout.SessionCreateParams = {
@@ -99,8 +119,13 @@ export async function POST(req: NextRequest) {
                 userId,          // For webhook → link account
                 referralCode: referralCode || "",
             },
-            // No Stripe trial — users already receive a free in-app trial before reaching checkout
         };
+
+        if (remainingTrialDays > 0) {
+            sessionPayload.subscription_data = {
+                trial_period_days: remainingTrialDays
+            };
+        }
 
         // Pass referral client_reference_id for Rewardful tracking
         if (referralCode) {

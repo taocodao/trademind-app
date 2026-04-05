@@ -18,7 +18,7 @@ export function getOpenAIClient(): OpenAI {
 
 // ── Platform Configuration ────────────────────────────────────────────────────
 
-export type SocialPlatform = 'linkedin' | 'twitter' | 'facebook' | 'instagram' | 'tiktok';
+export type SocialPlatform = 'linkedin' | 'twitter' | 'facebook' | 'instagram' | 'tiktok' | 'snapchat' | 'reddit' | 'youtube';
 
 /**
  * Platform → Composio Auth Config ID mapping.
@@ -30,6 +30,9 @@ export const COMPOSIO_AUTH_CONFIGS: Record<SocialPlatform, string> = {
     facebook:  process.env.COMPOSIO_AUTH_CONFIG_FACEBOOK  ?? '',
     instagram: process.env.COMPOSIO_AUTH_CONFIG_INSTAGRAM ?? '',
     tiktok:    '', // TikTok is clipboard-only — no Composio auth needed
+    snapchat:  process.env.COMPOSIO_AUTH_CONFIG_SNAPCHAT  ?? '', // Snapchat is clipboard-only for now, but uses OAuth
+    reddit:    process.env.COMPOSIO_AUTH_CONFIG_REDDIT    ?? '',
+    youtube:   process.env.COMPOSIO_AUTH_CONFIG_YOUTUBE   ?? '',
 };
 
 /**
@@ -41,6 +44,9 @@ export const PLATFORM_TOOL_SLUGS: Record<SocialPlatform, string> = {
     facebook:  'FACEBOOK_CREATE_POST',
     instagram: 'INSTAGRAM_CREATE_POST',
     tiktok:    '', // Clipboard-only
+    snapchat:  '', // Clipboard-only logic for now
+    reddit:    '', // Clipboard-only
+    youtube:   '', // Clipboard-only
 };
 
 /**
@@ -57,6 +63,9 @@ export const PLATFORM_CONSTRAINTS: Record<SocialPlatform, {
     facebook:  { maxChars: 63206, supportsLinks: true,  supportsHashtags: true,  supportsDirectPost: true },
     instagram: { maxChars: 2200,  supportsLinks: false, supportsHashtags: true,  supportsDirectPost: true },
     tiktok:    { maxChars: 2200,  supportsLinks: false, supportsHashtags: true,  supportsDirectPost: false },
+    snapchat:  { maxChars: 2200,  supportsLinks: false, supportsHashtags: false, supportsDirectPost: false },
+    reddit:    { maxChars: 40000, supportsLinks: true,  supportsHashtags: false, supportsDirectPost: false },
+    youtube:   { maxChars: 5000,  supportsLinks: true,  supportsHashtags: true,  supportsDirectPost: false },
 };
 
 /**
@@ -128,6 +137,30 @@ Format: Write TWO things:
 Label them clearly as "SPOKEN SCRIPT:" and "CAPTION:"
 Tone: raw, authentic, direct — like a Gen Z creator talking to camera, not an ad.
 Add: "Not financial advice." to the spoken script.`,
+
+    snapchat: `You are a Snapchat content creator for fintech platforms.
+Write a Snapchat Spotlight or Story text overlay script to promote TradeMind.bot.
+Because this will be placed over an image or video, keep it very punchy and visually adaptable.
+Write a quick hook, mention the value (AI signals), and tell the viewer to use the promo code [PROMO CODE] at trademind.bot.
+Make it energetic, casual, and Gen Z friendly. Include a couple relevant emojis.
+Note: Always include the disclaimer "Not financial advice." at the end.`,
+
+    reddit: `You are a knowledgeable Redditor participating in investing and options trading communities.
+Write a Reddit post or comment promoting TradeMind.bot.
+Make it sound authentic to Reddit: analytical, slightly skeptical but convinced by data, avoiding overly scammy or hype language.
+Focus on the technical merits of the AI options trading signals.
+Include the promotional code [PROMO CODE] naturally and link to trademind.bot.
+Format with markdown (e.g. bolding, bullet points if helpful).
+Add: "Not financial advice." at the end.`,
+
+    youtube: `You are a YouTube creator focused on finance, trading, and options.
+Write a YouTube video description to promote TradeMind.bot (AI options trading signals).
+Include a strong hook in the first 2 lines (above the "Show More" fold).
+Add the referral link and promo code clearly: "Use code [PROMO CODE] for a free trial at trademind.bot"
+Include a brief description of what TradeMind is.
+Add 3-5 relevant hashtags at the bottom.
+Make it highly searchable (SEO friendly) for terms like "AI options trading, TradeMind, options signals".
+Note: Always include the disclaimer "Not financial advice." at the end.`
 };
 
 /**

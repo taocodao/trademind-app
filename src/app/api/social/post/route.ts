@@ -43,9 +43,9 @@ export async function POST(req: NextRequest) {
             referralLink: string;
         };
 
-        if (platform === 'tiktok') {
+        if (['tiktok', 'snapchat', 'reddit', 'youtube'].includes(platform)) {
             return NextResponse.json(
-                { error: 'TikTok direct posting is not supported — use the Caption Script copy feature instead.' },
+                { error: `${platform} direct posting is not supported — use the copy feature instead.` },
                 { status: 400 }
             );
         }

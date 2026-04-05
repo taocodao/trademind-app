@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
             customContext?: string;
         };
 
-        const validPlatforms: SocialPlatform[] = ['linkedin', 'twitter', 'facebook', 'instagram', 'tiktok'];
+        const validPlatforms: SocialPlatform[] = ['linkedin', 'twitter', 'facebook', 'instagram', 'tiktok', 'snapchat', 'reddit', 'youtube'];
         if (!validPlatforms.includes(platform)) {
             return NextResponse.json({ error: 'Invalid platform' }, { status: 400 });
         }

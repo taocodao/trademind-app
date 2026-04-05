@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
         const user = await getUserFromRequest(req);
         const { platform } = await req.json() as { platform: SocialPlatform };
 
-        if (!DIRECT_POST_PLATFORMS.includes(platform)) {
+        if (!DIRECT_POST_PLATFORMS.includes(platform) && platform !== 'snapchat' && platform !== 'reddit' && platform !== 'youtube') {
             return NextResponse.json({ error: `Platform "${platform}" does not support OAuth connection` }, { status: 400 });
         }
 

@@ -41,6 +41,30 @@ const PLATFORMS = [
         requiresPage: false,
         clipboardOnly: true,
     },
+    {
+        id: 'snapchat',
+        label: 'Snapchat',
+        emoji: '👻',
+        note: 'Snapchat Spotlight/Story text generation. Connect account for identity verification.',
+        requiresPage: false,
+        clipboardOnly: true,
+    },
+    {
+        id: 'reddit',
+        label: 'Reddit',
+        emoji: '👾',
+        note: 'Generate analytical Reddit posts. Connect account for identity verification.',
+        requiresPage: false,
+        clipboardOnly: true,
+    },
+    {
+        id: 'youtube',
+        label: 'YouTube',
+        emoji: '▶️',
+        note: 'YouTube video description generator. Connect account for identity verification.',
+        requiresPage: false,
+        clipboardOnly: true,
+    },
 ] as const;
 
 interface SocialConnectionsClientProps {

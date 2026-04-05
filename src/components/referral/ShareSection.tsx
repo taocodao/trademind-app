@@ -70,7 +70,7 @@ export function ShareSection({ promoCode, referralLink, userTier, isCreator }: S
                 {!statusLoading && (
                     <div className="flex items-center justify-between pt-1">
                         <div className="flex items-center gap-2">
-                            {['linkedin', 'twitter', 'facebook', 'instagram'].map((p) => {
+                            {['linkedin', 'twitter', 'facebook', 'instagram', 'snapchat', 'reddit', 'youtube'].map((p) => {
                                 const isActive = connectedPlatforms[p]?.status === 'active';
                                 return (
                                     <div

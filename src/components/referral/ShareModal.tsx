@@ -12,6 +12,9 @@ const PLATFORM_CONFIG = {
     facebook:  { label: 'Facebook',  emoji: '📘', color: '#1877F2', bgClass: 'bg-blue-500',  supportsDirectPost: true  },
     instagram: { label: 'Instagram', emoji: '📸', color: '#E1306C', bgClass: 'bg-pink-600',  supportsDirectPost: true  },
     tiktok:    { label: 'TikTok',    emoji: '🎵', color: '#010101', bgClass: 'bg-gray-900',  supportsDirectPost: false },
+    snapchat:  { label: 'Snapchat',  emoji: '👻', color: '#FFFC00', bgClass: 'bg-yellow-400', supportsDirectPost: false },
+    reddit:    { label: 'Reddit',    emoji: '👾', color: '#FF4500', bgClass: 'bg-orange-600', supportsDirectPost: false },
+    youtube:   { label: 'YouTube',   emoji: '▶️', color: '#FF0000', bgClass: 'bg-red-600',    supportsDirectPost: false },
 } as const;
 
 const CHAR_LIMITS: Partial<Record<SocialPlatform, number>> = { twitter: 280 };
@@ -185,6 +188,9 @@ export function ShareModal({
                                         {canDirectPost && isConnected && p !== 'tiktok' && (
                                             <span className="absolute top-1 right-1 text-[8px] bg-emerald-500 text-white rounded-full w-3.5 h-3.5 flex items-center justify-center font-bold">⚡</span>
                                         )}
+                                        {canDirectPost && isConnected && p === 'snapchat' && (
+                                            <span className="absolute top-1 right-1 text-[8px] bg-emerald-500 text-white rounded-full w-3.5 h-3.5 flex items-center justify-center font-bold">🔗</span>
+                                        )}
                                     </button>
                                 );
                             })}
@@ -277,19 +283,19 @@ export function ShareModal({
                     {/* Step 4: CTA buttons */}
                     {generatedPost && !postSuccess && selected && (
                         <div className="space-y-2">
-                            {/* TikTok — clipboard only */}
-                            {selected === 'tiktok' && (
+                            {/* TikTok, Snapchat, Reddit, YouTube — clipboard only approach */}
+                            {(selected === 'tiktok' || selected === 'snapchat' || selected === 'reddit' || selected === 'youtube') && (
                                 <button
                                     onClick={handleCopy}
                                     className="w-full bg-tm-surface border border-tm-border hover:border-tm-purple/40 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all"
                                 >
                                     {copied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                                    {copied ? 'Copied! Paste into TikTok Studio' : 'Copy Caption Script'}
+                                    {copied ? `Copied! Paste into ${PLATFORM_CONFIG[selected].label}` : 'Copy Text / Script'}
                                 </button>
                             )}
 
                             {/* LinkedIn/Twitter/Facebook — Direct post (Diamond+) or Intent URL */}
-                            {selected !== 'tiktok' && selected !== 'instagram' && (
+                            {selected !== 'tiktok' && selected !== 'snapchat' && selected !== 'instagram' && selected !== 'reddit' && selected !== 'youtube' && (
                                 <>
                                     {canDirectPost && isPlatformConnected(selected) ? (
                                         <button
@@ -349,7 +355,7 @@ export function ShareModal({
 
                             {/* Always-visible copy + share fallbacks */}
                             <div className="flex gap-2 pt-1">
-                                {selected !== 'tiktok' && selected !== 'instagram' && (
+                                {selected !== 'tiktok' && selected !== 'snapchat' && selected !== 'instagram' && selected !== 'reddit' && selected !== 'youtube' && (
                                     <button onClick={handleCopy} className="flex-1 text-xs text-tm-muted hover:text-white border border-tm-border rounded-xl py-2 flex items-center justify-center gap-1.5 transition-colors">
                                         {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                                         {copied ? 'Copied!' : 'Copy Text'}

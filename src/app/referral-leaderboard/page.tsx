@@ -50,7 +50,7 @@ export default function ReferralLeaderboardPage() {
                         <p className="font-bold text-white text-sm mb-1">📱 On TikTok?</p>
                         <p className="text-xs text-tm-muted leading-relaxed">
                             Rank in the Top 10 and you have a built-in content hook:
-                            <em className="text-white"> "I'm a top TradeMind affiliate this month 🤑 — use code [YOURS]"</em>
+                            <em className="text-white"> "I'm a top TradeMind affiliate this month 🤑 — use code TRADEMIND"</em>
                         </p>
                     </div>
                 </div>

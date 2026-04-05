@@ -1,6 +1,6 @@
 /**
  * Promo Code Utilities
- * Generates and resolves short, memorable referral promo codes (e.g. "ERIC5", "BULL7")
+ * Generates and resolves short, memorable referral promo codes (e.g. "TRADEMIND5", "BULL7")
  */
 
 import pool from '@/lib/db';

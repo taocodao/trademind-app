@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Copy, CheckCircle2, Users, DollarSign, Clock, HelpCircle, Activity, CalendarDays, Gift } from 'lucide-react';
+import { ArrowLeft, Copy, CheckCircle2, Users, DollarSign, Clock, HelpCircle, Activity, CalendarDays, Trophy, Rocket } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 
@@ -77,17 +77,39 @@ export default function ReferPage() {
             {/* Share Card */}
             <div className="bg-tm-surface border border-tm-purple/30 rounded-2xl p-6 mb-8 relative overflow-hidden shadow-[0_0_30px_rgba(168,85,247,0.1)]">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-tm-purple/10 blur-[100px] rounded-full pointer-events-none"></div>
-                <h2 className="text-lg font-bold mb-2">Invite Friends — Earn Cash & Free Days</h2>
-                <p className="text-tm-muted text-sm mb-2 max-w-xl">
-                    Share your unique link. When a friend converts from their free trial to a paid plan, you earn <strong className="text-white">$50 account credit</strong> applied to your next bill, <em>plus</em> your subscription renewal date is pushed forward by the equivalent number of <strong className="text-tm-purple">free days</strong> — automatically, no action needed.
+                <h2 className="text-lg font-bold mb-1">Invite Friends — Earn Cash & Free Days</h2>
+                <p className="text-tm-muted text-xs mb-4 max-w-xl">
+                    Share your code verbally on TikTok/Instagram/YouTube or via link. When a friend subscribes, you earn <strong className="text-white">$50 credit</strong> + <strong className="text-tm-purple">free subscription days</strong> automatically.
                 </p>
-                <p className="text-xs text-tm-muted mb-6">Example: on the TurboCore Monthly plan ($29/mo), a $50 reward = <strong className="text-white">~52 extra free days</strong> before your next charge.</p>
 
+                {/* Promo Code — TikTok-native format (prominent) */}
+                <div className="mb-4">
+                    <p className="text-[10px] text-tm-muted uppercase tracking-wider mb-1.5">Your Promo Code (say this on TikTok!)</p>
+                    <div className="flex items-center gap-3">
+                        <div className="text-3xl font-black text-white tracking-widest font-mono bg-tm-bg border-2 border-tm-purple/40 px-5 py-3 rounded-xl">
+                            {data?.referralCode ?? '...'}
+                        </div>
+                        <button
+                            onClick={() => {
+                                navigator.clipboard.writeText(data?.referralCode || '');
+                                setCopied(true);
+                                setTimeout(() => setCopied(false), 2000);
+                            }}
+                            className="bg-tm-purple/20 hover:bg-tm-purple/30 border border-tm-purple/30 text-tm-purple px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors"
+                        >
+                            {copied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                            {copied ? 'Copied!' : 'Copy Code'}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Share Link */}
+                <p className="text-[10px] text-tm-muted uppercase tracking-wider mb-1.5">Or share this link</p>
                 <div className="flex items-center gap-2 bg-tm-bg rounded-xl border border-tm-border p-2 max-w-lg">
-                    <div className="px-3 text-tm-muted truncate flex-1 text-sm font-medium">{shareLink}</div>
+                    <div className="px-3 text-tm-muted truncate flex-1 text-xs font-medium">{data?.shareLink ?? shareLink}</div>
                     <button 
                         onClick={handleCopy}
-                        className="bg-tm-purple hover:bg-tm-purple/90 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shrink-0"
+                        className="bg-tm-purple hover:bg-tm-purple/90 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors shrink-0"
                     >
                         {copied ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                         {copied ? 'Copied!' : 'Copy Link'}
@@ -96,7 +118,7 @@ export default function ReferPage() {
             </div>
 
             {/* Stats Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div className="bg-tm-surface/50 border border-tm-border rounded-xl p-5 flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400">
                         <Users className="w-6 h-6" />
@@ -124,6 +146,60 @@ export default function ReferPage() {
                         <div className="text-2xl font-black">${pendingCredits}</div>
                     </div>
                 </div>
+            </div>
+
+            {/* Tier Progress */}
+            {(() => {
+                const currentTier = data?.tier?.current;
+                const nextAt = currentTier?.nextTierAt;
+                const progress = nextAt ? Math.min(100, Math.round((totalReferred / nextAt) * 100)) : 100;
+                return currentTier ? (
+                    <div className="bg-tm-surface border border-tm-border rounded-2xl p-5 mb-8">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                                <span className="text-2xl">{currentTier.emoji}</span>
+                                <div>
+                                    <div className="font-bold text-white text-sm">{currentTier.name}</div>
+                                    <div className="text-xs text-tm-muted">Current Tier</div>
+                                </div>
+                            </div>
+                            {nextAt && (
+                                <div className="text-right">
+                                    <div className="text-xs text-tm-muted">{totalReferred} / {nextAt} referrals to next tier</div>
+                                </div>
+                            )}
+                        </div>
+                        <div className="w-full bg-tm-bg rounded-full h-2 overflow-hidden">
+                            <div
+                                className="h-full bg-gradient-to-r from-tm-purple to-purple-400 rounded-full transition-all duration-700"
+                                style={{ width: `${progress}%` }}
+                            />
+                        </div>
+                        {nextAt && (
+                            <p className="text-[10px] text-tm-muted mt-2">
+                                {nextAt - totalReferred} more referral{nextAt - totalReferred !== 1 ? 's' : ''} to unlock <strong className="text-white">{data.tier.all?.find((t: any) => t.tier === currentTier.nextTier)?.name ?? 'next tier'}</strong>
+                            </p>
+                        )}
+                    </div>
+                ) : null;
+            })()}
+
+            {/* Quick Links */}
+            <div className="grid grid-cols-2 gap-3 mb-8">
+                <Link href="/referral-leaderboard" className="bg-tm-surface border border-tm-border hover:border-amber-500/40 rounded-xl p-4 flex items-center gap-3 transition-all">
+                    <Trophy className="w-5 h-5 text-amber-400" />
+                    <div>
+                        <div className="text-sm font-bold text-white">Leaderboard</div>
+                        <div className="text-[10px] text-tm-muted">See top affiliates</div>
+                    </div>
+                </Link>
+                <Link href="/creators" className="bg-tm-surface border border-tm-purple/30 hover:border-tm-purple/60 rounded-xl p-4 flex items-center gap-3 transition-all">
+                    <Rocket className="w-5 h-5 text-tm-purple" />
+                    <div>
+                        <div className="text-sm font-bold text-white">Creator Program</div>
+                        <div className="text-[10px] text-tm-muted">Apply for 20% rev share</div>
+                    </div>
+                </Link>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

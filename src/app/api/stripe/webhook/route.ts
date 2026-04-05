@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import Stripe from "stripe";
 import pool from "@/lib/db";
 import { extendReferrerSubscription } from "@/lib/stripe-extend";
+import { resolvePromoCode } from "@/lib/promo-codes";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs'; // Required for raw body access in App Router
@@ -391,19 +392,31 @@ async function recordCardFingerprint(userId: string, stripeCustomerId: string) {
 // ── Referral relationship storage ─────────────────────────────────────────
 async function linkReferral(referralCode: string, referredUserId: string, referredCustomerId: string) {
     try {
-        // referralCode is the referrer's user_id
+        // referralCode may be a short promo code (e.g. "ERIC54") or a legacy Privy DID
+        // Try resolving as short code first; fall back to treating it as a direct user_id
+        let referrerUserId = await resolvePromoCode(referralCode);
+        if (!referrerUserId) {
+            // Legacy: code was the referrer's Privy DID directly
+            const check = await pool.query(`SELECT user_id FROM user_settings WHERE user_id = $1`, [referralCode]);
+            referrerUserId = check.rows[0]?.user_id ?? null;
+        }
+        if (!referrerUserId || referrerUserId === referredUserId) return;
+
+        // Upsert referral — if already exists from pre-checkout redeem, update the stripe customer ID
         await pool.query(
             `INSERT INTO referrals (referrer_user_id, referred_user_id, referred_stripe_customer_id)
              VALUES ($1, $2, $3)
-             ON CONFLICT DO NOTHING`,
-            [referralCode, referredUserId, referredCustomerId]
+             ON CONFLICT (referred_user_id) DO UPDATE 
+             SET referred_stripe_customer_id = COALESCE(referrals.referred_stripe_customer_id, EXCLUDED.referred_stripe_customer_id)`,
+            [referrerUserId, referredUserId, referredCustomerId]
         );
         
         const newRef = await pool.query(`SELECT id FROM referrals WHERE referred_user_id = $1`, [referredUserId]);
         if (newRef.rows.length) {
             await pool.query(
                 `INSERT INTO referral_activity (referral_id, event_type, description)
-                 VALUES ($1, 'signed_up', 'Friend signed up and started 14-day trial')`,
+                 VALUES ($1, 'subscribed', 'Friend converted from trial to paid subscription')
+                 ON CONFLICT DO NOTHING`,
                 [newRef.rows[0].id]
             );
         }

@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/ai';
 import { query } from '@/lib/db';
+import { assignPromoCode, getTierForCount, TIER_CONFIG } from '@/lib/promo-codes';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
     try {
         const user = await getUserFromRequest(req);
+
+        // Auto-assign a short promo code if the user doesn't have one yet
+        const settingsRes = await query(
+            `SELECT referral_code, first_name FROM user_settings WHERE user_id = $1`,
+            [user.privyDid]
+        );
+        let referralCode: string = settingsRes.rows[0]?.referral_code;
+        if (!referralCode) {
+            referralCode = await assignPromoCode(user.privyDid, settingsRes.rows[0]?.first_name);
+        }
 
         // Get referral stats
         const statsResult = await query(
@@ -21,9 +32,13 @@ export async function GET(req: NextRequest) {
         );
 
         const stats = statsResult.rows[0];
+        const totalReferred = parseInt(stats.total_referred);
         const totalEarned = (parseInt(stats.stage1_count) * 50) +
                            (parseInt(stats.stage2_count) * 50) +
                            (parseInt(stats.annual_count) * 150);
+
+        // Compute tier
+        const currentTierInfo = getTierForCount(totalReferred);
 
         // Get list of referred users with their progress
         const referralsResult = await query(
@@ -48,13 +63,18 @@ export async function GET(req: NextRequest) {
         );
 
         return NextResponse.json({
-            referralCode: user.privyDid,  // The referral code IS the user's privy DID
+            referralCode,                           // Short code e.g. "ERIC54"
+            shareLink: `https://trademind.bot/?ref=${referralCode}`,
             stats: {
-                totalReferred: parseInt(stats.total_referred),
+                totalReferred,
                 stage1Paid: parseInt(stats.stage1_count),
                 stage2Paid: parseInt(stats.stage2_count),
                 annualBonuses: parseInt(stats.annual_count),
                 totalEarned,
+            },
+            tier: {
+                current: currentTierInfo,
+                all: TIER_CONFIG,
             },
             referrals: referralsResult.rows.map((r: any) => ({
                 id: r.id,

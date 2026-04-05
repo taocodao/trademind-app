@@ -40,6 +40,31 @@ export default function SinglePageMarketing() {
         }
     }, [ready, authenticated, router]);
 
+    // ── TikTok / dark social attribution capture ──────────────────────────────
+    // Store UTM params + referral code in localStorage on first visit.
+    // These survive multi-session paths (user watches TikTok, visits days later, signs up).
+    useEffect(() => {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            // Referral code from URL (e.g. trademind.bot/?ref=ERIC54)
+            const ref = params.get('ref') || params.get('code');
+            if (ref && !localStorage.getItem('tm_referralCode')) {
+                localStorage.setItem('tm_referralCode', ref.toUpperCase());
+            }
+            // UTM attribution
+            const utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content'] as const;
+            utmKeys.forEach(k => {
+                const v = params.get(k);
+                if (v && !localStorage.getItem(`tm_${k}`)) {
+                    localStorage.setItem(`tm_${k}`, v);
+                }
+            });
+        } catch {
+            // localStorage may be unavailable in certain browsers — fail silently
+        }
+    }, []);
+
+
     useEffect(() => {
         const fetchUrl = strategyMode === 'pro'
             ? '/turbocore_pro_5k_curve.json'

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Copy, CheckCircle2, Users, DollarSign, Clock, HelpCircle, Activity, CalendarDays, Trophy, Rocket } from 'lucide-react';
+import { ArrowLeft, Users, DollarSign, Clock, HelpCircle, Activity, CalendarDays, Trophy, Rocket } from 'lucide-react';
+import { ShareSection } from '@/components/referral/ShareSection';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 
@@ -13,7 +14,7 @@ export default function ReferPage() {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [copied, setCopied] = useState(false);
+
 
     useEffect(() => {
         if (ready && authenticated) {
@@ -30,14 +31,7 @@ export default function ReferPage() {
         }
     }, [ready, authenticated, router]);
 
-    const handleCopy = () => {
-        if (data?.referralCode) {
-            const link = `https://trademind.bot/?ref=${data.referralCode}`;
-            navigator.clipboard.writeText(link);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        }
-    };
+
 
     if (!ready || loading) {
         return (
@@ -74,48 +68,17 @@ export default function ReferPage() {
                 <h1 className="text-2xl font-bold">Referral Dashboard</h1>
             </header>
 
-            {/* Share Card */}
-            <div className="bg-tm-surface border border-tm-purple/30 rounded-2xl p-6 mb-8 relative overflow-hidden shadow-[0_0_30px_rgba(168,85,247,0.1)]">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-tm-purple/10 blur-[100px] rounded-full pointer-events-none"></div>
-                <h2 className="text-lg font-bold mb-1">Invite Friends — Earn Cash & Free Days</h2>
-                <p className="text-tm-muted text-xs mb-4 max-w-xl">
-                    Share your code verbally on TikTok/Instagram/YouTube or via link. When a friend subscribes, you earn <strong className="text-white">$50 credit</strong> + <strong className="text-tm-purple">free subscription days</strong> automatically.
-                </p>
-
-                {/* Promo Code — TikTok-native format (prominent) */}
-                <div className="mb-4">
-                    <p className="text-[10px] text-tm-muted uppercase tracking-wider mb-1.5">Your Promo Code (say this on TikTok!)</p>
-                    <div className="flex items-center gap-3">
-                        <div className="text-3xl font-black text-white tracking-widest font-mono bg-tm-bg border-2 border-tm-purple/40 px-5 py-3 rounded-xl">
-                            {data?.referralCode ?? '...'}
-                        </div>
-                        <button
-                            onClick={() => {
-                                navigator.clipboard.writeText(data?.referralCode || '');
-                                setCopied(true);
-                                setTimeout(() => setCopied(false), 2000);
-                            }}
-                            className="bg-tm-purple/20 hover:bg-tm-purple/30 border border-tm-purple/30 text-tm-purple px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors"
-                        >
-                            {copied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                            {copied ? 'Copied!' : 'Copy Code'}
-                        </button>
-                    </div>
+            {/* AI Social Share Section */}
+            {data?.referralCode && (
+                <div className="mb-8">
+                    <ShareSection
+                        promoCode={data.referralCode}
+                        referralLink={data.shareLink ?? shareLink}
+                        userTier={data.tier?.current?.tier ?? 'bronze'}
+                        isCreator={data.isCreator ?? false}
+                    />
                 </div>
-
-                {/* Share Link */}
-                <p className="text-[10px] text-tm-muted uppercase tracking-wider mb-1.5">Or share this link</p>
-                <div className="flex items-center gap-2 bg-tm-bg rounded-xl border border-tm-border p-2 max-w-lg">
-                    <div className="px-3 text-tm-muted truncate flex-1 text-xs font-medium">{data?.shareLink ?? shareLink}</div>
-                    <button 
-                        onClick={handleCopy}
-                        className="bg-tm-purple hover:bg-tm-purple/90 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors shrink-0"
-                    >
-                        {copied ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                        {copied ? 'Copied!' : 'Copy Link'}
-                    </button>
-                </div>
-            </div>
+            )}
 
             {/* Stats Row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">

@@ -3,7 +3,7 @@
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { ArrowLeft, Settings, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Settings, AlertTriangle, Share2, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { TastytradeCredentials } from '@/components/settings/TastytradeCredentials';
 import { InvestmentPrincipal } from '@/components/dashboard/InvestmentPrincipal';
@@ -70,6 +70,22 @@ export default function SettingsPage() {
                 
                 {/* Tastytrade Credentials */}
                 <TastytradeCredentials />
+
+                {/* Social Connections Link */}
+                <Link href="/settings/social-connections" className="block">
+                    <section className="glass-card p-4 hover:border-tm-purple/40 hover:bg-tm-surface/60 transition-all group flex items-center justify-between cursor-pointer">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-tm-purple/10 flex items-center justify-center text-tm-purple group-hover:scale-110 transition-transform">
+                                <Share2 className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-white mb-0.5">Social Connections</h3>
+                                <p className="text-xs text-tm-muted">Connect your X, LinkedIn, Facebook accounts</p>
+                            </div>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-tm-muted group-hover:text-tm-purple transition-colors" />
+                    </section>
+                </Link>
 
                 {/* Support & Help */}
                 <SupportContact />

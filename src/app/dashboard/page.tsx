@@ -865,16 +865,22 @@ function DashboardContent() {
 
                 <div className="glass-card p-3 flex items-center gap-3">
 
-                    {/* TradeMind Logo */}
-                    <Link href="/refer" className="flex items-center shrink-0 hover:opacity-90 transition-opacity">
+                    {/* TradeMind Logo / Refer Link */}
+                    <Link href="/refer" className="relative flex items-center gap-2 shrink-0 hover:scale-[1.02] active:scale-[0.98] transition-all bg-gradient-to-br from-tm-purple/10 to-transparent border border-tm-purple/30 rounded-xl pl-1 pr-2.5 py-1.5 shadow-[0_4px_20px_rgba(168,85,247,0.15)] ring-1 ring-white/5 group">
                         <Image
                             src="/Trade mind logo.png"
                             alt="TradeMind"
-                            width={130}
-                            height={36}
+                            width={160}
+                            height={48}
                             priority
-                            className="h-9 w-auto object-contain"
+                            className="h-12 w-auto object-contain drop-shadow-md group-hover:drop-shadow-[0_0_8px_rgba(168,85,247,0.4)] transition-all"
                         />
+                        <div className="flex flex-col justify-center">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-tm-purple leading-tight">Refer</span>
+                            <span className="text-xs font-bold text-white flex items-center gap-1 leading-none shadow-sm">
+                                & Earn <span className="text-sm border flex items-center justify-center p-0.5 rounded shadow-sm bg-white/10 border-white/20 -mt-0.5">🎁</span>
+                            </span>
+                        </div>
                     </Link>
 
                     {/* Setup Guide — mobile pill */}

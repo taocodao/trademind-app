@@ -1,6 +1,11 @@
 /**
  * Composio SDK Utilities
  * Singleton client + platform configuration for the TradeMind social referral system.
+ *
+ * Platform Groups:
+ *   Group A — Direct text post (OAuth + auto-post): linkedin, twitter, facebook, reddit
+ *   Group B — Media-required (script/clipboard mode): instagram, tiktok, youtube
+ *   Group C — No Composio toolkit (clipboard forever): snapchat
  */
 
 import { OpenAI } from 'openai';
@@ -19,6 +24,8 @@ export function getOpenAIClient(): OpenAI {
 // ── Platform Configuration ────────────────────────────────────────────────────
 
 export type SocialPlatform = 'linkedin' | 'twitter' | 'facebook' | 'instagram' | 'tiktok' | 'snapchat' | 'reddit' | 'youtube';
+export type PostMode = 'referral' | 'education';
+export type TemplateStyle = 'results' | 'educational' | 'casual';
 
 /**
  * Platform → Composio Auth Config ID mapping.
@@ -29,24 +36,25 @@ export const COMPOSIO_AUTH_CONFIGS: Record<SocialPlatform, string> = {
     twitter:   process.env.COMPOSIO_AUTH_CONFIG_TWITTER   ?? '',
     facebook:  process.env.COMPOSIO_AUTH_CONFIG_FACEBOOK  ?? '',
     instagram: process.env.COMPOSIO_AUTH_CONFIG_INSTAGRAM ?? '',
-    tiktok:    '', // TikTok is clipboard-only — no Composio auth needed
-    snapchat:  process.env.COMPOSIO_AUTH_CONFIG_SNAPCHAT  ?? '', // Snapchat is clipboard-only for now, but uses OAuth
+    tiktok:    process.env.COMPOSIO_AUTH_CONFIG_TIKTOK    ?? '',
+    snapchat:  process.env.COMPOSIO_AUTH_CONFIG_SNAPCHAT  ?? '', // Auth Config confirmed active in Composio dashboard
     reddit:    process.env.COMPOSIO_AUTH_CONFIG_REDDIT    ?? '',
     youtube:   process.env.COMPOSIO_AUTH_CONFIG_YOUTUBE   ?? '',
 };
 
 /**
  * Platform → Composio tool action slug for direct posting.
+ * Slugs are CONFIRMED via Perplexity research against Composio docs (April 2026).
  */
 export const PLATFORM_TOOL_SLUGS: Record<SocialPlatform, string> = {
-    linkedin:  'LINKEDIN_CREATE_LINKEDIN_POST',
-    twitter:   'TWITTER_CREATE_TWEET',
-    facebook:  'FACEBOOK_CREATE_POST',
-    instagram: 'INSTAGRAM_CREATE_POST',
-    tiktok:    '', // Clipboard-only
-    snapchat:  '', // Clipboard-only logic for now
-    reddit:    '', // Clipboard-only
-    youtube:   '', // Clipboard-only
+    linkedin:  'LINKEDIN_CREATE_LINKED_IN_POST',  // Confirmed — note IN_IN not IN
+    twitter:   'TWITTER_CREATION_OF_A_POST',       // Confirmed — not TWITTER_CREATE_TWEET
+    facebook:  'FACEBOOK_CREATE_POST',             // Confirmed — requires page_id in params
+    instagram: 'INSTAGRAM_CREATE_MEDIA_CONTAINER', // Step 1 of 2-step flow (media required)
+    reddit:    'REDDIT_CREATE_REDDIT_POST',        // Confirmed — text posts supported!
+    tiktok:    '',  // Video upload required — clipboard/script mode only
+    youtube:   '',  // Video upload required — clipboard/script mode only
+    snapchat:  '',  // No Composio toolkit — clipboard forever
 };
 
 /**
@@ -57,126 +65,188 @@ export const PLATFORM_CONSTRAINTS: Record<SocialPlatform, {
     supportsLinks: boolean;
     supportsHashtags: boolean;
     supportsDirectPost: boolean;
+    requiresMedia: boolean;
 }> = {
-    linkedin:  { maxChars: 3000,  supportsLinks: true,  supportsHashtags: true,  supportsDirectPost: true },
-    twitter:   { maxChars: 280,   supportsLinks: true,  supportsHashtags: true,  supportsDirectPost: true },
-    facebook:  { maxChars: 63206, supportsLinks: true,  supportsHashtags: true,  supportsDirectPost: true },
-    instagram: { maxChars: 2200,  supportsLinks: false, supportsHashtags: true,  supportsDirectPost: true },
-    tiktok:    { maxChars: 2200,  supportsLinks: false, supportsHashtags: true,  supportsDirectPost: false },
-    snapchat:  { maxChars: 2200,  supportsLinks: false, supportsHashtags: false, supportsDirectPost: false },
-    reddit:    { maxChars: 40000, supportsLinks: true,  supportsHashtags: false, supportsDirectPost: false },
-    youtube:   { maxChars: 5000,  supportsLinks: true,  supportsHashtags: true,  supportsDirectPost: false },
+    linkedin:  { maxChars: 3000,  supportsLinks: true,  supportsHashtags: true,  supportsDirectPost: true,  requiresMedia: false },
+    twitter:   { maxChars: 250,   supportsLinks: true,  supportsHashtags: true,  supportsDirectPost: true,  requiresMedia: false },
+    facebook:  { maxChars: 63206, supportsLinks: true,  supportsHashtags: true,  supportsDirectPost: true,  requiresMedia: false },
+    instagram: { maxChars: 2200,  supportsLinks: false, supportsHashtags: true,  supportsDirectPost: false, requiresMedia: true  },
+    tiktok:    { maxChars: 2200,  supportsLinks: false, supportsHashtags: true,  supportsDirectPost: false, requiresMedia: true  },
+    snapchat:  { maxChars: 2200,  supportsLinks: false, supportsHashtags: false, supportsDirectPost: false, requiresMedia: false },
+    reddit:    { maxChars: 40000, supportsLinks: true,  supportsHashtags: false, supportsDirectPost: true,  requiresMedia: false },
+    youtube:   { maxChars: 5000,  supportsLinks: true,  supportsHashtags: true,  supportsDirectPost: false, requiresMedia: true  },
 };
 
 /**
- * Platforms that support Composio direct posting.
- * TikTok is excluded (video-only API, clipboard approach used instead).
+ * Group A: Platforms that support Composio direct text posting.
+ * Group B: Media-first platforms — generate script/caption for user to post manually.
+ * Group C: No Composio support — clipboard only.
  */
-export const DIRECT_POST_PLATFORMS: SocialPlatform[] = ['linkedin', 'twitter', 'facebook', 'instagram'];
+export const DIRECT_POST_PLATFORMS: SocialPlatform[] = ['linkedin', 'twitter', 'facebook', 'reddit'];
+export const SCRIPT_ONLY_PLATFORMS: SocialPlatform[] = ['instagram', 'tiktok', 'youtube'];
+export const CLIPBOARD_ONLY_PLATFORMS: SocialPlatform[] = []; // Snapchat auth config is active — may support posting
 
 /**
- * Platform-specific system prompts for OpenAI post generation.
- * Each includes a mandatory "Not financial advice." compliance disclaimer.
+ * All platforms that can OAuth-connect via Composio (including Snapchat — auth config confirmed).
  */
-export const PLATFORM_SYSTEM_PROMPTS: Record<SocialPlatform, string> = {
-    linkedin: `You are a professional LinkedIn content writer specializing in fintech and trading.
-Write a LinkedIn post for a user promoting TradeMind.bot, an AI-powered options trading signal platform.
-The post should:
-- Start with a strong, curiosity-driven hook about trading results or insights
-- Share 2-3 specific value points about TradeMind's features (AI signals, options strategies, real-time alerts)
-- Include the referral link and promo code naturally in the body
-- End with a professional CTA to sign up
-- Use 2-4 relevant hashtags: #OptionsTrading #Fintech #TradeMind #AITrading
-- Be 200-400 words, formatted with line breaks for readability
-- Tone: professional but approachable, first-person experience
-- IMPORTANT: Always include the disclaimer "Not financial advice." at the end`,
+export const OAUTH_PLATFORMS: SocialPlatform[] = ['linkedin', 'twitter', 'facebook', 'instagram', 'tiktok', 'reddit', 'youtube', 'snapchat'];
 
-    twitter: `You are a punchy Twitter/X copywriter for fintech content.
-Write a tweet promoting TradeMind.bot (AI options trading signals).
-Rules:
-- MUST be under 250 characters (leave room for the link)
-- Start with a hook: a surprising stat, bold claim, or relatable pain point
-- Include the promo code inline, e.g. "Use code ALPHA49 for 14 days free"
+/**
+ * Safe default subreddits for financial content referral posts.
+ */
+export const REDDIT_SUBREDDITS = [
+    { value: 'stocks',        label: 'r/stocks — General investing' },
+    { value: 'options',       label: 'r/options — Options trading' },
+    { value: 'investing',     label: 'r/investing — Broad audience' },
+    { value: 'algotrading',   label: 'r/algotrading — AI/algo traders' },
+    { value: 'wallstreetbets', label: 'r/wallstreetbets — High energy (check rules)' },
+];
+
+// ── System Prompts ────────────────────────────────────────────────────────────
+
+/**
+ * Build the system prompt for a given platform, post mode, and template style.
+ * postMode: 'referral' = promote TradeMind + include referral link
+ *           'education' = share trading knowledge, soft CTA at end only
+ */
+export function buildSystemPrompt(
+    platform: SocialPlatform,
+    postMode: PostMode = 'referral',
+    templateStyle: TemplateStyle = 'results'
+): string {
+    const toneGuide: Record<TemplateStyle, string> = {
+        results:     'Focus on concrete results and performance. Use first-person experience ("I made X trades", "The signal caught Y move").',
+        educational: 'Focus on teaching — explain how options signals work, what IV means, how AI detects market conditions. Position yourself as a knowledgeable trader sharing insights.',
+        casual:      'Keep it short, punchy, and conversational. Use casual language, relatable frustrations ("tired of guessing?"), and hype energy without being cringe.',
+    };
+
+    const complianceNote = 'MANDATORY: Always end with "Not financial advice." as its own line.';
+    const linkNote = 'Include the full referral link in the post — it auto-applies the promo code when clicked. Do NOT ask the reader to manually type any code.';
+    const educationNote = postMode === 'education'
+        ? 'This is an educational post — lead with genuine trading knowledge. The referral is a soft CTA at the end only, not the focus.'
+        : 'This is a referral post — prominently feature the referral link and free trial offer.';
+
+    const base = `Tone: ${toneGuide[templateStyle]}\n${educationNote}\n${linkNote}\n${complianceNote}`;
+
+    const prompts: Record<SocialPlatform, string> = {
+        linkedin: `You are a professional LinkedIn content writer specializing in fintech and AI trading.
+Write a LinkedIn post for a TradeMind.bot user${postMode === 'education' ? ' sharing trading education' : ' promoting TradeMind.bot (AI-powered options trading signals)'}.
+- Start with a strong, curiosity-driven hook
+- ${postMode === 'education' ? 'Share 2-3 specific insights about options trading, AI signals, or market strategy' : 'Share 2-3 value points about TradeMind features (AI signals, options strategies, real-time alerts)'}
+- Include the full referral link naturally in the body
+- End with a ${postMode === 'education' ? 'soft' : 'clear'} CTA
+- Use 2-4 hashtags: #OptionsTrading #Fintech #TradeMind #AITrading
+- 200-400 words, formatted with line breaks
+${base}`,
+
+        twitter: `You are a punchy Twitter/X copywriter for fintech content.
+Write a tweet for a TradeMind.bot user (AI options trading signals).
+- MUST be under 240 characters including the link
+- Start with a hook: surprising stat, bold claim, or relatable pain point
+- Include the full referral link (it auto-applies the free trial)
 - Max 2 hashtags: #OptionsTrading #TradeMind
-- Casual, Gen Z-friendly tone
-- End with the referral link
-- Add: "Not financial advice."
-Keep it punchy — cut every word that isn't earning its place.`,
+${base}`,
 
-    facebook: `You are a conversational Facebook post writer for a fintech trading app.
-Write a Facebook post promoting TradeMind.bot (AI-powered options trading signals).
-The post should:
-- Open like a story or personal update ("I've been using this for 3 months...")
-- Describe how TradeMind helped with trading decisions
-- Include the referral link and mention the promo code clearly
-- Be friendly, human, slightly casual — like a post from a friend
-- 150-300 words
-- Include 2-3 emojis naturally placed
-- End with a clear CTA and the promo code
-- Add: "Not financial advice." at the end`,
+        facebook: `You are a conversational Facebook content writer for a fintech community.
+Write a Facebook post for a TradeMind.bot user${postMode === 'education' ? ' sharing trading knowledge' : ' promoting TradeMind.bot'}.
+- Open like a personal story or update
+- ${postMode === 'education' ? 'Share genuine trading insight or lesson learned' : 'Describe how TradeMind helped your trading decisions'}
+- Include the full referral link and mention the free trial
+- 150-300 words, 2-3 emojis, friendly tone
+${base}`,
 
-    instagram: `You are an Instagram caption writer for a fintech trading brand.
-Write an Instagram caption promoting TradeMind.bot (AI options trading signals).
-Rules:
-- Note: Instagram captions don't support clickable links — instead say "Link in bio" and mention the promo code
-- Start with a single strong hook line (the first line is critical on IG)
+        instagram: `You are an Instagram caption writer for a fintech trading account.
+Write an Instagram caption for a post about ${postMode === 'education' ? 'options trading / AI signals (educational)' : 'TradeMind.bot (AI options trading signals)'}.
+- IMPORTANT: Instagram doesn't support clickable links in captions — say "Link in bio 🔗" and mention the free trial code
+- Strong hook line first (critical on IG — first line must grab attention)
 - Use emojis throughout to break up text
-- 5-8 relevant hashtags at the END of the caption: #OptionsTrading #Fintech #TradeMind #StockMarket #TradingSignals #AITrading #InvestSmart
-- 100-200 words of caption body
-- Clear CTA: "Sign up at the link in bio — use code [PROMO CODE] for free days!"
-- Add: "Not financial advice." near the end`,
+- 5-8 hashtags at END: #OptionsTrading #Fintech #TradeMind #StockMarket #TradingSignals #AITrading #InvestSmart
+- 100-200 words body
+IMPORTANT: This will be posted with a user-provided image. Write caption only.
+${base}`,
 
-    tiktok: `You are a TikTok script writer for fintech content targeting Gen Z.
-Write a TikTok video caption/script for promoting TradeMind.bot (AI options trading signals).
-Format: Write TWO things:
-1. SPOKEN SCRIPT (3-5 sentences) — What the creator says on camera.
-   Use TikTok speech patterns: "POV:", "Not gonna lie...", "Here's the thing...", "If you're into trading..."
-   Include the promo code naturally: "Go to trademind.bot and use code [PROMO CODE]"
-2. CAPTION (under 150 chars) — The actual TikTok post caption with hashtags
+        tiktok: `You are a TikTok script writer for fintech content targeting Gen Z traders.
+Write a TikTok video script for a ${postMode === 'education' ? 'financial education' : 'TradeMind.bot referral'} video.
+Format — write BOTH:
+1. SPOKEN SCRIPT (3-5 sentences): What the creator says on camera.
+   Use: "POV:", "Not gonna lie...", "Here's the thing...", "If you trade options..."
+   ${postMode === 'education' ? 'Teach one concrete trading concept (e.g. how to read a signal, what IV crush means)' : 'Mention trademind.bot and the free trial'}
+   End with: "Link in my bio — [referral link]"
+2. CAPTION (under 150 chars): Actual TikTok caption with hashtags
    Include: #FinTok #TradingTips #OptionsTrading #TradeMind #StockTok
-Label them clearly as "SPOKEN SCRIPT:" and "CAPTION:"
-Tone: raw, authentic, direct — like a Gen Z creator talking to camera, not an ad.
-Add: "Not financial advice." to the spoken script.`,
+Label both clearly as "SPOKEN SCRIPT:" and "CAPTION:"
+${base}`,
 
-    snapchat: `You are a Snapchat content creator for fintech platforms.
-Write a Snapchat Spotlight or Story text overlay script to promote TradeMind.bot.
-Because this will be placed over an image or video, keep it very punchy and visually adaptable.
-Write a quick hook, mention the value (AI signals), and tell the viewer to use the promo code [PROMO CODE] at trademind.bot.
-Make it energetic, casual, and Gen Z friendly. Include a couple relevant emojis.
-Note: Always include the disclaimer "Not financial advice." at the end.`,
+        snapchat: `You are a Snapchat Story content creator for a fintech brand.
+Write a short, punchy Snapchat text overlay script for a ${postMode === 'education' ? 'trading tip' : 'TradeMind.bot promotion'}.
+This text overlays an image or video snap — keep it very short (2-3 lines max).
+${postMode === 'education' ? 'Share one quick trading tip or insight.' : 'Hook → value → "try trademind.bot free"'}
+Include a couple energetic emojis. Gen Z friendly.
+${base}`,
 
-    reddit: `You are a knowledgeable Redditor participating in investing and options trading communities.
-Write a Reddit post or comment promoting TradeMind.bot.
-Make it sound authentic to Reddit: analytical, slightly skeptical but convinced by data, avoiding overly scammy or hype language.
-Focus on the technical merits of the AI options trading signals.
-Include the promotional code [PROMO CODE] naturally and link to trademind.bot.
-Format with markdown (e.g. bolding, bullet points if helpful).
-Add: "Not financial advice." at the end.`,
+        reddit: `You are an experienced Redditor participating in investing and options trading communities.
+Write a Reddit post ${postMode === 'education' ? 'sharing options trading insights or a genuine market analysis' : 'discussing TradeMind.bot AI options signals'}.
+- Sound authentic to Reddit: analytical, evidence-based, not salesy
+- ${postMode === 'education' ? 'Lead with genuine value — teach something real about options, AI signals, or trading strategy' : 'Focus on technical merits of AI-powered options signals'}
+- Include the full referral link naturally
+- Format with Reddit markdown (bold, bullet points where helpful)
+- Write a good title AND post body
+${base}`,
 
-    youtube: `You are a YouTube creator focused on finance, trading, and options.
-Write a YouTube video description to promote TradeMind.bot (AI options trading signals).
-Include a strong hook in the first 2 lines (above the "Show More" fold).
-Add the referral link and promo code clearly: "Use code [PROMO CODE] for a free trial at trademind.bot"
-Include a brief description of what TradeMind is.
-Add 3-5 relevant hashtags at the bottom.
-Make it highly searchable (SEO friendly) for terms like "AI options trading, TradeMind, options signals".
-Note: Always include the disclaimer "Not financial advice." at the end.`
-};
+        youtube: `You are a YouTube finance creator writing a video description.
+Write a YouTube video description for a ${postMode === 'education' ? 'trading education video' : 'TradeMind.bot review/walkthrough video'}.
+- Strong hook in first 2 lines (above "Show More" fold)
+- ${postMode === 'education' ? 'Explain what the video teaches about options/AI trading' : 'Describe TradeMind features and results'}
+- Include referral link clearly: "Try TradeMind free → [link]"
+- 3-5 relevant hashtags at bottom
+- SEO-optimized for: "AI options trading, TradeMind, options signals, algorithmic trading"
+${base}`,
+    };
+
+    return prompts[platform];
+}
+
+// ── Tool Parameters ───────────────────────────────────────────────────────────
 
 /**
- * Build the tool parameters for a Composio direct post action.
+ * Build Composio tool parameters for direct posting.
+ * metadata: platform-specific stored values (page_id, ig_user_id, subreddit, etc.)
  */
-export function buildToolParams(platform: SocialPlatform, postContent: string): Record<string, unknown> {
+export function buildToolParams(
+    platform: SocialPlatform,
+    postContent: string,
+    metadata?: Record<string, string>
+): Record<string, unknown> {
     switch (platform) {
         case 'linkedin':
             return { text: postContent, visibility: 'PUBLIC' };
+
         case 'twitter':
             return { text: postContent };
+
         case 'facebook':
-            return { message: postContent };
+            return {
+                page_id: metadata?.page_id ?? '',  // Required — fetched on OAuth connection
+                message: postContent,
+            };
+
+        case 'reddit':
+            return {
+                subreddit: metadata?.subreddit ?? 'stocks',
+                title: metadata?.reddit_title ?? 'My experience with AI-powered options signals',
+                text: postContent,
+            };
+
         case 'instagram':
-            return { caption: postContent, media_type: 'IMAGE' };
+            // Step 1 of 2-step flow: create media container
+            // Step 2 (INSTAGRAM_CREATE_POST) is called after polling container status
+            return {
+                ig_user_id: metadata?.ig_user_id ?? '',
+                image_url: metadata?.image_url ?? '',  // Public HTTPS URL required
+                caption: postContent,
+            };
+
         default:
-            throw new Error(`Platform "${platform}" does not support direct posting`);
+            throw new Error(`Platform "${platform}" does not support direct posting via Composio`);
     }
 }

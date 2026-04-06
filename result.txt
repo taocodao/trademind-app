@@ -1,0 +1,14 @@
+﻿
+Verifying migration results:
+
+  Γ£à social_connections table
+  Γ£à social_posts table
+  Γ£à creator_applications table
+  Γ£à user_settings.referral_code
+  Γ£à user_settings.referral_tier
+  Γ£à user_settings.is_creator
+  Γ£à user_settings.hdyhau
+  Γ£à user_settings.utm_source
+
+  ≡ƒÄë All tables and columns present!
+

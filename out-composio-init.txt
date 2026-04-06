@@ -1,0 +1,44 @@
+ComposioError: Failed to parse connected account list query
+    at ConnectedAccounts.list (file:///D:/Projects/trademind-app/node_modules/@composio/core/dist/index.mjs:2669:36)
+    at instance.<computed> [as list] (file:///D:/Projects/trademind-app/node_modules/@composio/core/dist/Telemetry-CjVa99gU.mjs:170:42)
+    at ConnectedAccounts.initiate (file:///D:/Projects/trademind-app/node_modules/@composio/core/dist/index.mjs:2734:39)
+    at instance.<computed> [as initiate] (file:///D:/Projects/trademind-app/node_modules/@composio/core/dist/Telemetry-CjVa99gU.mjs:170:42)
+    at check (file:///D:/Projects/trademind-app/test-composio3.mjs:8:42)
+    at file:///D:/Projects/trademind-app/test-composio3.mjs:17:1
+    at ModuleJob.run (node:internal/modules/esm/module_job:218:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:329:24)
+    at async loadESM (node:internal/process/esm_loader:28:7)
+    at async handleMainPromise (node:internal/modules/run_main:113:12)
+
+Caused by:
+  {
+    "code": "invalid_type",
+    "expected": "string",
+    "received": "undefined",
+    "path": [
+      "authConfigIds",
+      0
+    ],
+    "message": "Required"
+  },
+  {
+    "code": "invalid_type",
+    "expected": "string",
+    "received": "object",
+    "path": [
+      "userIds",
+      0
+    ],
+    "message": "Expected string, received object"
+  }
+]
+    at get error [as error] (file:///D:/Projects/trademind-app/node_modules/zod/v3/types.js:39:31)
+    at ConnectedAccounts.list (file:///D:/Projects/trademind-app/node_modules/@composio/core/dist/index.mjs:2669:125)
+    at instance.<computed> [as list] (file:///D:/Projects/trademind-app/node_modules/@composio/core/dist/Telemetry-CjVa99gU.mjs:170:42)
+    at ConnectedAccounts.initiate (file:///D:/Projects/trademind-app/node_modules/@composio/core/dist/index.mjs:2734:39)
+    at instance.<computed> [as initiate] (file:///D:/Projects/trademind-app/node_modules/@composio/core/dist/Telemetry-CjVa99gU.mjs:170:42)
+    at check (file:///D:/Projects/trademind-app/test-composio3.mjs:8:42)
+    at file:///D:/Projects/trademind-app/test-composio3.mjs:17:1
+    at ModuleJob.run (node:internal/modules/esm/module_job:218:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:329:24)
+    at async loadESM (node:internal/process/esm_loader:28:7)

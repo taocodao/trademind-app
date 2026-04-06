@@ -50,7 +50,13 @@ import {
 
     ArrowRight,
 
+    Share2,
+
+    Gift,
+
 } from 'lucide-react';
+
+import Image from 'next/image';
 
 import Link from 'next/link';
 
@@ -855,89 +861,54 @@ function DashboardContent() {
 
 
 
-                {/* Welcome header */}
+                {/* Header — Logo + Language Selector */}
 
-                <div className="glass-card p-4 flex flex-wrap sm:flex-nowrap items-center gap-3">
+                <div className="glass-card p-3 flex items-center gap-3">
 
-                    <div className="flex-[1_1_150px] sm:flex-none min-w-0 mr-auto">
+                    {/* TradeMind Logo */}
+                    <Link href="/refer" className="flex items-center shrink-0 hover:opacity-90 transition-opacity">
+                        <Image
+                            src="/Trade mind logo.png"
+                            alt="TradeMind"
+                            width={130}
+                            height={36}
+                            priority
+                            className="h-9 w-auto object-contain"
+                        />
+                    </Link>
 
-                        <p className="hidden sm:block text-tm-muted text-xs">{t('dashboard.welcome')}</p>
-                        <button
-                            onClick={() => window.dispatchEvent(new Event('open-onboarding'))}
-                            className="flex sm:hidden items-center gap-1.5 px-2.5 py-1 mb-1 rounded-full bg-gradient-to-r from-blue-500 to-tm-purple text-white hover:opacity-90 transition-all text-[10px] font-bold border border-white/20 shadow-md whitespace-nowrap w-fit"
-                        >
-                            <Bell className="w-3 h-3" />
-                            <span>Onboarding</span>
-                        </button>
+                    {/* Setup Guide — mobile pill */}
+                    <button
+                        onClick={() => window.dispatchEvent(new Event('open-onboarding'))}
+                        className="flex sm:hidden items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-blue-500 to-tm-purple text-white hover:opacity-90 transition-all text-[10px] font-bold border border-white/20 shadow-md whitespace-nowrap"
+                    >
+                        <Bell className="w-3 h-3" />
+                        <span>Setup</span>
+                    </button>
 
-                        <h1 className="text-base font-bold truncate">
-
-                            {(() => {
-                                // Priority: Privy linked account name > TT username > email > fallback
-                                const privyName = (user as any)?.google?.name
-                                    || (user as any)?.apple?.name
-                                    || (user?.linkedAccounts?.find((a: any) => a.type === 'google_oauth') as any)?.name
-                                    || (user?.linkedAccounts?.find((a: any) => a.type === 'apple_oauth') as any)?.name
-                                    || user?.email?.address?.split('@')[0]
-                                    || null;
-                                return tastyUsername || privyName || t('dashboard.trader');
-                            })()}
-
-                        </h1>
-
-                    </div>
-
-                    <div className="hidden sm:flex w-auto order-2 flex-col justify-center">
-                        {/* Onboard Guide Manual Trigger */}
-                        <button
-                            onClick={() => window.dispatchEvent(new Event('open-onboarding'))}
-                            className="flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-blue-500 to-tm-purple text-white hover:opacity-90 transition-all text-sm font-bold border border-white/20 shadow-lg shadow-tm-purple/30 whitespace-nowrap shrink-0"
-                        >
-                            <Bell className="w-4 h-4" />
-                            <span>Setup Guide</span>
-                        </button>
-                    </div>
+                    {/* Setup Guide — desktop */}
+                    <button
+                        onClick={() => window.dispatchEvent(new Event('open-onboarding'))}
+                        className="hidden sm:flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-blue-500 to-tm-purple text-white hover:opacity-90 transition-all text-sm font-bold border border-white/20 shadow-lg shadow-tm-purple/30 whitespace-nowrap shrink-0"
+                    >
+                        <Bell className="w-4 h-4" />
+                        <span>Setup Guide</span>
+                    </button>
 
                     {/* Language Selector */}
-
-                    <div className="flex items-center gap-1 p-1 rounded-full bg-black/40 border border-white/5 shadow-inner shrink-0 ml-auto order-2 sm:order-3">
-
+                    <div className="flex items-center gap-1 p-1 rounded-full bg-black/40 border border-white/5 shadow-inner shrink-0 ml-auto">
                         <button
-
                             onClick={() => i18n.changeLanguage('en')}
-
                             className={`flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold transition-all ${i18n.language?.startsWith('en') ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
-
-                        >
-
-                            EN
-
-                        </button>
-
+                        >EN</button>
                         <button
-
                             onClick={() => i18n.changeLanguage('es')}
-
                             className={`flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold transition-all ${i18n.language?.startsWith('es') ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
-
-                        >
-
-                            ES
-
-                        </button>
-
+                        >ES</button>
                         <button
-
                             onClick={() => i18n.changeLanguage('zh')}
-
                             className={`flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold transition-all ${i18n.language?.startsWith('zh') ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
-
-                        >
-
-                            中
-
-                        </button>
-
+                        >中</button>
                     </div>
 
                 </div>
@@ -1248,6 +1219,15 @@ function DashboardContent() {
                 })()}
 
             </div>
+
+            {/* Share FAB — floating referral entry point, above bottom nav */}
+            <Link
+                href="/refer"
+                aria-label="Share & Earn"
+                className="fixed bottom-24 right-4 z-50 w-14 h-14 bg-tm-purple rounded-full flex items-center justify-center shadow-[0_0_24px_rgba(168,85,247,0.55)] hover:shadow-[0_0_36px_rgba(168,85,247,0.8)] hover:scale-110 active:scale-95 transition-all duration-200"
+            >
+                <Gift className="w-6 h-6 text-white" />
+            </Link>
 
         </main>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 
 type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
@@ -62,8 +62,9 @@ export function useSettings() {
 }
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-    const { getAccessToken } = usePrivy();
+    const { getAccessToken, authenticated, ready } = usePrivy();
     const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+    const redeemAttempted = useRef(false);
 
     // Load from localStorage on mount
     useEffect(() => {
@@ -137,6 +138,42 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         window.addEventListener('focus', fetchRemoteSync);
         return () => window.removeEventListener('focus', fetchRemoteSync);
     }, [getAccessToken]);
+
+    // ── Referral redeem on first auth ─────────────────────────────────────
+    // Safe to call on every login — the API is idempotent (already-linked returns success too).
+    // This ensures a referee's code is captured even if they don't immediately subscribe.
+    useEffect(() => {
+        if (!ready || !authenticated || redeemAttempted.current) return;
+        redeemAttempted.current = true;
+
+        const storedCode    = localStorage.getItem('tm_referralCode');
+        const hdyhau        = localStorage.getItem('tm_hdyhau');
+        const utmSource     = localStorage.getItem('tm_utm_source');
+        const utmMedium     = localStorage.getItem('tm_utm_medium');
+        const utmCampaign   = localStorage.getItem('tm_utm_campaign');
+
+        getAccessToken().then(token => {
+            fetch('/api/referrals/redeem', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({
+                    code:        storedCode  || null,
+                    hdyhau:      hdyhau      || null,
+                    utmSource:   utmSource   || null,
+                    utmMedium:   utmMedium   || null,
+                    utmCampaign: utmCampaign || null,
+                }),
+            }).then(() => {
+                // Clear referral code after redeem attempt (API is idempotent — safe)
+                if (storedCode) localStorage.removeItem('tm_referralCode');
+            }).catch(() => {
+                // Non-fatal — will retry on next login
+            });
+        });
+    }, [ready, authenticated, getAccessToken]);
 
     const setAutoApproval = async (enabled: boolean) => {
         persist({ ...settings, autoApproval: enabled });

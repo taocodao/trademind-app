@@ -1,0 +1,12 @@
+ConnectedAccounts methods:
+constructor
+list
+initiate
+link
+waitForConnection
+get
+delete
+refresh
+updateStatus
+enable
+disable

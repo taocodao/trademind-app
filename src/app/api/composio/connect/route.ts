@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
              VALUES ($1, $2, 'initiated', NOW())
              ON CONFLICT (user_id, platform) DO UPDATE
              SET status = 'initiated', composio_account_id = NULL, updated_at = NOW()`,
-            [user.privyDid, platform]
+            [user.privyDid, platform]  // keep full DID for our own DB (indexed by Privy DID)
         );
 
         return NextResponse.json({ redirectUrl: oauthRedirectUrl });

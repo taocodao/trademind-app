@@ -1,0 +1,2 @@
+Properties: client, config, tools, toolkits, triggers, provider, files, authConfigs, connectedAccounts, mcp, toolRouter, create, use, flush
+Prototype: constructor, getClient, getConfig, createSession, flush

@@ -268,11 +268,16 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     const customerId = invoice.customer as string;
     const billingReason = invoice.billing_reason;
 
-    // Find if this customer is a referred user
+    // Find if this customer is a referred user, include fingerprints for fraud check
     const referralResult = await pool.query(
-        `SELECT r.*, u.stripe_customer_id as referrer_stripe_id
+        `SELECT r.*, 
+                u.stripe_customer_id as referrer_stripe_id,
+                u.card_fingerprint as referrer_fingerprint,
+                u2.card_fingerprint as referred_fingerprint,
+                u2.created_at as referred_created_at
          FROM referrals r
          JOIN user_settings u ON u.user_id = r.referrer_user_id
+         JOIN user_settings u2 ON u2.user_id = r.referred_user_id
          WHERE r.referred_stripe_customer_id = $1`,
         [customerId]
     );
@@ -289,6 +294,31 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     const subscriptionId = (invoice as any).subscription as string;
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
     const isAnnual = subscription.items.data[0].price.recurring?.interval === "year";
+
+    // ── Fraud Prevention Checks ───────────────────────────────────────────
+    if (ref.referrer_fingerprint && ref.referred_fingerprint && ref.referrer_fingerprint === ref.referred_fingerprint) {
+        console.warn(`🚨 Fraud detected: Referrer and Referee share the same card fingerprint (${ref.referrer_fingerprint}). Denying reward.`);
+        await pool.query(
+            `INSERT INTO referral_activity (referral_id, event_type, description)
+             VALUES ($1, 'fraud_flagged', 'Reward denied: Shared card fingerprint detected between referrer and referee.')
+             ON CONFLICT DO NOTHING`,
+            [ref.id]
+        );
+        return; // Halt reward processing
+    }
+
+    const msSinceSignup = Date.now() - new Date(ref.referred_created_at).getTime();
+    const daysSinceSignup = msSinceSignup / (1000 * 60 * 60 * 24);
+    if ((isFirstPayment || isRenewal) && daysSinceSignup < 7) {
+        console.warn(`🚨 Fraud/Abuse detected: Premium conversion occurred less than 7 days after signup (${daysSinceSignup.toFixed(1)} days). Minimum trial period check failed.`);
+        await pool.query(
+            `INSERT INTO referral_activity (referral_id, event_type, description)
+             VALUES ($1, 'fraud_flagged', 'Reward denied: Conversion occurred less than 7 days after signup.')
+             ON CONFLICT DO NOTHING`,
+            [ref.id]
+        );
+        return; // Halt reward processing
+    }
 
     // Stage 1: First payment
     if (!ref.stage1_paid && (isFirstPayment || isRenewal)) {

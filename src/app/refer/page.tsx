@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Users, DollarSign, Clock, HelpCircle, Activity, CalendarDays, Trophy, Rocket } from 'lucide-react';
+import { ArrowLeft, Users, DollarSign, Clock, HelpCircle, Activity, CalendarDays, Trophy, Rocket, ChevronDown } from 'lucide-react';
 import { ShareSection } from '@/components/referral/ShareSection';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
@@ -14,6 +14,7 @@ export default function ReferPage() {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [showDetails, setShowDetails] = useState(false);
 
 
     useEffect(() => {
@@ -168,82 +169,93 @@ export default function ReferPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Left Column: Referrals & How it works */}
                 <div className="lg:col-span-2 space-y-8">
-                    
-                    {/* How It Works */}
-                    <section>
-                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                            <HelpCircle className="w-5 h-5 text-tm-purple" /> How It Works
-                        </h3>
-                        <div className="bg-tm-surface border border-tm-border rounded-xl p-5 space-y-4">
-                            <div className="flex gap-4">
-                                <div className="w-8 h-8 rounded-full bg-tm-purple/20 text-tm-purple font-bold flex items-center justify-center shrink-0">1</div>
-                                <div>
-                                    <div className="font-bold text-sm mb-1">Stage 1 — Trial Conversion (Monthly)</div>
-                                    <div className="text-xs text-tm-muted leading-relaxed">Your friend's 14-day free trial ends and they pay their first month. You instantly receive a <strong className="text-white">$50 account credit</strong> off your next invoice, <em>plus</em> your subscription renewal date is extended by <strong className="text-tm-purple">free days equivalent to that $50</strong>.</div>
-                                </div>
+                    {/* Collapsible Info Section */}
+                    <div className="bg-tm-surface border border-tm-border rounded-xl overflow-hidden mb-8">
+                        <button
+                            onClick={() => setShowDetails(!showDetails)}
+                            className="w-full flex items-center justify-between p-5 hover:bg-white/[0.02] transition-colors"
+                        >
+                            <div className="flex items-center gap-2">
+                                <HelpCircle className="w-5 h-5 text-tm-purple" />
+                                <h3 className="text-lg font-bold text-white">How It Works & Rewards</h3>
                             </div>
-                            <div className="flex gap-4">
-                                <div className="w-8 h-8 rounded-full bg-tm-purple/20 text-tm-purple font-bold flex items-center justify-center shrink-0">2</div>
-                                <div>
-                                    <div className="font-bold text-sm mb-1">Stage 2 — Second Month (Monthly)</div>
-                                    <div className="text-xs text-tm-muted leading-relaxed">Your friend sticks around and completes their second paid month. Another <strong className="text-white">$50 credit</strong> + more <strong className="text-tm-purple">free days</strong> are added to your subscription automatically.</div>
-                                </div>
-                            </div>
-                            <div className="flex gap-4">
-                                <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-500 font-bold flex items-center justify-center shrink-0">★</div>
-                                <div>
-                                    <div className="font-bold text-sm text-amber-400 mb-1">Annual Bonus Bypass</div>
-                                    <div className="text-xs text-tm-muted leading-relaxed">Friend skips monthly and subscribes to an annual plan? You get a <strong className="text-white">$150 credit instantly</strong> + the equivalent extension days applied in one shot!</div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
+                            <ChevronDown className={`w-5 h-5 text-tm-muted transition-transform duration-300 ${showDetails ? 'rotate-180' : ''}`} />
+                        </button>
+                        
+                        {showDetails && (
+                            <div className="p-5 border-t border-tm-border space-y-8 bg-black/20 animate-in fade-in slide-in-from-top-4 duration-300">
+                                {/* How It Works */}
+                                <section>
+                                    <div className="space-y-4">
+                                        <div className="flex gap-4">
+                                            <div className="w-8 h-8 rounded-full bg-tm-purple/20 text-tm-purple font-bold flex items-center justify-center shrink-0">1</div>
+                                            <div>
+                                                <div className="font-bold text-sm mb-1">Stage 1 — Trial Conversion (Monthly)</div>
+                                                <div className="text-xs text-tm-muted leading-relaxed">Your friend's 14-day free trial ends and they pay their first month. You instantly receive a <strong className="text-white">$50 account credit</strong> off your next invoice, <em>plus</em> your subscription renewal date is extended by <strong className="text-tm-purple">free days equivalent to that $50</strong>.</div>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-4">
+                                            <div className="w-8 h-8 rounded-full bg-tm-purple/20 text-tm-purple font-bold flex items-center justify-center shrink-0">2</div>
+                                            <div>
+                                                <div className="font-bold text-sm mb-1">Stage 2 — Second Month (Monthly)</div>
+                                                <div className="text-xs text-tm-muted leading-relaxed">Your friend sticks around and completes their second paid month. Another <strong className="text-white">$50 credit</strong> + more <strong className="text-tm-purple">free days</strong> are added to your subscription automatically.</div>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-4">
+                                            <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-500 font-bold flex items-center justify-center shrink-0">★</div>
+                                            <div>
+                                                <div className="font-bold text-sm text-amber-400 mb-1">Annual Bonus Bypass</div>
+                                                <div className="text-xs text-tm-muted leading-relaxed">Friend skips monthly and subscribes to an annual plan? You get a <strong className="text-white">$150 credit instantly</strong> + the equivalent extension days applied in one shot!</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
 
-                    {/* Extension Days Table */}
-                    <section>
-                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                            <CalendarDays className="w-5 h-5 text-tm-purple" /> How Many Free Days Do You Get?
-                        </h3>
-                        <div className="bg-tm-surface border border-tm-border rounded-xl overflow-hidden">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b border-tm-border">
-                                        <th className="text-left p-3 text-tm-muted font-semibold text-xs uppercase tracking-wider">Your Plan</th>
-                                        <th className="text-center p-3 text-tm-muted font-semibold text-xs uppercase tracking-wider">$50 Reward</th>
-                                        <th className="text-center p-3 text-amber-400 font-semibold text-xs uppercase tracking-wider">$150 Annual Bonus</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-tm-border">
-                                    {[
-                                        { plan: 'TurboCore Monthly', price: 29, per: 30 },
-                                        { plan: 'TurboCore Pro Monthly', price: 49, per: 30 },
-                                        { plan: 'Both Bundle Monthly', price: 69, per: 30 },
-                                        { plan: 'TurboCore Annual', price: 249, per: 365 },
-                                        { plan: 'TurboCore Pro Annual', price: 399, per: 365 },
-                                        { plan: 'Both Bundle Annual', price: 549, per: 365 },
-                                    ].map(({ plan, price, per }) => {
-                                        const daily = price / per;
-                                        const days50 = Math.floor(50 / daily);
-                                        const days150 = Math.floor(150 / daily);
-                                        return (
-                                            <tr key={plan} className="hover:bg-white/[0.02] transition-colors">
-                                                <td className="p-3 font-medium text-white">{plan}</td>
-                                                <td className="p-3 text-center">
-                                                    <span className="text-tm-purple font-bold">+{days50} days</span>
-                                                </td>
-                                                <td className="p-3 text-center">
-                                                    <span className="text-amber-400 font-bold">+{days150} days</span>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                            <div className="p-3 border-t border-tm-border">
-                                <p className="text-[10px] text-tm-muted text-center">Free days are added on top of account credits. Both rewards are applied automatically — no action required.</p>
+                                {/* Extension Days Table */}
+                                <section>
+                                    <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
+                                        <CalendarDays className="w-4 h-4 text-tm-purple" /> Free Days Table
+                                    </h4>
+                                    <div className="bg-tm-bg border border-tm-border rounded-xl overflow-hidden">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="border-b border-tm-border">
+                                                    <th className="text-left p-3 text-tm-muted font-semibold text-xs uppercase tracking-wider">Your Plan</th>
+                                                    <th className="text-center p-3 text-tm-muted font-semibold text-xs uppercase tracking-wider">$50 Reward</th>
+                                                    <th className="text-center p-3 text-amber-400 font-semibold text-xs uppercase tracking-wider">$150 Bonus</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-tm-border">
+                                                {[
+                                                    { plan: 'TurboCore', price: 29, per: 30 },
+                                                    { plan: 'TurboCore Pro', price: 49, per: 30 },
+                                                    { plan: 'Both Bundle', price: 69, per: 30 },
+                                                ].map(({ plan, price, per }) => {
+                                                    const daily = price / per;
+                                                    const days50 = Math.floor(50 / daily);
+                                                    const days150 = Math.floor(150 / daily);
+                                                    return (
+                                                        <tr key={plan} className="hover:bg-white/[0.02] transition-colors">
+                                                            <td className="p-3 font-medium text-white">{plan}</td>
+                                                            <td className="p-3 text-center">
+                                                                <span className="text-tm-purple font-bold">+{days50}d</span>
+                                                            </td>
+                                                            <td className="p-3 text-center">
+                                                                <span className="text-amber-400 font-bold">+{days150}d</span>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                        <div className="p-3 border-t border-tm-border">
+                                            <p className="text-[10px] text-tm-muted text-center">Free days are added on top of account credits. Applied automatically.</p>
+                                        </div>
+                                    </div>
+                                </section>
                             </div>
-                        </div>
-                    </section>
+                        )}
+                    </div>
 
                     {/* Referrals List */}
                     <section>

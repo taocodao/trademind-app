@@ -59,15 +59,45 @@ export async function POST(req: NextRequest) {
 
         // Merge stored metadata (page_id, ig_user_id, etc.) with request metadata
         const storedMeta: Record<string, string> = connection.metadata ?? {};
-        const effectiveMeta = { ...storedMeta, ...(metadata ?? {}) };
+        let effectiveMeta = { ...storedMeta, ...(metadata ?? {}) };
+
+        const { Composio } = await import('@composio/core');
+        const composio = new Composio({ apiKey: process.env.COMPOSIO_API_KEY ?? '' });
+
+        // Phase 7: Auto-resolve Facebook page_id if missing
+        if (platform === 'facebook' && !effectiveMeta.page_id) {
+            console.info(`[social/post] Auto-fetching Facebook page ID...`);
+            try {
+                const fbPages = await (composio as any).tools.execute('FACEBOOK_LIST_MANAGED_PAGES', {
+                    connectedAccountId: connection.composio_account_id,
+                });
+                
+                const dataObj = typeof fbPages === 'string' ? JSON.parse(fbPages) : fbPages;
+                const rawPages = dataObj?.data?.pages || dataObj?.data?.data || dataObj?.pages || dataObj?.data || [];
+                const pages = Array.isArray(rawPages) ? rawPages : [];
+                
+                if (pages.length > 0) {
+                    const firstPage = pages[0];
+                    const discoveredPageId = firstPage.id || firstPage.page_id;
+                    if (discoveredPageId) {
+                        effectiveMeta.page_id = discoveredPageId;
+                        console.info(`[social/post] Found Facebook page: ${discoveredPageId} (${firstPage.name})`);
+                        // Persist it
+                        await query(
+                            `UPDATE social_connections SET metadata = $1, updated_at = NOW() WHERE user_id = $2 AND platform = $3`,
+                            [JSON.stringify(effectiveMeta), user.privyDid, platform]
+                        );
+                    }
+                }
+            } catch (err: any) {
+                console.warn(`[social/post] Failed to auto-resolve Facebook page:`, err?.message || err);
+            }
+        }
 
         // ── Execute via Composio SDK ───────────────────────────────────────────
         const toolParams = buildToolParams(platform, postContent, effectiveMeta);
 
         console.info(`[social/post] Executing ${toolSlug} for ${platform} via connected account ${connection.composio_account_id}`);
-
-        const { Composio } = await import('@composio/core');
-        const composio = new Composio({ apiKey: process.env.COMPOSIO_API_KEY ?? '' });
 
         let executeResult: any;
         try {

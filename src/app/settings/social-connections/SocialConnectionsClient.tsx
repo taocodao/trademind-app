@@ -82,7 +82,7 @@ export function SocialConnectionsClient({
     const [loadingPlatform, setLoadingPlatform] = useState<string | null>(null);
     const [localError, setLocalError] = useState<string | null>(null);
 
-    const canConnect = userTier === 'diamond' || isCreator;
+    const canConnect = true; // Tier gate removed, all users can connect
 
     const handleConnect = async (platform: string) => {
         setLoadingPlatform(platform);
@@ -165,17 +165,7 @@ export function SocialConnectionsClient({
                 </div>
             )}
 
-            {/* Tier gate notice for non-Diamond users */}
-            {!canConnect && (
-                <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-6">
-                    <p className="text-sm text-amber-400 font-bold mb-1">💎 Diamond Tier Required</p>
-                    <p className="text-xs text-tm-muted">
-                        Direct posting requires Diamond tier (15+ referrals) or Creator status.
-                        You can still generate AI post copy and share via browser popups from the{' '}
-                        <Link href="/refer" className="text-tm-purple hover:underline">Referral Dashboard</Link>.
-                    </p>
-                </div>
-            )}
+            {/* Tier gate removed. All users can connect. */}
 
             {/* Platform cards */}
             <div className="space-y-3">
@@ -244,13 +234,8 @@ export function SocialConnectionsClient({
                                 ) : (
                                     <button
                                         onClick={() => handleConnect(id)}
-                                        disabled={isLoading || !canConnect}
-                                        title={!canConnect ? 'Reach Diamond tier (15 referrals) to unlock' : ''}
-                                        className={`text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 transition-all ${
-                                            canConnect
-                                                ? 'bg-tm-purple hover:bg-tm-purple/90 text-white'
-                                                : 'bg-tm-surface border border-tm-border text-tm-muted cursor-not-allowed'
-                                        }`}
+                                        disabled={isLoading}
+                                        className={`text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 transition-all bg-tm-purple hover:bg-tm-purple/90 text-white`}
                                     >
                                         {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
                                         {isLoading ? 'Connecting…' : `Connect ${label}`}

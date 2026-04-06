@@ -57,7 +57,7 @@ export function ShareModal({
     const [postSuccess, setPostSuccess] = useState(false);
     const [error, setError] = useState('');
 
-    const canDirectPost = userTier === 'diamond' || isCreator;
+    const canDirectPost = true; // Opened to all users
     const isPlatformConnected = (p: string) => connectedPlatforms[p]?.status === 'active';
 
     const handleSelect = useCallback((p: SocialPlatform) => {

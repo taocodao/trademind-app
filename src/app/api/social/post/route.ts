@@ -17,24 +17,8 @@ export async function POST(req: NextRequest) {
     try {
         const user = await getUserFromRequest(req);
 
-        // ── Tier gate ──────────────────────────────────────────────────────────
-        const settingsResult = await query(
-            `SELECT referral_code, referral_tier, is_creator FROM user_settings WHERE user_id = $1`,
-            [user.privyDid]
-        );
-        const settings = settingsResult.rows[0];
-        const isDiamond = settings?.referral_tier === 'diamond';
-        const isCreator = settings?.is_creator === true;
+        // Tier gate removed — all users can now direct post
 
-        if (!isDiamond && !isCreator) {
-            return NextResponse.json(
-                {
-                    error: 'Direct posting is a Diamond tier feature. Reach 15 referrals or apply to the Creator Program to unlock it.',
-                    upgradeRequired: true,
-                },
-                { status: 403 }
-            );
-        }
 
         const { platform, postContent, promoCode, referralLink } = await req.json() as {
             platform: SocialPlatform;

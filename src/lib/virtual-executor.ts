@@ -81,14 +81,20 @@ export async function executeVirtualOrders(
             [newBalance, userId, strategy]
         );
 
-        // 5. Create execution record (idempotent upsert)
+        // 5. Create execution record (atomic insert to prevent race conditions)
         const execRes = await client.query(
             `INSERT INTO user_signal_executions (user_id, signal_id, status, source, executed_at, created_at)
              VALUES ($1, $2, 'executed', 'virtual', NOW(), NOW())
-             ON CONFLICT (user_id, signal_id) DO UPDATE SET status = 'executed', executed_at = NOW()
+             ON CONFLICT (user_id, signal_id) DO NOTHING
              RETURNING id`,
             [userId, signalId]
         );
+        
+        if (execRes.rowCount === 0) {
+            // A parallel request beat us to it
+            await client.query('ROLLBACK');
+            return { success: false, balance: currentBalance, alreadyExecuted: true };
+        }
         const executionId = execRes.rows[0].id;
 
         // 6. Log transactions + shadow positions + order lines

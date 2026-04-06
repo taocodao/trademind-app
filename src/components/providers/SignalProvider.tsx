@@ -333,7 +333,7 @@ export function SignalProvider({ children }: SignalProviderProps) {
                 // Refresh account data (BP changed)
                 fetchAccountData();
             } else {
-                if (result.error && result.error.includes('already executed')) {
+                if (result.error && String(result.error).toLowerCase().includes('already executed')) {
                     console.log(`ℹ️ Signal ${signal.id} already executed elsewhere. Removing from queue.`);
                     setAllSignals(prev => prev.filter(s => s.id !== signal.id));
                 } else {
@@ -397,6 +397,8 @@ export function SignalProvider({ children }: SignalProviderProps) {
 
                             // Non-pending signals always pass (already executed/rejected)
                             if (s.status && s.status !== 'pending') return true;
+                            // If the current user already executed it, don't attempt to process it further
+                            if ((s as any).userExecution?.status === 'executed') return true;
 
                             // Only respect explicit DB-set expiry (isSignalExpired skips market-close
                             // inference for turbocore/rebalance signals)

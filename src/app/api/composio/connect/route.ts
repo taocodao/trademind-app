@@ -37,17 +37,22 @@ export async function POST(req: NextRequest) {
         const { Composio } = await import('@composio/core');
         const composio = new Composio({ apiKey: process.env.COMPOSIO_API_KEY ?? '' });
 
+        // Composio userId must be alphanumeric — strip Privy DID prefix (did:privy:xxx → xxx)
+        const composioUserId = user.privyDid.replace(/^did:privy:/, '');
+
         // Call Composio SDK to initiate the OAuth flow
         let oauthRedirectUrl = '';
         try {
             const connectionRequest = await composio.connectedAccounts.initiate(
-                user.privyDid,
+                composioUserId,
                 authConfigId,
                 { callbackUrl: redirectUrl }
             );
             oauthRedirectUrl = connectionRequest.redirectUrl || '';
         } catch (err: any) {
-            console.error('[composio/connect] Composio SDK error:', err);
+            const maskedKey = (process.env.COMPOSIO_API_KEY ?? '').slice(0, 8) + '...';
+            console.error('[composio/connect] Composio SDK error:', err.message || err);
+            console.error('[composio/connect] DEBUG — authConfigId used:', authConfigId, '| API key prefix:', maskedKey);
             return NextResponse.json({ error: 'Failed to initiate Composio OAuth' }, { status: 502 });
         }
 

@@ -1,0 +1,10 @@
+﻿Testing: api/v1/connectedAccounts/initiate
+Status for api/v1/connectedAccounts/initiate: 410
+Testing: api/v1/connectedAccounts
+Status for api/v1/connectedAccounts: 400
+Testing: api/v2/connectedAccounts
+Status for api/v2/connectedAccounts: 410
+Testing: api/v3/connectedAccounts
+Status for api/v3/connectedAccounts: 404
+Testing: api/v1/toolkits/auth/initiate
+Status for api/v1/toolkits/auth/initiate: 410

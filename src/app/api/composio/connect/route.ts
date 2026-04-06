@@ -33,29 +33,23 @@ export async function POST(req: NextRequest) {
         const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://trademind.bot';
         const redirectUrl = `${appUrl}/settings/social-connections?platform=${platform}&status=callback`;
 
-        // Call Composio REST API to initiate the OAuth flow
-        const composioRes = await fetch('https://backend.composio.dev/api/v3/connectedAccounts', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': process.env.COMPOSIO_API_KEY ?? '',
-            },
-            body: JSON.stringify({
-                authConfigId,
-                userId: user.privyDid,
-                redirectUri: redirectUrl,
-                data: {},
-            }),
-        });
+        // Instantiate Composio SDK
+        const { Composio } = await import('@composio/core');
+        const composio = new Composio({ apiKey: process.env.COMPOSIO_API_KEY ?? '' });
 
-        if (!composioRes.ok) {
-            const err = await composioRes.json().catch(() => ({}));
-            console.error('[composio/connect] Composio API error:', err);
+        // Call Composio SDK to initiate the OAuth flow
+        let oauthRedirectUrl = '';
+        try {
+            const connectionRequest = await composio.connectedAccounts.initiate(
+                user.privyDid,
+                authConfigId,
+                { callbackUrl: redirectUrl }
+            );
+            oauthRedirectUrl = connectionRequest.redirectUrl || '';
+        } catch (err: any) {
+            console.error('[composio/connect] Composio SDK error:', err);
             return NextResponse.json({ error: 'Failed to initiate Composio OAuth' }, { status: 502 });
         }
-
-        const composioData = await composioRes.json();
-        const oauthRedirectUrl: string = composioData.redirectUrl ?? composioData.connectionUrl ?? '';
 
         if (!oauthRedirectUrl) {
             return NextResponse.json({ error: 'Composio did not return a redirect URL' }, { status: 502 });

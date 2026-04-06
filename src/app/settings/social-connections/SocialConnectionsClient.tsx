@@ -37,7 +37,7 @@ const PLATFORMS = [
         id: 'tiktok',
         label: 'TikTok',
         emoji: '🎵',
-        note: 'TikTok is video-only — no OAuth needed. Use the AI Caption Script generator instead.',
+        note: 'Connect your account for identity verification to use the AI Caption generator.',
         requiresPage: false,
         clipboardOnly: true,
     },
@@ -45,7 +45,7 @@ const PLATFORMS = [
         id: 'snapchat',
         label: 'Snapchat',
         emoji: '👻',
-        note: 'Snapchat Spotlight/Story text generation. Connect account for identity verification.',
+        note: 'Connect your account for identity verification to use the Spotlight generator.',
         requiresPage: false,
         clipboardOnly: true,
     },
@@ -53,15 +53,15 @@ const PLATFORMS = [
         id: 'reddit',
         label: 'Reddit',
         emoji: '👾',
-        note: 'Generate analytical Reddit posts. Connect account for identity verification.',
+        note: 'Connect your account to auto-publish analytical posts to subreddits.',
         requiresPage: false,
-        clipboardOnly: true,
+        clipboardOnly: true, // We support auto post on Reddit now, but labeling as script for UI badge legacy
     },
     {
         id: 'youtube',
         label: 'YouTube',
         emoji: '▶️',
-        note: 'YouTube video description generator. Connect account for identity verification.',
+        note: 'Connect your account for identity verification to use the description generator.',
         requiresPage: false,
         clipboardOnly: true,
     },
@@ -215,14 +215,7 @@ export function SocialConnectionsClient({
 
                             {/* Action */}
                             <div className="shrink-0">
-                                {clipboardOnly ? (
-                                    <Link
-                                        href="/refer"
-                                        className="text-xs text-tm-purple hover:underline flex items-center gap-1"
-                                    >
-                                        Open Refer <ExternalLink className="w-3 h-3" />
-                                    </Link>
-                                ) : isActive ? (
+                                {isActive ? (
                                     <button
                                         onClick={() => handleDisconnect(id)}
                                         disabled={isLoading}

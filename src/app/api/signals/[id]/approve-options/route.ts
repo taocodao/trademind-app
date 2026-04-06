@@ -57,13 +57,17 @@ async function submitEquityOrder(
     qty: number,         // positive = buy, negative = sell
 ): Promise<{ orderId: string; status: string }> {
     const action = qty > 0 ? 'Buy to Open' : 'Sell to Close';
+    const intQty = Math.round(Math.abs(qty));
+    if (intQty === 0) {
+        return { orderId: 'skipped', status: 'Fractional qty < 1 ignored' };
+    }
     const orderBody = {
         'time-in-force': 'Day',
         'order-type':    'Market',
         legs: [{
             'instrument-type': 'Equity',
             symbol,
-            quantity: String(Math.abs(qty)),
+            quantity: String(intQty),
             action,
         }],
     };

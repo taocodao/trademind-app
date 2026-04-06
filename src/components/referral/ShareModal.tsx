@@ -81,6 +81,7 @@ export function ShareModal({
     const [customContext, setCustomContext] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
     const [isPosting, setIsPosting] = useState(false);
+    const [isConnecting, setIsConnecting] = useState(false);
     const [copied, setCopied] = useState(false);
     const [postSuccess, setPostSuccess] = useState(false);
     const [error, setError] = useState('');
@@ -113,6 +114,27 @@ export function ShareModal({
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [connectedPlatforms]);
+
+    const handleConnect = async () => {
+        if (!selected) return;
+        setIsConnecting(true);
+        setError('');
+        try {
+            const res = await fetch('/api/composio/connect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ platform: selected }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error ?? 'Failed to initiate connection');
+            
+            // Redirect to Composio OAuth page
+            window.location.href = data.redirectUrl;
+        } catch (err: any) {
+            setError(err.message || 'Failed to connect. Please try again.');
+            setIsConnecting(false);
+        }
+    };
 
     const handleGenerate = useCallback(async () => {
         if (!selected) return;
@@ -351,16 +373,15 @@ export function ShareModal({
                                 )}
                             </div>
 
-                            <a
-                                href={`/settings/social-connections?platform=${selected}&returnTo=refer`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="w-full py-3.5 rounded-2xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-95"
+                            <button
+                                onClick={handleConnect}
+                                disabled={isConnecting}
+                                className="w-full py-3.5 rounded-2xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
                                 style={{ background: cfg.color }}
                             >
                                 <Link2 className="w-4 h-4" />
-                                Connect {cfg.label} Account →
-                            </a>
+                                {isConnecting ? `Connecting...` : `Connect ${cfg.label} Account →`}
+                            </button>
 
                             <button
                                 onClick={() => setStep('generate')}

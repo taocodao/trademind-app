@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: `Platform "${platform}" does not support OAuth connection` }, { status: 400 });
         }
 
-        const authConfigId = COMPOSIO_AUTH_CONFIGS[platform];
+        const authConfigId = COMPOSIO_AUTH_CONFIGS[platform]?.trim();
         if (!authConfigId) {
             return NextResponse.json(
                 { error: `Composio auth config not set for ${platform}. Add COMPOSIO_AUTH_CONFIG_${platform.toUpperCase()} to your environment variables.` },

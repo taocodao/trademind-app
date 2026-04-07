@@ -137,13 +137,14 @@ export function ShareModal({
         }
     };
 
-    // Auto-advance to "generate" step once the connection completes and the focus event fires
+    // Auto-advance to "generate" step once the connection completes and the focus event fires.
+    // Use connectedPlatforms[selected] directly (not isConnected()) to avoid stale closure.
     useEffect(() => {
-        if (step === 'connect' && selected && isConnected(selected)) {
+        if (step === 'connect' && selected && connectedPlatforms[selected]?.status === 'active') {
             setIsConnecting(false);
             setStep('generate');
         }
-    }, [connectedPlatforms, step, selected, isConnected]);
+    }, [connectedPlatforms, step, selected]);
 
     const handleGenerate = useCallback(async () => {
         if (!selected) return;
@@ -382,22 +383,42 @@ export function ShareModal({
                                 )}
                             </div>
 
-                            <button
-                                onClick={handleConnect}
-                                disabled={isConnecting}
-                                className="w-full py-3.5 rounded-2xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
-                                style={{ background: cfg.color }}
-                            >
-                                <Link2 className="w-4 h-4" />
-                                {isConnecting ? `Connecting...` : `Connect ${cfg.label} Account →`}
-                            </button>
+                            {isConnecting ? (
+                                <div className="w-full py-4 rounded-2xl flex flex-col items-center gap-2 border border-white/10 bg-white/5">
+                                    <div className="flex items-center gap-2 text-sm text-zinc-300 font-semibold">
+                                        <svg className="w-4 h-4 animate-spin text-white" viewBox="0 0 24 24" fill="none">
+                                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.2" />
+                                            <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                                        </svg>
+                                        Waiting for authorization...
+                                    </div>
+                                    <p className="text-[11px] text-zinc-500">Complete the sign-in in the popup window, then return here</p>
+                                    <button
+                                        onClick={() => setIsConnecting(false)}
+                                        className="text-[11px] text-zinc-500 hover:text-zinc-300 underline transition-colors mt-1"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={handleConnect}
+                                    className="w-full py-3.5 rounded-2xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-95"
+                                    style={{ background: cfg.color }}
+                                >
+                                    <Link2 className="w-4 h-4" />
+                                    Connect {cfg.label} Account →
+                                </button>
+                            )}
 
-                            <button
-                                onClick={() => setStep('generate')}
-                                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-                            >
-                                Skip — generate script to copy instead
-                            </button>
+                            {!isConnecting && (
+                                <button
+                                    onClick={() => setStep('generate')}
+                                    className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                                >
+                                    Skip — generate script to copy instead
+                                </button>
+                            )}
                         </div>
                     )}
 

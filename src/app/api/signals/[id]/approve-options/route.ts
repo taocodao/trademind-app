@@ -259,25 +259,95 @@ export async function POST(
                 }
             }
 
+            // ── Resolve authoritative OCC symbols from TT's option chain ───────
+            // Never trust hand-built OCC symbols. Query /option-chains/QQQ/nested
+            // to get the exact symbol TT has in its catalog for the closest available
+            // strike to the signal's computed strike, then use that for submission.
+            const resolvedLegs = await Promise.all(optionsLegs.map(async (leg: any) => {
+                const rawSym: string = (leg.symbol || '').trim();
+                // Only resolve QQQ equity options (OCC format: starts with QQQ)
+                if (!rawSym.startsWith('QQQ') || rawSym.length < 15) return leg;
+
+                try {
+                    // Parse the signal's computed strike from the OCC symbol
+                    // OCC format: "QQQ   YYMMDDCSSSSSSSS" — strike = last 8 digits / 1000
+                    const strikePart = rawSym.replace(/\s/g, '').slice(-8); // last 8 chars
+                    const signalStrike = parseInt(strikePart, 10) / 1000;
+                    const isCall = rawSym.includes('C');
+
+                    // Fetch TT's live option chain
+                    const chainUrl = `${TT_API}/option-chains/QQQ/nested`;
+                    const chainResp = await fetch(chainUrl, {
+                        headers: { Authorization: `Bearer ${accessToken}`, 'User-Agent': 'TradeMind/1.0' },
+                    });
+                    if (!chainResp.ok) {
+                        console.warn(`[approve-options] Option chain fetch failed (${chainResp.status}) — using original symbol`);
+                        return leg;
+                    }
+                    const chainData = await chainResp.json();
+                    const expirations: any[] = chainData?.data?.items || [];
+
+                    // Find the expiration date from the OCC symbol (YYMMDD at positions 6-12)
+                    const occNoSpace = rawSym.replace(/\s/g, '');
+                    const yymmdd = occNoSpace.slice(3, 9); // e.g. "260618"
+                    const targetDateStr = `20${yymmdd.slice(0,2)}-${yymmdd.slice(2,4)}-${yymmdd.slice(4,6)}`;
+
+                    // Find closest expiration to signal's target date (within 7 days)
+                    const exp = expirations
+                        .filter((e: any) => Math.abs(new Date(e['expiration-date']).getTime() - new Date(targetDateStr).getTime()) <= 7 * 86400000)
+                        .sort((a: any, b: any) =>
+                            Math.abs(new Date(a['expiration-date']).getTime() - new Date(targetDateStr).getTime()) -
+                            Math.abs(new Date(b['expiration-date']).getTime() - new Date(targetDateStr).getTime())
+                        )[0];
+
+                    if (!exp) {
+                        console.warn(`[approve-options] No expiration near ${targetDateStr} in TT chain — using original`);
+                        return leg;
+                    }
+
+                    // Find closest available strike in TT's catalog
+                    const strikes: any[] = exp.strikes || [];
+                    const closest = strikes.reduce((best: any, s: any) => {
+                        const sp = parseFloat(s['strike-price']);
+                        const bestSp = parseFloat(best['strike-price']);
+                        return Math.abs(sp - signalStrike) < Math.abs(bestSp - signalStrike) ? s : best;
+                    });
+
+                    const catalogSymbol: string | null = isCall ? closest.call : closest.put;
+                    if (!catalogSymbol) {
+                        console.warn(`[approve-options] No catalog symbol for QQQ ${closest['strike-price']} ${isCall ? 'C' : 'P'} — using original`);
+                        return leg;
+                    }
+
+                    const chosenStrike = parseFloat(closest['strike-price']);
+                    console.log(`[approve-options] ✅ OCC resolved: signal=${rawSym.trim()} (strike $${signalStrike}) → catalog=${catalogSymbol.trim()} (strike $${chosenStrike}) exp=${exp['expiration-date']}`);
+                    return { ...leg, symbol: catalogSymbol };
+
+                } catch (resolveErr: any) {
+                    console.warn(`[approve-options] Symbol resolution failed for ${rawSym} — using original:`, resolveErr.message);
+                    return leg;
+                }
+            }));
+
             // 9. Submit options order (TT only)
             if (optionsLegs.length > 0) {
                 try {
                     const limitPrice: number | null = sigData.cost && parseFloat(sigData.cost) > 0
                         ? parseFloat(sigData.cost)
                         : null;
-                    console.log('[approve-options] Options legs to submit:', JSON.stringify(optionsLegs, null, 2));
-                    results.options = await submitOptionsOrder(accessToken, accountNumber, optionsLegs, limitPrice, 'Limit');
+                    console.log('[approve-options] Options legs (resolved) to submit:', JSON.stringify(resolvedLegs, null, 2));
+                    results.options = await submitOptionsOrder(accessToken, accountNumber, resolvedLegs, limitPrice, 'Limit');
                     console.log(`[approve-options] Options submitted:`, results.options);
                 } catch (e: any) {
                     console.error('[approve-options] Options order FAILED:', e.message);
                     results.optionsError = e.message;
                 }
             } else {
-                console.warn('[approve-options] No options legs found in signal. rawLegs structure:', JSON.stringify(rawLegs.map(l => ({leg_type: l.leg_type, action: l.action, symbol: l.symbol}))));
+                console.warn('[approve-options] No options legs found in signal. rawLegs structure:', JSON.stringify(rawLegs.map((l: any) => ({leg_type: l.leg_type, action: l.action, symbol: l.symbol}))));
             }
         } else {
             // Virtual: record delta for tracking (no real order)
-            results.equity = deltaOrders.map(o => ({ ...o, virtual: true }));
+            results.equity = deltaOrders.map((o: any) => ({ ...o, virtual: true }));
         }
 
         // 10. REPLACE shadow_positions with full TARGET state (equity)

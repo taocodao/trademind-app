@@ -1,0 +1,59 @@
+[
+  {
+    "id": "ac_WMQbkWyVm-T5",
+    "uuid": "1204f742-5b5a-4802-bc5f-a0dfeebc9460",
+    "name": "twitter-anv-qa",
+    "auth_scheme": "OAUTH2",
+    "is_composio_managed": false,
+    "credentials": {
+      "client_id": "cms5YjhNUURrTUdMUXk2YVFWSHg6MTpjaQ",
+      "client_secret": "SFROR5BahGcP5uQYM0IJTSnwVJzhLXhgy3e74iA548Pv3cyEwo",
+      "generic_id": "AAAAAAAAAAAAAAAAAAAAAMcz8wEAAAAAjXj%2FJUoAZU58pFz%2FicCJjZyUnRM%3DvXcTSIuee503CcHeZlw4RnyxVLPKAGs71HN0s4osQe2EGhzkVU",
+      "scopes": [
+        "dm.write",
+        "dm.read",
+        "mute.read",
+        "mute.write",
+        "space.read",
+        "tweet.write",
+        "tweet.read",
+        "tweet.moderate.write",
+        "users.read",
+        "follows.read",
+        "follows.write",
+        "like.read",
+        "like.write",
+        "list.read",
+        "list.write",
+        "block.read",
+        "block.write",
+        "bookmark.read",
+        "bookmark.write",
+        "media.write",
+        "offline.access"
+      ],
+      "oauth_redirect_uri": "https://backend.composio.dev/api/v1/auth-apps/add"
+    },
+    "created_by": "f2327b57-9718-409e-a14b-de64dd512339",
+    "created_at": "2026-04-05T19:36:27.704Z",
+    "last_updated_at": "2026-04-05T19:36:27.704Z",
+    "status": "ENABLED",
+    "toolkit": {
+      "slug": "twitter",
+      "logo": "https://logos.composio.dev/api/twitter"
+    },
+    "no_of_connections": 3,
+    "tool_access_config": {
+      "tools_for_connected_account_creation": [],
+      "tools_available_for_execution": []
+    },
+    "is_enabled_for_tool_router": false,
+    "type": "custom",
+    "deprecated_params": {
+      "default_connector_id": "",
+      "member_uuid": "f2327b57-9718-409e-a14b-de64dd512339",
+      "toolkit_id": "b3a9602b-731b-4044-9c9a-d0137ef5c887",
+      "expected_input_fields": []
+    }
+  }
+]

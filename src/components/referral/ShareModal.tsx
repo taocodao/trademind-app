@@ -128,13 +128,22 @@ export function ShareModal({
             const data = await res.json();
             if (!res.ok) throw new Error(data.error ?? 'Failed to initiate connection');
             
-            // Redirect to Composio OAuth page
-            window.location.href = data.redirectUrl;
+            // Open Composio OAuth page in a popup so we don't lose the modal state
+            window.open(data.redirectUrl, 'ComposioOAuth', 'width=600,height=800,left=200,top=100');
+            // The modal stays in 'connect' step, but we show a waiting state
         } catch (err: any) {
             setError(err.message || 'Failed to connect. Please try again.');
             setIsConnecting(false);
         }
     };
+
+    // Auto-advance to "generate" step once the connection completes and the focus event fires
+    useEffect(() => {
+        if (step === 'connect' && selected && isConnected(selected)) {
+            setIsConnecting(false);
+            setStep('generate');
+        }
+    }, [connectedPlatforms, step, selected, isConnected]);
 
     const handleGenerate = useCallback(async () => {
         if (!selected) return;

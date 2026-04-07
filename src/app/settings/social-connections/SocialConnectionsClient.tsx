@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, AlertCircle, ExternalLink, Trash2, Loader2 } from 'lucide-react';
 
@@ -81,6 +81,18 @@ export function SocialConnectionsClient({
     const [connections, setConnections] = useState(initialConnections);
     const [loadingPlatform, setLoadingPlatform] = useState<string | null>(null);
     const [localError, setLocalError] = useState<string | null>(null);
+
+    // Auto-close popup logic for Share Modal integration
+    useEffect(() => {
+        if (typeof window !== 'undefined' && window.opener && (successPlatform || errorType)) {
+            // Give the user 1.5s to see the "connected successfully" banner, then close the popup.
+            // Closing the popup triggers a window 'focus' event on the original window.
+            const timer = setTimeout(() => {
+                window.close();
+            }, 1500);
+            return () => clearTimeout(timer);
+        }
+    }, [successPlatform, errorType]);
 
     const canConnect = true; // Tier gate removed, all users can connect
 

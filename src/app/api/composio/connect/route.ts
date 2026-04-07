@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
         }
 
         const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://trademind.bot';
-        const redirectUrl = `${appUrl}/settings/social-connections?platform=${platform}&status=callback`;
+        const redirectUrl = `${appUrl}/api/composio/callback?platform=${platform}`;
 
         // Instantiate Composio SDK
         const { Composio } = await import('@composio/core');

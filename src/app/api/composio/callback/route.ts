@@ -22,8 +22,9 @@ export async function GET(req: NextRequest) {
         const status = params.get('status');
         const connectedAccountId = params.get('connectedAccountId');
 
-        // Validate all required params are present
-        if (status !== 'success' || !connectedAccountId || !platform) {
+        // Validate required params — connectedAccountId presence is sufficient proof OAuth succeeded.
+        // (Composio may send status=success or status=ACTIVE depending on SDK/version)
+        if (!connectedAccountId || !platform) {
             console.warn('[composio/callback] Missing params:', { status, connectedAccountId, platform });
             return NextResponse.redirect(`${settingsBase}?error=auth_failed&platform=${platform ?? ''}`);
         }

@@ -1,0 +1,5 @@
+57a91f1 fix(composio): point callbackUrl to /api/composio/callback so DB gets updated after OAuth, relax status param check
+e44d5a4 add referral system
+54341dd fix(referrals): fix stale closure bug preventing green badge after OAuth connect, add waiting state UI
+9d70df3 feat(referrals): use popup for composio oauth in ShareModal so modal context is not lost, auto-close popup on finish
+95c68ca add referral system

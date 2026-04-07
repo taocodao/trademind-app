@@ -287,21 +287,43 @@ export async function POST(
                     const chainData = await chainResp.json();
                     const expirations: any[] = chainData?.data?.items || [];
 
-                    // Find the expiration date from the OCC symbol (YYMMDD at positions 6-12)
+                    // Find the expiration date from the OCC symbol (YYMMDD at positions 6-12).
+                    // Note: OCC always uses the official 3rd Friday date (e.g. 2026-06-19 = Juneteenth)
+                    // even when markets are closed that day. Our lookup must handle ±1 day tolerance.
                     const occNoSpace = rawSym.replace(/\s/g, '');
-                    const yymmdd = occNoSpace.slice(3, 9); // e.g. "260618"
+                    const yymmdd = occNoSpace.slice(3, 9); // e.g. "260619"
                     const targetDateStr = `20${yymmdd.slice(0,2)}-${yymmdd.slice(2,4)}-${yymmdd.slice(4,6)}`;
+                    const targetTs = new Date(targetDateStr).getTime();
 
-                    // Find closest expiration to signal's target date (within 7 days)
-                    const exp = expirations
-                        .filter((e: any) => Math.abs(new Date(e['expiration-date']).getTime() - new Date(targetDateStr).getTime()) <= 7 * 86400000)
+                    // Log what TT actually has — critical for debugging
+                    const expDates = expirations.map((e: any) => e['expiration-date']).slice(0, 20);
+                    console.log(`[approve-options] QQQ chain expirations (first 20):`, expDates);
+                    console.log(`[approve-options] Signal target expiration: ${targetDateStr}`);
+
+                    // Find closest expiration within ±14 days of signal's OCC date
+                    let exp = expirations
+                        .filter((e: any) => !isNaN(new Date(e['expiration-date']).getTime()) &&
+                            Math.abs(new Date(e['expiration-date']).getTime() - targetTs) <= 14 * 86400000)
                         .sort((a: any, b: any) =>
-                            Math.abs(new Date(a['expiration-date']).getTime() - new Date(targetDateStr).getTime()) -
-                            Math.abs(new Date(b['expiration-date']).getTime() - new Date(targetDateStr).getTime())
+                            Math.abs(new Date(a['expiration-date']).getTime() - targetTs) -
+                            Math.abs(new Date(b['expiration-date']).getTime() - targetTs)
                         )[0];
 
+                    // Fallback: find by DTE closest to 45 days (the signal's target DTE)
                     if (!exp) {
-                        console.warn(`[approve-options] No expiration near ${targetDateStr} in TT chain — using original`);
+                        const today = Date.now();
+                        exp = expirations
+                            .filter((e: any) => !isNaN(new Date(e['expiration-date']).getTime()) &&
+                                new Date(e['expiration-date']).getTime() > today)
+                            .sort((a: any, b: any) => {
+                                const dteDiff = (x: any) => Math.abs((new Date(x['expiration-date']).getTime() - targetTs));
+                                return dteDiff(a) - dteDiff(b);
+                            })[0];
+                        if (exp) console.log(`[approve-options] Date match failed — using DTE fallback: ${exp['expiration-date']}`);
+                    }
+
+                    if (!exp) {
+                        console.warn(`[approve-options] No expiration near ${targetDateStr} in TT chain (${expirations.length} total) — using original`);
                         return leg;
                     }
 

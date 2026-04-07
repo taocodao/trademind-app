@@ -1091,9 +1091,11 @@ export async function getOptionChainNested(
     }
 
     const data = await response.json();
-    const items = data.data?.items || [];
+    // TT /nested: data.items=[underlyingWrapper]; expirations nested at items[0].expirations
+    const chainWrapper = data.data?.items?.[0];
+    const expItems: any[] = chainWrapper?.expirations || [];
 
-    const expirations: OptionChainExpiration[] = items.map((item: any) => ({
+    const expirations: OptionChainExpiration[] = expItems.map((item: any) => ({
         expirationDate: item['expiration-date'],
         daysToExpiration: item['days-to-expiration'],
         expirationStyle: item['expiration-type'] || 'American',

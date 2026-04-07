@@ -285,7 +285,12 @@ export async function POST(
                         return leg;
                     }
                     const chainData = await chainResp.json();
-                    const expirations: any[] = chainData?.data?.items || [];
+                    // TT /option-chains/{sym}/nested structure:
+                    //   data.items = [ { expirations: [...], underlying-symbol: "QQQ", ... } ]
+                    // items[0] is the underlying wrapper — NOT an array of expirations.
+                    // Expirations are one level deeper at items[0].expirations[].
+                    const chainWrapper = chainData?.data?.items?.[0];
+                    const expirations: any[] = chainWrapper?.expirations || [];
 
                     // Find the expiration date from the OCC symbol (YYMMDD at positions 6-12).
                     // Note: OCC always uses the official 3rd Friday date (e.g. 2026-06-19 = Juneteenth)

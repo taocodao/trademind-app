@@ -65,9 +65,8 @@ interface ShareModalProps {
     onRefreshConnections?: () => void;
 }
 
+import type { PostMode, TemplateStyle } from '@/lib/composio';
 type Step = 'platforms' | 'connect' | 'generate' | 'review';
-type PostMode = 'referral' | 'education';
-type TemplateStyle = 'results' | 'educational' | 'casual';
 
 // ── Component ─────────────────────────────────────────────────────────────────
 

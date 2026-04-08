@@ -3,8 +3,10 @@
 import { useState, useCallback, useEffect } from 'react';
 import {
     X, Sparkles, Copy, CheckCircle2, RefreshCw, ExternalLink,
-    Send, AlertCircle, ChevronLeft, BookOpen, TrendingUp, Zap, Link2
+    Send, AlertCircle, ChevronLeft, BookOpen, TrendingUp, Zap, Link2, Eye, Edit3
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { SocialPlatform } from '@/lib/composio';
 import {
     DIRECT_POST_PLATFORMS, SCRIPT_ONLY_PLATFORMS, REDDIT_SUBREDDITS
@@ -84,6 +86,7 @@ export function ShareModal({
     const [isConnecting, setIsConnecting] = useState(false);
     const [copied, setCopied] = useState(false);
     const [postSuccess, setPostSuccess] = useState(false);
+    const [showPreview, setShowPreview] = useState(true);
     const [error, setError] = useState('');
 
     const isConnected = (p: SocialPlatform) => connectedPlatforms[p]?.status === 'active';
@@ -539,29 +542,49 @@ export function ShareModal({
                             ) : (
                                 <>
                                     <div className="flex items-center justify-between">
-                                        <label htmlFor="postEditor" className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">
-                                            Review & Edit
-                                        </label>
+                                        <div className="flex items-center gap-2 bg-black/40 p-1 rounded-lg border border-white/5">
+                                            <button
+                                                onClick={() => setShowPreview(false)}
+                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] uppercase tracking-wider font-bold transition-all ${!showPreview ? 'bg-white/10 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                            >
+                                                <Edit3 className="w-3 h-3" /> Edit
+                                            </button>
+                                            <button
+                                                onClick={() => setShowPreview(true)}
+                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] uppercase tracking-wider font-bold transition-all ${showPreview ? 'bg-tm-purple/20 text-tm-purple' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                            >
+                                                <Eye className="w-3 h-3" /> Preview
+                                            </button>
+                                        </div>
                                         <button
-                                            onClick={() => { setStep('generate'); setGeneratedPost(''); }}
+                                            onClick={() => { setStep('generate'); setGeneratedPost(''); setShowPreview(true); }}
                                             disabled={isGenerating}
-                                            className="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1 transition-colors"
+                                            className="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1 transition-colors px-2"
                                         >
                                             <RefreshCw className={`w-3 h-3 ${isGenerating ? 'animate-spin' : ''}`} />
                                             Regenerate
                                         </button>
                                     </div>
 
-                                    <textarea
-                                        id="postEditor"
-                                        value={editedPost}
-                                        onChange={(e) => setEditedPost(e.target.value)}
-                                        rows={8}
-                                        className={`w-full bg-black/40 border rounded-2xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none transition-colors resize-none leading-relaxed ${
-                                            isOverLimit ? 'border-red-500/60' : 'border-white/10 focus:border-tm-purple'
-                                        }`}
-                                    />
-                                    {charLimit && (
+                                    {showPreview ? (
+                                        <div className="w-full bg-black/20 border border-white/10 rounded-2xl px-4 py-4 text-sm text-zinc-200 min-h-[180px] max-h-[300px] overflow-y-auto prose prose-invert prose-p:leading-relaxed prose-sm">
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                {editedPost}
+                                            </ReactMarkdown>
+                                        </div>
+                                    ) : (
+                                        <textarea
+                                            id="postEditor"
+                                            value={editedPost}
+                                            onChange={(e) => setEditedPost(e.target.value)}
+                                            rows={8}
+                                            className={`w-full bg-black/40 border rounded-2xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none transition-colors resize-none leading-relaxed ${
+                                                isOverLimit ? 'border-red-500/60' : 'border-white/10 focus:border-tm-purple'
+                                            }`}
+                                        />
+                                    )}
+
+                                    {charLimit && !showPreview && (
                                         <p className={`text-[11px] text-right -mt-2 ${isOverLimit ? 'text-red-400' : 'text-zinc-600'}`}>
                                             {editedPost.length} / {charLimit}{isOverLimit && ' — over limit, please trim'}
                                         </p>

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/ai';
 import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -7,49 +6,69 @@ export const dynamic = 'force-dynamic';
 /**
  * GET /api/composio/callback
  * Handles the OAuth callback redirect from Composio after the user completes auth.
- * Composio appends ?connectedAccountId=ca_XXXX&status=success to our redirect URL.
  *
- * On success: redirects to /oauth-complete?status=success&platform=xxx
- * The oauth-complete page closes the popup and notifies the parent modal via postMessage.
+ * IMPORTANT: This route does NOT require user authentication.
+ * The OAuth redirect chain (LinkedIn → Composio → callback) does not reliably
+ * carry Privy auth cookies through the popup. Instead, we identify the user
+ * from the Composio connected account's user_id field, which was set during initiation.
+ *
+ * Composio appends ?connectedAccountId=ca_XXXX to our callbackUrl.
+ * On success → redirects to /oauth-complete?status=success&platform=xxx
  */
 export async function GET(req: NextRequest) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://trademind.bot';
     const oauthCompletePage = `${appUrl}/oauth-complete`;
-    // Read platform before try/catch so it's available in the catch block too
     const fallbackPlatform = req.nextUrl.searchParams.get('platform') ?? '';
 
     try {
-        const user = await getUserFromRequest(req);
         const params = req.nextUrl.searchParams;
         const platform = fallbackPlatform;
         const status = params.get('status');
-        // Composio SDK uses camelCase 'connectedAccountId'; REST API uses snake_case 'connected_account_id'
+        // Composio SDK uses camelCase; REST API uses snake_case
         const connectedAccountId = params.get('connectedAccountId') ?? params.get('connected_account_id');
 
-        // Validate required params
+        console.log('[composio/callback] Received:', { platform, status, connectedAccountId });
+
         if (!connectedAccountId || !platform) {
             console.warn('[composio/callback] Missing params:', { status, connectedAccountId, platform });
             return NextResponse.redirect(`${oauthCompletePage}?status=auth_failed&platform=${platform}`);
         }
 
-        // Verify ACTIVE status with Composio API
+        // Verify the account with Composio and get the user_id from it
         const composioRes = await fetch(
             `https://backend.composio.dev/api/v3/connectedAccounts/${connectedAccountId}`,
             { headers: { 'x-api-key': process.env.COMPOSIO_API_KEY ?? '' } }
         );
 
         if (!composioRes.ok) {
-            console.warn('[composio/callback] Composio verify failed:', composioRes.status);
+            const errText = await composioRes.text();
+            console.warn('[composio/callback] Composio verify failed:', composioRes.status, errText);
             return NextResponse.redirect(`${oauthCompletePage}?status=composio_verify_failed&platform=${platform}`);
         }
 
         const account = await composioRes.json();
-        console.log('[composio/callback] Account status:', account.status, '| id:', connectedAccountId);
+        console.log('[composio/callback] Account:', JSON.stringify({
+            status: account.status,
+            userId: account.userId ?? account.user_id,
+        }));
 
         if (account.status !== 'ACTIVE') {
             console.warn('[composio/callback] Account not active:', account.status);
             return NextResponse.redirect(`${oauthCompletePage}?status=not_active&platform=${platform}`);
         }
+
+        // Recover the user from Composio's stored user_id.
+        // We stored the Privy DID suffix (stripped "did:privy:" prefix) as the Composio userId.
+        const composioUserId: string = account.userId ?? account.user_id ?? '';
+        if (!composioUserId) {
+            console.error('[composio/callback] No user_id in Composio account:', JSON.stringify(account).slice(0, 300));
+            return NextResponse.redirect(`${oauthCompletePage}?status=no_user_id&platform=${platform}`);
+        }
+
+        // Reconstruct full Privy DID
+        const privyDid = composioUserId.startsWith('did:privy:')
+            ? composioUserId
+            : `did:privy:${composioUserId}`;
 
         // Persist the ACTIVE connection
         await query(
@@ -58,15 +77,13 @@ export async function GET(req: NextRequest) {
              ON CONFLICT (user_id, platform) DO UPDATE
              SET composio_account_id = $3, status = 'active',
                  connected_at = NOW(), updated_at = NOW()`,
-            [user.privyDid, platform, connectedAccountId]
+            [privyDid, platform, connectedAccountId]
         );
 
+        console.log('[composio/callback] ✓ Saved connection for', privyDid, 'platform:', platform);
         return NextResponse.redirect(`${oauthCompletePage}?status=success&platform=${platform}`);
     } catch (error: any) {
-        console.error('[composio/callback] Error:', error);
-        if (error.message === 'Unauthorized') {
-            return NextResponse.redirect(`${appUrl}/login?redirect=/settings/social-connections`);
-        }
+        console.error('[composio/callback] Unexpected error:', error);
         return NextResponse.redirect(`${oauthCompletePage}?status=server_error&platform=${fallbackPlatform}`);
     }
 }

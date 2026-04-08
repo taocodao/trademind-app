@@ -20,7 +20,8 @@ export async function GET(req: NextRequest) {
         const params = req.nextUrl.searchParams;
         const platform = params.get('platform');
         const status = params.get('status');
-        const connectedAccountId = params.get('connectedAccountId');
+        // Composio SDK uses camelCase 'connectedAccountId'; REST API uses snake_case 'connected_account_id'
+        const connectedAccountId = params.get('connectedAccountId') ?? params.get('connected_account_id');
 
         // Validate required params — connectedAccountId presence is sufficient proof OAuth succeeded.
         // (Composio may send status=success or status=ACTIVE depending on SDK/version)

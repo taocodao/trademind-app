@@ -61,16 +61,38 @@ export async function POST(req: NextRequest) {
         const storedMeta: Record<string, string> = connection.metadata ?? {};
         let effectiveMeta = { ...storedMeta, ...(metadata ?? {}) };
 
-        const { Composio } = await import('@composio/core');
-        const composio = new Composio({ apiKey: process.env.COMPOSIO_API_KEY ?? '' });
+        // Helper for v3.1 REST Tools Execution bypassing SDK
+        const executeComposioTool = async (actionSlug: string, args: any = {}) => {
+            const res = await fetch(`https://backend.composio.dev/api/v3.1/tools/execute/${actionSlug}`, {
+                method: 'POST',
+                headers: {
+                    'x-api-key': process.env.COMPOSIO_API_KEY ?? '',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    connected_account_id: connection.composio_account_id,
+                    arguments: args,
+                }),
+            });
+            
+            // Composio responses are sometimes strings, sometimes objects
+            const text = await res.text();
+            let data;
+            try { data = JSON.parse(text); } catch { data = { message: text }; }
+            
+            if (!res.ok) {
+                const err: any = new Error(data?.message || data?.error || JSON.stringify(data));
+                err.status = res.status;
+                throw err;
+            }
+            return data;
+        };
 
         // Phase 7: Auto-resolve Facebook page_id if missing
         if (platform === 'facebook' && !effectiveMeta.page_id) {
             console.info(`[social/post] Auto-fetching Facebook page ID...`);
             try {
-                const fbPages = await (composio as any).tools.execute('FACEBOOK_LIST_MANAGED_PAGES', {
-                    connectedAccountId: connection.composio_account_id,
-                });
+                const fbPages = await executeComposioTool('FACEBOOK_LIST_MANAGED_PAGES');
                 
                 const dataObj = typeof fbPages === 'string' ? JSON.parse(fbPages) : fbPages;
                 const rawPages = dataObj?.data?.pages || dataObj?.data?.data || dataObj?.pages || dataObj?.data || [];
@@ -94,23 +116,19 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        // ── Execute via Composio SDK ───────────────────────────────────────────
+        // ── Execute via Composio REST API ───────────────────────────────────────────
         const toolParams = buildToolParams(platform, postContent, effectiveMeta);
 
         console.info(`[social/post] Executing ${toolSlug} for ${platform} via connected account ${connection.composio_account_id}`);
 
         let executeResult: any;
         try {
-            // Use composio.tools.execute — confirmed as current SDK API (April 2026)
-            executeResult = await (composio as any).tools.execute(toolSlug, {
-                arguments: toolParams,
-                connectedAccountId: connection.composio_account_id,
-            });
+            executeResult = await executeComposioTool(toolSlug, toolParams);
         } catch (err: any) {
-            console.error('[social/post] Composio tools.execute error:', err?.message ?? err);
+            console.error('[social/post] Composio tools.execute error:', err?.status, err?.message ?? err);
 
             // Token expired → mark as expired so UI prompts reconnect
-            if (err?.status === 401 || err?.status === 403) {
+            if (err?.status === 401 || err?.status === 403 || err?.message?.toLowerCase().includes('expired')) {
                 await query(
                     `UPDATE social_connections SET status = 'expired', updated_at = NOW()
                      WHERE user_id = $1 AND platform = $2`,

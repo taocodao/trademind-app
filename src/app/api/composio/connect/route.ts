@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Composio } from '@composio/core';
 import { getUserFromRequest } from '@/lib/ai';
 import { query } from '@/lib/db';
 import { SocialPlatform, COMPOSIO_AUTH_CONFIGS, DIRECT_POST_PLATFORMS } from '@/lib/composio';
+
+// Module-scope singleton — instantiated once per serverless cold-start, not per request.
+// Static import required: @composio/core is pure ESM and crashes when dynamically imported
+// inside a Next.js API route that bundles as CJS (produces 502 on Vercel).
+const composioClient = new Composio({ apiKey: process.env.COMPOSIO_API_KEY ?? '' });
+
 
 export const dynamic = 'force-dynamic';
 
@@ -33,17 +40,14 @@ export async function POST(req: NextRequest) {
         const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://trademind.bot';
         const redirectUrl = `${appUrl}/api/composio/callback?platform=${platform}`;
 
-        // Instantiate Composio SDK
-        const { Composio } = await import('@composio/core');
-        const composio = new Composio({ apiKey: process.env.COMPOSIO_API_KEY ?? '' });
-
         // Composio userId must be alphanumeric — strip Privy DID prefix (did:privy:xxx → xxx)
         const composioUserId = user.privyDid.replace(/^did:privy:/, '');
 
         // Call Composio SDK to initiate the OAuth flow
         let oauthRedirectUrl = '';
         try {
-            const connectionRequest = await composio.connectedAccounts.initiate(
+            // Use module-scope Composio singleton (static import at top of file)
+            const connectionRequest = await composioClient.connectedAccounts.initiate(
                 composioUserId,
                 authConfigId,
                 { callbackUrl: redirectUrl }

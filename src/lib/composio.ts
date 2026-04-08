@@ -25,7 +25,7 @@ export function getOpenAIClient(): OpenAI {
 
 export type SocialPlatform = 'linkedin' | 'twitter' | 'facebook' | 'instagram' | 'tiktok' | 'snapchat' | 'reddit' | 'youtube';
 export type PostMode = 'referral' | 'education';
-export type TemplateStyle = 'results' | 'educational' | 'casual';
+export type TemplateStyle = 'results' | 'educational' | 'casual' | 'campaign';
 
 /**
  * Platform → Composio Auth Config ID mapping.
@@ -118,6 +118,7 @@ export function buildSystemPrompt(
         results:     'Focus on concrete results and performance. Use first-person experience ("I made X trades", "The signal caught Y move").',
         educational: 'Focus on teaching — explain how options signals work, what IV means, how AI detects market conditions. Position yourself as a knowledgeable trader sharing insights.',
         casual:      'Keep it short, punchy, and conversational. Use casual language, relatable frustrations ("tired of guessing?"), and hype energy without being cringe.',
+        campaign:    'Reserved for exact LinkedIn campaign copy. Do not deviate from the prompt.',
     };
 
     const complianceNote = 'MANDATORY: Always end with "Not financial advice." as its own line.';

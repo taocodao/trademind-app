@@ -64,6 +64,50 @@ export async function POST(req: NextRequest) {
         const referralLink = `${appUrl}/?ref=${promoCode}&utm_source=${platform}&utm_medium=social&utm_campaign=${postMode}`;
         const constraints = PLATFORM_CONSTRAINTS[platform];
 
+        // Intercept exactly for the LinkedIn Compounding Campaign
+        if (templateStyle === 'campaign') {
+            const campaignText = `A 19-year-old investing $5,000 at a 39% annual return becomes a millionaire at 41.
+
+No inheritance.
+
+No lucky stock pick.
+
+Just time doing what time does.
+
+The problem is nobody teaches Gen Z exactly *how* to get that return.
+
+Not Robinhood.
+Not Reddit.
+Not a finance influencer selling a course.
+
+I built TradeMind to close that gap.
+
+Every trading day at 3PM, our AI sends a clear signal: BULL, SIDEWAYS, or BEAR.
+
+It tells you the exact allocation and gives a plain-English reason why. 
+
+7-year backtest: 39% annualized return. 
+3x the S&P 500.
+In 2022 when the QQQ lost 33%: our system returned +21.4%.
+
+It takes under 2 minutes to act on. 
+
+What is the biggest thing holding you back from starting to invest right now?
+
+📝 Link to the live AI signals in the comments: ${referralLink}`;
+
+            return NextResponse.json({
+                post: campaignText,
+                promoCode,
+                referralLink,
+                platform,
+                postMode,
+                templateStyle,
+                charCount: campaignText.length,
+                maxChars: constraints.maxChars,
+            });
+        }
+
         // Build the dynamic system prompt based on platform + mode + template style
         const systemPrompt = buildSystemPrompt(platform, postMode, templateStyle);
 

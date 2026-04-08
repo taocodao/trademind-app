@@ -34,6 +34,7 @@ const PLATFORM_CONFIG: Record<SocialPlatform, {
 };
 
 const TEMPLATE_OPTIONS = [
+    { id: 'campaign' as const,    emoji: '🚀', label: 'Campaign',   desc: '39% Compound hook' },
     { id: 'results' as const,     emoji: '🎯', label: 'Results',    desc: 'Share your trading wins' },
     { id: 'educational' as const, emoji: '🧑‍🏫', label: 'Education',  desc: 'Teach options concepts' },
     { id: 'casual' as const,      emoji: '😎', label: 'Casual',     desc: 'Hype & conversational' },

@@ -61,6 +61,10 @@ export async function POST(req: NextRequest) {
         const storedMeta: Record<string, string> = connection.metadata ?? {};
         let effectiveMeta = { ...storedMeta, ...(metadata ?? {}) };
 
+        // Composio entity_id must match what we used during OAuth initiation:
+        // the Privy DID with the "did:privy:" prefix stripped (alphanumeric only).
+        const composioEntityId = user.privyDid.replace(/^did:privy:/, '');
+
         // Helper for v3.1 REST Tools Execution bypassing SDK
         const executeComposioTool = async (actionSlug: string, args: any = {}) => {
             const res = await fetch(`https://backend.composio.dev/api/v3.1/tools/execute/${actionSlug}`, {
@@ -70,8 +74,9 @@ export async function POST(req: NextRequest) {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    connected_account_id: connection.composio_account_id,
-                    entity_id: user.privyDid,
+                    // Per Composio docs: omit connected_account_id to auto-resolve when entity_id is correct.
+                    // Providing both can cause a mismatch error if the account was registered under a different entity key.
+                    entity_id: composioEntityId,
                     arguments: args,
                 }),
             });

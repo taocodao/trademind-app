@@ -91,11 +91,24 @@ export function ShareModal({
     const isScriptOnly = (p: SocialPlatform) => SCRIPT_ONLY_PLATFORMS.includes(p);
     const cfg = selected ? PLATFORM_CONFIG[selected] : null;
 
-    // Re-fetch connection status when user returns from OAuth tab
+    // Re-fetch connection status when user returns from OAuth popup.
+    // Two strategies: (1) postMessage from /oauth-complete page when popup closes,
+    // (2) window focus as fallback when user manually closes popup.
     useEffect(() => {
         const handleFocus = () => { onRefreshConnections?.(); };
+        const handleMessage = (e: MessageEvent) => {
+            if (e.data?.type === 'COMPOSIO_OAUTH_COMPLETE') {
+                console.log('[ShareModal] OAuth complete for', e.data.platform, '| status:', e.data.status);
+                setIsConnecting(false);
+                onRefreshConnections?.();
+            }
+        };
         window.addEventListener('focus', handleFocus);
-        return () => window.removeEventListener('focus', handleFocus);
+        window.addEventListener('message', handleMessage);
+        return () => {
+            window.removeEventListener('focus', handleFocus);
+            window.removeEventListener('message', handleMessage);
+        };
     }, [onRefreshConnections]);
 
     const handleSelectPlatform = useCallback((p: SocialPlatform) => {

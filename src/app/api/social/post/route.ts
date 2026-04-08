@@ -71,6 +71,7 @@ export async function POST(req: NextRequest) {
                 },
                 body: JSON.stringify({
                     connected_account_id: connection.composio_account_id,
+                    entity_id: user.privyDid,
                     arguments: args,
                 }),
             });

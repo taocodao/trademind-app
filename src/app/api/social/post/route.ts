@@ -3,7 +3,7 @@ import { getUserFromRequest } from '@/lib/ai';
 import { query } from '@/lib/db';
 import { SocialPlatform, PLATFORM_TOOL_SLUGS, DIRECT_POST_PLATFORMS, buildToolParams } from '@/lib/composio';
 
-export const dynamic = 'force-dynamic'; // Added to trigger Vercel deployment hook
+export const dynamic = 'force-dynamic'; // Trigger Vercel Build (Actual File Diff)
 
 /**
  * POST /api/social/post
@@ -75,13 +75,17 @@ export async function POST(req: NextRequest) {
                 }),
             });
             
-            // Composio responses are sometimes strings, sometimes objects
             const text = await res.text();
-            let data;
+            let data: any;
             try { data = JSON.parse(text); } catch { data = { message: text }; }
             
             if (!res.ok) {
-                const err: any = new Error(data?.message || data?.error || JSON.stringify(data));
+                let errMsg = data?.error || data?.message || text;
+                // If error is a nested object, stringify it so it doesn't print [object Object]
+                if (typeof errMsg === 'object') {
+                    errMsg = JSON.stringify(errMsg);
+                }
+                const err: any = new Error(errMsg);
                 err.status = res.status;
                 throw err;
             }

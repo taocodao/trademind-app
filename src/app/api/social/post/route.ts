@@ -3,7 +3,7 @@ import { getUserFromRequest } from '@/lib/ai';
 import { query } from '@/lib/db';
 import { SocialPlatform, PLATFORM_TOOL_SLUGS, DIRECT_POST_PLATFORMS, buildToolParams } from '@/lib/composio';
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'; // Added to trigger Vercel deployment hook
 
 /**
  * POST /api/social/post

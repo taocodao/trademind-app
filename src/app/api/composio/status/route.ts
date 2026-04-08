@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
             if (row.status === 'active' && row.composio_account_id) {
                 try {
                     const composioRes = await fetch(
-                        `https://backend.composio.dev/api/v3/connectedAccounts/${row.composio_account_id}`,
+                        `https://backend.composio.dev/api/v3/connected_accounts/${row.composio_account_id}`,
                         { headers: { 'x-api-key': process.env.COMPOSIO_API_KEY ?? '' } }
                     );
 

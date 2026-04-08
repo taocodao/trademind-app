@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
 
         // Verify the account with Composio and get the user_id from it
         const composioRes = await fetch(
-            `https://backend.composio.dev/api/v3/connectedAccounts/${connectedAccountId}`,
+            `https://backend.composio.dev/api/v1/connectedAccounts/${connectedAccountId}`,
             { headers: { 'x-api-key': process.env.COMPOSIO_API_KEY ?? '' } }
         );
 

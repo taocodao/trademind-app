@@ -1,0 +1,6 @@
+{
+  "https://backend.composio.dev/api/v3/connectedAccounts": "expected string or bytes-like object",
+  "https://backend.composio.dev/api/v3/connected_accounts": "expected string or bytes-like object",
+  "https://backend.composio.dev/api/v1/connectedAccounts": "expected string or bytes-like object",
+  "https://backend.composio.dev/api/v1/connected_accounts": "expected string or bytes-like object"
+}

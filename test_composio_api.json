@@ -1,0 +1,7 @@
+{
+  "https://backend.composio.dev/api/v3/connectedAccounts/test": "403",
+  "https://backend.composio.dev/api/v3/connected_accounts/test": "403",
+  "https://backend.composio.dev/api/v1/connectedAccounts/test": "403",
+  "https://backend.composio.dev/api/v1/connected_accounts/test": "403",
+  "https://backend.composio.dev/api/v2/connectedAccounts/test": "403"
+}

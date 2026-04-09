@@ -617,7 +617,10 @@ export function ShareModal({
                                             <button
                                                 onClick={() => {
                                                     handleCopy();
-                                                    window.open('https://www.linkedin.com/feed/', '_blank');
+                                                    // Swap out the root URL for the campaign URL so the intent link card hits the right OpenGraph tags
+                                                    const campaignUrl = referralLink.replace('/?ref=', '/c/compounding?ref=');
+                                                    const intentUrl = buildIntentUrl('linkedin', '', campaignUrl);
+                                                    window.open(intentUrl || 'https://www.linkedin.com/feed/', '_blank');
                                                 }}
                                                 className="w-full bg-[#0a66c2] hover:bg-[#004182] text-white font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-lg shadow-blue-900/30"
                                             >

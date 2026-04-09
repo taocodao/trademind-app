@@ -94,7 +94,7 @@ It takes under 2 minutes to act on.
 
 What is the biggest thing holding you back from starting to invest right now?
 
-📝 Link to the live AI signals in the comments: \${appUrl}/c/compounding?ref=\${promoCode}\`;
+📝 Link to the live AI signals in the comments: ${appUrl}/c/compounding?ref=${promoCode}`;
 
             return NextResponse.json({
                 post: campaignText,

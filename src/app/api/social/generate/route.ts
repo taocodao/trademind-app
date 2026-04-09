@@ -66,35 +66,55 @@ export async function POST(req: NextRequest) {
 
         // Intercept exactly for the LinkedIn Compounding Campaign
         if (templateStyle === 'campaign') {
-            const campaignText = `A 19-year-old investing $5,000 at a 39% annual return becomes a millionaire at 41.
+            const campaignText = `[ CHOOSE ONE OF THE TEMPLATES BELOW AND DELETE THE REST ]
 
-No inheritance.
+--- OPTION 1: PROFESSIONAL & ANALYTICAL ---
 
-No lucky stock pick.
+The math behind algorithmic compounding is undeniable.
 
-Just time doing what time does.
+A 19-year-old investing $5,000 at a 39% annual return becomes a millionaire at 41.
 
-The problem is nobody teaches Gen Z exactly *how* to get that return.
+No inheritance. No lucky stock pick. Just time doing what time does.
 
-Not Robinhood.
-Not Reddit.
-Not a finance influencer selling a course.
+The problem is nobody teaches Gen Z exactly *how* to get that return reliably. Not Robinhood. Not Reddit. Not a finance influencer.
 
-I built TradeMind to close that gap.
+I built TradeMind to close that gap. Every trading day at 3PM, our AI sends a clear signal: BULL, SIDEWAYS, or BEAR. It tells you the exact allocation and gives a plain-English reason why. 
 
-Every trading day at 3PM, our AI sends a clear signal: BULL, SIDEWAYS, or BEAR.
-
-It tells you the exact allocation and gives a plain-English reason why. 
-
-7-year backtest: 39% annualized return. 
-3x the S&P 500.
-In 2022 when the QQQ lost 33%: our system returned +21.4%.
+7-year backtest: 39% annualized return. 3x the S&P 500.
+In 2022 when the QQQ lost 33%, our system returned +21.4%.
 
 It takes under 2 minutes to act on. 
 
-What is the biggest thing holding you back from starting to invest right now?
+What is the biggest thing holding you back from systematic trading right now?
 
-📝 Link to the live AI signals in the comments: ${appUrl}/c/compounding?ref=${promoCode}`;
+📝 Link to the live AI signals: ${appUrl}/c/compounding?ref=${promoCode}
+
+--- OPTION 2: DIRECT & PUNCHY ---
+
+Most people think you need a massive salary to become a millionaire. You just need a mathematical edge.
+
+If you start with $5,000 at age 19 and compound it at 39% annually, you hit $1M by age 41. 
+
+TradeMind's AI gives you that mathematical edge.
+- 39% annualized return in our 7-year backtest (3x the S&P 500)
+- Capital preservation: Returned +21.4% in 2022 when the market crashed 33%
+- Effortless execution: Clear BULL/BEAR signals every day at 3PM. 
+
+Stop guessing and start trading with an algorithm.
+
+📝 Start with $100 in free credit: ${appUrl}/c/compounding?ref=${promoCode}
+
+--- OPTION 3: CASUAL HOOK ---
+
+Wild stat of the day: A 19-year-old investing $5k at a 39% annual return becomes a millionaire at 41. 🤯
+
+No luck. Just pure compound interest.
+
+If you want to know *how* to actually hit 39% APY without staring at charts all day, check out TradeMind. Our AI sends a simple BULL/BEAR signal every day before the market closes. It takes 2 minutes to follow and has 3x'd the S&P 500 over the past 7 years.
+
+We even made +21% during the 2022 market crash while everyone else was losing money.
+
+📝 Try the AI for free here: ${appUrl}/c/compounding?ref=${promoCode}`;
 
             return NextResponse.json({
                 post: campaignText,

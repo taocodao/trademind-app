@@ -630,7 +630,7 @@ export function ShareModal({
                                         )}
 
                                         {/* Intent URL share (fallback for text platforms) */}
-                                        {!cfg.requiresMedia && buildIntentUrl(selected, editedPost, referralLink) && (
+                                        {!cfg.requiresMedia && buildIntentUrl(selected, editedPost, referralLink) && !(selected === 'linkedin' && templateStyle === 'campaign') && (
                                             <button
                                                 onClick={handleIntentPost}
                                                 disabled={isOverLimit}
@@ -652,24 +652,27 @@ export function ShareModal({
                                             </button>
                                         )}
 
-                                        {/* Script/clipboard row for all */}
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={handleCopy}
-                                                className="flex-1 bg-white/5 border border-white/10 hover:border-white/20 text-white font-semibold py-2.5 rounded-2xl flex items-center justify-center gap-1.5 transition-all text-sm"
-                                            >
-                                                {copied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                                                {copied ? 'Copied!' : 'Copy Text'}
-                                            </button>
-                                            {typeof navigator !== 'undefined' && 'share' in navigator && (
+                                        {/* Script/clipboard row for all (hidden for LinkedIn campaigns since it has a dedicated macro button) */}
+                                        {!(selected === 'linkedin' && templateStyle === 'campaign') && (
+                                            <div className="flex gap-2">
                                                 <button
-                                                    onClick={handleWebShare}
-                                                    className="flex-1 bg-white/5 border border-white/10 hover:border-white/20 text-zinc-300 font-semibold py-2.5 rounded-2xl flex items-center justify-center gap-1.5 transition-all text-sm"
+                                                    onClick={handleCopy}
+                                                    className="flex-1 bg-white/5 border border-white/10 hover:border-white/20 text-white font-semibold py-2.5 rounded-2xl flex items-center justify-center gap-1.5 transition-all text-sm"
                                                 >
-                                                    📤 Share…
+                                                    {copied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                                                    {copied ? 'Copied!' : 'Copy Text'}
                                                 </button>
-                                            )}
-                                        </div>
+                                                {typeof navigator !== 'undefined' && 'share' in navigator && (
+                                                    <button
+                                                        onClick={handleWebShare}
+                                                        className="flex-1 bg-white/5 border border-white/10 hover:border-white/20 text-zinc-300 font-semibold py-2.5 rounded-2xl flex items-center justify-center gap-1.5 transition-all text-sm"
+                                                    >
+                                                        📤 Share…
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+
 
                                         {/* Script-mode note for media platforms */}
                                         {cfg.requiresMedia && (
@@ -679,11 +682,7 @@ export function ShareModal({
                                                 {cfg.label === 'YouTube'   && 'Use this as your video description. Include the referral link.'}
                                             </p>
                                         )}
-                                        {templateStyle === 'campaign' && selected === 'linkedin' && (
-                                            <p className="text-[11px] text-amber-500/80 text-center font-medium mt-2">
-                                                ⚠️ Composio's LinkedIn integration is text-only. If you want to attach the Infographic image, please use the "Copy Text" button and post natively on LinkedIn.
-                                            </p>
-                                        )}
+
                                     </div>
                                 </>
                             )}

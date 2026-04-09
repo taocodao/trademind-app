@@ -24,6 +24,7 @@ const CAMPAIGNS: Record<string, {
         image: '/campaigns/compounding.png',
         hookHeader: 'How to build generational wealth starting with $5,000.',
         content: [
+            'The math behind algorithmic compounding is undeniable.',
             'A 19-year-old investing $5,000 at a 39% annual return becomes a millionaire at 41.',
             'No inheritance. No lucky stock pick. Just time doing what time does.',
             'The problem is nobody teaches Gen Z exactly *how* to get that return. Not Robinhood. Not Reddit. Not a finance influencer selling a course.',
@@ -140,7 +141,7 @@ export default async function CampaignPage({ params, searchParams }: Props) {
                             href={ctaLink}
                             className="w-full flex justify-center items-center py-4 bg-tm-purple hover:bg-tm-purple/90 text-white font-bold rounded-2xl transition-all shadow-[0_0_20px_rgba(168,85,247,0.3)] hover:scale-[1.02] active:scale-[0.98] text-lg gap-2 tracking-wide"
                         >
-                            Claim 30-Day Free Trial
+                            Start with $100 Free Credit
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                             </svg>

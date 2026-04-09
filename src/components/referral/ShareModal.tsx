@@ -599,7 +599,7 @@ export function ShareModal({
                                     {/* CTA buttons */}
                                     <div className="space-y-2">
                                         {/* Group A platforms — Direct post */}
-                                        {DIRECT_POST_PLATFORMS.includes(selected) && isConnected(selected) && (
+                                        {DIRECT_POST_PLATFORMS.includes(selected) && isConnected(selected) && !(selected === 'linkedin' && templateStyle === 'campaign') && (
                                             <button
                                                 onClick={handleDirectPost}
                                                 disabled={isPosting || isOverLimit || !editedPost}
@@ -609,6 +609,20 @@ export function ShareModal({
                                                     ? <><RefreshCw className="w-4 h-4 animate-spin" /> Posting…</>
                                                     : <><Send className="w-4 h-4" /> Post to {cfg.label} Now</>
                                                 }
+                                            </button>
+                                        )}
+
+                                        {/* LinkedIn Campaign Fallback (API text posts with links often get silently dropped, manual UI is required to unfurl) */}
+                                        {DIRECT_POST_PLATFORMS.includes(selected) && selected === 'linkedin' && templateStyle === 'campaign' && (
+                                            <button
+                                                onClick={() => {
+                                                    handleCopy();
+                                                    window.open('https://www.linkedin.com/feed/', '_blank');
+                                                }}
+                                                className="w-full bg-[#0a66c2] hover:bg-[#004182] text-white font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-lg shadow-blue-900/30"
+                                            >
+                                                {copied ? <CheckCircle2 className="w-4 h-4" /> : <ExternalLink className="w-4 h-4" />}
+                                                {copied ? 'Copied text!' : 'Copy Text & Open LinkedIn'}
                                             </button>
                                         )}
 

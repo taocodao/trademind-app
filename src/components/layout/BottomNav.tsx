@@ -31,7 +31,7 @@ export function BottomNav() {
 
     // Do not show on public marketing pages (but /refer IS shown when logged in)
     const publicRoutes = ['/', '/how-it-works', '/results', '/family'];
-    if (publicRoutes.includes(pathname)) return null;
+    if (publicRoutes.includes(pathname) || pathname.startsWith('/c/')) return null;
 
     return (
         <nav className="fixed bottom-0 left-0 right-0 z-50 bg-tm-surface/90 backdrop-blur-md border-t border-tm-border pb-safe">

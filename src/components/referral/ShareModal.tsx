@@ -662,6 +662,11 @@ export function ShareModal({
                                                 {cfg.label === 'YouTube'   && 'Use this as your video description. Include the referral link.'}
                                             </p>
                                         )}
+                                        {templateStyle === 'campaign' && selected === 'linkedin' && (
+                                            <p className="text-[11px] text-amber-500/80 text-center font-medium mt-2">
+                                                ⚠️ Composio's LinkedIn integration is text-only. If you want to attach the Infographic image, please use the "Copy Text" button and post natively on LinkedIn.
+                                            </p>
+                                        )}
                                     </div>
                                 </>
                             )}

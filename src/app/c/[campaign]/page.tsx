@@ -56,7 +56,7 @@ export async function generateMetadata(
             title: campaign.title,
             description: campaign.description,
             // Full absolute URL to the image so LinkedIn can fetch it
-            images: [`${appUrl}${campaign.image}`],
+            images: [appUrl + campaign.image],
             type: 'website',
             siteName: 'TradeMind',
         },
@@ -64,7 +64,7 @@ export async function generateMetadata(
             card: 'summary_large_image',
             title: campaign.title,
             description: campaign.description,
-            images: [`${appUrl}${campaign.image}`],
+            images: [appUrl + campaign.image],
         }
     };
 }
@@ -87,7 +87,7 @@ export default function CampaignPage({ params, searchParams }: Props) {
     // Extract referral code
     const refCode = typeof searchParams.ref === 'string' ? searchParams.ref : '';
     // Build the sign up link that carries the referral down the funnel
-    const ctaLink = refCode ? `/?ref=${refCode}` : '/';
+    const ctaLink = refCode ? '/?ref=' + refCode : '/';
 
     return (
         <main className="min-h-screen bg-[#07070F] text-zinc-300 antialiased pb-24">

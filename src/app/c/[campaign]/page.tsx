@@ -6,8 +6,8 @@ import Link from 'next/link';
 export const dynamic = 'force-dynamic';
 
 interface Props {
-    params: { campaign: string };
-    searchParams: { [key: string]: string | string[] | undefined };
+    params: Promise<{ campaign: string }>;
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 // Map of available campaigns
@@ -39,7 +39,8 @@ export async function generateMetadata(
     { params, searchParams }: Props,
     parent: ResolvingMetadata
 ): Promise<Metadata> {
-    const campaignId = params.campaign.toLowerCase();
+    const resolvedParams = await params;
+    const campaignId = resolvedParams.campaign.toLowerCase();
     const campaign = CAMPAIGNS[campaignId];
     
     // Fallback if bad link
@@ -70,8 +71,9 @@ export async function generateMetadata(
 }
 
 // 2. PAGE UI
-export default function CampaignPage({ params, searchParams }: Props) {
-    const campaignId = params.campaign.toLowerCase();
+export default async function CampaignPage({ params, searchParams }: Props) {
+    const resolvedParams = await params;
+    const campaignId = resolvedParams.campaign.toLowerCase();
     const campaign = CAMPAIGNS[campaignId];
 
     if (!campaign) {
@@ -85,7 +87,8 @@ export default function CampaignPage({ params, searchParams }: Props) {
     }
 
     // Extract referral code
-    const refCode = typeof searchParams.ref === 'string' ? searchParams.ref : '';
+    const resolvedSearchParams = await searchParams;
+    const refCode = typeof resolvedSearchParams.ref === 'string' ? resolvedSearchParams.ref : '';
     // Build the sign up link that carries the referral down the funnel
     const ctaLink = refCode ? '/?ref=' + refCode : '/';
 

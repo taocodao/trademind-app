@@ -66,11 +66,8 @@ export async function POST(req: NextRequest) {
 
         // Intercept exactly for the LinkedIn Compounding Campaign
         if (templateStyle === 'campaign') {
-            const campaignText = `[ CHOOSE ONE OF THE TEMPLATES BELOW AND DELETE THE REST ]
-
---- OPTION 1: PROFESSIONAL & ANALYTICAL ---
-
-The math behind algorithmic compounding is undeniable.
+            const options = [
+\`The math behind algorithmic compounding is undeniable.
 
 A 19-year-old investing $5,000 at a 39% annual return becomes a millionaire at 41.
 
@@ -87,11 +84,9 @@ It takes under 2 minutes to act on.
 
 What is the biggest thing holding you back from systematic trading right now?
 
-📝 Link to the live AI signals: ${appUrl}/c/compounding?ref=${promoCode}
+📝 Link to the live AI signals: \${appUrl}/c/compounding?ref=\${promoCode}\`,
 
---- OPTION 2: DIRECT & PUNCHY ---
-
-Most people think you need a massive salary to become a millionaire. You just need a mathematical edge.
+\`Most people think you need a massive salary to become a millionaire. You just need a mathematical edge.
 
 If you start with $5,000 at age 19 and compound it at 39% annually, you hit $1M by age 41. 
 
@@ -102,11 +97,9 @@ TradeMind's AI gives you that mathematical edge.
 
 Stop guessing and start trading with an algorithm.
 
-📝 Start with $100 in free credit: ${appUrl}/c/compounding?ref=${promoCode}
+📝 Start with $100 in free credit: \${appUrl}/c/compounding?ref=\${promoCode}\`,
 
---- OPTION 3: CASUAL HOOK ---
-
-Wild stat of the day: A 19-year-old investing $5k at a 39% annual return becomes a millionaire at 41. 🤯
+\`Wild stat of the day: A 19-year-old investing $5k at a 39% annual return becomes a millionaire at 41. 🤯
 
 No luck. Just pure compound interest.
 
@@ -114,16 +107,18 @@ If you want to know *how* to actually hit 39% APY without staring at charts all 
 
 We even made +21% during the 2022 market crash while everyone else was losing money.
 
-📝 Try the AI for free here: ${appUrl}/c/compounding?ref=${promoCode}`;
+📝 Try the AI for free here: \${appUrl}/c/compounding?ref=\${promoCode}\`
+            ];
 
             return NextResponse.json({
-                post: campaignText,
+                post: options[0],
+                options,
                 promoCode,
                 referralLink,
                 platform,
                 postMode,
                 templateStyle,
-                charCount: campaignText.length,
+                charCount: options[0].length,
                 maxChars: constraints.maxChars,
             });
         }

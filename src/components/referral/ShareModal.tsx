@@ -40,7 +40,7 @@ const TEMPLATE_OPTIONS = [
     { id: 'casual' as const,      emoji: '😎', label: 'Casual',     desc: 'Hype & conversational' },
 ];
 
-const char_limits: Partial<Record<SocialPlatform, number>> = { twitter: 250 };
+const char_limits: Partial<Record<SocialPlatform, number>> = { twitter: 280 };
 
 function buildIntentUrl(platform: SocialPlatform, text: string, link: string): string {
     const enc = encodeURIComponent(text);
@@ -588,9 +588,9 @@ export function ShareModal({
                                         />
                                     )}
 
-                                    {charLimit && !showPreview && (
-                                        <p className={`text-[11px] text-right -mt-2 ${isOverLimit ? 'text-red-400' : 'text-zinc-600'}`}>
-                                            {editedPost.length} / {charLimit}{isOverLimit && ' — over limit, please trim'}
+                                    {charLimit && (
+                                        <p className={`text-[11px] text-right -mt-2 ${isOverLimit ? 'text-red-400 font-medium' : 'text-zinc-600'}`}>
+                                            {editedPost.length} / {charLimit}{isOverLimit && ' — over limit, please trim if needed'}
                                         </p>
                                     )}
 
@@ -624,11 +624,11 @@ export function ShareModal({
 
                                     {/* CTA buttons */}
                                     <div className="space-y-2">
-                                        {/* Group A platforms — Direct post */}
-                                        {DIRECT_POST_PLATFORMS.includes(selected) && isConnected(selected) && !(selected === 'linkedin' && templateStyle === 'campaign') && (
+                                        {/* Group A platforms — Direct post (LinkedIn, Facebook, Reddit only — Twitter uses intent URL) */}
+                                        {DIRECT_POST_PLATFORMS.includes(selected) && isConnected(selected) && !(selected === 'linkedin' && templateStyle === 'campaign') && selected !== 'twitter' && (
                                             <button
                                                 onClick={handleDirectPost}
-                                                disabled={isPosting || isOverLimit || !editedPost}
+                                                disabled={isPosting || !editedPost}
                                                 className="w-full bg-tm-purple hover:bg-tm-purple/90 disabled:opacity-50 text-white font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-lg shadow-purple-900/30"
                                             >
                                                 {isPosting
@@ -638,10 +638,11 @@ export function ShareModal({
                                             </button>
                                         )}
 
-                                        {/* Intent URL share (fallback for text platforms) */}
+                                        {/* Intent URL share — primary action for Twitter, fallback for other text platforms */}
                                         {!cfg.requiresMedia && (
                                             (() => {
                                                 const isLinkedInCardFlow = selected === 'linkedin' && templateStyle === 'campaign';
+                                                const isTwitterFlow = selected === 'twitter';
                                                 
                                                 let url = isLinkedInCardFlow
                                                     ? buildIntentUrl('linkedin', '', referralLink.replace('/?ref=', '/c/compounding?ref='))
@@ -649,11 +650,14 @@ export function ShareModal({
                                                 
                                                 if (!url) return null;
                                                 
-                                                const bgClass = selected === 'twitter' 
-                                                    ? 'bg-black hover:bg-zinc-900 border border-zinc-700 shadow-zinc-900/20 text-white'
+                                                const bgClass = isTwitterFlow 
+                                                    ? 'bg-[#000000] hover:bg-zinc-900 border border-zinc-700 shadow-zinc-900/30 text-white'
                                                     : selected === 'reddit'
                                                     ? 'bg-[#ff4500] hover:bg-[#cc3700] border-transparent shadow-[#ff4500]/20 text-white'
                                                     : 'bg-[#0a66c2] hover:bg-[#004182] border-transparent shadow-blue-900/30 text-white';
+
+                                                // Twitter & LinkedIn campaign use the prominent "Post Now" style
+                                                const isProminent = isTwitterFlow || isLinkedInCardFlow;
 
                                                 return (
                                                     <div className="flex flex-col gap-1.5 w-full">
@@ -662,13 +666,15 @@ export function ShareModal({
                                                                 await handleCopy();
                                                                 setTimeout(() => window.open(url, '_blank'), 150);
                                                             }}
-                                                            disabled={isOverLimit}
-                                                            className={`w-full font-semibold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-40 text-sm shadow-lg ${bgClass}`}
+                                                            disabled={!editedPost}
+                                                            className={`w-full font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-40 text-sm shadow-lg ${bgClass}`}
                                                         >
-                                                            <ExternalLink className="w-4 h-4" />
-                                                            {isConnected(selected) ? `Open in ${cfg.label}` : `Share on ${cfg.label}`}
+                                                            {isProminent
+                                                                ? <><Send className="w-4 h-4" /> Post to {cfg.label} Now</>
+                                                                : <><ExternalLink className="w-4 h-4" />{isConnected(selected) ? `Open in ${cfg.label}` : `Share on ${cfg.label}`}</>
+                                                            }
                                                         </button>
-                                                        {(isLinkedInCardFlow || selected === 'twitter') && (
+                                                        {isProminent && (
                                                             <p className="text-[11px] text-center text-zinc-400 font-semibold px-4 pt-0.5 leading-tight">
                                                                 Text will auto-copy to clipboard.<br/>Just hit "Paste" inside {cfg.label}!
                                                             </p>

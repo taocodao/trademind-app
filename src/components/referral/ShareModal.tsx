@@ -24,7 +24,7 @@ const PLATFORM_CONFIG: Record<SocialPlatform, {
     appDeepLink?: string;   // Mobile deep link to open the app
 }> = {
     linkedin:  { label: 'LinkedIn',  emoji: '💼', color: '#0A66C2', glowColor: 'rgba(10,102,194,0.4)',  canOAuth: true,  requiresMedia: false },
-    twitter:   { label: 'X/Twitter', emoji: '🐦', color: '#1D9BF0', glowColor: 'rgba(29,155,240,0.4)',  canOAuth: true,  requiresMedia: false },
+    twitter:   { label: 'X/Twitter', emoji: '🐦', color: '#1D9BF0', glowColor: 'rgba(29,155,240,0.4)',  canOAuth: false, requiresMedia: false },
     facebook:  { label: 'Facebook',  emoji: '📘', color: '#1877F2', glowColor: 'rgba(24,119,242,0.4)',  canOAuth: true,  requiresMedia: false },
     instagram: { label: 'Instagram', emoji: '📸', color: '#E1306C', glowColor: 'rgba(225,48,108,0.4)',  canOAuth: true,  requiresMedia: true,  appDeepLink: 'instagram://app' },
     tiktok:    { label: 'TikTok',    emoji: '🎵', color: '#FE2C55', glowColor: 'rgba(254,44,85,0.4)',   canOAuth: true,  requiresMedia: true,  appDeepLink: 'tiktok://app' },

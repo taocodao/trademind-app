@@ -68,7 +68,7 @@ export const PLATFORM_CONSTRAINTS: Record<SocialPlatform, {
     requiresMedia: boolean;
 }> = {
     linkedin:  { maxChars: 3000,  supportsLinks: true,  supportsHashtags: true,  supportsDirectPost: true,  requiresMedia: false },
-    twitter:   { maxChars: 250,   supportsLinks: true,  supportsHashtags: true,  supportsDirectPost: true,  requiresMedia: false },
+    twitter:   { maxChars: 250,   supportsLinks: true,  supportsHashtags: true,  supportsDirectPost: false, requiresMedia: false },
     facebook:  { maxChars: 63206, supportsLinks: true,  supportsHashtags: true,  supportsDirectPost: true,  requiresMedia: false },
     instagram: { maxChars: 2200,  supportsLinks: false, supportsHashtags: true,  supportsDirectPost: false, requiresMedia: true  },
     tiktok:    { maxChars: 2200,  supportsLinks: false, supportsHashtags: true,  supportsDirectPost: false, requiresMedia: true  },
@@ -82,14 +82,14 @@ export const PLATFORM_CONSTRAINTS: Record<SocialPlatform, {
  * Group B: Media-first platforms — generate script/caption for user to post manually.
  * Group C: No Composio support — clipboard only.
  */
-export const DIRECT_POST_PLATFORMS: SocialPlatform[] = ['linkedin', 'twitter', 'facebook', 'reddit'];
+export const DIRECT_POST_PLATFORMS: SocialPlatform[] = ['linkedin', 'facebook', 'reddit'];
 export const SCRIPT_ONLY_PLATFORMS: SocialPlatform[] = ['instagram', 'tiktok', 'youtube'];
 export const CLIPBOARD_ONLY_PLATFORMS: SocialPlatform[] = []; // Snapchat auth config is active — may support posting
 
 /**
  * All platforms that can OAuth-connect via Composio (including Snapchat — auth config confirmed).
  */
-export const OAUTH_PLATFORMS: SocialPlatform[] = ['linkedin', 'twitter', 'facebook', 'instagram', 'tiktok', 'reddit', 'youtube', 'snapchat'];
+export const OAUTH_PLATFORMS: SocialPlatform[] = ['linkedin', 'facebook', 'instagram', 'tiktok', 'reddit', 'youtube', 'snapchat'];
 
 /**
  * Safe default subreddits for financial content referral posts.

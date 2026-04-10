@@ -641,30 +641,36 @@ export function ShareModal({
                                         {/* Intent URL share (fallback for text platforms) */}
                                         {!cfg.requiresMedia && (
                                             (() => {
-                                                const url = (selected === 'linkedin' && templateStyle === 'campaign')
+                                                const isLinkedInCardFlow = selected === 'linkedin' && templateStyle === 'campaign';
+                                                
+                                                let url = isLinkedInCardFlow
                                                     ? buildIntentUrl('linkedin', '', referralLink.replace('/?ref=', '/c/compounding?ref='))
                                                     : buildIntentUrl(selected, editedPost, referralLink);
+                                                
                                                 if (!url) return null;
+                                                
+                                                const bgClass = selected === 'twitter' 
+                                                    ? 'bg-black hover:bg-zinc-900 border border-zinc-700 shadow-zinc-900/20 text-white'
+                                                    : selected === 'reddit'
+                                                    ? 'bg-[#ff4500] hover:bg-[#cc3700] border-transparent shadow-[#ff4500]/20 text-white'
+                                                    : 'bg-[#0a66c2] hover:bg-[#004182] border-transparent shadow-blue-900/30 text-white';
+
                                                 return (
                                                     <div className="flex flex-col gap-1.5 w-full">
                                                         <button
                                                             onClick={async () => {
-                                                                if (selected === 'linkedin' && templateStyle === 'campaign') {
-                                                                    await handleCopy();
-                                                                    setTimeout(() => window.open(url, '_blank'), 150);
-                                                                } else {
-                                                                    window.open(url, '_blank');
-                                                                }
+                                                                await handleCopy();
+                                                                setTimeout(() => window.open(url, '_blank'), 150);
                                                             }}
                                                             disabled={isOverLimit}
-                                                            className="w-full bg-[#0a66c2] hover:bg-[#004182] border-transparent text-white font-semibold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-40 text-sm shadow-lg shadow-blue-900/30"
+                                                            className={`w-full font-semibold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-40 text-sm shadow-lg ${bgClass}`}
                                                         >
                                                             <ExternalLink className="w-4 h-4" />
                                                             {isConnected(selected) ? `Open in ${cfg.label}` : `Share on ${cfg.label}`}
                                                         </button>
-                                                        {selected === 'linkedin' && templateStyle === 'campaign' && (
+                                                        {(isLinkedInCardFlow || selected === 'twitter') && (
                                                             <p className="text-[11px] text-center text-zinc-400 font-semibold px-4 pt-0.5 leading-tight">
-                                                                Text will auto-copy to clipboard.<br/>Just hit "Paste" inside LinkedIn!
+                                                                Text will auto-copy to clipboard.<br/>Just hit "Paste" inside {cfg.label}!
                                                             </p>
                                                         )}
                                                     </div>

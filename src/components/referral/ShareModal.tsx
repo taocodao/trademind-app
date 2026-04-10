@@ -602,19 +602,23 @@ export function ShareModal({
 
                                     {postOptions.length > 0 && (
                                         <div className="flex gap-2 w-full overflow-x-auto pb-1 min-h-[36px] scrollbar-hide">
-                                            {postOptions.map((opt, i) => (
-                                                <button
-                                                    key={i}
-                                                    onClick={() => { setEditedPost(opt); setGeneratedPost(opt); }}
-                                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors border ${
-                                                        editedPost === opt 
-                                                            ? 'bg-tm-purple/20 text-tm-purple border-tm-purple/40' 
-                                                            : 'bg-white/5 text-zinc-400 border-white/5 hover:bg-white/10'
-                                                    }`}
-                                                >
-                                                    Tone Option {i + 1}
-                                                </button>
-                                            ))}
+                                            {postOptions.map((opt: any, i) => {
+                                                const btnText = typeof opt === 'string' ? opt : opt.text;
+                                                const btnLabel = typeof opt === 'string' ? `Tone Option ${i + 1}` : opt.label;
+                                                return (
+                                                    <button
+                                                        key={i}
+                                                        onClick={() => { setEditedPost(btnText); setGeneratedPost(btnText); }}
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors border ${
+                                                            editedPost === btnText 
+                                                                ? 'bg-tm-purple/20 text-tm-purple border-tm-purple/40' 
+                                                                : 'bg-white/5 text-zinc-400 border-white/5 hover:bg-white/10'
+                                                        }`}
+                                                    >
+                                                        {btnLabel}
+                                                    </button>
+                                                );
+                                            })}
                                         </div>
                                     )}
 

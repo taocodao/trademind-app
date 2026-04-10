@@ -646,14 +646,28 @@ export function ShareModal({
                                                     : buildIntentUrl(selected, editedPost, referralLink);
                                                 if (!url) return null;
                                                 return (
-                                                    <button
-                                                        onClick={() => window.open(url, '_blank')}
-                                                        disabled={isOverLimit}
-                                                        className="w-full bg-[#0a66c2] hover:bg-[#004182] border-transparent text-white font-semibold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-40 text-sm shadow-lg shadow-blue-900/30"
-                                                    >
-                                                        <ExternalLink className="w-4 h-4" />
-                                                        {isConnected(selected) ? `Open in ${cfg.label}` : `Share on ${cfg.label}`}
-                                                    </button>
+                                                    <div className="flex flex-col gap-1.5 w-full">
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (selected === 'linkedin' && templateStyle === 'campaign') {
+                                                                    await handleCopy();
+                                                                    setTimeout(() => window.open(url, '_blank'), 150);
+                                                                } else {
+                                                                    window.open(url, '_blank');
+                                                                }
+                                                            }}
+                                                            disabled={isOverLimit}
+                                                            className="w-full bg-[#0a66c2] hover:bg-[#004182] border-transparent text-white font-semibold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-40 text-sm shadow-lg shadow-blue-900/30"
+                                                        >
+                                                            <ExternalLink className="w-4 h-4" />
+                                                            {isConnected(selected) ? `Open in ${cfg.label}` : `Share on ${cfg.label}`}
+                                                        </button>
+                                                        {selected === 'linkedin' && templateStyle === 'campaign' && (
+                                                            <p className="text-[11px] text-center text-zinc-400 font-semibold px-4 pt-0.5 leading-tight">
+                                                                Text will auto-copy to clipboard.<br/>Just hit "Paste" inside LinkedIn!
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 );
                                             })()
                                         )}

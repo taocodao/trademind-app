@@ -308,7 +308,7 @@ export function ShareModal({
                     </button>
                 </div>
 
-                <div className="p-5 space-y-5 flex-1">
+                <div className="p-5 pb-[100px] sm:pb-5 space-y-5 flex-1">
 
                     {/* ══ STEP: PLATFORM GRID ══════════════════════════════ */}
                     {step === 'platforms' && (

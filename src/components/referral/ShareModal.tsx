@@ -44,15 +44,28 @@ interface PlatformCfg {
 }
 
 const PLATFORM_CFG: Record<SocialPlatform, PlatformCfg> = {
-    linkedin:  { label: 'LinkedIn',  emoji: '💼', color: '#0A66C2', glowColor: 'rgba(10,102,194,0.35)',  canOAuth: true,  copyAction: 'text', hint: 'Text copied — paste into LinkedIn, or use Post Directly when connected.' },
-    twitter:   { label: 'X/Twitter', emoji: '🐦', color: '#1D9BF0', glowColor: 'rgba(29,155,240,0.35)',  canOAuth: false, charLimit: 280, copyAction: 'text', hint: 'Tweet copied — open X and paste into the composer.' },
-    facebook:  { label: 'Facebook',  emoji: '📘', color: '#1877F2', glowColor: 'rgba(24,119,242,0.35)',  canOAuth: false, copyAction: 'text', hint: 'Post copied — paste into Facebook. Or tap Share to open the OS share sheet.' },
-    instagram: { label: 'Instagram', emoji: '📸', color: '#E1306C', glowColor: 'rgba(225,48,108,0.35)',  canOAuth: false, copyAction: 'both', hint: 'No clickable links in IG feed. Copy caption, then separately "Copy Referral Link" to put in your bio or Story link sticker.' },
-    tiktok:    { label: 'TikTok',    emoji: '🎵', color: '#FE2C55', glowColor: 'rgba(254,44,85,0.35)',   canOAuth: false, copyAction: 'both', hint: 'Links not clickable in TikTok posts. Copy script (says "link in bio"), then Copy Referral Link to paste in your profile bio.' },
-    reddit:    { label: 'Reddit',    emoji: '👾', color: '#FF4500', glowColor: 'rgba(255,69,0,0.35)',    canOAuth: false, copyAction: 'text', hint: 'Post copied — open Reddit, create a post, paste the title and body.' },
-    youtube:   { label: 'YouTube',   emoji: '▶️', color: '#FF0000', glowColor: 'rgba(255,0,0,0.35)',     canOAuth: false, copyAction: 'text', hint: 'YouTube Community Posts support text + links (no video needed). Paste in YouTube Studio → Community tab.' },
-    snapchat:  { label: 'Snapchat',  emoji: '👻', color: '#F9C900', glowColor: 'rgba(249,201,0,0.25)',   canOAuth: false, copyAction: 'link', hint: 'Snapchat needs a photo/video. Copy the referral link to add as a "Link sticker" in your Snap.' },
+    linkedin:  { label: 'LinkedIn',  emoji: '💼', color: '#0A66C2', glowColor: 'rgba(10,102,194,0.35)',  canOAuth: true,  copyAction: 'text', hint: 'Post directly with one click (when connected), or copy and paste into LinkedIn.' },
+    twitter:   { label: 'X/Twitter', emoji: '🐦', color: '#1D9BF0', glowColor: 'rgba(29,155,240,0.35)',  canOAuth: false, charLimit: 280, copyAction: 'text', hint: 'Opens X with your tweet pre-filled — just click Post.' },
+    facebook:  { label: 'Facebook',  emoji: '📘', color: '#1877F2', glowColor: 'rgba(24,119,242,0.35)',  canOAuth: false, copyAction: 'text', hint: 'Opens Facebook share dialog with content pre-filled.' },
+    instagram: { label: 'Instagram', emoji: '📸', color: '#E1306C', glowColor: 'rgba(225,48,108,0.35)',  canOAuth: false, copyAction: 'both', hint: 'Instagram doesn\'t support clickable links in feed captions. Copy the caption, then use "Copy Referral Link" for your bio or Story link sticker.' },
+    tiktok:    { label: 'TikTok',    emoji: '🎵', color: '#FE2C55', glowColor: 'rgba(254,44,85,0.35)',   canOAuth: false, copyAction: 'both', hint: 'TikTok doesn\'t allow clickable external links. Copy the script (says "link in bio"), then add your referral URL to your profile bio.' },
+    reddit:    { label: 'Reddit',    emoji: '👾', color: '#FF4500', glowColor: 'rgba(255,69,0,0.35)',    canOAuth: false, copyAction: 'text', hint: 'Opens Reddit submit page with your link and title pre-filled.' },
+    youtube:   { label: 'YouTube',   emoji: '▶️', color: '#FF0000', glowColor: 'rgba(255,0,0,0.35)',     canOAuth: false, copyAction: 'text', hint: 'YouTube Community Posts support text + links (no video needed). Copy and paste in YouTube Studio → Community tab.' },
+    snapchat:  { label: 'Snapchat',  emoji: '👻', color: '#F9C900', glowColor: 'rgba(249,201,0,0.25)',   canOAuth: false, copyAction: 'link', hint: 'Snapchat needs a photo or video. Copy the referral link to add as a "Link sticker" to your Snap.' },
 };
+
+// ── Intent URL builders (pre-populate platform composers) ────────────────────
+// These open a popup with the content already filled in — no copy-paste needed.
+function buildIntentUrl(platform: SocialPlatform, text: string, ogUrl: string): string | null {
+    const encText = encodeURIComponent(text);
+    const encUrl  = encodeURIComponent(ogUrl);
+    switch (platform) {
+        case 'twitter':  return `https://twitter.com/intent/tweet?text=${encText}`;
+        case 'facebook': return `https://www.facebook.com/sharer/sharer.php?u=${encUrl}&quote=${encText}`;
+        case 'reddit':   return `https://www.reddit.com/submit?url=${encUrl}&title=${encodeURIComponent(text.split('\n')[0].slice(0, 300))}`;
+        default:         return null;
+    }
+}
 
 // Twitter t.co URL shortening — every URL counted as 23 chars
 const TWITTER_URL_LEN = 23;
@@ -90,6 +103,7 @@ export function ShareModal({
     const [isPosting, setIsPosting]     = useState(false);
     const [copied, setCopied]           = useState(false);
     const [linkCopied, setLinkCopied]   = useState(false);
+    const [intentOpened, setIntentOpened] = useState(false);
     const [postSuccess, setPostSuccess] = useState(false);
     const [error, setError]             = useState('');
     const [hasGenerated, setHasGenerated] = useState(false);
@@ -129,6 +143,7 @@ export function ShareModal({
         setPostOptions([]);
         setSelectedOption(0);
         setPostSuccess(false);
+        setIntentOpened(false);
         setError('');
         setHasGenerated(false);
     };
@@ -235,6 +250,24 @@ export function ShareModal({
             // User dismissed the share sheet — clipboard already copied, that's fine
         }
     }, [editedPost, ogCardUrl]);
+
+    // ── Open pre-populated platform composer ───────────────────────────────────
+    // For Twitter, Facebook, Reddit — opens a named popup with content pre-filled.
+    // Also pre-copies text to clipboard as a backup.
+    const handleOpenIntent = useCallback(async () => {
+        if (!editedPost) return;
+        // Pre-copy text to clipboard (backup if popup is blocked or user wants to paste elsewhere)
+        await navigator.clipboard.writeText(editedPost);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 3000);
+
+        const intentUrl = buildIntentUrl(platform, editedPost, ogCardUrl);
+        if (!intentUrl) return;
+
+        // Open in a named popup — reuses the same window if already open
+        window.open(intentUrl, `ShareComposer_${platform}`, 'width=620,height=720,left=200,top=80');
+        setIntentOpened(true);
+    }, [editedPost, platform, ogCardUrl]);
 
     // ── LinkedIn direct post ───────────────────────────────────────────────────
     const handleDirectPost = useCallback(async () => {
@@ -445,24 +478,70 @@ export function ShareModal({
                     )}
                 </div>
 
-                {/* ── Action bar (fixed at bottom) ── */}
+                    {/* ── Action bar (fixed at bottom) ── */}
                 {!isGenerating && editedPost && (
                     <div className="px-5 pt-3 pb-5 border-t border-white/8 shrink-0 space-y-2.5 bg-[#141420]">
 
-                        {/* Primary: Copy to Clipboard */}
-                        <button
-                            onClick={copyText}
-                            disabled={!editedPost || isOverLimit}
-                            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm transition-all disabled:opacity-40
-                                bg-tm-purple hover:bg-tm-purple/90 text-white shadow-[0_4px_20px_rgba(168,85,247,0.35)] active:scale-[0.98]"
-                        >
-                            {copied
-                                ? <><CheckCircle2 className="w-4 h-4" /> Copied!</>
-                                : <><Copy className="w-4 h-4" /> Copy to Clipboard</>
-                            }
-                        </button>
+                        {/* PRIMARY: Open pre-populated composer (Twitter / Facebook / Reddit) */}
+                        {(() => {
+                            const intentUrl = buildIntentUrl(platform, editedPost, ogCardUrl);
+                            if (!intentUrl) return null;
+                            const platformColors: Record<string, string> = {
+                                twitter:  '#000000',
+                                facebook: '#1877F2',
+                                reddit:   '#FF4500',
+                            };
 
-                        {/* Secondary row */}
+                            // After intent opened: swap to a confirmation nudge
+                            if (intentOpened) {
+                                return (
+                                    <div className="flex flex-col items-center gap-1.5 w-full py-3 px-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl">
+                                        <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                                            <CheckCircle2 className="w-4 h-4" />
+                                            {cfg.label} composer opened!
+                                        </div>
+                                        <p className="text-[11px] text-zinc-400 text-center">
+                                            Click <strong className="text-white">Post</strong> in that window to publish.
+                                        </p>
+                                        <button
+                                            onClick={() => { setIntentOpened(false); handleOpenIntent(); }}
+                                            className="text-[11px] text-zinc-500 hover:text-zinc-300 underline transition-colors"
+                                        >
+                                            Re-open
+                                        </button>
+                                    </div>
+                                );
+                            }
+
+                            return (
+                                <button
+                                    onClick={handleOpenIntent}
+                                    disabled={isOverLimit}
+                                    className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm transition-all disabled:opacity-40 text-white active:scale-[0.98] shadow-lg"
+                                    style={{ backgroundColor: platformColors[platform] ?? '#6d28d9' }}
+                                >
+                                    <Send className="w-4 h-4" />
+                                    Open {cfg.label} with content pre-filled
+                                </button>
+                            );
+                        })()}
+
+                        {/* PRIMARY (no intent URL): LinkedIn or clipboard-only platforms */}
+                        {!buildIntentUrl(platform, editedPost, ogCardUrl) && platform !== 'linkedin' && (
+                            <button
+                                onClick={copyText}
+                                disabled={!editedPost}
+                                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm transition-all disabled:opacity-40
+                                    bg-tm-purple hover:bg-tm-purple/90 text-white shadow-[0_4px_20px_rgba(168,85,247,0.35)] active:scale-[0.98]"
+                            >
+                                {copied
+                                    ? <><CheckCircle2 className="w-4 h-4" /> Copied!</>
+                                    : <><Copy className="w-4 h-4" /> Copy to Clipboard</>
+                                }
+                            </button>
+                        )}
+
+                        {/* Secondary row: Share + Copy Referral Link + Copy fallback (intent platforms) */}
                         <div className="flex gap-2">
                             {/* Web Share */}
                             <button
@@ -484,6 +563,18 @@ export function ShareModal({
                                 <Link2 className="w-3.5 h-3.5" />
                                 {linkCopied ? 'Link Copied!' : 'Copy Referral Link'}
                             </button>
+
+                            {/* Extra clipboard copy for intent-URL platforms */}
+                            {buildIntentUrl(platform, editedPost, ogCardUrl) && (
+                                <button
+                                    onClick={copyText}
+                                    className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-semibold
+                                        bg-white/8 hover:bg-white/12 border border-white/10 text-zinc-300 transition-all active:scale-[0.98]"
+                                    title="Copy text to clipboard"
+                                >
+                                    {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                                </button>
+                            )}
                         </div>
 
                         {/* LinkedIn: Post Directly (only when connected) */}

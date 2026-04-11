@@ -2,11 +2,10 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import {
-    X, Sparkles, Copy, CheckCircle2, RefreshCw, Send,
-    AlertCircle, Link2, Share2, ChevronRight, Rocket, Target, BookOpen, Smile
+    X, Sparkles, Copy, CheckCircle2, RefreshCw,
+    AlertCircle, Link2, Share2, Rocket, Target, BookOpen, Smile
 } from 'lucide-react';
 import type { SocialPlatform } from '@/lib/composio';
-import { DIRECT_POST_PLATFORMS } from '@/lib/composio';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -63,6 +62,8 @@ function buildIntentUrl(platform: SocialPlatform, text: string, ogUrl: string): 
         case 'twitter':  return `https://twitter.com/intent/tweet?text=${encText}`;
         case 'facebook': return `https://www.facebook.com/sharer/sharer.php?u=${encUrl}&quote=${encText}`;
         case 'reddit':   return `https://www.reddit.com/submit?url=${encUrl}&title=${encodeURIComponent(text.split('\n')[0].slice(0, 300))}`;
+        // LinkedIn shareArticle: pre-fills the link share + summary in the composer
+        case 'linkedin': return `https://www.linkedin.com/shareArticle?mini=true&url=${encUrl}&summary=${encText}&source=TradeMind`;
         default:         return null;
     }
 }
@@ -100,17 +101,14 @@ export function ShareModal({
     const [selectedOption, setSelectedOption] = useState(0);
 
     const [isGenerating, setIsGenerating] = useState(false);
-    const [isPosting, setIsPosting]     = useState(false);
     const [copied, setCopied]           = useState(false);
     const [linkCopied, setLinkCopied]   = useState(false);
     const [intentOpened, setIntentOpened] = useState(false);
-    const [postSuccess, setPostSuccess] = useState(false);
     const [error, setError]             = useState('');
     const [hasGenerated, setHasGenerated] = useState(false);
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const cfg = PLATFORM_CFG[platform];
-    const isLinkedInConnected = connectedPlatforms['linkedin']?.status === 'active';
 
     // OG card campaign URL (used as the share link)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://trademind.bot';
@@ -142,7 +140,6 @@ export function ShareModal({
         setEditedPost('');
         setPostOptions([]);
         setSelectedOption(0);
-        setPostSuccess(false);
         setIntentOpened(false);
         setError('');
         setHasGenerated(false);
@@ -175,7 +172,6 @@ export function ShareModal({
     const handleGenerate = useCallback(async () => {
         setIsGenerating(true);
         setError('');
-        setPostSuccess(false);
         try {
             const res = await fetch('/api/social/generate', {
                 method: 'POST',
@@ -269,31 +265,7 @@ export function ShareModal({
         setIntentOpened(true);
     }, [editedPost, platform, ogCardUrl]);
 
-    // ── LinkedIn direct post ───────────────────────────────────────────────────
-    const handleDirectPost = useCallback(async () => {
-        if (!editedPost) return;
-        // Pre-copy to clipboard
-        await navigator.clipboard.writeText(editedPost);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 3000);
-
-        setIsPosting(true);
-        setError('');
-        try {
-            const res = await fetch('/api/social/post', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ platform: 'linkedin', postContent: editedPost, promoCode, referralLink }),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error ?? 'Post failed');
-            setPostSuccess(true);
-        } catch (err: any) {
-            setError(err.message || 'Failed to post. Please try again.');
-        } finally {
-            setIsPosting(false);
-        }
-    }, [editedPost, promoCode, referralLink]);
+    // ── LinkedIn direct post (Composio) REMOVED — now uses intent URL like other platforms ──
 
     // ── Char count (Twitter t.co aware) ───────────────────────────────────────
     const charCount   = platform === 'twitter' ? twitterCharCount(editedPost) : editedPost.length;
@@ -301,12 +273,12 @@ export function ShareModal({
 
     // ── Render ─────────────────────────────────────────────────────────────────
     return (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
             {/* Backdrop */}
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
 
             {/* Modal */}
-            <div className="relative z-10 w-full sm:max-w-lg bg-[#141420] border border-white/10 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[92dvh] overflow-hidden">
+            <div className="relative z-10 w-full sm:max-w-lg bg-[#141420] border border-white/10 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[calc(92dvh-4rem)] sm:max-h-[92dvh] mb-16 sm:mb-0 overflow-hidden">
 
                 {/* ── Header ── */}
                 <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
@@ -345,9 +317,6 @@ export function ShareModal({
                                     >
                                         <span>{pc.emoji}</span>
                                         <span>{pc.label}</span>
-                                        {p === 'linkedin' && isLinkedInConnected && (
-                                            <span className="w-3.5 h-3.5 bg-emerald-400 rounded-full flex items-center justify-center text-[8px] text-black font-black">✓</span>
-                                        )}
                                     </button>
                                 );
                             })}
@@ -445,13 +414,6 @@ export function ShareModal({
                         )}
                     </div>
 
-                    {/* ── Success banner (LinkedIn direct post) ── */}
-                    {postSuccess && (
-                        <div className="flex items-center gap-2 px-4 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                            <p className="text-emerald-400 text-sm font-semibold">Posted to LinkedIn successfully!</p>
-                        </div>
-                    )}
 
                     {/* ── Channel-specific hint ── */}
                     {!isGenerating && editedPost && (
@@ -465,11 +427,12 @@ export function ShareModal({
                 {!isGenerating && editedPost && (
                     <div className="px-5 pt-3 pb-5 border-t border-white/8 shrink-0 space-y-2.5 bg-[#141420]">
 
-                        {/* PRIMARY: Open pre-populated composer (Twitter / Facebook / Reddit) */}
+                        {/* PRIMARY: Open pre-populated composer (LinkedIn / Twitter / Facebook / Reddit) */}
                         {(() => {
                             const intentUrl = buildIntentUrl(platform, editedPost, ogCardUrl);
                             if (!intentUrl) return null;
                             const platformColors: Record<string, string> = {
+                                linkedin: '#0A66C2',
                                 twitter:  '#000000',
                                 facebook: '#1877F2',
                                 reddit:   '#FF4500',
@@ -503,14 +466,14 @@ export function ShareModal({
                                     className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm transition-all disabled:opacity-40 text-white active:scale-[0.98] shadow-lg"
                                     style={{ backgroundColor: platformColors[platform] ?? '#6d28d9' }}
                                 >
-                                    <Send className="w-4 h-4" />
+                                    <Share2 className="w-4 h-4" />
                                     Open {cfg.label} with content pre-filled
                                 </button>
                             );
                         })()}
 
-                        {/* PRIMARY (no intent URL): LinkedIn or clipboard-only platforms */}
-                        {!buildIntentUrl(platform, editedPost, ogCardUrl) && platform !== 'linkedin' && (
+                        {/* PRIMARY (no intent URL): clipboard-only platforms (Instagram, TikTok, YouTube, Snapchat) */}
+                        {!buildIntentUrl(platform, editedPost, ogCardUrl) && (
                             <button
                                 onClick={copyText}
                                 disabled={!editedPost}
@@ -560,59 +523,9 @@ export function ShareModal({
                             )}
                         </div>
 
-                        {/* PRIMARY: LinkedIn — direct post (connected) or copy (not connected) */}
-                        {platform === 'linkedin' && (() => {
-                            if (postSuccess) {
-                                return (
-                                    <div className="flex items-center justify-center gap-2 px-4 py-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl">
-                                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                                        <span className="text-emerald-400 font-bold text-sm">Posted to LinkedIn!</span>
-                                    </div>
-                                );
-                            }
-                            if (isLinkedInConnected) {
-                                return (
-                                    <button
-                                        onClick={handleDirectPost}
-                                        disabled={isPosting || !editedPost}
-                                        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm text-white transition-all disabled:opacity-40 active:scale-[0.98] shadow-lg"
-                                        style={{ backgroundColor: '#0A66C2' }}
-                                    >
-                                        {isPosting
-                                            ? <><RefreshCw className="w-4 h-4 animate-spin" /> Posting to LinkedIn…</>
-                                            : <><Send className="w-4 h-4" /> Post to LinkedIn Now</>
-                                        }
-                                    </button>
-                                );
-                            }
-                            // Not connected: copy is primary, with a nudge to connect
-                            return (
-                                <div className="space-y-2">
-                                    <button
-                                        onClick={copyText}
-                                        disabled={!editedPost}
-                                        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm transition-all disabled:opacity-40
-                                            bg-tm-purple hover:bg-tm-purple/90 text-white shadow-[0_4px_20px_rgba(168,85,247,0.35)] active:scale-[0.98]"
-                                    >
-                                        {copied
-                                            ? <><CheckCircle2 className="w-4 h-4" /> Copied!</>
-                                            : <><Copy className="w-4 h-4" /> Copy to Clipboard</>
-                                        }
-                                    </button>
-                                    <a
-                                        href="/settings"
-                                        className="flex items-center justify-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-                                        onClick={onClose}
-                                    >
-                                        Connect LinkedIn in Settings for 1-click auto-post
-                                        <ChevronRight className="w-3 h-3" />
-                                    </a>
-                                </div>
-                            );
-                        })()}
 
                         {/* Error */}
-                        {error && !isPosting && (
+                        {error && (
                             <p className="text-[11px] text-red-400 text-center">{error}</p>
                         )}
                     </div>

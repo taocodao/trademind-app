@@ -252,8 +252,15 @@ export function ShareModal({
         catch { handleCopy(); }
     }, [editedPost, referralLink, handleCopy]);
 
+    // Twitter counts every URL as 23 chars (t.co shortener) regardless of actual URL length
+    const TWITTER_URL_LENGTH = 23;
+    const getEffectiveCharCount = (text: string, platform: SocialPlatform | null) => {
+        if (platform !== 'twitter') return text.length;
+        return text.replace(/https?:\/\/\S+/g, (url) => 'x'.repeat(TWITTER_URL_LENGTH)).length;
+    };
     const charLimit = selected ? char_limits[selected] : undefined;
-    const isOverLimit = charLimit ? editedPost.length > charLimit : false;
+    const effectiveCharCount = getEffectiveCharCount(editedPost, selected);
+    const isOverLimit = charLimit ? effectiveCharCount > charLimit : false;
 
     // ── Platform tile badge ───────────────────────────────────────────────────
 
@@ -592,7 +599,7 @@ export function ShareModal({
 
                                     {charLimit && (
                                         <p className={`text-[11px] text-right -mt-2 ${isOverLimit ? 'text-red-400 font-medium' : 'text-zinc-600'}`}>
-                                            {editedPost.length} / {charLimit}{isOverLimit && ' — over limit, please trim if needed'}
+                                            {effectiveCharCount} / {charLimit}{isOverLimit && ' — over limit, please trim'}{selected === 'twitter' && !isOverLimit && effectiveCharCount !== editedPost.length && ' (URLs auto-shortened by X)'}
                                         </p>
                                     )}
 
@@ -661,25 +668,25 @@ export function ShareModal({
                                                 // Twitter & LinkedIn campaign use the prominent "Post Now" style
                                                 const isProminent = isTwitterFlow || isLinkedInCardFlow;
 
-                                                // After intent opened: show success nudge instead of button
+                                                // After intent opened: show clear success nudge
                                                 if (isProminent && intentOpened) {
                                                     return (
-                                                        <div className="flex flex-col items-center gap-2 w-full py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl">
+                                                        <div className="flex flex-col items-center gap-1.5 w-full py-3 px-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl">
                                                             <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
                                                                 <CheckCircle2 className="w-4 h-4" />
-                                                                Composer opened in {cfg.label}!
+                                                                {cfg.label} composer is open!
                                                             </div>
-                                                            <p className="text-[11px] text-zinc-400 text-center leading-tight">
-                                                                Click <strong>Post</strong> inside {cfg.label} to publish.
+                                                            <p className="text-[11px] text-zinc-400 text-center leading-snug">
+                                                                Click the <strong className="text-white">Post</strong> button inside that window to publish.
                                                             </p>
                                                             <button
                                                                 onClick={() => {
                                                                     setIntentOpened(false);
                                                                     window.open(url, 'IntentComposer', 'width=600,height=720,left=200,top=80');
                                                                 }}
-                                                                className="text-[11px] text-zinc-500 hover:text-zinc-300 underline transition-colors"
+                                                                className="text-[11px] text-zinc-500 hover:text-zinc-300 underline transition-colors mt-0.5"
                                                             >
-                                                                Open again
+                                                                Re-open composer
                                                             </button>
                                                         </div>
                                                     );
@@ -703,7 +710,7 @@ export function ShareModal({
                                                         </button>
                                                         {isProminent && (
                                                             <p className="text-[11px] text-center text-zinc-400 font-semibold px-4 pt-0.5 leading-tight">
-                                                                Text will auto-copy to clipboard.<br/>Just hit "Paste" inside {cfg.label}!
+                                                                Your tweet is pre-filled — just click <strong className="text-white">Post</strong> in the X window!
                                                             </p>
                                                         )}
                                                     </div>

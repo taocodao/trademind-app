@@ -418,24 +418,7 @@ export function ShareModal({
                             </div>
                         ) : (
                             <div className="p-4 space-y-3">
-                                {/* Campaign variant pills */}
-                                {postOptions.length > 0 && (
-                                    <div className="flex gap-1.5">
-                                        {postOptions.map((opt, i) => (
-                                            <button
-                                                key={i}
-                                                onClick={() => { setSelectedOption(i); setEditedPost(opt.text); }}
-                                                className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all border ${
-                                                    selectedOption === i
-                                                        ? 'bg-tm-purple/20 border-tm-purple/50 text-tm-purple'
-                                                        : 'bg-white/5 border-white/10 text-zinc-500 hover:text-white'
-                                                }`}
-                                            >
-                                                {opt.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
+                                {/* Campaign: no need for duplicate variant pills — the Tone row above handles it */}
 
                                 {/* Editable textarea */}
                                 <textarea

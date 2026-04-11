@@ -87,6 +87,7 @@ export function ShareModal({
     const [isConnecting, setIsConnecting] = useState(false);
     const [copied, setCopied] = useState(false);
     const [postSuccess, setPostSuccess] = useState(false);
+    const [intentOpened, setIntentOpened] = useState(false);
     const [showPreview, setShowPreview] = useState(true);
     const [error, setError] = useState('');
 
@@ -122,6 +123,7 @@ export function ShareModal({
         setPostOptions([]);
         setError('');
         setPostSuccess(false);
+        setIntentOpened(false);
 
         const platformCfg = PLATFORM_CONFIG[p];
         // If it needs OAuth and isn't connected → show connect panel
@@ -659,12 +661,37 @@ export function ShareModal({
                                                 // Twitter & LinkedIn campaign use the prominent "Post Now" style
                                                 const isProminent = isTwitterFlow || isLinkedInCardFlow;
 
+                                                // After intent opened: show success nudge instead of button
+                                                if (isProminent && intentOpened) {
+                                                    return (
+                                                        <div className="flex flex-col items-center gap-2 w-full py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl">
+                                                            <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                                                                <CheckCircle2 className="w-4 h-4" />
+                                                                Composer opened in {cfg.label}!
+                                                            </div>
+                                                            <p className="text-[11px] text-zinc-400 text-center leading-tight">
+                                                                Click <strong>Post</strong> inside {cfg.label} to publish.
+                                                            </p>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setIntentOpened(false);
+                                                                    window.open(url, 'IntentComposer', 'width=600,height=720,left=200,top=80');
+                                                                }}
+                                                                className="text-[11px] text-zinc-500 hover:text-zinc-300 underline transition-colors"
+                                                            >
+                                                                Open again
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                }
+
                                                 return (
                                                     <div className="flex flex-col gap-1.5 w-full">
                                                         <button
                                                             onClick={async () => {
                                                                 await handleCopy();
-                                                                setTimeout(() => window.open(url, '_blank', 'noopener,noreferrer'), 150);
+                                                                setIntentOpened(true);
+                                                                setTimeout(() => window.open(url, 'IntentComposer', 'width=600,height=720,left=200,top=80'), 150);
                                                             }}
                                                             disabled={!editedPost}
                                                             className={`w-full font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-40 text-sm shadow-lg ${bgClass}`}

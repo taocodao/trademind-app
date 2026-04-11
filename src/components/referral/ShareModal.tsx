@@ -664,7 +664,7 @@ export function ShareModal({
                                                         <button
                                                             onClick={async () => {
                                                                 await handleCopy();
-                                                                setTimeout(() => window.open(url, '_blank'), 150);
+                                                                setTimeout(() => window.open(url, '_blank', 'noopener,noreferrer'), 150);
                                                             }}
                                                             disabled={!editedPost}
                                                             className={`w-full font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-40 text-sm shadow-lg ${bgClass}`}

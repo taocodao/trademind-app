@@ -1,59 +1,66 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
-    X, Sparkles, Copy, CheckCircle2, RefreshCw, ExternalLink,
-    Send, AlertCircle, ChevronLeft, BookOpen, TrendingUp, Zap, Link2, Eye, Edit3
+    X, Sparkles, Copy, CheckCircle2, RefreshCw, Send,
+    AlertCircle, Link2, Share2, ChevronRight, Rocket, Target, BookOpen, Smile
 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import type { SocialPlatform } from '@/lib/composio';
-import {
-    DIRECT_POST_PLATFORMS, SCRIPT_ONLY_PLATFORMS, REDDIT_SUBREDDITS
-} from '@/lib/composio';
+import { DIRECT_POST_PLATFORMS } from '@/lib/composio';
 
-// ── Platform metadata ─────────────────────────────────────────────────────────
+// ── Types ──────────────────────────────────────────────────────────────────────
 
-const PLATFORM_CONFIG: Record<SocialPlatform, {
-    label: string;
-    emoji: string;
-    color: string;
-    glowColor: string;
-    canOAuth: boolean;   // Has Composio OAuth support
-    requiresMedia: boolean; // Must have image/video to post
-    appDeepLink?: string;   // Mobile deep link to open the app
-}> = {
-    linkedin:  { label: 'LinkedIn',  emoji: '💼', color: '#0A66C2', glowColor: 'rgba(10,102,194,0.4)',  canOAuth: true,  requiresMedia: false },
-    twitter:   { label: 'X/Twitter', emoji: '🐦', color: '#1D9BF0', glowColor: 'rgba(29,155,240,0.4)',  canOAuth: false, requiresMedia: false },
-    facebook:  { label: 'Facebook',  emoji: '📘', color: '#1877F2', glowColor: 'rgba(24,119,242,0.4)',  canOAuth: true,  requiresMedia: false },
-    instagram: { label: 'Instagram', emoji: '📸', color: '#E1306C', glowColor: 'rgba(225,48,108,0.4)',  canOAuth: true,  requiresMedia: true,  appDeepLink: 'instagram://app' },
-    tiktok:    { label: 'TikTok',    emoji: '🎵', color: '#FE2C55', glowColor: 'rgba(254,44,85,0.4)',   canOAuth: true,  requiresMedia: true,  appDeepLink: 'tiktok://app' },
-    reddit:    { label: 'Reddit',    emoji: '👾', color: '#FF4500', glowColor: 'rgba(255,69,0,0.4)',    canOAuth: true,  requiresMedia: false },
-    youtube:   { label: 'YouTube',   emoji: '▶️', color: '#FF0000', glowColor: 'rgba(255,0,0,0.4)',     canOAuth: true,  requiresMedia: true,  appDeepLink: 'youtube://app' },
-    snapchat:  { label: 'Snapchat',  emoji: '👻', color: '#FFFC00', glowColor: 'rgba(255,252,0,0.3)',   canOAuth: true,  requiresMedia: false, appDeepLink: 'snapchat://app' },
-};
+type TemplateId = 'campaign' | 'results' | 'education' | 'casual';
+type ToneId     = 'professional' | 'punchy' | 'casual';
 
-const TEMPLATE_OPTIONS = [
-    { id: 'campaign' as const,    emoji: '🚀', label: 'Campaign',   desc: '39% Compound hook' },
-    { id: 'results' as const,     emoji: '🎯', label: 'Results',    desc: 'Share your trading wins' },
-    { id: 'educational' as const, emoji: '🧑‍🏫', label: 'Education',  desc: 'Teach options concepts' },
-    { id: 'casual' as const,      emoji: '😎', label: 'Casual',     desc: 'Hype & conversational' },
+interface Template { id: TemplateId; icon: React.ReactNode; label: string; desc: string }
+interface Tone     { id: ToneId;     label: string }
+
+const TEMPLATES: Template[] = [
+    { id: 'campaign',   icon: <Rocket  className="w-3.5 h-3.5" />, label: 'Campaign',   desc: '39% Compound hook' },
+    { id: 'results',    icon: <Target  className="w-3.5 h-3.5" />, label: 'Results',    desc: 'Share your wins' },
+    { id: 'education',  icon: <BookOpen className="w-3.5 h-3.5" />, label: 'Education',  desc: 'Teach & soft CTA' },
+    { id: 'casual',     icon: <Smile   className="w-3.5 h-3.5" />, label: 'Casual',     desc: 'Hype & conversational' },
 ];
 
-const char_limits: Partial<Record<SocialPlatform, number>> = { twitter: 280 };
+const TONES: Tone[] = [
+    { id: 'professional', label: 'Professional' },
+    { id: 'punchy',       label: 'Punchy' },
+    { id: 'casual',       label: 'Casual' },
+];
 
-function buildIntentUrl(platform: SocialPlatform, text: string, link: string): string {
-    const enc = encodeURIComponent(text);
-    const encLink = encodeURIComponent(link);
-    switch (platform) {
-        case 'twitter':   return `https://twitter.com/intent/tweet?text=${enc}`;
-        case 'linkedin':  return `https://www.linkedin.com/shareArticle?mini=true&url=${encLink}&summary=${enc}`;
-        case 'facebook':  return `https://www.facebook.com/sharer/sharer.php?u=${encLink}&quote=${enc}`;
-        default:          return '';
-    }
+// ── Platform configuration ─────────────────────────────────────────────────────
+
+interface PlatformCfg {
+    label:         string;
+    emoji:         string;
+    color:         string;
+    glowColor:     string;
+    canOAuth:      boolean;
+    charLimit?:    number;
+    // What the "Share..." / post action should do
+    copyAction:    'text' | 'link' | 'both';    // what goes to clipboard
+    hint:          string;                        // helper text shown under action bar
 }
 
-// ── Props ─────────────────────────────────────────────────────────────────────
+const PLATFORM_CFG: Record<SocialPlatform, PlatformCfg> = {
+    linkedin:  { label: 'LinkedIn',  emoji: '💼', color: '#0A66C2', glowColor: 'rgba(10,102,194,0.35)',  canOAuth: true,  copyAction: 'text', hint: 'Text copied — paste into LinkedIn, or use Post Directly when connected.' },
+    twitter:   { label: 'X/Twitter', emoji: '🐦', color: '#1D9BF0', glowColor: 'rgba(29,155,240,0.35)',  canOAuth: false, charLimit: 280, copyAction: 'text', hint: 'Tweet copied — open X and paste into the composer.' },
+    facebook:  { label: 'Facebook',  emoji: '📘', color: '#1877F2', glowColor: 'rgba(24,119,242,0.35)',  canOAuth: false, copyAction: 'text', hint: 'Post copied — paste into Facebook. Or tap Share to open the OS share sheet.' },
+    instagram: { label: 'Instagram', emoji: '📸', color: '#E1306C', glowColor: 'rgba(225,48,108,0.35)',  canOAuth: false, copyAction: 'both', hint: 'No clickable links in IG feed. Copy caption, then separately "Copy Referral Link" to put in your bio or Story link sticker.' },
+    tiktok:    { label: 'TikTok',    emoji: '🎵', color: '#FE2C55', glowColor: 'rgba(254,44,85,0.35)',   canOAuth: false, copyAction: 'both', hint: 'Links not clickable in TikTok posts. Copy script (says "link in bio"), then Copy Referral Link to paste in your profile bio.' },
+    reddit:    { label: 'Reddit',    emoji: '👾', color: '#FF4500', glowColor: 'rgba(255,69,0,0.35)',    canOAuth: false, copyAction: 'text', hint: 'Post copied — open Reddit, create a post, paste the title and body.' },
+    youtube:   { label: 'YouTube',   emoji: '▶️', color: '#FF0000', glowColor: 'rgba(255,0,0,0.35)',     canOAuth: false, copyAction: 'text', hint: 'YouTube Community Posts support text + links (no video needed). Paste in YouTube Studio → Community tab.' },
+    snapchat:  { label: 'Snapchat',  emoji: '👻', color: '#F9C900', glowColor: 'rgba(249,201,0,0.25)',   canOAuth: false, copyAction: 'link', hint: 'Snapchat needs a photo/video. Copy the referral link to add as a "Link sticker" in your Snap.' },
+};
+
+// Twitter t.co URL shortening — every URL counted as 23 chars
+const TWITTER_URL_LEN = 23;
+function twitterCharCount(text: string): number {
+    return text.replace(/https?:\/\/\S+/g, () => 'x'.repeat(TWITTER_URL_LEN)).length;
+}
+
+// ── Props ──────────────────────────────────────────────────────────────────────
 
 interface ShareModalProps {
     promoCode: string;
@@ -65,706 +72,455 @@ interface ShareModalProps {
     onRefreshConnections?: () => void;
 }
 
-import type { PostMode, TemplateStyle } from '@/lib/composio';
-type Step = 'platforms' | 'connect' | 'generate' | 'review';
-
-// ── Component ─────────────────────────────────────────────────────────────────
+// ── Component ──────────────────────────────────────────────────────────────────
 
 export function ShareModal({
-    promoCode, referralLink, userTier, isCreator, connectedPlatforms, onClose, onRefreshConnections
+    promoCode, referralLink, connectedPlatforms, onClose, onRefreshConnections
 }: ShareModalProps) {
-    const [step, setStep] = useState<Step>('platforms');
-    const [selected, setSelected] = useState<SocialPlatform | null>(null);
-    const [postMode, setPostMode] = useState<PostMode>('referral');
-    const [templateStyle, setTemplateStyle] = useState<TemplateStyle>('results');
-    const [subreddit, setSubreddit] = useState('stocks');
-    const [generatedPost, setGeneratedPost] = useState('');
+
+    // ── State ──────────────────────────────────────────────────────────────────
+    const [platform, setPlatform]   = useState<SocialPlatform>('linkedin');
+    const [template, setTemplate]   = useState<TemplateId>('campaign');
+    const [tone, setTone]           = useState<ToneId>('professional');
     const [editedPost, setEditedPost] = useState('');
-    const [postOptions, setPostOptions] = useState<string[]>([]);
-    const [customContext, setCustomContext] = useState('');
+    const [postOptions, setPostOptions] = useState<{ label: string; text: string }[]>([]);
+    const [selectedOption, setSelectedOption] = useState(0);
+
     const [isGenerating, setIsGenerating] = useState(false);
-    const [isPosting, setIsPosting] = useState(false);
-    const [isConnecting, setIsConnecting] = useState(false);
-    const [copied, setCopied] = useState(false);
+    const [isPosting, setIsPosting]     = useState(false);
+    const [copied, setCopied]           = useState(false);
+    const [linkCopied, setLinkCopied]   = useState(false);
     const [postSuccess, setPostSuccess] = useState(false);
-    const [intentOpened, setIntentOpened] = useState(false);
-    const [showPreview, setShowPreview] = useState(true);
-    const [error, setError] = useState('');
+    const [error, setError]             = useState('');
+    const [hasGenerated, setHasGenerated] = useState(false);
 
-    const isConnected = (p: SocialPlatform) => connectedPlatforms[p]?.status === 'active';
-    const isDirectPost = (p: SocialPlatform) => DIRECT_POST_PLATFORMS.includes(p) && isConnected(p);
-    const isScriptOnly = (p: SocialPlatform) => SCRIPT_ONLY_PLATFORMS.includes(p);
-    const cfg = selected ? PLATFORM_CONFIG[selected] : null;
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const cfg = PLATFORM_CFG[platform];
+    const isLinkedInConnected = connectedPlatforms['linkedin']?.status === 'active';
 
-    // Re-fetch connection status when user returns from OAuth popup.
-    // Two strategies: (1) postMessage from /oauth-complete page when popup closes,
-    // (2) window focus as fallback when user manually closes popup.
+    // OG card campaign URL (used as the share link)
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://trademind.bot';
+    const ogCardUrl = `${appUrl}/c/compounding?ref=${promoCode}`;
+
+    // ── Auto-resize textarea ───────────────────────────────────────────────────
     useEffect(() => {
-        const handleFocus = () => { onRefreshConnections?.(); };
-        const handleMessage = (e: MessageEvent) => {
+        const el = textareaRef.current;
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = `${el.scrollHeight}px`;
+    }, [editedPost]);
+
+    // ── Re-listen for LinkedIn OAuth completion ────────────────────────────────
+    useEffect(() => {
+        const onFocus = () => onRefreshConnections?.();
+        const onMsg   = (e: MessageEvent) => {
             if (e.data?.type === 'COMPOSIO_OAUTH_COMPLETE') {
-                console.log('[ShareModal] OAuth complete for', e.data.platform, '| status:', e.data.status);
-                setIsConnecting(false);
                 onRefreshConnections?.();
             }
         };
-        window.addEventListener('focus', handleFocus);
-        window.addEventListener('message', handleMessage);
-        return () => {
-            window.removeEventListener('focus', handleFocus);
-            window.removeEventListener('message', handleMessage);
-        };
+        window.addEventListener('focus', onFocus);
+        window.addEventListener('message', onMsg);
+        return () => { window.removeEventListener('focus', onFocus); window.removeEventListener('message', onMsg); };
     }, [onRefreshConnections]);
 
-    const handleSelectPlatform = useCallback((p: SocialPlatform) => {
-        setSelected(p);
-        setGeneratedPost('');
+    // ── Reset on platform/template change ─────────────────────────────────────
+    const resetContent = () => {
         setEditedPost('');
         setPostOptions([]);
-        setError('');
+        setSelectedOption(0);
         setPostSuccess(false);
-        setIntentOpened(false);
-
-        const platformCfg = PLATFORM_CONFIG[p];
-        // If it needs OAuth and isn't connected → show connect panel
-        if (platformCfg.canOAuth && !isConnected(p)) {
-            setStep('connect');
-        } else {
-            setStep('generate');
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [connectedPlatforms]);
-
-    const handleConnect = async () => {
-        if (!selected) return;
-        setIsConnecting(true);
         setError('');
-        try {
-            const res = await fetch('/api/composio/connect', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ platform: selected }),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error ?? 'Failed to initiate connection');
-            
-            // Open Composio OAuth page in a popup so we don't lose the modal state
-            window.open(data.redirectUrl, 'ComposioOAuth', 'width=600,height=800,left=200,top=100');
-            // The modal stays in 'connect' step, but we show a waiting state
-        } catch (err: any) {
-            setError(err.message || 'Failed to connect. Please try again.');
-            setIsConnecting(false);
+        setHasGenerated(false);
+    };
+
+    const handlePlatformChange = (p: SocialPlatform) => {
+        setPlatform(p);
+        resetContent();
+    };
+
+    const handleTemplateChange = (t: TemplateId) => {
+        setTemplate(t);
+        resetContent();
+    };
+
+    const handleToneChange = (t: ToneId) => {
+        setTone(t);
+        // If using campaign with pre-loaded options, just switch the option
+        if (postOptions.length > 0) {
+            const idx = t === 'professional' ? 0 : t === 'punchy' ? 1 : 2;
+            const safeIdx = Math.min(idx, postOptions.length - 1);
+            setSelectedOption(safeIdx);
+            setEditedPost(postOptions[safeIdx].text);
+        } else {
+            resetContent();
         }
     };
 
-    // Auto-advance to "generate" step once the connection completes and the focus event fires.
-    // Use connectedPlatforms[selected] directly (not isConnected()) to avoid stale closure.
-    useEffect(() => {
-        if (step === 'connect' && selected && connectedPlatforms[selected]?.status === 'active') {
-            setIsConnecting(false);
-            setStep('generate');
-        }
-    }, [connectedPlatforms, step, selected]);
-
+    // ── Generate ───────────────────────────────────────────────────────────────
     const handleGenerate = useCallback(async () => {
-        if (!selected) return;
         setIsGenerating(true);
         setError('');
+        setPostSuccess(false);
         try {
             const res = await fetch('/api/social/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    platform: selected,
-                    postMode,
-                    templateStyle,
-                    customContext: customContext.trim() || undefined,
+                    platform,
+                    templateStyle: template,
+                    // Map our tone to postMode for the API (education template → education mode)
+                    postMode: template === 'education' ? 'education' : 'referral',
+                    tone,
                 }),
             });
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error);
-            setGeneratedPost(data.post);
-            setEditedPost(data.post);
-            if (data.options) setPostOptions(data.options);
-            else setPostOptions([]);
-            setStep('review');
+            if (!res.ok) throw new Error(data.error ?? 'Generation failed');
+
+            if (data.options) {
+                // Campaign template returns tone variants
+                setPostOptions(data.options);
+                const idx = tone === 'professional' ? 0 : tone === 'punchy' ? 1 : 2;
+                const safeIdx = Math.min(idx, data.options.length - 1);
+                setSelectedOption(safeIdx);
+                setEditedPost(data.options[safeIdx].text);
+            } else {
+                setPostOptions([]);
+                setEditedPost(data.post ?? '');
+            }
+            setHasGenerated(true);
         } catch (err: any) {
-            setError(err.message || 'Failed to generate post. Please try again.');
+            setError(err.message || 'Failed to generate. Please try again.');
         } finally {
             setIsGenerating(false);
         }
-    }, [selected, postMode, templateStyle, customContext]);
+    }, [platform, template, tone]);
 
-    const handleDirectPost = useCallback(async () => {
-        if (!selected || !editedPost) return;
-        setIsPosting(true);
-        setError('');
-        try {
-            const metadata: Record<string, string> = {};
-            if (selected === 'reddit') metadata.subreddit = subreddit;
-
-            const res = await fetch('/api/social/post', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    platform: selected, postContent: editedPost,
-                    promoCode, referralLink, metadata,
-                }),
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                if (data.needsConnection) {
-                    // Redirect to connect panel instead of dead error message
-                    setStep('connect');
-                    return;
-                }
-                if (data.reconnectRequired) {
-                    setError(`Your ${selected} connection has expired. Reconnect below.`);
-                    setStep('connect');
-                    return;
-                }
-                throw new Error(data.error);
-            }
-            setPostSuccess(true);
-        } catch (err: any) {
-            setError(err.message || 'Failed to post. Please try again.');
-        } finally {
-            setIsPosting(false);
+    // Auto-generate when platform/template is selected for the first time
+    useEffect(() => {
+        if (!hasGenerated) {
+            handleGenerate();
         }
-    }, [selected, editedPost, promoCode, referralLink, subreddit]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [platform, template]);
 
-    const handleCopy = useCallback(async () => {
+    // ── Clipboard helpers ──────────────────────────────────────────────────────
+    const copyText = useCallback(async () => {
         if (!editedPost) return;
         await navigator.clipboard.writeText(editedPost);
         setCopied(true);
         setTimeout(() => setCopied(false), 3000);
     }, [editedPost]);
 
-    const handleIntentPost = useCallback(() => {
-        if (!selected || !editedPost) return;
-        const url = buildIntentUrl(selected, editedPost, referralLink);
-        if (url) window.open(url, '_blank', 'width=620,height=520,noopener,noreferrer');
-    }, [selected, editedPost, referralLink]);
+    const copyLink = useCallback(async () => {
+        await navigator.clipboard.writeText(ogCardUrl);
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 3000);
+    }, [ogCardUrl]);
 
-    const handleWebShare = useCallback(async () => {
+    // ── Web Share API ──────────────────────────────────────────────────────────
+    const handleShare = useCallback(async () => {
+        // Always pre-copy text to clipboard first
+        if (editedPost) await navigator.clipboard.writeText(editedPost);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 3000);
+
+        if (!navigator.share) return; // clipboard-only fallback
+        try {
+            await navigator.share({
+                title: 'TradeMind AI Trading Signals',
+                text: editedPost,
+                url: ogCardUrl,
+            });
+        } catch {
+            // User dismissed the share sheet — clipboard already copied, that's fine
+        }
+    }, [editedPost, ogCardUrl]);
+
+    // ── LinkedIn direct post ───────────────────────────────────────────────────
+    const handleDirectPost = useCallback(async () => {
         if (!editedPost) return;
-        try { await navigator.share({ text: editedPost, url: referralLink }); }
-        catch { handleCopy(); }
-    }, [editedPost, referralLink, handleCopy]);
+        // Pre-copy to clipboard
+        await navigator.clipboard.writeText(editedPost);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 3000);
 
-    // Twitter counts every URL as 23 chars (t.co shortener) regardless of actual URL length
-    const TWITTER_URL_LENGTH = 23;
-    const getEffectiveCharCount = (text: string, platform: SocialPlatform | null) => {
-        if (platform !== 'twitter') return text.length;
-        return text.replace(/https?:\/\/\S+/g, (url) => 'x'.repeat(TWITTER_URL_LENGTH)).length;
-    };
-    const charLimit = selected ? char_limits[selected] : undefined;
-    const effectiveCharCount = getEffectiveCharCount(editedPost, selected);
-    const isOverLimit = charLimit ? effectiveCharCount > charLimit : false;
+        setIsPosting(true);
+        setError('');
+        try {
+            const res = await fetch('/api/social/post', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ platform: 'linkedin', postContent: editedPost, promoCode, referralLink }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error ?? 'Post failed');
+            setPostSuccess(true);
+        } catch (err: any) {
+            setError(err.message || 'Failed to post. Please try again.');
+        } finally {
+            setIsPosting(false);
+        }
+    }, [editedPost, promoCode, referralLink]);
 
-    // ── Platform tile badge ───────────────────────────────────────────────────
+    // ── Char count (Twitter t.co aware) ───────────────────────────────────────
+    const charCount   = platform === 'twitter' ? twitterCharCount(editedPost) : editedPost.length;
+    const isOverLimit = cfg.charLimit ? charCount > cfg.charLimit : false;
 
-    function PlatformBadge({ p }: { p: SocialPlatform }) {
-        const connected = isConnected(p);
-        const pcfg = PLATFORM_CONFIG[p];
-        if (p === 'snapchat') return <span className="absolute top-1 right-1 text-[8px] bg-zinc-600 text-white rounded-full px-1 leading-4">clip</span>;
-        if (isScriptOnly(p) && !connected) return <span className="absolute top-1 right-1 text-[8px] bg-blue-500/80 text-white rounded-full px-1 leading-4">📝</span>;
-        if (!pcfg.canOAuth) return null;
-        if (connected) return <span className="absolute top-1 right-1 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center text-[9px] font-bold text-white shadow-md">✓</span>;
-        return <span className="absolute top-1 right-1 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center text-[8px] font-bold text-white shadow-md">!</span>;
-    }
-
-    // ── Render ────────────────────────────────────────────────────────────────
-
+    // ── Render ─────────────────────────────────────────────────────────────────
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm"
-            role="dialog"
-            aria-modal="true"
-            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-        >
-            {/* Bottom-sheet on mobile, centered modal on desktop */}
-            <div className="bg-[#141420] border border-white/10 rounded-t-3xl sm:rounded-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto shadow-2xl shadow-purple-900/20 flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+
+            {/* Modal */}
+            <div className="relative z-10 w-full sm:max-w-lg bg-[#141420] border border-white/10 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[92dvh] overflow-hidden">
 
                 {/* ── Header ── */}
-                <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/5 sticky top-0 bg-[#141420] z-10">
-                    <div className="flex items-center gap-2">
-                        {step !== 'platforms' && (
-                            <button
-                                onClick={() => setStep(step === 'review' ? 'generate' : 'platforms')}
-                                className="p-1 text-zinc-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
-                            >
-                                <ChevronLeft className="w-5 h-5" />
-                            </button>
-                        )}
-                        <div>
-                            <h2 className="text-base font-bold text-white leading-tight">
-                                {step === 'platforms' ? 'Share & Earn' :
-                                 step === 'connect'   ? `Connect ${cfg?.label}` :
-                                 step === 'generate'  ? `${cfg?.emoji} ${cfg?.label} Post` :
-                                                        'Review & Post'}
-                            </h2>
-                            <p className="text-[11px] text-zinc-500 mt-0.5">
-                                {step === 'platforms' ? <>Code <span className="font-mono font-bold text-white">{promoCode}</span> · auto-applied in your link</> :
-                                 step === 'connect'   ? 'Connect once — post anytime without re-login' :
-                                 step === 'generate'  ? 'AI writes your post in seconds' :
-                                                        'Edit if needed, then post'}
-                            </p>
-                        </div>
+                <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
+                    <div>
+                        <h2 className="text-white font-black text-lg tracking-tight">Share & Earn</h2>
+                        <p className="text-zinc-500 text-[11px] mt-0.5">
+                            Code <span className="text-tm-purple font-mono font-bold">{promoCode}</span>
+                            {' '}· auto-applied in your link
+                        </p>
                     </div>
-                    <button onClick={onClose} className="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-white/5 transition-colors shrink-0">
-                        <X className="w-5 h-5" />
+                    <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors">
+                        <X className="w-4 h-4 text-zinc-400" />
                     </button>
                 </div>
 
-                <div className="p-5 pb-[100px] sm:pb-5 space-y-5 flex-1">
+                {/* ── Scrollable Body ── */}
+                <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-4 min-h-0">
 
-                    {/* ══ STEP: PLATFORM GRID ══════════════════════════════ */}
-                    {step === 'platforms' && (
-                        <>
-                            {/* Mode toggle */}
-                            <div className="flex rounded-xl overflow-hidden border border-white/10 p-0.5 gap-0.5 bg-black/30">
-                                <button
-                                    onClick={() => setPostMode('referral')}
-                                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${postMode === 'referral' ? 'bg-tm-purple text-white' : 'text-zinc-400 hover:text-white'}`}
-                                >
-                                    <Zap className="w-3.5 h-3.5" /> Referral Post
-                                </button>
-                                <button
-                                    onClick={() => setPostMode('education')}
-                                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${postMode === 'education' ? 'bg-tm-purple text-white' : 'text-zinc-400 hover:text-white'}`}
-                                >
-                                    <BookOpen className="w-3.5 h-3.5" /> Education Post
-                                </button>
-                            </div>
-
-                            <div>
-                                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-3 font-semibold">Select Platform</p>
-                                <div className="grid grid-cols-4 gap-2">
-                                    {(Object.entries(PLATFORM_CONFIG) as [SocialPlatform, typeof PLATFORM_CONFIG[SocialPlatform]][]).map(([p, pcfg]) => {
-                                        const connected = isConnected(p);
-                                        const isSelected = selected === p;
-                                        return (
-                                            <button
-                                                key={p}
-                                                onClick={() => handleSelectPlatform(p)}
-                                                style={connected ? { boxShadow: `0 0 0 1.5px ${pcfg.color}66` } : undefined}
-                                                className={`relative flex flex-col items-center gap-1.5 py-3.5 px-2 rounded-2xl border transition-all text-center ${
-                                                    isSelected
-                                                        ? 'border-tm-purple bg-tm-purple/10'
-                                                        : connected
-                                                        ? 'border-emerald-500/40 bg-emerald-500/5 hover:bg-emerald-500/10'
-                                                        : 'border-white/8 bg-white/3 hover:border-white/20 hover:bg-white/5'
-                                                }`}
-                                            >
-                                                <PlatformBadge p={p} />
-                                                <span className="text-2xl leading-none">{pcfg.emoji}</span>
-                                                <span className="text-[10px] font-semibold text-zinc-400 leading-tight">{pcfg.label}</span>
-                                                {connected && (
-                                                    <span className="text-[9px] text-emerald-400 font-medium">Connected</span>
-                                                )}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-
-                                {/* Legend */}
-                                <div className="flex flex-wrap items-center gap-3 mt-3 text-[10px] text-zinc-500">
-                                    <span className="flex items-center gap-1"><span className="w-3 h-3 bg-emerald-500 rounded-full inline-flex items-center justify-center text-[7px] font-bold text-white">✓</span> Connected — auto-post</span>
-                                    <span className="flex items-center gap-1"><span className="w-3 h-3 bg-amber-500 rounded-full inline-flex items-center justify-center text-[7px] font-bold text-white">!</span> Tap to connect once</span>
-                                    <span className="flex items-center gap-1"><span className="text-[9px] bg-blue-500/80 text-white rounded px-1">📝</span> Script + clipboard</span>
-                                </div>
-                            </div>
-                        </>
-                    )}
-
-                    {/* ══ STEP: CONNECT PANEL ══════════════════════════════ */}
-                    {step === 'connect' && selected && cfg && (
-                        <div className="flex flex-col items-center text-center py-4 space-y-5">
-                            <div
-                                className="w-20 h-20 rounded-3xl flex items-center justify-center text-4xl shadow-2xl"
-                                style={{ background: `${cfg.color}22`, border: `2px solid ${cfg.color}44` }}
-                            >
-                                {cfg.emoji}
-                            </div>
-
-                            <div>
-                                <h3 className="text-lg font-bold text-white">Connect {cfg.label}</h3>
-                                <p className="text-sm text-zinc-400 mt-1 max-w-xs mx-auto">
-                                    Log in once — TradeMind posts directly for you every time. No re-login needed.
-                                </p>
-                            </div>
-
-                            <div className="w-full bg-black/30 rounded-2xl p-4 text-left space-y-2 border border-white/5">
-                                <p className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> One-click posting after connecting
-                                </p>
-                                <p className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Your referral link is auto-embedded
-                                </p>
-                                <p className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Post from TradeMind in 2 taps
-                                </p>
-                                {cfg.requiresMedia && (
-                                    <p className="text-xs font-semibold text-amber-400 flex items-center gap-1.5">
-                                        <AlertCircle className="w-3.5 h-3.5" /> {cfg.label} requires a video/image — we'll generate the caption + script
-                                    </p>
-                                )}
-                            </div>
-
-                            {isConnecting ? (
-                                <div className="w-full py-4 rounded-2xl flex flex-col items-center gap-2 border border-white/10 bg-white/5">
-                                    <div className="flex items-center gap-2 text-sm text-zinc-300 font-semibold">
-                                        <svg className="w-4 h-4 animate-spin text-white" viewBox="0 0 24 24" fill="none">
-                                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.2" />
-                                            <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                                        </svg>
-                                        Waiting for authorization...
-                                    </div>
-                                    <p className="text-[11px] text-zinc-500">Complete the sign-in in the popup window, then return here</p>
+                    {/* ── Platform selector ── */}
+                    <div>
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-600 font-semibold mb-2">Platform</p>
+                        <div className="flex flex-wrap gap-1.5">
+                            {(Object.keys(PLATFORM_CFG) as SocialPlatform[]).map((p) => {
+                                const pc = PLATFORM_CFG[p];
+                                const active = platform === p;
+                                return (
                                     <button
-                                        onClick={() => setIsConnecting(false)}
-                                        className="text-[11px] text-zinc-500 hover:text-zinc-300 underline transition-colors mt-1"
+                                        key={p}
+                                        onClick={() => handlePlatformChange(p)}
+                                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+                                            active
+                                                ? 'text-white border-transparent shadow-lg'
+                                                : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white hover:bg-white/10'
+                                        }`}
+                                        style={active ? { backgroundColor: pc.color, boxShadow: `0 0 12px ${pc.glowColor}` } : undefined}
                                     >
-                                        Cancel
+                                        <span>{pc.emoji}</span>
+                                        <span>{pc.label}</span>
+                                        {p === 'linkedin' && isLinkedInConnected && (
+                                            <span className="w-3.5 h-3.5 bg-emerald-400 rounded-full flex items-center justify-center text-[8px] text-black font-black">✓</span>
+                                        )}
                                     </button>
-                                </div>
-                            ) : (
-                                <button
-                                    onClick={handleConnect}
-                                    className="w-full py-3.5 rounded-2xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-95"
-                                    style={{ background: cfg.color }}
-                                >
-                                    <Link2 className="w-4 h-4" />
-                                    Connect {cfg.label} Account →
-                                </button>
-                            )}
-
-                            {!isConnecting && (
-                                <button
-                                    onClick={() => setStep('generate')}
-                                    className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-                                >
-                                    Skip — generate script to copy instead
-                                </button>
-                            )}
+                                );
+                            })}
                         </div>
-                    )}
+                    </div>
 
-                    {/* ══ STEP: GENERATE ═══════════════════════════════════ */}
-                    {step === 'generate' && selected && cfg && (
-                        <div className="space-y-4">
-                            {/* Template Style */}
-                            <div>
-                                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2.5 font-semibold">Template Style</p>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {TEMPLATE_OPTIONS.map(({ id, emoji, label, desc }) => (
-                                        <button
-                                            key={id}
-                                            onClick={() => setTemplateStyle(id)}
-                                            className={`flex flex-col items-center gap-1 py-3 px-2 rounded-2xl border text-center transition-all ${
-                                                templateStyle === id
-                                                    ? 'border-tm-purple bg-tm-purple/10 shadow-[0_0_12px_rgba(168,85,247,0.2)]'
-                                                    : 'border-white/8 bg-white/3 hover:border-white/20'
-                                            }`}
-                                        >
-                                            <span className="text-xl">{emoji}</span>
-                                            <span className="text-[11px] font-bold text-white">{label}</span>
-                                            <span className="text-[10px] text-zinc-500 leading-tight">{desc}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                    {/* ── Template selector ── */}
+                    <div>
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-600 font-semibold mb-2">Template</p>
+                        <div className="flex gap-1.5 flex-wrap">
+                            {TEMPLATES.map((t) => (
+                                <button
+                                    key={t.id}
+                                    onClick={() => handleTemplateChange(t.id)}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+                                        template === t.id
+                                            ? 'bg-tm-purple border-tm-purple text-white shadow-[0_0_10px_rgba(168,85,247,0.4)]'
+                                            : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white hover:bg-white/8'
+                                    }`}
+                                >
+                                    {t.icon}
+                                    {t.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
 
-                            {/* Reddit subreddit picker */}
-                            {selected === 'reddit' && (
-                                <div>
-                                    <label htmlFor="subredditPicker" className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2 font-semibold block">
-                                        Target Subreddit
-                                    </label>
-                                    <select
-                                        id="subredditPicker"
-                                        value={subreddit}
-                                        onChange={(e) => setSubreddit(e.target.value)}
-                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-tm-purple transition-colors"
-                                    >
-                                        {REDDIT_SUBREDDITS.map(r => (
-                                            <option key={r.value} value={r.value}>{r.label}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            )}
-
-                            {/* Custom context */}
-                            <div>
-                                <label htmlFor="customContext" className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2 font-semibold block">
-                                    Personal Context <span className="normal-case font-normal text-zinc-600">(optional — makes AI more authentic)</span>
-                                </label>
-                                <input
-                                    id="customContext"
-                                    type="text"
-                                    value={customContext}
-                                    onChange={(e) => setCustomContext(e.target.value)}
-                                    placeholder={postMode === 'education'
-                                        ? 'e.g. "I trade TQQQ options and focus on IV crush plays"'
-                                        : 'e.g. "I made 3 profitable trades last week using TradeMind"'}
-                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-tm-purple transition-colors"
-                                />
-                            </div>
-
-                            {error && (
-                                <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-sm text-red-400">
-                                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" /><span>{error}</span>
-                                </div>
-                            )}
-
+                    {/* ── Tone selector ── */}
+                    <div>
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-600 font-semibold mb-2">Tone</p>
+                        <div className="flex gap-1.5">
+                            {TONES.map((t) => (
+                                <button
+                                    key={t.id}
+                                    onClick={() => handleToneChange(t.id)}
+                                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+                                        tone === t.id
+                                            ? 'bg-white/15 border-white/30 text-white'
+                                            : 'bg-white/5 border-white/10 text-zinc-500 hover:text-white hover:bg-white/8'
+                                    }`}
+                                >
+                                    {t.label}
+                                </button>
+                            ))}
                             <button
                                 onClick={handleGenerate}
                                 disabled={isGenerating}
-                                className="w-full bg-tm-purple hover:bg-tm-purple/90 disabled:opacity-50 text-white font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-lg shadow-purple-900/30"
+                                className="ml-auto flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border border-white/10 bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 disabled:opacity-40 transition-all"
                             >
-                                {isGenerating
-                                    ? <><RefreshCw className="w-4 h-4 animate-spin" /> Generating…</>
-                                    : <><Sparkles className="w-4 h-4" /> Generate {cfg.label} {postMode === 'education' ? 'Educational' : 'Referral'} Post</>
-                                }
+                                <RefreshCw className={`w-3 h-3 ${isGenerating ? 'animate-spin' : ''}`} />
+                                {isGenerating ? 'Generating…' : 'Regenerate'}
                             </button>
                         </div>
-                    )}
+                    </div>
 
-                    {/* ══ STEP: REVIEW & POST ══════════════════════════════ */}
-                    {step === 'review' && selected && cfg && (
-                        <div className="space-y-4">
-                            {postSuccess ? (
-                                <div className="flex flex-col items-center text-center py-6 space-y-3">
-                                    <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
-                                        <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+                    {/* ── Content area ── */}
+                    <div className="rounded-2xl border border-white/10 bg-black/30 overflow-hidden">
+                        {isGenerating ? (
+                            <div className="flex flex-col items-center justify-center gap-3 py-12">
+                                <Sparkles className="w-6 h-6 text-tm-purple animate-pulse" />
+                                <p className="text-zinc-500 text-sm">Generating your {template} post…</p>
+                            </div>
+                        ) : error ? (
+                            <div className="flex flex-col items-center gap-3 py-10 px-4 text-center">
+                                <AlertCircle className="w-6 h-6 text-red-400" />
+                                <p className="text-red-400 text-sm">{error}</p>
+                                <button onClick={handleGenerate} className="text-xs text-tm-purple underline">Try again</button>
+                            </div>
+                        ) : (
+                            <div className="p-4 space-y-3">
+                                {/* Campaign variant pills */}
+                                {postOptions.length > 0 && (
+                                    <div className="flex gap-1.5">
+                                        {postOptions.map((opt, i) => (
+                                            <button
+                                                key={i}
+                                                onClick={() => { setSelectedOption(i); setEditedPost(opt.text); }}
+                                                className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all border ${
+                                                    selectedOption === i
+                                                        ? 'bg-tm-purple/20 border-tm-purple/50 text-tm-purple'
+                                                        : 'bg-white/5 border-white/10 text-zinc-500 hover:text-white'
+                                                }`}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
                                     </div>
-                                    <div>
-                                        <p className="font-bold text-white text-lg">Posted! 🎉</p>
-                                        <p className="text-sm text-zinc-400 mt-1">
-                                            Your referral link is live on {cfg.label}. Share more platforms to maximize reach.
-                                        </p>
-                                    </div>
-                                    <button
-                                        onClick={() => { setStep('platforms'); setPostSuccess(false); setSelected(null); }}
-                                        className="px-6 py-2.5 bg-tm-purple/20 border border-tm-purple/40 text-tm-purple font-bold rounded-xl text-sm hover:bg-tm-purple/30 transition-colors"
-                                    >
-                                        Share on another platform
-                                    </button>
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2 bg-black/40 p-1 rounded-lg border border-white/5">
-                                            <button
-                                                onClick={() => setShowPreview(false)}
-                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] uppercase tracking-wider font-bold transition-all ${!showPreview ? 'bg-white/10 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
-                                            >
-                                                <Edit3 className="w-3 h-3" /> Edit
-                                            </button>
-                                            <button
-                                                onClick={() => setShowPreview(true)}
-                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] uppercase tracking-wider font-bold transition-all ${showPreview ? 'bg-tm-purple/20 text-tm-purple' : 'text-zinc-500 hover:text-zinc-300'}`}
-                                            >
-                                                <Eye className="w-3 h-3" /> Preview
-                                            </button>
-                                        </div>
-                                        <button
-                                            onClick={() => { setStep('generate'); setGeneratedPost(''); setShowPreview(true); }}
-                                            disabled={isGenerating}
-                                            className="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1 transition-colors px-2"
-                                        >
-                                            <RefreshCw className={`w-3 h-3 ${isGenerating ? 'animate-spin' : ''}`} />
-                                            Regenerate
-                                        </button>
-                                    </div>
+                                )}
 
-                                    {showPreview ? (
-                                        <div className="w-full bg-black/20 border border-white/10 rounded-2xl px-4 py-4 text-sm text-zinc-200 min-h-[180px] max-h-[300px] overflow-y-auto prose prose-invert prose-p:leading-relaxed prose-sm">
-                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                                {editedPost}
-                                            </ReactMarkdown>
-                                        </div>
-                                    ) : (
-                                        <textarea
-                                            id="postEditor"
-                                            value={editedPost}
-                                            onChange={(e) => setEditedPost(e.target.value)}
-                                            rows={8}
-                                            className={`w-full bg-black/40 border rounded-2xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none transition-colors resize-none leading-relaxed ${
-                                                isOverLimit ? 'border-red-500/60' : 'border-white/10 focus:border-tm-purple'
-                                            }`}
-                                        />
-                                    )}
+                                {/* Editable textarea */}
+                                <textarea
+                                    ref={textareaRef}
+                                    value={editedPost}
+                                    onChange={(e) => setEditedPost(e.target.value)}
+                                    placeholder="Your AI-generated post will appear here…"
+                                    className="w-full bg-transparent text-zinc-200 text-sm leading-relaxed resize-none focus:outline-none placeholder:text-zinc-600 min-h-[120px]"
+                                    style={{ height: 'auto' }}
+                                    rows={6}
+                                />
 
-                                    {charLimit && (
-                                        <p className={`text-[11px] text-right -mt-2 ${isOverLimit ? 'text-red-400 font-medium' : 'text-zinc-600'}`}>
-                                            {effectiveCharCount} / {charLimit}{isOverLimit && ' — over limit, please trim'}{selected === 'twitter' && !isOverLimit && effectiveCharCount !== editedPost.length && ' (URLs auto-shortened by X)'}
-                                        </p>
-                                    )}
-
-                                    {error && (
-                                        <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-sm text-red-400">
-                                            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" /><span>{error}</span>
-                                        </div>
-                                    )}
-
-                                    {postOptions.length > 0 && (
-                                        <div className="flex gap-2 w-full overflow-x-auto pb-1 min-h-[36px] scrollbar-hide">
-                                            {postOptions.map((opt: any, i) => {
-                                                const btnText = typeof opt === 'string' ? opt : opt.text;
-                                                const btnLabel = typeof opt === 'string' ? `Tone Option ${i + 1}` : opt.label;
-                                                return (
-                                                    <button
-                                                        key={i}
-                                                        onClick={() => { setEditedPost(btnText); setGeneratedPost(btnText); }}
-                                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors border ${
-                                                            editedPost === btnText 
-                                                                ? 'bg-tm-purple/20 text-tm-purple border-tm-purple/40' 
-                                                                : 'bg-white/5 text-zinc-400 border-white/5 hover:bg-white/10'
-                                                        }`}
-                                                    >
-                                                        {btnLabel}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-
-                                    {/* CTA buttons */}
-                                    <div className="space-y-2">
-                                        {/* Group A platforms — Direct post (LinkedIn, Facebook, Reddit only — Twitter uses intent URL) */}
-                                        {DIRECT_POST_PLATFORMS.includes(selected) && isConnected(selected) && !(selected === 'linkedin' && templateStyle === 'campaign') && selected !== 'twitter' && (
-                                            <button
-                                                onClick={handleDirectPost}
-                                                disabled={isPosting || !editedPost}
-                                                className="w-full bg-tm-purple hover:bg-tm-purple/90 disabled:opacity-50 text-white font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-lg shadow-purple-900/30"
-                                            >
-                                                {isPosting
-                                                    ? <><RefreshCw className="w-4 h-4 animate-spin" /> Posting…</>
-                                                    : <><Send className="w-4 h-4" /> Post to {cfg.label} Now</>
-                                                }
-                                            </button>
+                                {/* Char count */}
+                                {editedPost && (
+                                    <p className={`text-[11px] text-right ${isOverLimit ? 'text-red-400 font-medium' : 'text-zinc-600'}`}>
+                                        {charCount}{cfg.charLimit ? ` / ${cfg.charLimit}` : ''}
+                                        {isOverLimit && ' — over limit, please trim'}
+                                        {platform === 'twitter' && !isOverLimit && charCount !== editedPost.length && (
+                                            <span className="text-zinc-600"> (URLs auto-shortened by X)</span>
                                         )}
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </div>
 
-                                        {/* Intent URL share — primary action for Twitter, fallback for other text platforms */}
-                                        {!cfg.requiresMedia && (
-                                            (() => {
-                                                const isLinkedInCardFlow = selected === 'linkedin' && templateStyle === 'campaign';
-                                                const isTwitterFlow = selected === 'twitter';
-                                                
-                                                let url = isLinkedInCardFlow
-                                                    ? buildIntentUrl('linkedin', '', referralLink.replace('/?ref=', '/c/compounding?ref='))
-                                                    : buildIntentUrl(selected, editedPost, referralLink);
-                                                
-                                                if (!url) return null;
-                                                
-                                                const bgClass = isTwitterFlow 
-                                                    ? 'bg-[#000000] hover:bg-zinc-900 border border-zinc-700 shadow-zinc-900/30 text-white'
-                                                    : selected === 'reddit'
-                                                    ? 'bg-[#ff4500] hover:bg-[#cc3700] border-transparent shadow-[#ff4500]/20 text-white'
-                                                    : 'bg-[#0a66c2] hover:bg-[#004182] border-transparent shadow-blue-900/30 text-white';
-
-                                                // Twitter & LinkedIn campaign use the prominent "Post Now" style
-                                                const isProminent = isTwitterFlow || isLinkedInCardFlow;
-
-                                                // After intent opened: show clear success nudge
-                                                if (isProminent && intentOpened) {
-                                                    return (
-                                                        <div className="flex flex-col items-center gap-1.5 w-full py-3 px-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl">
-                                                            <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
-                                                                <CheckCircle2 className="w-4 h-4" />
-                                                                {cfg.label} composer is open!
-                                                            </div>
-                                                            <p className="text-[11px] text-zinc-400 text-center leading-snug">
-                                                                Click the <strong className="text-white">Post</strong> button inside that window to publish.
-                                                            </p>
-                                                            <button
-                                                                onClick={() => {
-                                                                    setIntentOpened(false);
-                                                                    window.open(url, 'IntentComposer', 'width=600,height=720,left=200,top=80');
-                                                                }}
-                                                                className="text-[11px] text-zinc-500 hover:text-zinc-300 underline transition-colors mt-0.5"
-                                                            >
-                                                                Re-open composer
-                                                            </button>
-                                                        </div>
-                                                    );
-                                                }
-
-                                                return (
-                                                    <div className="flex flex-col gap-1.5 w-full">
-                                                        <button
-                                                            onClick={async () => {
-                                                                await handleCopy();
-                                                                setIntentOpened(true);
-                                                                setTimeout(() => window.open(url, 'IntentComposer', 'width=600,height=720,left=200,top=80'), 150);
-                                                            }}
-                                                            disabled={!editedPost}
-                                                            className={`w-full font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-40 text-sm shadow-lg ${bgClass}`}
-                                                        >
-                                                            {isProminent
-                                                                ? <><Send className="w-4 h-4" /> Post to {cfg.label} Now</>
-                                                                : <><ExternalLink className="w-4 h-4" />{isConnected(selected) ? `Open in ${cfg.label}` : `Share on ${cfg.label}`}</>
-                                                            }
-                                                        </button>
-                                                        {isProminent && (
-                                                            <p className="text-[11px] text-center text-zinc-400 font-semibold px-4 pt-0.5 leading-tight">
-                                                                Your tweet is pre-filled — just click <strong className="text-white">Post</strong> in the X window!
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })()
-                                        )}
-
-                                        {/* Connect nudge for disconnected platforms */}
-                                        {DIRECT_POST_PLATFORMS.includes(selected) && !isConnected(selected) && (
-                                            <button
-                                                onClick={() => setStep('connect')}
-                                                className="w-full bg-amber-500/10 border border-amber-500/30 text-amber-400 font-semibold py-2.5 rounded-2xl flex items-center justify-center gap-2 transition-all text-sm hover:bg-amber-500/20"
-                                            >
-                                                <Link2 className="w-4 h-4" />
-                                                Connect {cfg.label} for one-click posting
-                                            </button>
-                                        )}
-
-                                        {/* Script/clipboard row for all */}
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={handleCopy}
-                                                className="flex-1 bg-white/5 border border-white/10 hover:border-white/20 text-white font-semibold py-2.5 rounded-2xl flex items-center justify-center gap-1.5 transition-all text-sm"
-                                            >
-                                                {copied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                                                {copied ? 'Copied!' : 'Copy Text'}
-                                            </button>
-                                            {typeof navigator !== 'undefined' && 'share' in navigator && (
-                                                <button
-                                                    onClick={handleWebShare}
-                                                    className="flex-1 bg-white/5 border border-white/10 hover:border-white/20 text-zinc-300 font-semibold py-2.5 rounded-2xl flex items-center justify-center gap-1.5 transition-all text-sm"
-                                                >
-                                                    📤 Share…
-                                                </button>
-                                            )}
-                                        </div>
-
-
-                                        {/* Script-mode note for media platforms */}
-                                        {cfg.requiresMedia && (
-                                            <p className="text-[11px] text-zinc-500 text-center">
-                                                {cfg.label === 'Instagram' && 'Paste this caption into Instagram with your photo or story'}
-                                                {cfg.label === 'TikTok'    && 'Read this script on camera, then paste the caption when uploading'}
-                                                {cfg.label === 'YouTube'   && 'Use this as your video description. Include the referral link.'}
-                                            </p>
-                                        )}
-
-                                    </div>
-                                </>
-                            )}
+                    {/* ── Success banner (LinkedIn direct post) ── */}
+                    {postSuccess && (
+                        <div className="flex items-center gap-2 px-4 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <p className="text-emerald-400 text-sm font-semibold">Posted to LinkedIn successfully!</p>
                         </div>
                     )}
 
+                    {/* ── Channel-specific hint ── */}
+                    {!isGenerating && editedPost && (
+                        <p className="text-[11px] text-zinc-500 leading-relaxed text-center px-2">
+                            {cfg.hint}
+                        </p>
+                    )}
                 </div>
+
+                {/* ── Action bar (fixed at bottom) ── */}
+                {!isGenerating && editedPost && (
+                    <div className="px-5 pt-3 pb-5 border-t border-white/8 shrink-0 space-y-2.5 bg-[#141420]">
+
+                        {/* Primary: Copy to Clipboard */}
+                        <button
+                            onClick={copyText}
+                            disabled={!editedPost || isOverLimit}
+                            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm transition-all disabled:opacity-40
+                                bg-tm-purple hover:bg-tm-purple/90 text-white shadow-[0_4px_20px_rgba(168,85,247,0.35)] active:scale-[0.98]"
+                        >
+                            {copied
+                                ? <><CheckCircle2 className="w-4 h-4" /> Copied!</>
+                                : <><Copy className="w-4 h-4" /> Copy to Clipboard</>
+                            }
+                        </button>
+
+                        {/* Secondary row */}
+                        <div className="flex gap-2">
+                            {/* Web Share */}
+                            <button
+                                onClick={handleShare}
+                                disabled={!editedPost}
+                                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold
+                                    bg-white/8 hover:bg-white/12 border border-white/10 text-zinc-300 transition-all active:scale-[0.98] disabled:opacity-40"
+                            >
+                                <Share2 className="w-3.5 h-3.5" />
+                                Share…
+                            </button>
+
+                            {/* Copy Referral Link */}
+                            <button
+                                onClick={async () => { await copyText(); await copyLink(); }}
+                                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold
+                                    bg-white/8 hover:bg-white/12 border border-white/10 text-zinc-300 transition-all active:scale-[0.98]"
+                            >
+                                <Link2 className="w-3.5 h-3.5" />
+                                {linkCopied ? 'Link Copied!' : 'Copy Referral Link'}
+                            </button>
+                        </div>
+
+                        {/* LinkedIn: Post Directly (only when connected) */}
+                        {platform === 'linkedin' && (
+                            <div className="flex justify-center">
+                                {isLinkedInConnected ? (
+                                    <button
+                                        onClick={handleDirectPost}
+                                        disabled={isPosting || !editedPost || postSuccess}
+                                        className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 font-semibold transition-colors disabled:opacity-40"
+                                    >
+                                        {isPosting
+                                            ? <><RefreshCw className="w-3 h-3 animate-spin" /> Posting…</>
+                                            : postSuccess
+                                            ? <><CheckCircle2 className="w-3 h-3" /> Posted!</>
+                                            : <><Send className="w-3 h-3" /> Post directly to LinkedIn (1-click)</>
+                                        }
+                                    </button>
+                                ) : (
+                                    <a
+                                        href="/settings"
+                                        className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                                        onClick={onClose}
+                                    >
+                                        Connect LinkedIn in Settings for 1-click posting
+                                        <ChevronRight className="w-3 h-3" />
+                                    </a>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Error */}
+                        {error && !isPosting && (
+                            <p className="text-[11px] text-red-400 text-center">{error}</p>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );

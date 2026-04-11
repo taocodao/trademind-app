@@ -32,11 +32,13 @@ export async function POST(req: NextRequest) {
             platform,
             postMode = 'referral',
             templateStyle = 'results',
+            tone = 'professional',
             customContext,
         } = await req.json() as {
             platform: SocialPlatform;
             postMode?: PostMode;
             templateStyle?: TemplateStyle;
+            tone?: 'professional' | 'punchy' | 'casual';
             customContext?: string;
         };
 
@@ -116,6 +118,12 @@ export async function POST(req: NextRequest) {
         // Build the dynamic system prompt based on platform + mode + template style
         const systemPrompt = buildSystemPrompt(platform, postMode, templateStyle);
 
+        const toneDirective = tone === 'professional'
+            ? 'Write in a formal, data-driven, professional tone. Use LinkedIn-quality prose.'
+            : tone === 'punchy'
+            ? 'Write in a direct, bold tone. Short sentences. High energy. Maximum impact per word.'
+            : 'Write in a casual, conversational, relatable tone. Use contractions, be friendly and approachable.';
+
         const userMessage = `Generate a ${platform} ${postMode === 'education' ? 'educational trading' : 'referral'} post for me.
 
 My referral/promo code: ${promoCode}
@@ -123,6 +131,7 @@ My referral link (auto-applies free trial — use this URL, not the bare code): 
 ${customContext ? `Personal context to weave in authentically: "${customContext}"` : ''}
 
 Template style: ${templateStyle}
+Tone direction: ${toneDirective}
 Character limit: ${constraints.maxChars} characters.
 ${!constraints.supportsLinks ? 'IMPORTANT: This platform does not support clickable links — write "link in bio" and show the URL as plain text.' : ''}
 

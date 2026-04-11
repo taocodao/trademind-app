@@ -577,34 +577,56 @@ export function ShareModal({
                             )}
                         </div>
 
-                        {/* LinkedIn: Post Directly (only when connected) */}
-                        {platform === 'linkedin' && (
-                            <div className="flex justify-center">
-                                {isLinkedInConnected ? (
+                        {/* PRIMARY: LinkedIn — direct post (connected) or copy (not connected) */}
+                        {platform === 'linkedin' && (() => {
+                            if (postSuccess) {
+                                return (
+                                    <div className="flex items-center justify-center gap-2 px-4 py-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl">
+                                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                        <span className="text-emerald-400 font-bold text-sm">Posted to LinkedIn!</span>
+                                    </div>
+                                );
+                            }
+                            if (isLinkedInConnected) {
+                                return (
                                     <button
                                         onClick={handleDirectPost}
-                                        disabled={isPosting || !editedPost || postSuccess}
-                                        className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 font-semibold transition-colors disabled:opacity-40"
+                                        disabled={isPosting || !editedPost}
+                                        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm text-white transition-all disabled:opacity-40 active:scale-[0.98] shadow-lg"
+                                        style={{ backgroundColor: '#0A66C2' }}
                                     >
                                         {isPosting
-                                            ? <><RefreshCw className="w-3 h-3 animate-spin" /> Posting…</>
-                                            : postSuccess
-                                            ? <><CheckCircle2 className="w-3 h-3" /> Posted!</>
-                                            : <><Send className="w-3 h-3" /> Post directly to LinkedIn (1-click)</>
+                                            ? <><RefreshCw className="w-4 h-4 animate-spin" /> Posting to LinkedIn…</>
+                                            : <><Send className="w-4 h-4" /> Post to LinkedIn Now</>
                                         }
                                     </button>
-                                ) : (
+                                );
+                            }
+                            // Not connected: copy is primary, with a nudge to connect
+                            return (
+                                <div className="space-y-2">
+                                    <button
+                                        onClick={copyText}
+                                        disabled={!editedPost}
+                                        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm transition-all disabled:opacity-40
+                                            bg-tm-purple hover:bg-tm-purple/90 text-white shadow-[0_4px_20px_rgba(168,85,247,0.35)] active:scale-[0.98]"
+                                    >
+                                        {copied
+                                            ? <><CheckCircle2 className="w-4 h-4" /> Copied!</>
+                                            : <><Copy className="w-4 h-4" /> Copy to Clipboard</>
+                                        }
+                                    </button>
                                     <a
                                         href="/settings"
-                                        className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                                        className="flex items-center justify-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
                                         onClick={onClose}
                                     >
-                                        Connect LinkedIn in Settings for 1-click posting
+                                        Connect LinkedIn in Settings for 1-click auto-post
                                         <ChevronRight className="w-3 h-3" />
                                     </a>
-                                )}
-                            </div>
-                        )}
+                                </div>
+                            );
+                        })()}
 
                         {/* Error */}
                         {error && !isPosting && (

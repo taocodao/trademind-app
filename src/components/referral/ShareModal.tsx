@@ -105,6 +105,7 @@ export function ShareModal({
     const [linkCopied, setLinkCopied]   = useState(false);
     const [intentOpened, setIntentOpened] = useState(false);
     const [fromCache, setFromCache]     = useState(false);
+    const [canShare, setCanShare]       = useState(false); // navigator.share not available on Firefox desktop
     const [error, setError]             = useState('');
     const [hasGenerated, setHasGenerated] = useState(false);
 
@@ -122,6 +123,11 @@ export function ShareModal({
         el.style.height = 'auto';
         el.style.height = `${el.scrollHeight}px`;
     }, [editedPost]);
+
+    // Detect Web Share API support (not available on Firefox desktop)
+    useEffect(() => {
+        setCanShare(typeof navigator !== 'undefined' && 'share' in navigator);
+    }, []);
 
     // ── Re-listen for LinkedIn OAuth completion ────────────────────────────────
     useEffect(() => {
@@ -474,8 +480,8 @@ export function ShareModal({
                                     className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm transition-all disabled:opacity-40 text-white active:scale-[0.98] shadow-lg"
                                     style={{ backgroundColor: platformColors[platform] ?? '#6d28d9' }}
                                 >
-                                    <Share2 className="w-4 h-4" />
-                                    Open {cfg.label} with content pre-filled
+                                <Share2 className="w-4 h-4" />
+                                    Open {cfg.label} · Text Copied to Clipboard
                                 </button>
                             );
                         })()}
@@ -497,16 +503,18 @@ export function ShareModal({
 
                         {/* Secondary row: Share + Copy Referral Link + Copy fallback (intent platforms) */}
                         <div className="flex gap-2">
-                            {/* Web Share */}
-                            <button
-                                onClick={handleShare}
-                                disabled={!editedPost}
-                                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold
-                                    bg-white/8 hover:bg-white/12 border border-white/10 text-zinc-300 transition-all active:scale-[0.98] disabled:opacity-40"
-                            >
-                                <Share2 className="w-3.5 h-3.5" />
-                                Share…
-                            </button>
+                            {/* Web Share — only shown when browser supports navigator.share (not Firefox desktop) */}
+                            {canShare && (
+                                <button
+                                    onClick={handleShare}
+                                    disabled={!editedPost}
+                                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold
+                                        bg-white/8 hover:bg-white/12 border border-white/10 text-zinc-300 transition-all active:scale-[0.98] disabled:opacity-40"
+                                >
+                                    <Share2 className="w-3.5 h-3.5" />
+                                    Share…
+                                </button>
+                            )}
 
                             {/* Copy Referral Link */}
                             <button

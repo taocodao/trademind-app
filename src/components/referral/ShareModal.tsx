@@ -104,6 +104,7 @@ export function ShareModal({
     const [copied, setCopied]           = useState(false);
     const [linkCopied, setLinkCopied]   = useState(false);
     const [intentOpened, setIntentOpened] = useState(false);
+    const [fromCache, setFromCache]     = useState(false);
     const [error, setError]             = useState('');
     const [hasGenerated, setHasGenerated] = useState(false);
 
@@ -168,10 +169,11 @@ export function ShareModal({
         }
     };
 
-    // ── Generate ───────────────────────────────────────────────────────────────
-    const handleGenerate = useCallback(async () => {
+    // ── Generate ────────────────────────────────────────────────────────────────
+    const handleGenerate = useCallback(async (forceRegenerate = false) => {
         setIsGenerating(true);
         setError('');
+        setFromCache(false);
         try {
             const res = await fetch('/api/social/generate', {
                 method: 'POST',
@@ -179,16 +181,16 @@ export function ShareModal({
                 body: JSON.stringify({
                     platform,
                     templateStyle: template,
-                    // Map our tone to postMode for the API (education template → education mode)
                     postMode: template === 'education' ? 'education' : 'referral',
                     tone,
+                    forceRegenerate,
                 }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error ?? 'Generation failed');
 
             if (data.options) {
-                // Campaign template returns tone variants
+                // Campaign template returns hardcoded tone variants
                 setPostOptions(data.options);
                 const idx = tone === 'professional' ? 0 : tone === 'punchy' ? 1 : 2;
                 const safeIdx = Math.min(idx, data.options.length - 1);
@@ -197,6 +199,7 @@ export function ShareModal({
             } else {
                 setPostOptions([]);
                 setEditedPost(data.post ?? '');
+                setFromCache(!!data.fromCache);
             }
             setHasGenerated(true);
         } catch (err: any) {
@@ -206,10 +209,10 @@ export function ShareModal({
         }
     }, [platform, template, tone]);
 
-    // Auto-generate when platform/template is selected for the first time
+    // Auto-generate on platform/template change — uses cache (forceRegenerate=false)
     useEffect(() => {
         if (!hasGenerated) {
-            handleGenerate();
+            handleGenerate(false);
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [platform, template]);
@@ -362,7 +365,7 @@ export function ShareModal({
                                 </button>
                             ))}
                             <button
-                                onClick={handleGenerate}
+                                onClick={() => handleGenerate(true)}
                                 disabled={isGenerating}
                                 className="ml-auto flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border border-white/10 bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 disabled:opacity-40 transition-all"
                             >
@@ -383,7 +386,7 @@ export function ShareModal({
                             <div className="flex flex-col items-center gap-3 py-10 px-4 text-center">
                                 <AlertCircle className="w-6 h-6 text-red-400" />
                                 <p className="text-red-400 text-sm">{error}</p>
-                                <button onClick={handleGenerate} className="text-xs text-tm-purple underline">Try again</button>
+                                <button onClick={() => handleGenerate(true)} className="text-xs text-tm-purple underline">Try again</button>
                             </div>
                         ) : (
                             <div className="p-4 space-y-3">
@@ -400,15 +403,20 @@ export function ShareModal({
                                     rows={6}
                                 />
 
-                                {/* Char count */}
+                                {/* Char count + cache badge */}
                                 {editedPost && (
-                                    <p className={`text-[11px] text-right ${isOverLimit ? 'text-red-400 font-medium' : 'text-zinc-600'}`}>
-                                        {charCount}{cfg.charLimit ? ` / ${cfg.charLimit}` : ''}
-                                        {isOverLimit && ' — over limit, please trim'}
-                                        {platform === 'twitter' && !isOverLimit && charCount !== editedPost.length && (
-                                            <span className="text-zinc-600"> (URLs auto-shortened by X)</span>
+                                    <div className="flex items-center justify-end gap-2">
+                                        {fromCache && (
+                                            <span className="text-[10px] text-zinc-600 bg-white/5 rounded-full px-2 py-0.5">cached</span>
                                         )}
-                                    </p>
+                                        <p className={`text-[11px] ${isOverLimit ? 'text-red-400 font-medium' : 'text-zinc-600'}`}>
+                                            {charCount}{cfg.charLimit ? ` / ${cfg.charLimit}` : ''}
+                                            {isOverLimit && ' — over limit, please trim'}
+                                            {platform === 'twitter' && !isOverLimit && charCount !== editedPost.length && (
+                                                <span className="text-zinc-600"> (URLs auto-shortened by X)</span>
+                                            )}
+                                        </p>
+                                    </div>
                                 )}
                             </div>
                         )}

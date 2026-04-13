@@ -114,6 +114,7 @@ interface SignalContextValue {
     pendingCount: number;
     removeSignal: (id: string) => void;
     updateSignalStatus: (id: string, status: string) => void;
+    updateSignalExecution: (id: string, orderId: string | null) => void;
     clearSignals: () => void;
     isAutoApproving: boolean;
 }
@@ -125,6 +126,7 @@ const SignalContext = createContext<SignalContextValue>({
     pendingCount: 0,
     removeSignal: () => { },
     updateSignalStatus: () => { },
+    updateSignalExecution: () => { },
     clearSignals: () => { },
     isAutoApproving: false,
 });
@@ -522,6 +524,18 @@ export function SignalProvider({ children }: SignalProviderProps) {
             return prev.map(s => s.id === id ? { ...s, status } : s);
         });
     }, []);
+    // Immediately marks a signal as executed (status + userExecution) so the card
+    // flips to the green Executed state without waiting for the next DB poll.
+    // Used by BOTH auto-approve and manual approval paths for consistency.
+    const updateSignalExecution = useCallback((id: string, orderId: string | null) => {
+        _setAllSignals(prev => {
+            console.log(`[SignalProvider] updateSignalExecution: Marking signal ${id} as executed (orderId=${orderId}).`);
+            return prev.map(s => s.id === id
+                ? { ...s, status: 'executed', userExecution: { status: 'executed', orderId, executedAt: new Date().toISOString() } }
+                : s
+            );
+        });
+    }, []);
     const clearSignals = useCallback(() => {
         console.log('[SignalProvider] clearSignals called: Clearing all signals.');
         _setAllSignals([]);
@@ -555,6 +569,7 @@ export function SignalProvider({ children }: SignalProviderProps) {
             pendingCount,
             removeSignal,
             updateSignalStatus,
+            updateSignalExecution,
             clearSignals,
             isAutoApproving
         }}>

@@ -346,7 +346,7 @@ function DashboardContent() {
 
     const { settings, setAutoApproval, setSessionAutoApproval, effectiveAutoApproval, sessionAutoApproval } = useSettings();
 
-    const { allSignals, removeSignal } = useSignalContext();
+    const { allSignals, removeSignal, updateSignalExecution } = useSignalContext();
 
     const { t, i18n } = useTranslation();
 
@@ -758,8 +758,11 @@ function DashboardContent() {
                     throw new Error(errMsg || 'Execution failed');
                 }
 
+                const liveResult = await response.json();
+                const liveOrderId = liveResult.orderId || liveResult.order_id || null;
                 setToast({ msg: 'TurboCore Atomic Rebalance queued successfully', ok: true });
-                // We no longer rely on a local executedIds set; the next DB fetch will have userExecution populated
+                // Flip card to Executed immediately — same as auto-approve path
+                updateSignalExecution(String(signal.id), liveOrderId);
                 fetchOrders();
                 fetchAccountData(); // Immediately refresh positions matching user request
             } else {
@@ -787,6 +790,8 @@ function DashboardContent() {
                 }
 
                 setToast({ msg: `Virtual Execution Complete — Positions updated!`, ok: true });
+                // Flip card to Executed immediately — same as auto-approve path
+                updateSignalExecution(String(signal.id), null);
             }
         } catch (err: any) {
             console.error('Core Exec error:', err);

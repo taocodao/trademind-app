@@ -344,7 +344,7 @@ function DashboardContent() {
 
     const router = useRouter();
 
-    const { settings, setAutoApproval, setSessionAutoApproval, effectiveAutoApproval, sessionAutoApproval } = useSettings();
+    const { settings, setAutoApproval } = useSettings();
 
     const { allSignals, removeSignal, updateSignalExecution } = useSignalContext();
 
@@ -1133,44 +1133,33 @@ function DashboardContent() {
                 {/* Your Progress */}
                 {/* <ProgressCard stats={gamStats} /> */}
 
-                {/* Auto-Approve Toggle */}
+                {/* Auto-Approve Toggle — writes to DB, consistent with Settings page */}
 
                 <button
 
-                    onClick={() => setSessionAutoApproval(!effectiveAutoApproval)}
+                    onClick={() => setAutoApproval(!settings.autoApproval)}
 
                     className="w-full flex items-center gap-3 glass-card px-4 py-3"
 
                 >
 
-                    {effectiveAutoApproval
+                    {settings.autoApproval
 
                         ? <CheckSquare className="w-5 h-5 text-tm-purple flex-shrink-0" />
 
                         : <Square className="w-5 h-5 text-tm-muted flex-shrink-0" />}
 
-                    <div className="text-left flex-1">
+                    <div className="text-left">
 
-                        <div className="flex items-center gap-2">
-                            <p className="font-semibold text-sm">{t('dashboard.auto_approve.title')}</p>
-                            {/* Badge shown when session differs from the persisted setting */}
-                            {sessionAutoApproval !== null && sessionAutoApproval !== settings.autoApproval && (
-                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                                    Session Override
-                                </span>
-                            )}
-                        </div>
+                        <p className="font-semibold text-sm">{t('dashboard.auto_approve.title')}</p>
 
                         <p className="text-xs text-tm-muted">
 
-                            {effectiveAutoApproval
+                            {settings.autoApproval
 
                                 ? t('dashboard.auto_approve.enabled')
 
                                 : t('dashboard.auto_approve.disabled')}
-                            {sessionAutoApproval !== null && (
-                                <span className="text-zinc-600"> · Resets on refresh</span>
-                            )}
 
                         </p>
 

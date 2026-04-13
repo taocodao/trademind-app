@@ -152,7 +152,7 @@ interface SignalProviderProps {
 
 export function SignalProvider({ children }: SignalProviderProps) {
     const router = useRouter();
-    const { settings: localSettings, effectiveAutoApproval } = useSettings();
+    const { settings: localSettings } = useSettings();
 
     const [isMounted, setIsMounted] = useState(false);
     const [notificationSignal, setNotificationSignal] = useState<Signal | null>(null);
@@ -225,8 +225,8 @@ export function SignalProvider({ children }: SignalProviderProps) {
         
         let isAutoApprovePermitted = false;
         
-        // Check effective value (respects session-only override from dashboard)
-        if (effectiveAutoApproval) {
+        // Check DB-persisted auto-approve setting (both dashboard and settings page write here)
+        if (localSettings?.autoApproval) {
             // If it's turbocore/turbobounce, the global bundle setting is sufficient
             if (strategy.includes('turbocore') || strategy.includes('turbobounce')) {
                 isAutoApprovePermitted = true;

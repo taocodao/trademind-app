@@ -35,10 +35,6 @@ interface SettingsContextValue {
     setTurboBounceMode: (mode: 'MODE_A' | 'MODE_B') => void;
     updateShadowLedger: (strategy: string, updates: Partial<ShadowLedger>) => void;
     clearSettings: () => void;
-    // Session-only override (not persisted to DB or localStorage)
-    sessionAutoApproval: boolean | null;
-    setSessionAutoApproval: (v: boolean | null) => void;
-    effectiveAutoApproval: boolean; // sessionAutoApproval ?? settings.autoApproval
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -59,9 +55,6 @@ const SettingsContext = createContext<SettingsContextValue>({
     setTurboBounceMode: (_mode: 'MODE_A' | 'MODE_B') => { },
     updateShadowLedger: (_strategy: string, _updates: Partial<ShadowLedger>) => { },
     clearSettings: () => { },
-    sessionAutoApproval: null,
-    setSessionAutoApproval: () => { },
-    effectiveAutoApproval: false,
 });
 
 export function useSettings() {
@@ -71,10 +64,6 @@ export function useSettings() {
 export function SettingsProvider({ children }: { children: ReactNode }) {
     const { getAccessToken, authenticated, ready } = usePrivy();
     const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
-    // Session-only override — React state only, never written to localStorage or DB.
-    // Resets to null on page refresh. Dashboard uses this to temporarily override the setting.
-    const [sessionAutoApproval, setSessionAutoApproval] = useState<boolean | null>(null);
-    const effectiveAutoApproval = sessionAutoApproval ?? settings.autoApproval;
     const redeemAttempted = useRef(false);
 
     // Load from localStorage on mount
@@ -234,9 +223,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             setTurboBounceMode,
             updateShadowLedger,
             clearSettings,
-            sessionAutoApproval,
-            setSessionAutoApproval,
-            effectiveAutoApproval,
         }}>
             {children}
         </SettingsContext.Provider>

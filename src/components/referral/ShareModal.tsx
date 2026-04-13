@@ -122,6 +122,7 @@ export function ShareModal({
     const [copied, setCopied]             = useState(false);
     const [linkCopied, setLinkCopied]     = useState(false);
     const [intentOpened, setIntentOpened] = useState(false);
+    const [shared, setShared]             = useState(false); // true after Share sheet triggered
     const [fromCache, setFromCache]       = useState(false);
     const [canShare, setCanShare]         = useState(false);
     const [error, setError]               = useState('');
@@ -166,6 +167,7 @@ export function ShareModal({
         setPostOptions([]);
         setSelectedOption(0);
         setIntentOpened(false);
+        setShared(false);
         setError('');
         setHasGenerated(false);
     };
@@ -321,6 +323,8 @@ export function ShareModal({
 
         try {
             await navigator.share(shareData);
+            // Show persistent paste reminder after share sheet is triggered
+            setShared(true);
         } catch (err) {
             // AbortError = user dismissed — that's fine, clipboard already copied
             if ((err as Error).name !== 'AbortError') console.error('[share]', err);
@@ -653,8 +657,10 @@ export function ShareModal({
                                     className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold
                                         bg-white/8 hover:bg-white/12 border border-white/10 text-zinc-300 transition-all active:scale-[0.98] disabled:opacity-40"
                                 >
-                                    <Share2 className="w-3.5 h-3.5" />
-                                    Share…
+                                    {shared
+                                        ? <><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Copied &amp; Shared</>
+                                        : <><Share2 className="w-3.5 h-3.5" /> Share &amp; Copy…</>
+                                    }
                                 </button>
                             )}
 
@@ -681,6 +687,19 @@ export function ShareModal({
                             )}
                         </div>
 
+
+                        {/* Paste reminder — shown after Share sheet is triggered */}
+                        {shared && (
+                            <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
+                                <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                                <p className="text-[11px] leading-relaxed">
+                                    <strong>Post copied to clipboard.</strong> Your content is ready — paste it with{' '}
+                                    <kbd className="text-[10px] bg-emerald-900/40 border border-emerald-700/40 rounded px-1 py-0.5 font-mono">Ctrl+V</kbd>{' '}or{' '}
+                                    <kbd className="text-[10px] bg-emerald-900/40 border border-emerald-700/40 rounded px-1 py-0.5 font-mono">⌘V</kbd>{' '}
+                                    into any composer or message field.
+                                </p>
+                            </div>
+                        )}
 
                         {/* Error */}
                         {error && (

@@ -647,7 +647,12 @@ export function ShareModal({
                             </button>
                         )}
 
-                        {/* Secondary row: Share + Copy Referral Link + Copy fallback (intent platforms) */}
+                        {/* Secondary row: More Apps + Copy Referral Link + Copy fallback */}
+                        {canShare && (
+                            <p className="text-[10px] text-zinc-600 text-center -mb-1">
+                                <span className="text-zinc-500 font-medium">More Apps</span> opens your device's share panel — WhatsApp, Gmail, Discord, Outlook &amp; more
+                            </p>
+                        )}
                         <div className="flex gap-2">
                             {/* Web Share — only shown when browser supports navigator.share (not Firefox desktop) */}
                             {canShare && (
@@ -658,8 +663,8 @@ export function ShareModal({
                                         bg-white/8 hover:bg-white/12 border border-white/10 text-zinc-300 transition-all active:scale-[0.98] disabled:opacity-40"
                                 >
                                     {shared
-                                        ? <><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Copied &amp; Shared</>
-                                        : <><Share2 className="w-3.5 h-3.5" /> Share &amp; Copy…</>
+                                        ? <><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Sent · Text Copied</>
+                                        : <><Share2 className="w-3.5 h-3.5" /> More Apps…</>
                                     }
                                 </button>
                             )}

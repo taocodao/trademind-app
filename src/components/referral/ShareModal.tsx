@@ -301,20 +301,29 @@ export function ShareModal({
 
     // ── Web Share API ──────────────────────────────────────────────────────────
     const handleShare = useCallback(async () => {
-        // Always pre-copy text to clipboard first
+        // Always pre-copy text to clipboard first (fallback if share is dismissed or unsupported)
         if (editedPost) await navigator.clipboard.writeText(editedPost);
         setCopied(true);
         setTimeout(() => setCopied(false), 3000);
 
-        if (!navigator.share) return; // clipboard-only fallback
+        if (!navigator.share) return; // clipboard-only fallback (Firefox desktop, etc.)
+
+        // Android quirk: include url in text field too — Android sometimes ignores the url field
+        const textWithUrl = `${editedPost}\n\n${ogCardUrl}`;
+        const shareData = {
+            title: 'TradeMind AI Trading Signals',
+            text: textWithUrl,
+            url: ogCardUrl,
+        };
+
+        // canShare() guard — prevents silent failures on edge-case browsers
+        if (!navigator.canShare(shareData)) return;
+
         try {
-            await navigator.share({
-                title: 'TradeMind AI Trading Signals',
-                text: editedPost,
-                url: ogCardUrl,
-            });
-        } catch {
-            // User dismissed the share sheet — clipboard already copied, that's fine
+            await navigator.share(shareData);
+        } catch (err) {
+            // AbortError = user dismissed — that's fine, clipboard already copied
+            if ((err as Error).name !== 'AbortError') console.error('[share]', err);
         }
     }, [editedPost, ogCardUrl]);
 

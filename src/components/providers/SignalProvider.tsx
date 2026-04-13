@@ -150,7 +150,7 @@ interface SignalProviderProps {
 
 export function SignalProvider({ children }: SignalProviderProps) {
     const router = useRouter();
-    const { settings: localSettings } = useSettings();
+    const { settings: localSettings, effectiveAutoApproval } = useSettings();
 
     const [isMounted, setIsMounted] = useState(false);
     const [notificationSignal, setNotificationSignal] = useState<Signal | null>(null);
@@ -223,8 +223,8 @@ export function SignalProvider({ children }: SignalProviderProps) {
         
         let isAutoApprovePermitted = false;
         
-        // Check if the global bundle setting is turned on.
-        if (localSettings?.autoApproval) {
+        // Check effective value (respects session-only override from dashboard)
+        if (effectiveAutoApproval) {
             // If it's turbocore/turbobounce, the global bundle setting is sufficient
             if (strategy.includes('turbocore') || strategy.includes('turbobounce')) {
                 isAutoApprovePermitted = true;
@@ -328,8 +328,12 @@ export function SignalProvider({ children }: SignalProviderProps) {
 
             if (response.ok) {
                 console.log(`✅ Auto-approved successfully: Order ${result.orderId}`);
-                // Update local list
-                setAllSignals(prev => prev.filter(s => s.id !== signal.id));
+                // Update signal to executed state so TurboCoreSignalCard shows green 'Executed'
+                setAllSignals(prev => prev.map(s =>
+                    s.id === signal.id
+                        ? { ...s, status: 'executed', userExecution: { status: 'executed', orderId: result.orderId || null, executedAt: new Date().toISOString() } }
+                        : s
+                ));
                 // Refresh account data (BP changed)
                 fetchAccountData();
             } else {

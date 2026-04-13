@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import {
     X, Sparkles, Copy, CheckCircle2, RefreshCw,
-    AlertCircle, Link2, Share2, Rocket, Target, BookOpen, Smile
+    AlertCircle, Link2, Share2, Rocket, Target, BookOpen, Smile, ExternalLink, Image as ImageIcon
 } from 'lucide-react';
 import type { SocialPlatform } from '@/lib/composio';
 
@@ -67,6 +67,21 @@ function buildIntentUrl(platform: SocialPlatform, text: string, ogUrl: string): 
         default:         return null;
     }
 }
+
+// ── Creator page URLs for platforms that can't pre-fill content via URL ──────
+// These open the platform's upload/create page — user pastes the copied text.
+const CREATOR_URLS: Partial<Record<SocialPlatform, string>> = {
+    instagram: 'https://www.instagram.com/create/select/',
+    tiktok:    'https://www.tiktok.com/creator-center/upload',
+    youtube:   'https://studio.youtube.com/',
+    // snapchat: web creator requires the app — clipboard-only
+};
+
+const CREATOR_COLORS: Partial<Record<SocialPlatform, string>> = {
+    instagram: '#E1306C',
+    tiktok:    '#010101',
+    youtube:   '#FF0000',
+};
 
 // Twitter t.co URL shortening — every URL counted as 23 chars
 const TWITTER_URL_LEN = 23;
@@ -323,6 +338,17 @@ export function ShareModal({
 
     // ── LinkedIn direct post (Composio) REMOVED — now uses intent URL like other platforms ──
 
+    // ── Open platform creator page (Instagram / TikTok / YouTube) ─────────────
+    // Copies text to clipboard first, then opens the platform's upload/create page.
+    const [creatorOpened, setCreatorOpened] = useState(false);
+    const handleOpenCreator = useCallback(async () => {
+        const url = CREATOR_URLS[platform];
+        if (!url || !editedPost) return;
+        try { await navigator.clipboard.writeText(editedPost); setCopied(true); setTimeout(() => setCopied(false), 3000); } catch (_) { /* ignore */ }
+        window.open(url, `Creator_${platform}`, 'noopener,noreferrer,width=1024,height=768');
+        setCreatorOpened(true);
+    }, [platform, editedPost]);
+
     // ── Char count (Twitter t.co aware) ───────────────────────────────────────
     const charCount   = platform === 'twitter' ? twitterCharCount(editedPost) : editedPost.length;
     const isOverLimit = cfg.charLimit ? charCount > cfg.charLimit : false;
@@ -562,8 +588,39 @@ export function ShareModal({
                             );
                         })()}
 
-                        {/* PRIMARY (no intent URL): clipboard-only platforms (Instagram, TikTok, YouTube, Snapchat) */}
-                        {!buildIntentUrl(platform, editedPost, ogCardUrl) && (
+                        {/* PRIMARY (no intent URL): Instagram / TikTok / YouTube → open creator window */}
+                        {!buildIntentUrl(platform, editedPost, ogCardUrl) && CREATOR_URLS[platform] && (
+                            creatorOpened ? (
+                                <div className="flex flex-col items-center gap-1.5 w-full py-3 px-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl">
+                                    <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                                        <CheckCircle2 className="w-4 h-4" />
+                                        {cfg.label} creator opened · Text in clipboard
+                                    </div>
+                                    <p className="text-[11px] text-zinc-400 text-center">
+                                        Paste your text <strong className="text-white">(Ctrl+V)</strong> into the composer and publish.
+                                    </p>
+                                    <button
+                                        onClick={() => { setCreatorOpened(false); handleOpenCreator(); }}
+                                        className="text-[11px] text-zinc-500 hover:text-zinc-300 underline transition-colors"
+                                    >
+                                        Re-open
+                                    </button>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={handleOpenCreator}
+                                    disabled={!editedPost}
+                                    className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm transition-all disabled:opacity-40 text-white active:scale-[0.98] shadow-lg"
+                                    style={{ backgroundColor: CREATOR_COLORS[platform] ?? '#6d28d9' }}
+                                >
+                                    <ExternalLink className="w-4 h-4" />
+                                    Open {cfg.label} Creator · Text Copied
+                                </button>
+                            )
+                        )}
+
+                        {/* PRIMARY (Snapchat): clipboard-only — no web creator available */}
+                        {!buildIntentUrl(platform, editedPost, ogCardUrl) && !CREATOR_URLS[platform] && (
                             <button
                                 onClick={copyText}
                                 disabled={!editedPost}
@@ -620,6 +677,14 @@ export function ShareModal({
                         {error && (
                             <p className="text-[11px] text-red-400 text-center">{error}</p>
                         )}
+
+                        {/* Media Kit link */}
+                        <p className="text-center">
+                            <a href="/media-kit" target="_blank" rel="noopener noreferrer" className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors inline-flex items-center gap-1">
+                                <ImageIcon className="w-3 h-3" />
+                                Download images &amp; copy templates → Media Kit
+                            </a>
+                        </p>
                     </div>
                 )}
             </div>

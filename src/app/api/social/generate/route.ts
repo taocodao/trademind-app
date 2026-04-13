@@ -97,12 +97,14 @@ export async function POST(req: NextRequest) {
             templateStyle = 'results',
             tone = 'professional',
             forceRegenerate = false,
+            customizationRequest,
         } = await req.json() as {
             platform: SocialPlatform;
             postMode?: PostMode;
             templateStyle?: TemplateStyle;
             tone?: 'professional' | 'punchy' | 'casual';
             forceRegenerate?: boolean;
+            customizationRequest?: string; // User's "what to change" prompt for guided regeneration
         };
 
         const validPlatforms: SocialPlatform[] = [
@@ -195,6 +197,52 @@ export async function POST(req: NextRequest) {
                     fromCache: true,
                 });
             }
+        }
+
+        // ── Guided customization: modify existing cached post per user request ──────────
+        if (customizationRequest && customizationRequest.trim()) {
+            // Load base post from cache (fall back to empty string if not cached yet)
+            const baseRow = await getCachedPost(user.privyDid, platform, templateStyle, tone);
+            const basePost = baseRow?.post_content ?? '';
+
+            const openai = getOpenAIClient();
+            const customCompletion = await openai.chat.completions.create({
+                model: 'gpt-4o-mini',
+                messages: [
+                    {
+                        role: 'system',
+                        content: `You are a social media editor for a fintech platform. You will receive an existing social media post and a user's modification request. Make ONLY the changes the user asks for — do not rewrite from scratch unless explicitly asked. Preserve the core message, referral link, and disclaimer. Remove any markdown formatting (no **bold**, no *italic*, no # headings).`,
+                    },
+                    {
+                        role: 'user',
+                        content: `Current post for ${platform}:\n\n${basePost}\n\nUser modification request: "${customizationRequest.trim()}"\n\nReturn only the modified post text, nothing else.`,
+                    },
+                ],
+                max_tokens: 900,
+                temperature: 0.75,
+            });
+
+            const rawCustom = customCompletion.choices[0]?.message?.content?.trim() ?? '';
+            if (!rawCustom) {
+                return NextResponse.json({ error: 'Customization returned an empty response' }, { status: 500 });
+            }
+            const customPost = stripMarkdown(rawCustom);
+
+            // Save customized version back to cache
+            await upsertCachedPost(user.privyDid, platform, templateStyle, tone, customPost)
+                .catch(e => console.warn('[social/generate] Custom cache write failed:', e.message));
+
+            return NextResponse.json({
+                post: customPost,
+                promoCode,
+                referralLink,
+                platform,
+                postMode,
+                templateStyle,
+                charCount: customPost.length,
+                maxChars: constraints.maxChars,
+                fromCache: false,
+            });
         }
 
         // ── Generate via OpenAI ───────────────────────────────────────────────

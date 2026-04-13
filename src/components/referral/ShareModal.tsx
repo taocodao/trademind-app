@@ -100,13 +100,16 @@ export function ShareModal({
     const [postOptions, setPostOptions] = useState<{ label: string; text: string }[]>([]);
     const [selectedOption, setSelectedOption] = useState(0);
 
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [copied, setCopied]           = useState(false);
-    const [linkCopied, setLinkCopied]   = useState(false);
+    const [isGenerating, setIsGenerating]   = useState(false);
+    const [isCustomizing, setIsCustomizing] = useState(false);
+    const [showCustomize, setShowCustomize] = useState(false);
+    const [customizeRequest, setCustomizeRequest] = useState('');
+    const [copied, setCopied]             = useState(false);
+    const [linkCopied, setLinkCopied]     = useState(false);
     const [intentOpened, setIntentOpened] = useState(false);
-    const [fromCache, setFromCache]     = useState(false);
-    const [canShare, setCanShare]       = useState(false); // navigator.share not available on Firefox desktop
-    const [error, setError]             = useState('');
+    const [fromCache, setFromCache]       = useState(false);
+    const [canShare, setCanShare]         = useState(false);
+    const [error, setError]               = useState('');
     const [hasGenerated, setHasGenerated] = useState(false);
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -222,6 +225,50 @@ export function ShareModal({
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [platform, template]);
+
+    // ── Bulk-generate all permutations on first modal open (background, non-blocking) ──────
+    const bulkGenStarted = useRef(false);
+    useEffect(() => {
+        if (bulkGenStarted.current) return;
+        bulkGenStarted.current = true;
+        // Fire-and-forget — runs in background, doesn't block the UI
+        fetch('/api/social/generate-all', { method: 'POST' })
+            .then(r => r.json())
+            .then(d => console.log('[ShareModal] Bulk-gen:', d.message))
+            .catch(e => console.warn('[ShareModal] Bulk-gen failed:', e.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // ── Guided customization (Regenerate → user types request → OpenAI modifies) ──────
+    const handleCustomize = useCallback(async () => {
+        if (!customizeRequest.trim()) return;
+        setIsCustomizing(true);
+        setError('');
+        setFromCache(false);
+        try {
+            const res = await fetch('/api/social/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    platform,
+                    templateStyle: template,
+                    postMode: template === 'education' ? 'education' : 'referral',
+                    tone,
+                    forceRegenerate: true,
+                    customizationRequest: customizeRequest,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error ?? 'Customization failed');
+            setEditedPost(data.post ?? '');
+            setShowCustomize(false);
+            setCustomizeRequest('');
+        } catch (err: any) {
+            setError(err.message || 'Failed to customize. Please try again.');
+        } finally {
+            setIsCustomizing(false);
+        }
+    }, [platform, template, tone, customizeRequest]);
 
     // ── Clipboard helpers ──────────────────────────────────────────────────────
     const copyText = useCallback(async () => {
@@ -371,15 +418,44 @@ export function ShareModal({
                                 </button>
                             ))}
                             <button
-                                onClick={() => handleGenerate(true)}
-                                disabled={isGenerating}
+                                onClick={() => { setShowCustomize(true); setCustomizeRequest(''); }}
+                                disabled={isGenerating || isCustomizing}
                                 className="ml-auto flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border border-white/10 bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 disabled:opacity-40 transition-all"
                             >
-                                <RefreshCw className={`w-3 h-3 ${isGenerating ? 'animate-spin' : ''}`} />
-                                {isGenerating ? 'Generating…' : 'Regenerate'}
+                                <RefreshCw className={`w-3 h-3 ${isCustomizing ? 'animate-spin' : ''}`} />
+                                {isCustomizing ? 'Customizing…' : 'Regenerate'}
                             </button>
                         </div>
                     </div>
+
+                    {/* ── Guided customization input ── */}
+                    {showCustomize && (
+                        <div className="flex flex-col gap-2 px-1">
+                            <p className="text-xs text-zinc-400">What would you like to change?</p>
+                            <textarea
+                                autoFocus
+                                value={customizeRequest}
+                                onChange={e => setCustomizeRequest(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleCustomize(); } }}
+                                placeholder='e.g. "make it shorter", "add a question at the end", "focus on the 2022 crash story"'
+                                rows={2}
+                                className="w-full text-sm bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-tm-purple/50 resize-none"
+                            />
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={handleCustomize}
+                                    disabled={!customizeRequest.trim() || isCustomizing}
+                                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold bg-tm-purple hover:bg-tm-purple/90 text-white disabled:opacity-40 transition-all"
+                                >
+                                    {isCustomizing ? <><RefreshCw className="w-3 h-3 animate-spin" /> Customizing…</> : <><Sparkles className="w-3 h-3" /> Apply Changes</>}
+                                </button>
+                                <button
+                                    onClick={() => { setShowCustomize(false); setCustomizeRequest(''); }}
+                                    className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-500 hover:text-zinc-300 border border-white/10 bg-white/5 transition-all"
+                                >Cancel</button>
+                            </div>
+                        </div>
+                    )}
 
                     {/* ── Content area ── */}
                     <div className="rounded-2xl border border-white/10 bg-black/30 overflow-hidden">

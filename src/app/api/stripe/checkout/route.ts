@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
         }
 
-        const { priceId, isAnnual, referralCode } = await req.json();
+        const { priceId, isAnnual, referralCode, locale } = await req.json();
         if (!priceId) {
             return NextResponse.json({ error: "Price ID is required" }, { status: 400 });
         }
@@ -120,6 +120,13 @@ export async function POST(req: NextRequest) {
                 referralCode: referralCode || "",
             },
         };
+
+        // Apply locale to Stripe checkout page (en / es / zh)
+        const ALLOWED_LOCALES = ['en', 'es', 'zh'] as const;
+        type StripeLocale = Stripe.Checkout.SessionCreateParams.Locale;
+        if (locale && ALLOWED_LOCALES.includes(locale)) {
+            sessionPayload.locale = locale as StripeLocale;
+        }
 
         if (remainingTrialDays > 0) {
             sessionPayload.subscription_data = {

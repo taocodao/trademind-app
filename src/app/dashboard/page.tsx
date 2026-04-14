@@ -344,7 +344,7 @@ function DashboardContent() {
 
     const router = useRouter();
 
-    const { settings, setAutoApproval } = useSettings();
+    const { settings, setAutoApproval, setLanguage } = useSettings();
 
     const { allSignals, removeSignal, updateSignalExecution } = useSignalContext();
 
@@ -508,7 +508,7 @@ function DashboardContent() {
 
                     },
 
-                    body: JSON.stringify({ priceId, isAnnual }),
+                    body: JSON.stringify({ priceId, isAnnual, locale: i18n.language }),
 
                 });
 
@@ -909,15 +909,15 @@ function DashboardContent() {
                     {/* Language Selector */}
                     <div className="flex items-center gap-1 p-1 rounded-full bg-black/40 border border-white/5 shadow-inner shrink-0 ml-auto">
                         <button
-                            onClick={() => i18n.changeLanguage('en')}
+                            onClick={() => setLanguage('en')}
                             className={`flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold transition-all ${i18n.language?.startsWith('en') ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
                         >EN</button>
                         <button
-                            onClick={() => i18n.changeLanguage('es')}
+                            onClick={() => setLanguage('es')}
                             className={`flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold transition-all ${i18n.language?.startsWith('es') ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
                         >ES</button>
                         <button
-                            onClick={() => i18n.changeLanguage('zh')}
+                            onClick={() => setLanguage('zh')}
                             className={`flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold transition-all ${i18n.language?.startsWith('zh') ? 'bg-tm-purple text-white shadow-md' : 'text-tm-muted hover:text-white/80 hover:bg-white/5'}`}
                         >中</button>
                     </div>

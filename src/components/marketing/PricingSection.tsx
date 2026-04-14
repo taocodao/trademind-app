@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { usePrivy } from '@privy-io/react-auth';
 
 export function PricingSection() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { login, authenticated, getAccessToken } = usePrivy();
     const [isAnnual, setIsAnnual] = useState(true);
     const [loadingTier, setLoadingTier] = useState<string | null>(null);
@@ -106,7 +106,11 @@ export function PricingSection() {
             if (tierData.tier && tierData.tier !== 'observer') {
                 const portalRes = await fetch('/api/stripe/portal', { 
                     method: 'POST',
-                    headers: token ? { 'Authorization': `Bearer ${token}` } : {} 
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    },
+                    body: JSON.stringify({ locale: i18n.language }),
                 });
                 const portalData = await portalRes.json();
                 if (portalData.url) {
@@ -122,7 +126,7 @@ export function PricingSection() {
                     'Content-Type': 'application/json',
                     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
                 },
-                body: JSON.stringify({ priceId, isAnnual }),
+                body: JSON.stringify({ priceId, isAnnual, locale: i18n.language }),
             });
             const data = await res.json();
             if (data.url) {

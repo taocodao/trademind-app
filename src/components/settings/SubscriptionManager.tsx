@@ -29,7 +29,7 @@ interface MembershipInfo {
 }
 
 export function SubscriptionManager() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [loading, setLoading] = useState<string | null>(null);
     const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('annual');
     const [portalLoading, setPortalLoading] = useState(false);
@@ -116,7 +116,7 @@ export function SubscriptionManager() {
                     'Content-Type': 'application/json',
                     ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                 },
-                body: JSON.stringify({ priceId, isAnnual }),
+                body: JSON.stringify({ priceId, isAnnual, locale: i18n.language }),
             });
             const data = await res.json();
             if (data.url) {
@@ -138,7 +138,11 @@ export function SubscriptionManager() {
             const token = await getAccessToken();
             const res = await fetch('/api/stripe/portal', { 
                 method: 'POST',
-                headers: token ? { 'Authorization': `Bearer ${token}` } : {} 
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify({ locale: i18n.language }),
             });
             const data = await res.json();
             if (data.url) {

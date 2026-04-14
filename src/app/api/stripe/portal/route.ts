@@ -32,6 +32,9 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
         }
 
+        const body = await req.json().catch(() => ({}));
+        const locale: string = body.locale || 'en';
+
         const result = await pool.query(
             `SELECT stripe_customer_id FROM user_settings WHERE user_id = $1`,
             [userId]
@@ -44,9 +47,14 @@ export async function POST(req: NextRequest) {
 
         const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
+        const ALLOWED_LOCALES = ['en', 'es', 'zh'] as const;
+        type PortalLocale = Stripe.BillingPortal.SessionCreateParams.Locale;
+        const stripeLocale: PortalLocale = (ALLOWED_LOCALES.includes(locale as any) ? locale : 'en') as PortalLocale;
+
         const session = await stripe.billingPortal.sessions.create({
             customer: customerId,
             return_url: `${origin}/settings`,
+            locale: stripeLocale,
         });
 
         return NextResponse.json({ url: session.url });

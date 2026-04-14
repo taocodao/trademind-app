@@ -2,6 +2,9 @@
 
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
+import i18n from '@/lib/i18n';
+
+type Lang = 'en' | 'es' | 'zh';
 
 type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
 
@@ -24,6 +27,7 @@ interface AppSettings {
     turboBounceMode: 'MODE_A' | 'MODE_B';
     shadowLedger: Record<string, ShadowLedger>; // strategy key -> shadow ledger
     subscription_tier?: string;
+    preferredLanguage: Lang;
 }
 
 interface SettingsContextValue {
@@ -35,6 +39,7 @@ interface SettingsContextValue {
     setTurboBounceMode: (mode: 'MODE_A' | 'MODE_B') => void;
     updateShadowLedger: (strategy: string, updates: Partial<ShadowLedger>) => void;
     clearSettings: () => void;
+    setLanguage: (lang: Lang) => void;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -44,6 +49,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     autoApproval: false,
     turboBounceMode: 'MODE_B',
     shadowLedger: {},
+    preferredLanguage: 'en',
 };
 
 const SettingsContext = createContext<SettingsContextValue>({
@@ -55,6 +61,7 @@ const SettingsContext = createContext<SettingsContextValue>({
     setTurboBounceMode: (_mode: 'MODE_A' | 'MODE_B') => { },
     updateShadowLedger: (_strategy: string, _updates: Partial<ShadowLedger>) => { },
     clearSettings: () => { },
+    setLanguage: () => { },
 });
 
 export function useSettings() {
@@ -112,7 +119,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         persist({ ...settings, riskLevel: level });
     };
 
-    // Sync with DB
+    // Sync with DB — restores autoApproval AND preferredLanguage on login/focus
     useEffect(() => {
         const fetchRemoteSync = async () => {
             const token = await getAccessToken();
@@ -121,15 +128,25 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             })
                 .then(res => res.json())
                 .then(data => {
-                    if (data.globalAutoApprove !== undefined) {
-                        setSettings(prev => {
-                            // Only update if it actually changed to avoid unnecessary renders
-                            if (prev.autoApproval === data.globalAutoApprove) return prev;
-                            const updated = { ...prev, autoApproval: data.globalAutoApprove };
-                            localStorage.setItem('tm_settings', JSON.stringify(updated));
-                            return updated;
-                        });
-                    }
+                    setSettings(prev => {
+                        let updated = { ...prev };
+                        let changed = false;
+                        if (data.globalAutoApprove !== undefined && prev.autoApproval !== data.globalAutoApprove) {
+                            updated = { ...updated, autoApproval: data.globalAutoApprove };
+                            changed = true;
+                        }
+                        if (data.preferredLanguage && prev.preferredLanguage !== data.preferredLanguage) {
+                            updated = { ...updated, preferredLanguage: data.preferredLanguage as Lang };
+                            // Apply to i18n immediately (login language restore)
+                            if (i18n.language !== data.preferredLanguage) {
+                                i18n.changeLanguage(data.preferredLanguage);
+                            }
+                            changed = true;
+                        }
+                        if (!changed) return prev;
+                        localStorage.setItem('tm_settings', JSON.stringify(updated));
+                        return updated;
+                    });
                 })
                 .catch(() => {});
         };
@@ -193,6 +210,25 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    // setLanguage — applies immediately to i18n, persists to localStorage + DB
+    const setLanguage = async (lang: Lang) => {
+        i18n.changeLanguage(lang);                          // instant UI update
+        persist({ ...settings, preferredLanguage: lang });  // localStorage
+        try {
+            const token = await getAccessToken();
+            await fetch('/api/settings/language', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({ language: lang }),
+            });
+        } catch (err) {
+            console.error('Failed to save language preference', err);
+        }
+    };
+
     const setTurboBounceMode = (mode: 'MODE_A' | 'MODE_B') => {
         persist({ ...settings, turboBounceMode: mode });
     };
@@ -223,6 +259,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             setTurboBounceMode,
             updateShadowLedger,
             clearSettings,
+            setLanguage,
         }}>
             {children}
         </SettingsContext.Provider>

@@ -119,9 +119,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         persist({ ...settings, riskLevel: level });
     };
 
-    // Sync with DB — restores autoApproval AND preferredLanguage on login/focus
+    // Sync with DB — restores autoApproval AND preferredLanguage on every login/focus.
+    // Runs when: (1) user becomes authenticated, (2) window re-focuses.
+    // MUST include `authenticated` in deps so it fires after login, not just on mount.
     useEffect(() => {
+        if (!ready) return; // Privy not ready yet — skip
+
+        const ALLOWED_LANGS: Lang[] = ['en', 'es', 'zh'];
+
         const fetchRemoteSync = async () => {
+            // Only sync when logged in — anonymous calls return observer defaults
+            if (!authenticated) return;
+
             const token = await getAccessToken();
             fetch('/api/settings/tier', {
                 headers: token ? { Authorization: `Bearer ${token}` } : {}
@@ -131,18 +140,47 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
                     setSettings(prev => {
                         let updated = { ...prev };
                         let changed = false;
+
+                        // ── Auto-approve sync ──────────────────────────────
                         if (data.globalAutoApprove !== undefined && prev.autoApproval !== data.globalAutoApprove) {
                             updated = { ...updated, autoApproval: data.globalAutoApprove };
                             changed = true;
                         }
-                        if (data.preferredLanguage && prev.preferredLanguage !== data.preferredLanguage) {
-                            updated = { ...updated, preferredLanguage: data.preferredLanguage as Lang };
-                            // Apply to i18n immediately (login language restore)
-                            if (i18n.language !== data.preferredLanguage) {
-                                i18n.changeLanguage(data.preferredLanguage);
+
+                        // ── Language sync ──────────────────────────────────
+                        const dbLang = data.preferredLanguage as Lang;
+                        // Normalize browser lang to 2-char code (e.g. 'zh-TW' → 'zh')
+                        const browserLang = (i18n.language?.slice(0, 2) || 'en') as Lang;
+
+                        if (dbLang && dbLang !== 'en') {
+                            // Returning user — restore their explicit DB language choice
+                            if (prev.preferredLanguage !== dbLang) {
+                                updated = { ...updated, preferredLanguage: dbLang };
+                                if (i18n.language !== dbLang) i18n.changeLanguage(dbLang);
+                                changed = true;
                             }
-                            changed = true;
+                        } else if (dbLang === 'en' && ALLOWED_LANGS.includes(browserLang) && browserLang !== 'en') {
+                            // New user — they chose a language on the landing page.
+                            // The DB has the default 'en' but their browser/landing page
+                            // preference is browserLang. Save it to DB so next login on
+                            // any device restores the correct language.
+                            if (prev.preferredLanguage !== browserLang) {
+                                updated = { ...updated, preferredLanguage: browserLang };
+                                changed = true;
+                            }
+                            // Persist to DB async (non-blocking)
+                            getAccessToken().then(t => {
+                                fetch('/api/settings/language', {
+                                    method: 'PATCH',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        ...(t ? { Authorization: `Bearer ${t}` } : {}),
+                                    },
+                                    body: JSON.stringify({ language: browserLang }),
+                                }).catch(() => {});
+                            });
                         }
+
                         if (!changed) return prev;
                         localStorage.setItem('tm_settings', JSON.stringify(updated));
                         return updated;
@@ -154,7 +192,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         fetchRemoteSync();
         window.addEventListener('focus', fetchRemoteSync);
         return () => window.removeEventListener('focus', fetchRemoteSync);
-    }, [getAccessToken]);
+    }, [getAccessToken, authenticated, ready]);
 
     // ── Referral redeem on first auth ─────────────────────────────────────
     // Safe to call on every login — the API is idempotent (already-linked returns success too).

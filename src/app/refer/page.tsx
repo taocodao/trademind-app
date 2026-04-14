@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Users, DollarSign, Clock, HelpCircle, Activity, CalendarDays, Trophy, Rocket, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Users, DollarSign, Clock, HelpCircle, Activity, CalendarDays, Trophy, Rocket, ChevronDown, Gift, CheckCircle2, Circle } from 'lucide-react';
 import { ShareSection } from '@/components/referral/ShareSection';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
@@ -52,13 +52,16 @@ export default function ReferPage() {
 
     const shareLink = `https://trademind.bot/?ref=${data?.referralCode}`;
     
-    // Calculate pending standard credits: if stage1 Paid but stage2 NOT paid, $50 is conceptually pending for stage2
     const totalReferred = data?.stats?.totalReferred || 0;
+    const referralHalf = data?.stats?.referralHalf || 50;
+    const signupBonusPaidCount = data?.stats?.signupBonusPaid || 0;
     const stage1PaidCount = data?.stats?.stage1Paid || 0;
-    const stage2PaidCount = data?.stats?.stage2Paid || 0;
-    
-    // This is just a rough estimate of potential pending value for display
-    const pendingCredits = (totalReferred - stage1PaidCount) * 50 + (stage1PaidCount - stage2PaidCount) * 50;
+
+    // Potential = referrals without signup bonus + referrals without payment bonus
+    const pendingCredits = Math.max(0,
+        (totalReferred - signupBonusPaidCount) * referralHalf +
+        (signupBonusPaidCount - stage1PaidCount) * referralHalf
+    );
 
     return (
         <main className="min-h-screen bg-tm-bg text-white pb-24 px-4 pt-6 max-w-4xl mx-auto">
@@ -111,6 +114,77 @@ export default function ReferPage() {
                     </div>
                 </div>
             </div>
+
+            {/* ── Referee Benefit Card ─ shown only if THIS user was referred ── */}
+            {data?.refereeStatus && (() => {
+                const rs = data.refereeStatus;
+                const half = rs.referralHalf || 50;
+                return (
+                    <div className="mb-6 bg-gradient-to-r from-purple-900/20 to-purple-800/10 border border-purple-500/30 rounded-2xl p-5 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-40 h-40 bg-purple-600/10 blur-[60px] rounded-full pointer-events-none" />
+                        <div className="flex items-center gap-2 mb-3">
+                            <Gift className="w-5 h-5 text-purple-400" />
+                            <h3 className="font-bold text-white text-sm">Your Referral Reward</h3>
+                            <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full font-mono">
+                                via {rs.referredBy}
+                            </span>
+                        </div>
+                        <p className="text-xs text-zinc-400 mb-4">
+                            You were referred! Here&apos;s your <strong className="text-white">${rs.referralFee} total reward</strong> — applied as free subscription days, no action needed.
+                        </p>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex gap-3 items-start">
+                                <div className="mt-0.5 shrink-0">
+                                    {rs.signupBonusPaid
+                                        ? <CheckCircle2 className="w-5 h-5 text-purple-400" />
+                                        : <Circle className="w-5 h-5 text-zinc-600" />
+                                    }
+                                </div>
+                                <div>
+                                    <div className="text-sm font-bold text-white">
+                                        {rs.signupBonusPaid ? '✓ Signup Bonus Applied' : 'Signup Bonus Pending'}
+                                    </div>
+                                    <div className="text-xs text-zinc-400 mt-0.5">
+                                        <span className="text-purple-300 font-semibold">${half} in free trial days</span> — extends your trial before your first charge.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex gap-3 items-start">
+                                <div className="mt-0.5 shrink-0">
+                                    {rs.paymentBonusPaid
+                                        ? <CheckCircle2 className="w-5 h-5 text-green-400" />
+                                        : <Circle className="w-5 h-5 text-zinc-600" />
+                                    }
+                                </div>
+                                <div>
+                                    <div className="text-sm font-bold text-white">
+                                        {rs.paymentBonusPaid ? '✓ First Charge Bonus Applied' : 'First Charge Bonus — Coming'}
+                                    </div>
+                                    <div className="text-xs text-zinc-400 mt-0.5">
+                                        <span className="text-green-400 font-semibold">${half} more in free days</span> credited automatically when your first payment processes.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {rs.activity?.length > 0 && (
+                            <div className="mt-4 space-y-2">
+                                <div className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Your credit history</div>
+                                {rs.activity.map((act: any, i: number) => (
+                                    <div key={i} className="flex items-center justify-between text-xs bg-black/20 px-3 py-2 rounded-lg">
+                                        <span className="text-zinc-400">{act.description}</span>
+                                        <span className="text-green-400 font-bold shrink-0 ml-2">
+                                            {act.credit_amount > 0 ? `+$${act.credit_amount}` : ''}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                );
+            })()}
 
             {/* Tier Progress */}
             {(() => {
@@ -294,21 +368,21 @@ export default function ReferPage() {
                                             </div>
                                             
                                             <div className="flex items-center gap-2">
-                                                {/* Progress dots */}
+                                                {/* Progress dots — new 2-stage model */}
                                                 <div className="flex items-center gap-1.5 bg-tm-bg p-2 rounded-lg border border-tm-border">
-                                                    <div className="flex flex-col items-center gap-1 w-12">
+                                                    <div className="flex flex-col items-center gap-1 w-14">
                                                         <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
                                                         <div className="text-[9px] text-tm-muted uppercase">Signed Up</div>
                                                     </div>
                                                     <div className="w-4 h-[1px] bg-tm-border"></div>
-                                                    <div className="flex flex-col items-center gap-1 w-12">
-                                                        <div className={`w-3 h-3 rounded-full ${ref.stage1Paid || ref.annualBonusPaid ? 'bg-emerald-500 shadow-[0_0_10px_#10b981]' : 'bg-tm-border'}`}></div>
-                                                        <div className="text-[9px] text-tm-muted uppercase">Stage 1</div>
+                                                    <div className="flex flex-col items-center gap-1 w-14">
+                                                        <div className={`w-3 h-3 rounded-full ${ref.signupBonusPaid ? 'bg-tm-purple shadow-[0_0_8px_#a855f7]' : 'bg-tm-border'}`}></div>
+                                                        <div className="text-[9px] text-tm-muted uppercase">+$50 Sent</div>
                                                     </div>
                                                     <div className="w-4 h-[1px] bg-tm-border"></div>
-                                                    <div className="flex flex-col items-center gap-1 w-12">
-                                                        <div className={`w-3 h-3 rounded-full ${ref.stage2Paid || ref.annualBonusPaid ? 'bg-emerald-500 shadow-[0_0_10px_#10b981]' : 'bg-tm-border'}`}></div>
-                                                        <div className="text-[9px] text-tm-muted uppercase">Stage 2</div>
+                                                    <div className="flex flex-col items-center gap-1 w-14">
+                                                        <div className={`w-3 h-3 rounded-full ${ref.stage1Paid || ref.annualBonusPaid ? 'bg-emerald-500 shadow-[0_0_10px_#10b981]' : 'bg-tm-border'}`}></div>
+                                                        <div className="text-[9px] text-tm-muted uppercase">+$50 Paid</div>
                                                     </div>
                                                 </div>
                                             </div>

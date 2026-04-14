@@ -1186,21 +1186,29 @@ export async function cancelWorkingOrders(
     if (symbols.length === 0) return;
     try {
         const resp = await fetch(
-            `/accounts//orders?status=working`,
-            { headers: { Authorization: `Bearer `, 'User-Agent': 'TradeMind/1.0' } }
+            `${TASTYTRADE_API_BASE}/accounts/${accountNumber}/orders?status=Live`,
+            { headers: { Authorization: `Bearer ${accessToken}`, 'User-Agent': 'TradeMind/1.0' } }
         );
         if (!resp.ok) { console.warn('[cancelWorkingOrders] Could not fetch working orders:', resp.status); return; }
         const data = await resp.json();
         const orders: any[] = data?.data?.items ?? [];
         const symbolSet = new Set(symbols.map(s => s.toUpperCase()));
+        let cancelled = 0;
         for (const order of orders) {
             const orderSymbols: string[] = (order.legs ?? []).map((l: any) => String(l.symbol ?? '').toUpperCase());
             if (!orderSymbols.some(s => symbolSet.has(s))) continue;
+            const orderId = order.id || order['id'];
             const delResp = await fetch(
-                `/accounts//orders/`,
-                { method: 'DELETE', headers: { Authorization: `Bearer `, 'User-Agent': 'TradeMind/1.0' } }
+                `${TASTYTRADE_API_BASE}/accounts/${accountNumber}/orders/${orderId}`,
+                { method: 'DELETE', headers: { Authorization: `Bearer ${accessToken}`, 'User-Agent': 'TradeMind/1.0' } }
             );
-            console.log(`[cancelWorkingOrders]  order  ()`);
+            cancelled++;
+            console.log(`[cancelWorkingOrders] Cancelled order ${orderId} for ${orderSymbols.join(',')} — HTTP ${delResp.status}`);
+        }
+        // Give TT a moment to settle cancellations before new orders arrive
+        if (cancelled > 0) {
+            await new Promise(r => setTimeout(r, 1500));
+            console.log(`[cancelWorkingOrders] ${cancelled} order(s) cancelled. Settled.`);
         }
     } catch (e) { console.warn('[cancelWorkingOrders] Failed (non-fatal):', e); }
 }

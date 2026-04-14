@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
         }
 
-        const { priceId, isAnnual, referralCode, locale } = await req.json();
+        const { priceId, isAnnual, referralCode, locale, isReferralSignup } = await req.json();
         if (!priceId) {
             return NextResponse.json({ error: "Price ID is required" }, { status: 400 });
         }
@@ -74,15 +74,35 @@ export async function POST(req: NextRequest) {
             );
         }
 
+        // ── Monthly price per plan (used for referral bonus day calculation) ──
+        const MONTHLY_PRICES: Record<string, number> = {
+            [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_MONTHLY_PRICE_ID || '']: 29,
+            [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_ANNUAL_PRICE_ID  || '']: 29, // use monthly rate
+            [process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID       || '']: 49,
+            [process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID        || '']: 49,
+            [process.env.NEXT_PUBLIC_STRIPE_BUNDLE_MONTHLY_PRICE_ID    || '']: 69,
+            [process.env.NEXT_PUBLIC_STRIPE_BUNDLE_ANNUAL_PRICE_ID     || '']: 69,
+        };
+        delete MONTHLY_PRICES[''];
+
         // ── Calculate Remaining Trial Days ──────────────────────────────────
         let remainingTrialDays = 0;
         const row = userResult.rows[0];
-        if (row) {
+
+        // If this is a referral signup, override trial with bonus days (REFERRAL_FEE/2 / daily_rate + 14)
+        if (isReferralSignup && referralCode) {
+            const BASE_TRIAL = 14;
+            const halfFee = parseInt(process.env.REFERRAL_FEE || '100', 10) / 2;
+            const monthlyPrice = MONTHLY_PRICES[priceId] ?? 29;
+            const dailyRate = monthlyPrice / 30;
+            const bonusDays = Math.floor(halfFee / dailyRate);
+            remainingTrialDays = bonusDays + BASE_TRIAL;
+            console.log(`🎁 Referral signup: ${bonusDays} bonus days + ${BASE_TRIAL} base = ${remainingTrialDays} total trial days`);
+        } else if (row) {
             const FREE_TRIAL_DAYS = parseInt(process.env.FREE_TRIAL_DAYS || '14', 10);
             const trial1Start = row.app_trial_started_at ? new Date(row.app_trial_started_at) : null;
             const trial2Start = row.app_trial_2_started_at ? new Date(row.app_trial_2_started_at) : null;
             const activeTrial = trial2Start ?? trial1Start;
-            
             if (activeTrial) {
                 const now = new Date();
                 const trialEndDate = new Date(activeTrial.getTime() + FREE_TRIAL_DAYS * 24 * 60 * 60 * 1000);
@@ -118,6 +138,7 @@ export async function POST(req: NextRequest) {
             metadata: {
                 userId,          // For webhook → link account
                 referralCode: referralCode || "",
+                isReferralSignup: isReferralSignup ? "true" : "",
             },
         };
 

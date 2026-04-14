@@ -11,6 +11,14 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: "2025-01-27.acacia" as any,
 });
 
+// ── Config ─────────────────────────────────────────────────────────────────
+// REFERRAL_FEE: total bilateral credit per referral (default $100)
+// Split in half: $50 at signup, $50 at first charge — both referrer AND referee
+const REFERRAL_FEE = parseInt(process.env.REFERRAL_FEE || '100', 10);
+const REFERRAL_HALF = REFERRAL_FEE / 2;
+const REFERRAL_ANNUAL_BONUS = parseInt(process.env.REFERRAL_ANNUAL_BONUS || '150', 10);
+const REFERRAL_ANNUAL_HALF = REFERRAL_ANNUAL_BONUS / 2;
+
 export async function POST(req: NextRequest) {
     if (!process.env.STRIPE_WEBHOOK_SECRET) {
         return new Response("Webhook secret not configured", { status: 500 });
@@ -55,6 +63,7 @@ async function processWebhookEvent(event: Stripe.Event) {
             const customerId = session.customer as string;
             const subscriptionId = session.subscription as string;
             const referralCode = session.metadata?.referralCode;
+            const isReferralSignup = session.metadata?.isReferralSignup === "true";
 
             if (!userId || !subscriptionId) break;
 
@@ -65,8 +74,6 @@ async function processWebhookEvent(event: Stripe.Event) {
             const email = session.customer_details?.email || null;
 
             // ── FAILSAFE: Prevent Orphaned Subscriptions ──
-            // If the user already had an active subscription, cancel it in Stripe 
-            // before overwriting it in our database so they aren't double billed.
             const existingUserRes = await pool.query(
                 `SELECT stripe_subscription_id FROM user_settings WHERE user_id = $1`,
                 [userId]
@@ -74,13 +81,12 @@ async function processWebhookEvent(event: Stripe.Event) {
             const existingSubscriptionId = existingUserRes.rows[0]?.stripe_subscription_id;
             
             if (existingSubscriptionId && existingSubscriptionId !== subscriptionId) {
-                console.log(`⚠️ User ${userId} completed new checkout session but already has subscription ${existingSubscriptionId}. Canceling orphaned subscription to prevent duplicate billing.`);
+                console.log(`⚠️ User ${userId} completed new checkout session but already has subscription ${existingSubscriptionId}. Canceling orphaned subscription.`);
                 try {
                     await stripe.subscriptions.cancel(existingSubscriptionId);
                 } catch (cancelErr: any) {
-                    // Ignore 404s if it was already canceled
                     if (cancelErr.code !== 'resource_missing') {
-                        console.error(`Failed to automatically cancel orphaned subscription ${existingSubscriptionId}:`, cancelErr);
+                        console.error(`Failed to cancel orphaned subscription ${existingSubscriptionId}:`, cancelErr);
                     }
                 }
             }
@@ -123,7 +129,35 @@ async function processWebhookEvent(event: Stripe.Event) {
 
             // Store referral relationship if present
             if (referralCode) {
-                await linkReferral(referralCode, userId, customerId);
+                const referrerUserId = await linkReferral(referralCode, userId, customerId);
+
+                // ── Stage 1 (Signup): Extend REFERRER's subscription by REFERRAL_HALF ──────
+                // The referee already received REFERRAL_HALF worth of bonus trial days
+                // baked into their trial_period_days at checkout. Now we credit the referrer.
+                if (referrerUserId && isReferralSignup) {
+                    const refRecord = await pool.query(
+                        `SELECT id FROM referrals WHERE referred_user_id = $1`, [userId]
+                    );
+                    const referralId = refRecord.rows[0]?.id;
+                    if (referralId) {
+                        await extendReferrerSubscription(
+                            referrerUserId,
+                            REFERRAL_HALF,
+                            referralId,
+                            `Referral Stage 1 (signup) — friend joined, referrer credited $${REFERRAL_HALF}`
+                        );
+                        await pool.query(
+                            `UPDATE referrals SET signup_bonus_paid = true, updated_at = NOW() WHERE id = $1`,
+                            [referralId]
+                        );
+                        await pool.query(
+                            `INSERT INTO referral_activity (referral_id, event_type, credit_amount, description)
+                             VALUES ($1, 'stage1_referrer', $2, $3)`,
+                            [referralId, REFERRAL_HALF, `Stage 1: Referrer credited $${REFERRAL_HALF} in free days — friend signed up`]
+                        );
+                        console.log(`🎁 Stage 1 (signup): Referrer ${referrerUserId} extended by $${REFERRAL_HALF} worth of days`);
+                    }
+                }
             }
 
             console.log(`✅ User ${userId} subscribed to ${tier} (${subscription.status})`);
@@ -219,38 +253,33 @@ async function processWebhookEvent(event: Stripe.Event) {
         case "customer.subscription.trial_will_end": {
             const subscription = event.data.object as Stripe.Subscription;
             const customerId = subscription.customer as string;
-            // TODO: Trigger transactional email via Resend/SendGrid
-            // "Your 14-day trial ends on [date]. You won't be charged until then."
             console.log(`⏰ Trial ending soon for customer ${customerId}`);
             break;
         }
 
-        // ── Invoice paid — trigger referral credits ────────────────────────
+        // ── Invoice paid — trigger Stage 2 bilateral referral credits ──────
         case "invoice.payment_succeeded": {
             const invoice = event.data.object as Stripe.Invoice;
             await handleInvoicePaymentSucceeded(invoice);
             break;
         }
 
-        // ── Invoice failed — restrict access after grace period ───────────
+        // ── Invoice failed ─────────────────────────────────────────────────
         case "invoice.payment_failed": {
             const invoice = event.data.object as Stripe.Invoice;
             const customerId = invoice.customer as string;
             console.log(`💳 Payment failed for customer ${customerId}`);
-            // Stripe Smart Retries will handle automatic reattempts.
-            // subscription.status changes to 'past_due' which customer.subscription.updated already handles.
             break;
         }
 
         // ── 3DS/SCA authentication required ───────────────────────────────
         case "invoice.payment_action_required": {
             const invoice = event.data.object as Stripe.Invoice;
-            // TODO: Email user the hosted_invoice_url so they can authenticate
             console.log(`🔐 Payment action required for invoice ${invoice.id}`);
             break;
         }
 
-        // ── Invoice finalization failed — critical, subscription stays active ─
+        // ── Invoice finalization failed ────────────────────────────────────
         case "invoice.finalization_failed": {
             const invoice = event.data.object as Stripe.Invoice;
             console.error(`🚨 Invoice finalization failed: ${invoice.id}. Manual intervention required.`);
@@ -258,17 +287,25 @@ async function processWebhookEvent(event: Stripe.Event) {
         }
 
         default:
-            // Unhandled event type — safe to ignore
             break;
     }
 }
 
-// ── Referral Credit Logic ──────────────────────────────────────────────────
+// ── Stage 2: First real charge — bilateral credit for both parties ─────────
+// 
+// Referral credit model (REFERRAL_FEE env, default $100):
+//   Stage 1 (signup): Referee gets bonus trial days + Referrer gets extension (handled in checkout.session.completed)
+//   Stage 2 (first charge): BOTH get REFERRAL_HALF in free days (extension)
+//   Annual bonus: BOTH get REFERRAL_ANNUAL_HALF in free days
+//
+// All credits applied as subscription extension days (credit_dollars / plan_daily_rate).
+// Cash balance credits are NOT used — only day extensions.
+//
 async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     const customerId = invoice.customer as string;
     const billingReason = invoice.billing_reason;
 
-    // Find if this customer is a referred user, include fingerprints for fraud check
+    // Find if this customer is a referred user
     const referralResult = await pool.query(
         `SELECT r.*, 
                 u.stripe_customer_id as referrer_stripe_id,
@@ -290,101 +327,72 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     const isFirstPayment = billingReason === "subscription_create";
     const isRenewal = billingReason === "subscription_cycle";
 
-    // Determine if this is an annual plan (for the $150 bonus)
     const subscriptionId = (invoice as any).subscription as string;
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
     const isAnnual = subscription.items.data[0].price.recurring?.interval === "year";
 
-    // ── Fraud Prevention Checks ───────────────────────────────────────────
+    // ── Fraud Prevention ──────────────────────────────────────────────────
     if (ref.referrer_fingerprint && ref.referred_fingerprint && ref.referrer_fingerprint === ref.referred_fingerprint) {
-        console.warn(`🚨 Fraud detected: Referrer and Referee share the same card fingerprint (${ref.referrer_fingerprint}). Denying reward.`);
+        console.warn(`🚨 Fraud: shared card fingerprint between referrer and referee.`);
         await pool.query(
             `INSERT INTO referral_activity (referral_id, event_type, description)
-             VALUES ($1, 'fraud_flagged', 'Reward denied: Shared card fingerprint detected between referrer and referee.')
-             ON CONFLICT DO NOTHING`,
+             VALUES ($1, 'fraud_flagged', 'Reward denied: shared card fingerprint') ON CONFLICT DO NOTHING`,
             [ref.id]
         );
-        return; // Halt reward processing
+        return;
     }
 
     const msSinceSignup = Date.now() - new Date(ref.referred_created_at).getTime();
     const daysSinceSignup = msSinceSignup / (1000 * 60 * 60 * 24);
     if ((isFirstPayment || isRenewal) && daysSinceSignup < 7) {
-        console.warn(`🚨 Fraud/Abuse detected: Premium conversion occurred less than 7 days after signup (${daysSinceSignup.toFixed(1)} days). Minimum trial period check failed.`);
+        console.warn(`🚨 Fraud/Abuse: conversion less than 7 days after signup (${daysSinceSignup.toFixed(1)}d)`);
         await pool.query(
             `INSERT INTO referral_activity (referral_id, event_type, description)
-             VALUES ($1, 'fraud_flagged', 'Reward denied: Conversion occurred less than 7 days after signup.')
-             ON CONFLICT DO NOTHING`,
+             VALUES ($1, 'fraud_flagged', 'Reward denied: conversion < 7 days after signup') ON CONFLICT DO NOTHING`,
             [ref.id]
         );
-        return; // Halt reward processing
+        return;
     }
 
-    // Stage 1: First payment
+    // ── Stage 2: First real charge (trial → paid) ─────────────────────────
+    // Triggers when stage1_paid=false at billing_reason=subscription_create.
+    // Stage 1 (signup) was already paid via checkout.session.completed.
     if (!ref.stage1_paid && (isFirstPayment || isRenewal)) {
-        if (isAnnual && !ref.annual_bonus_paid) {
-            // Annual plan: $150 instant credit
-            await stripe.customers.createBalanceTransaction(referrerStripeId, {
-                amount: -15000, // Negative = credit in cents
-                currency: "usd",
-                description: "Referral bonus — friend joined annual plan ($150)",
-                metadata: { referral_stage: "annual_bonus", referred_customer: customerId },
-            });
-            await pool.query(
-                `UPDATE referrals SET stage1_paid=true, annual_bonus_paid=true, updated_at=NOW() WHERE id=$1`,
-                [ref.id]
-            );
-            await pool.query(
-                `INSERT INTO referral_activity (referral_id, event_type, credit_amount, description)
-                 VALUES ($1, 'annual_bonus', 150, 'Annual bonus: $150 credit — friend joined annual plan')`,
-                [ref.id]
-            );
-            // Also extend the referrer's subscription renewal by the equivalent free days
-            await extendReferrerSubscription(ref.referrer_user_id, 150, ref.id, 'Annual referral bonus');
-            console.log(`💰 $150 annual referral bonus issued to ${referrerStripeId}`);
-        } else if (!ref.stage1_paid) {
-            // Monthly plan: $50 stage 1
-            await stripe.customers.createBalanceTransaction(referrerStripeId, {
-                amount: -5000,
-                currency: "usd",
-                description: "Referral credit — Stage 1 ($50)",
-                metadata: { referral_stage: "1", referred_customer: customerId },
-            });
-            await pool.query(
-                `UPDATE referrals SET stage1_paid=true, updated_at=NOW() WHERE id=$1`,
-                [ref.id]
-            );
-            await pool.query(
-                `INSERT INTO referral_activity (referral_id, event_type, credit_amount, description)
-                 VALUES ($1, 'stage1_paid', 50, 'Stage 1: $50 credit — friend paid first month')`,
-                [ref.id]
-            );
-            // Also extend the referrer's subscription renewal by the equivalent free days
-            await extendReferrerSubscription(ref.referrer_user_id, 50, ref.id, 'Stage 1 referral reward');
-            console.log(`💰 $50 referral Stage 1 issued to ${referrerStripeId}`);
-        }
-    }
+        const creditAmount = isAnnual ? REFERRAL_ANNUAL_HALF : REFERRAL_HALF;
+        const label = isAnnual ? `Annual` : `Monthly`;
 
-    // Stage 2: Second renewal (monthly only, stage1 already paid, no annual bonus)
-    else if (ref.stage1_paid && !ref.stage2_paid && !ref.annual_bonus_paid && isRenewal) {
-        await stripe.customers.createBalanceTransaction(referrerStripeId, {
-            amount: -5000,
-            currency: "usd",
-            description: "Referral credit — Stage 2 ($50)",
-            metadata: { referral_stage: "2", referred_customer: customerId },
-        });
-        await pool.query(
-            `UPDATE referrals SET stage2_paid=true, updated_at=NOW() WHERE id=$1`,
-            [ref.id]
+        // 1. Extend REFERRER's subscription
+        await extendReferrerSubscription(
+            ref.referrer_user_id,
+            creditAmount,
+            ref.id,
+            `Stage 2 ${label} — friend's card charged, referrer credited $${creditAmount}`
         );
         await pool.query(
             `INSERT INTO referral_activity (referral_id, event_type, credit_amount, description)
-             VALUES ($1, 'stage2_paid', 50, 'Stage 2: $50 credit — friend completed second month')`,
+             VALUES ($1, 'stage2_referrer', $2, $3)`,
+            [ref.id, creditAmount, `Stage 2: Referrer credited $${creditAmount} in free days — friend's first charge`]
+        );
+
+        // 2. Extend REFEREE's subscription (bilateral)
+        await extendReferrerSubscription(
+            ref.referred_user_id,
+            creditAmount,
+            ref.id,
+            `Stage 2 ${label} — referee credited $${creditAmount} for completing trial`
+        );
+        await pool.query(
+            `INSERT INTO referral_activity (referral_id, event_type, credit_amount, description)
+             VALUES ($1, 'stage2_referee', $2, $3)`,
+            [ref.id, creditAmount, `Stage 2: Referee credited $${creditAmount} in free days — first charge completed`]
+        );
+
+        await pool.query(
+            `UPDATE referrals SET stage1_paid = true, ${isAnnual ? 'annual_bonus_paid = true,' : ''} updated_at = NOW() WHERE id = $1`,
             [ref.id]
         );
-        // Also extend the referrer's subscription renewal by the equivalent free days
-        await extendReferrerSubscription(ref.referrer_user_id, 50, ref.id, 'Stage 2 referral reward');
-        console.log(`💰 $50 referral Stage 2 issued to ${referrerStripeId}`);
+
+        console.log(`💰 Stage 2 (first charge): Both referrer ${ref.referrer_user_id} and referee ${ref.referred_user_id} credited $${creditAmount} each (${label})`);
     }
 }
 
@@ -398,14 +406,13 @@ async function recordCardFingerprint(userId: string, stripeCustomerId: string) {
         const fingerprint = paymentMethods.data[0]?.card?.fingerprint;
         if (!fingerprint) return;
 
-        // Check if this card is used on another account
         const duplicate = await pool.query(
             `SELECT user_id FROM user_settings 
              WHERE card_fingerprint = $1 AND user_id != $2`,
             [fingerprint, userId]
         );
         if (duplicate.rows.length > 0) {
-            console.warn(`⚠️ Duplicate card fingerprint detected: user ${userId} shares card with ${duplicate.rows[0].user_id}`);
+            console.warn(`⚠️ Duplicate card fingerprint: user ${userId} shares card with ${duplicate.rows[0].user_id}`);
         }
 
         await pool.query(
@@ -419,20 +426,16 @@ async function recordCardFingerprint(userId: string, stripeCustomerId: string) {
     }
 }
 
-// ── Referral relationship storage ─────────────────────────────────────────
-async function linkReferral(referralCode: string, referredUserId: string, referredCustomerId: string) {
+// ── Referral relationship storage — returns referrerUserId if successfully linked ──
+async function linkReferral(referralCode: string, referredUserId: string, referredCustomerId: string): Promise<string | null> {
     try {
-        // referralCode may be a short promo code (e.g. "ERIC54") or a legacy Privy DID
-        // Try resolving as short code first; fall back to treating it as a direct user_id
         let referrerUserId = await resolvePromoCode(referralCode);
         if (!referrerUserId) {
-            // Legacy: code was the referrer's Privy DID directly
             const check = await pool.query(`SELECT user_id FROM user_settings WHERE user_id = $1`, [referralCode]);
             referrerUserId = check.rows[0]?.user_id ?? null;
         }
-        if (!referrerUserId || referrerUserId === referredUserId) return;
+        if (!referrerUserId || referrerUserId === referredUserId) return null;
 
-        // Upsert referral — if already exists from pre-checkout redeem, update the stripe customer ID
         await pool.query(
             `INSERT INTO referrals (referrer_user_id, referred_user_id, referred_stripe_customer_id)
              VALUES ($1, $2, $3)
@@ -445,13 +448,14 @@ async function linkReferral(referralCode: string, referredUserId: string, referr
         if (newRef.rows.length) {
             await pool.query(
                 `INSERT INTO referral_activity (referral_id, event_type, description)
-                 VALUES ($1, 'subscribed', 'Friend converted from trial to paid subscription')
-                 ON CONFLICT DO NOTHING`,
+                 VALUES ($1, 'subscribed', 'Friend started trial — referral linked') ON CONFLICT DO NOTHING`,
                 [newRef.rows[0].id]
             );
         }
+        return referrerUserId;
     } catch (err) {
         console.error("Failed to link referral:", err);
+        return null;
     }
 }
 

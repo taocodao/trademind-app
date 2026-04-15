@@ -881,9 +881,9 @@ function DashboardContent() {
                             className="h-12 w-auto object-contain drop-shadow-md group-hover:drop-shadow-[0_0_8px_rgba(168,85,247,0.4)] transition-all"
                         />
                         <div className="flex flex-col justify-center">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-tm-purple leading-tight">Refer</span>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-tm-purple leading-tight">{t('dashboard.nav.refer', 'Refer')}</span>
                             <span className="text-xs font-bold text-white flex items-center gap-1 leading-none shadow-sm">
-                                & Earn <span className="text-sm border flex items-center justify-center p-0.5 rounded shadow-sm bg-white/10 border-white/20 -mt-0.5">🎁</span>
+                                & {t('dashboard.refer_earn_badge', 'Earn')} <span className="text-sm border flex items-center justify-center p-0.5 rounded shadow-sm bg-white/10 border-white/20 -mt-0.5">🎁</span>
                             </span>
                         </div>
                     </Link>
@@ -894,7 +894,7 @@ function DashboardContent() {
                         className="flex sm:hidden items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-blue-500 to-tm-purple text-white hover:opacity-90 transition-all text-[10px] font-bold border border-white/20 shadow-md whitespace-nowrap"
                     >
                         <Bell className="w-3 h-3" />
-                        <span>Setup</span>
+                        <span>{t('dashboard.setup_short', 'Setup')}</span>
                     </button>
 
                     {/* Setup Guide — desktop */}
@@ -903,7 +903,7 @@ function DashboardContent() {
                         className="hidden sm:flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-blue-500 to-tm-purple text-white hover:opacity-90 transition-all text-sm font-bold border border-white/20 shadow-lg shadow-tm-purple/30 whitespace-nowrap shrink-0"
                     >
                         <Bell className="w-4 h-4" />
-                        <span>Setup Guide</span>
+                        <span>{t('dashboard.setup_guide', 'Setup Guide')}</span>
                     </button>
 
                     {/* Language Selector */}
@@ -991,12 +991,14 @@ function DashboardContent() {
                                     <span className="text-sm">🎉</span>
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-bold text-white">Free Trial #{trialNum} — {membership.appTrialTier.replace('_', ' ')} Access</p>
+                                    <p className="text-xs font-bold text-white">
+                                        {t('dashboard.trial_banner', 'Free Trial #{{trialNum}} — {{tier}} Access', { trialNum, tier: membership.appTrialTier.replace('_', ' ') })}
+                                    </p>
                                     <p className="text-[10px] text-tm-muted">
-                                        {daysLeft > 0 ? `${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining · No credit card needed yet` : 'Expires today!'}
+                                        {daysLeft > 0 ? t(daysLeft === 1 ? 'dashboard.days_remaining' : 'dashboard.days_remaining_plural', '{{days}} days remaining · No credit card needed yet', { days: daysLeft }) : t('dashboard.expires_today', 'Expires today!')}
                                     </p>
                                 </div>
-                                <a href="https://www.trademind.bot/#pricing" className="text-[10px] font-bold text-tm-purple hover:underline whitespace-nowrap shrink-0">Choose a Plan →</a>
+                                <a href="https://www.trademind.bot/#pricing" className="text-[10px] font-bold text-tm-purple hover:underline whitespace-nowrap shrink-0">{t('dashboard.choose_plan', 'Choose a Plan →')}</a>
                             </div>
                         );
                     })() : null;
@@ -1005,9 +1007,9 @@ function DashboardContent() {
                     const SecondTrialCTA = trialExpired && membership.appTrialAvailable ? (
                         <div className="glass-card p-5 flex flex-col items-center justify-center text-center border-yellow-500/20 bg-yellow-500/5">
                             <span className="text-2xl mb-2">⏳</span>
-                            <h2 className="text-base font-bold mb-1">Your Free Trial Has Ended</h2>
+                            <h2 className="text-base font-bold mb-1">{t('dashboard.trial_ended', 'Your Free Trial Has Ended')}</h2>
                             <p className="text-xs text-tm-muted mb-4 max-w-sm">
-                                Welcome back! As a special offer, you're eligible for one more {membership.trialDaysTotal}-day free trial — no credit card required.
+                                {t('dashboard.trial_ended_desc', "Welcome back! As a special offer, you're eligible for one more {{days}}-day free trial — no credit card required.", { days: membership.trialDaysTotal })}
                             </p>
                             <div className="flex flex-col gap-2 w-full">
                                 <button
@@ -1028,9 +1030,9 @@ function DashboardContent() {
                                     }}
                                     className="btn-primary flex items-center gap-2 px-6 py-2.5 w-full justify-center text-sm"
                                 >
-                                    🎁 Claim My Second Free Trial
+                                    {t('dashboard.claim_second_trial', '🎁 Claim My Second Free Trial')}
                                 </button>
-                                <a href="https://www.trademind.bot/#pricing" className="text-xs text-tm-muted text-center hover:text-white transition-colors">Or subscribe now →</a>
+                                <a href="https://www.trademind.bot/#pricing" className="text-xs text-tm-muted text-center hover:text-white transition-colors">{t('dashboard.subscribe_now', 'Or subscribe now →')}</a>
                             </div>
                         </div>
                     ) : null;
@@ -1041,12 +1043,12 @@ function DashboardContent() {
                             <div className="w-16 h-16 rounded-full bg-tm-purple/10 flex items-center justify-center mb-4 border border-tm-purple/20">
                                 <Target className="w-8 h-8 text-tm-purple" />
                             </div>
-                            <h2 className="text-xl font-bold mb-2">Continue with TradeMind</h2>
+                            <h2 className="text-xl font-bold mb-2">{t('dashboard.hard_paywall_title', 'Continue with TradeMind')}</h2>
                             <p className="text-sm text-tm-muted mb-6 max-w-sm">
-                                You've used your free trials. Subscribe to keep access to AI-powered signals, real-time targets, and portfolio backtests.
+                                {t('dashboard.hard_paywall_desc', "You've used your free trials. Subscribe to keep access to AI-powered signals, real-time targets, and portfolio backtests.")}
                             </p>
                             <a href="https://www.trademind.bot/#pricing" className="btn-primary flex items-center gap-2 px-6 py-3 w-full justify-center text-sm">
-                                View Subscription Plans
+                                {t('dashboard.view_plans', 'View Subscription Plans')}
                                 <ArrowRight className="w-4 h-4 text-white/50" />
                             </a>
                         </div>
@@ -1059,8 +1061,8 @@ function DashboardContent() {
                             <div className="w-16 h-16 rounded-full bg-tm-purple/10 flex items-center justify-center mb-4 border border-tm-purple/20">
                                 <Target className="w-8 h-8 text-tm-purple" />
                             </div>
-                            <h2 className="text-xl font-bold mb-2">Starting Your Free Trial…</h2>
-                            <p className="text-sm text-tm-muted mb-4">Hold on one moment while we set up your {membership.trialDaysTotal}-day free access.</p>
+                            <h2 className="text-xl font-bold mb-2">{t('dashboard.trial_starting', 'Starting Your Free Trial…')}</h2>
+                            <p className="text-sm text-tm-muted mb-4">{t('dashboard.trial_setting_up', 'Hold on one moment while we set up your {{days}}-day free access.', { days: membership.trialDaysTotal })}</p>
                             <div className="w-6 h-6 rounded-full border-2 border-tm-purple/30 border-t-tm-purple animate-spin" />
                         </div>
                     ) : null;
@@ -1106,15 +1108,15 @@ function DashboardContent() {
 
                                             if (membership.status === 'trialing') {
                                                 return membership.cancelAtPeriodEnd
-                                                    ? `Trial ends ${cancelDate}`
-                                                    : `Trial · ${daysLeft}d left`;
+                                                    ? t('dashboard.badge_cancels', 'Cancels {{date}}', { date: cancelDate })
+                                                    : t('dashboard.badge_trial_left', 'Trial · {{days}}d left', { days: daysLeft });
                                             }
                                             if (membership.status === 'active') {
                                                 return membership.cancelAtPeriodEnd
-                                                    ? `Cancels ${cancelDate}`
-                                                    : `Active · Renews ${renewDate}`;
+                                                    ? t('dashboard.badge_cancels', 'Cancels {{date}}', { date: cancelDate })
+                                                    : t('dashboard.badge_active_renews', 'Active · Renews {{date}}', { date: renewDate });
                                             }
-                                            if (membership.status === 'past_due') return 'Past Due';
+                                            if (membership.status === 'past_due') return t('dashboard.badge_past_due', 'Past Due');
                                             return membership.status || '';
                                         })()
                                         }
@@ -1124,7 +1126,7 @@ function DashboardContent() {
                             </div>
                             <div className="flex items-center gap-1 text-[10px] text-tm-muted group-hover:text-tm-purple transition-colors">
                                 <Clock className="w-3 h-3" />
-                                <span>{membership.billingInterval === 'year' ? 'Annual' : 'Monthly'}</span>
+                                <span>{membership.billingInterval === 'year' ? t('dashboard.billing_annual', 'Annual') : t('dashboard.billing_monthly', 'Monthly')}</span>
                             </div>
                         </a>
 
@@ -1180,10 +1182,10 @@ function DashboardContent() {
                     />
 
                     <div className="flex items-center justify-between mb-3 mt-4">
-                        <h2 className="font-semibold text-sm">{activeStrategyConfig?.label || 'TurboCore'} Signals</h2>
+                        <h2 className="font-semibold text-sm">{t('dashboard.signals_header', '{{strategy}} Signals', { strategy: activeStrategyConfig?.label || 'TurboCore' })}</h2>
                         {coreSignals.length > 0 && (
                             <span className="text-xs bg-tm-purple/20 text-tm-purple px-2 py-0.5 rounded-full">
-                                {coreSignals.length} Active Target Change
+                                {t(coreSignals.length === 1 ? 'dashboard.active_target_change' : 'dashboard.active_target_change_plural', '{{count}} Active Target Change', { count: coreSignals.length })}
                             </span>
                         )}
                     </div>
@@ -1194,8 +1196,8 @@ function DashboardContent() {
                         {coreSignals.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-6 gap-2 border border-white/5 rounded-xl bg-black/20">
                                 <CheckCircle className="w-10 h-10 text-tm-green opacity-60" />
-                                <p className="font-semibold text-sm">Portfolio Target Aligned</p>
-                                <p className="text-xs text-tm-muted">No pending ML target rebalances requested.</p>
+                                <p className="font-semibold text-sm">{t('dashboard.aligned_title', 'Portfolio Target Aligned')}</p>
+                                <p className="text-xs text-tm-muted">{t('dashboard.aligned_desc', 'No pending ML target rebalances requested.')}</p>
                             </div>
                         ) : (
                             <div className="space-y-3">
@@ -1214,9 +1216,7 @@ function DashboardContent() {
                                 ))}
 
                                 {!tastyLinked && (
-                                    <p className="text-xs text-tm-muted text-center pt-1">
-                                        Not using Tastytrade? <span className="text-tm-purple">Track Only</span> monitors P&L without executing orders.
-                                    </p>
+                                    <div className="text-xs text-tm-muted text-center pt-1" dangerouslySetInnerHTML={{ __html: t('dashboard.track_only_notice', 'Not using Tastytrade? <span class="text-tm-purple">Track Only</span> monitors P&L without executing orders.') }} />
                                 )}
                             </div>
                         )}

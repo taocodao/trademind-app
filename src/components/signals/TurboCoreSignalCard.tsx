@@ -273,11 +273,11 @@ export function TurboCoreSignalCard({
       orders.push({
         symbol: leg.symbol,
         label: leg.symbol === 'QLD' ? 'QLD (2x)' : leg.symbol,
-        action: isBuy ? 'BUY' : 'SELL',
+        action: isBuy ? t('dashboard.signals.buy', 'BUY') : t('dashboard.signals.sell', 'SELL'),
         dollarAmount: actualDollar,
-        approxShares: `${wholeShares} sh`,
-        approxPrice: refPrice > 0 ? `~$${refPrice.toFixed(2)}/sh` : '\u2014',
-        orderType: 'Market',
+        approxShares: `${wholeShares} ${t('dashboard.signals.sh', 'sh')}`,
+        approxPrice: refPrice > 0 ? `~$${refPrice.toFixed(2)}/${t('dashboard.signals.sh', 'sh')}` : '—',
+        orderType: t('dashboard.signals.market', 'Market'),
         isOption: false,
       });
     }
@@ -331,7 +331,7 @@ export function TurboCoreSignalCard({
                     confidence >= 0.65 ? "text-green-400" : "text-yellow-400"
                   }
                 >
-                  Target Rebalance
+                  {t('dashboard.signals.target_rebalance', 'Target Rebalance')}
                 </span>
 
                 {formattedTimestamp && (
@@ -350,7 +350,7 @@ export function TurboCoreSignalCard({
               {(confidence * 100).toFixed(1)}%
             </div>
 
-            <div className="text-xs text-white/40 font-medium">ML Score</div>
+            <div className="text-xs text-white/40 font-medium">{t('dashboard.signals.ml_score', 'ML Score')}</div>
           </div>
         </div>
 
@@ -427,7 +427,7 @@ export function TurboCoreSignalCard({
           <span className="text-white/50 flex items-center gap-1">
             <DollarSign className="w-3.5 h-3.5 text-purple-400" />
 
-            Virtual Balance
+            {t('dashboard.signals.virtual_balance', 'Virtual Balance')}
           </span>
 
           <span className="font-mono font-bold text-purple-400">
@@ -441,7 +441,7 @@ export function TurboCoreSignalCard({
           <div className="text-xs text-purple-400 font-semibold mb-2 flex justify-between items-center">
             <span className="flex items-center gap-1">
               <DollarSign className="w-3.5 h-3.5" />
-              Virtual Order Preview
+              {t('dashboard.signals.virtual_order_preview', 'Virtual Order Preview')}
             </span>
           </div>
           {/* Always use local virtual-balance calculation */}
@@ -501,12 +501,11 @@ export function TurboCoreSignalCard({
               ) : (
                 <>
                   <span className="flex items-center gap-1">
-                    <Zap className="w-4 h-4" /> SUBMIT ORDER
+                    <Zap className="w-4 h-4" /> {isExecuting ? String(t('dashboard.signals.executing', 'EXECUTING...')).toUpperCase() : (isExecuted ? String(t('dashboard.signals.executed', 'EXECUTED')).toUpperCase() : t('dashboard.signals.submit_order', 'SUBMIT ORDER'))}
                   </span>
-
-                  <span className="text-[10px] font-normal opacity-70">
-                    Virtual · integer shares · market price
-                  </span>
+                  <div className="text-[10px] text-white/40 text-center font-mono tracking-wider">
+                    {t('dashboard.signals.submit_help', 'Virtual · integer shares · market price')}
+                  </div>
                 </>
               )}
             </button>
@@ -583,6 +582,7 @@ function ManualOrderPanel({
     optionNote?: string;
   }>;
 }) {
+  const { t } = useTranslation();
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   const copyRow = (o: (typeof orders)[0], i: number) => {
@@ -609,7 +609,7 @@ function ManualOrderPanel({
     <div className="space-y-2">
       <div className="flex items-center gap-1.5 text-[10px] text-amber-400/80 font-semibold mb-1">
         <BookOpen className="w-3 h-3" />
-        MANUAL ORDER INSTRUCTIONS - enter these in your broker
+        {t('dashboard.signals.manual_instructions', 'MANUAL ORDER INSTRUCTIONS - enter these in your broker')}
       </div>
 
       {orders.map((o, i) => (
@@ -669,7 +669,7 @@ function ManualOrderPanel({
       ))}
 
       <div className="text-[10px] text-yellow-400/50 text-center pt-1">
-        ⚡ Connect Tastytrade for live pricing &amp; one-click execution
+        ⚡ {t('dashboard.signals.connect_tastytrade', 'Connect Tastytrade for live pricing & one-click execution')}
       </div>
     </div>
   );

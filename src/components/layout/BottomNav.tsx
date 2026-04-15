@@ -19,8 +19,8 @@ export function BottomNav() {
 
     // useMemo MUST be called before any early returns (Rules of Hooks)
     const navItems = useMemo(() => [
-        { name: 'Home',                             href: '/dashboard', icon: Home },
-        { name: 'AI',                               href: '/ai',        icon: Bot },
+        { name: t('dashboard.nav.home', 'Home'),    href: '/dashboard', icon: Home },
+        { name: t('dashboard.nav.ai', 'AI'),        href: '/ai',        icon: Bot },
         { name: t('dashboard.nav.positions'),       href: '/positions', icon: Activity },
         { name: t('dashboard.nav.activity'),        href: '/activity',  icon: Bell },
         { name: t('dashboard.nav.refer', 'Refer'),  href: '/refer',     icon: Gift, highlight: true },

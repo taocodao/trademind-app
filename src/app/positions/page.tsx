@@ -16,6 +16,7 @@ import Link from "next/link";
 import { useStrategyContext } from "@/components/providers/StrategyContext";
 import { StrategyTabs } from "@/components/ui/StrategyTabs";
 import { getStrategy } from "@/lib/strategies";
+import { useTranslation } from 'react-i18next';
 
 interface EquityPosition {
     symbol: string;
@@ -47,6 +48,7 @@ interface AccountBalance {
 export default function PositionsPage() {
     const { ready, authenticated } = usePrivy();
     const router = useRouter();
+    const { t } = useTranslation();
     const { activeStrategy, setActiveStrategy, enabledStrategies } = useStrategyContext();
     const [positions, setPositions] = useState<EquityPosition[]>([]);
     const [loading, setLoading] = useState(true);
@@ -324,13 +326,13 @@ export default function PositionsPage() {
                 </Link>
                 <div className="flex-1">
                     <h1 className="text-xl font-bold flex items-center gap-2">
-                        Positions
+                        {t('positions_page.title', 'Positions')}
                         <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
                             <WifiOff className="w-2.5 h-2.5" /> VIRTUAL
                         </span>
                     </h1>
                     <p className="text-sm text-tm-muted">
-                        {equityPositions.length} equity · {optionSpreads.length} spread{optionSpreads.length !== 1 ? 's' : ''}
+                        {equityPositions.length} {t('positions_page.subtitle_equity', 'equity')} · {optionSpreads.length} {optionSpreads.length !== 1 ? t('positions_page.subtitle_spreads_plural', 'spreads') : t('positions_page.subtitle_spreads', 'spread')}
                     </p>
                 </div>
                 <button onClick={fetchAccountAndPositions} className="w-10 h-10 rounded-full bg-tm-surface flex items-center justify-center text-tm-muted hover:text-white transition">
@@ -401,9 +403,11 @@ export default function PositionsPage() {
             {showTransferModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
                     <div className="bg-[#111] border border-white/10 p-5 rounded-xl w-full max-w-sm">
-                        <h3 className="text-lg font-bold mb-4 capitalize">{showTransferModal} Virtual Cash</h3>
+                        <h3 className="text-lg font-bold mb-4 capitalize">
+                            {showTransferModal === 'deposit' ? t('positions_page.deposit_title', 'Deposit Virtual Cash') : t('positions_page.withdraw_title', 'Withdraw Virtual Cash')}
+                        </h3>
                         <p className="text-xs text-tm-muted mb-4">
-                            {showTransferModal === 'deposit' ? 'Add' : 'Remove'} virtual funds for the {activeStrategyConfig?.label || activeStrategy} ledger.
+                            {showTransferModal === 'deposit' ? t('positions_page.add_position', 'Add') : 'Remove'} virtual funds for the {activeStrategyConfig?.label || activeStrategy} ledger.
                         </p>
                         <input
                             type="number"
@@ -411,7 +415,7 @@ export default function PositionsPage() {
                             step="1"
                             value={transferAmount}
                             onChange={(e) => setTransferAmount(e.target.value)}
-                            placeholder="Amount ($)"
+                            placeholder={t('positions_page.amount_placeholder', 'Amount ($)')}
                             className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-tm-purple mb-4 font-mono"
                         />
                         <div className="flex gap-3">
@@ -419,7 +423,7 @@ export default function PositionsPage() {
                                 onClick={() => setShowTransferModal(null)}
                                 className="flex-1 py-3 rounded-lg font-bold bg-white/5 hover:bg-white/10 transition"
                             >
-                                Cancel
+                                {t('positions_page.cancel', 'Cancel')}
                             </button>
                             <button
                                 onClick={handleTransfer}
@@ -433,7 +437,7 @@ export default function PositionsPage() {
                                 {transferLoading ? (
                                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                 ) : (
-                                    'Confirm'
+                                    t('positions_page.confirm', 'Confirm')
                                 )}
                             </button>
                         </div>
@@ -448,10 +452,9 @@ export default function PositionsPage() {
                         <div className="w-12 h-12 rounded-full bg-tm-purple/20 flex items-center justify-center mb-4 mx-auto">
                             <Wallet className="w-6 h-6 text-tm-purple" />
                         </div>
-                        <h3 className="text-lg font-bold text-center mb-2">Set Your Starting Capital</h3>
+                        <h3 className="text-lg font-bold text-center mb-2">{t('positions_page.set_capital_title', 'Set Your Starting Capital')}</h3>
                         <p className="text-xs text-tm-muted text-center mb-6 leading-relaxed">
-                            Enter the amount you're starting with. This initializes your virtual portfolio
-                            to mirror real position sizing from TurboCore signals.
+                            {t('positions_page.set_capital_desc', "Enter the amount you're starting with. This initializes your virtual portfolio to mirror real position sizing from TurboCore signals.")}
                         </p>
                         <input
                             type="number"
@@ -468,7 +471,7 @@ export default function PositionsPage() {
                             disabled={!onboardingAmount || parseFloat(onboardingAmount) < 1000}
                             className="w-full py-3 rounded-xl font-bold bg-tm-purple hover:bg-tm-purple/90 text-white transition disabled:opacity-50"
                         >
-                            Start Tracking
+                            {t('positions_page.start_tracking', 'Start Tracking')}
                         </button>
                     </div>
                 </div>
@@ -562,12 +565,12 @@ export default function PositionsPage() {
             {/* Equity Positions Table */}
             <div className="px-6">
                 <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-sm font-bold text-tm-muted uppercase tracking-wider">Equity Holdings</h2>
+                    <h2 className="text-sm font-bold text-tm-muted uppercase tracking-wider">{t('positions_page.equity_holdings', 'Equity Holdings')}</h2>
                     <button
                         onClick={openAddModal}
                         className="flex items-center gap-1.5 text-xs text-tm-purple hover:text-white transition font-bold"
                     >
-                        <PlusCircle className="w-3.5 h-3.5" /> Add Position
+                        <PlusCircle className="w-3.5 h-3.5" /> {t('positions_page.add_position', 'Add Position')}
                     </button>
                 </div>
                 <div className="glass-card overflow-hidden">
@@ -575,11 +578,11 @@ export default function PositionsPage() {
                         <table className="w-full text-left border-collapse min-w-[500px]">
                             <thead>
                                 <tr className="border-b border-white/5 bg-white/[0.02]">
-                                    <th className="px-4 py-3 text-[10px] uppercase font-bold text-tm-muted">Symbol</th>
-                                    <th className="px-4 py-3 text-[10px] uppercase font-bold text-tm-muted text-right">Price</th>
-                                    <th className="px-4 py-3 text-[10px] uppercase font-bold text-tm-muted text-right">Cost/sh</th>
-                                    <th className="px-4 py-3 text-[10px] uppercase font-bold text-tm-muted text-right">Market Value</th>
-                                    <th className="px-4 py-3 text-[10px] uppercase font-bold text-tm-muted text-right">Unrealized G/L</th>
+                                    <th className="px-4 py-3 text-[10px] uppercase font-bold text-tm-muted">{t('positions_page.symbol', 'Symbol')}</th>
+                                    <th className="px-4 py-3 text-[10px] uppercase font-bold text-tm-muted text-right">{t('positions_page.price', 'Price')}</th>
+                                    <th className="px-4 py-3 text-[10px] uppercase font-bold text-tm-muted text-right">{t('positions_page.cost_per_sh', 'Cost/sh')}</th>
+                                    <th className="px-4 py-3 text-[10px] uppercase font-bold text-tm-muted text-right">{t('positions_page.market_value', 'Market Value')}</th>
+                                    <th className="px-4 py-3 text-[10px] uppercase font-bold text-tm-muted text-right">{t('positions_page.unrealized_gl', 'Unrealized G/L')}</th>
                                     <th className="px-4 py-3 text-[10px] uppercase font-bold text-tm-muted text-center w-16"></th>
                                 </tr>
                             </thead>
@@ -590,7 +593,7 @@ export default function PositionsPage() {
                                     </tr>
                                 ) : equityPositions.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="px-4 py-8 text-center text-tm-muted text-xs">No active equity positions.</td>
+                                        <td colSpan={6} className="px-4 py-8 text-center text-tm-muted text-xs">{t('positions_page.no_equity', 'No active equity positions.')}</td>
                                     </tr>
                                 ) : (
                                     equityPositions.map((pos) => {

@@ -20,6 +20,7 @@ import {
 import Link from "next/link";
 import { useStrategyContext } from "@/components/providers/StrategyContext";
 import { StrategyTabs } from "@/components/ui/StrategyTabs";
+import { useTranslation } from 'react-i18next';
 
 // ---- Types ----------------------------------------------------------------
 
@@ -89,6 +90,7 @@ const strategyBadge = (s?: string | null) => {
 export default function ActivityPage() {
     const { ready, authenticated } = usePrivy();
     const router = useRouter();
+    const { t } = useTranslation();
     const { activeStrategy, setActiveStrategy, enabledStrategies } = useStrategyContext();
 
     const [items, setItems] = useState<AnyItem[]>([]);
@@ -237,8 +239,8 @@ export default function ActivityPage() {
                     <ArrowLeft className="w-5 h-5" />
                 </Link>
                 <div className="flex-1">
-                    <h1 className="text-xl font-bold">Activity Log</h1>
-                    <p className="text-sm text-tm-muted">Track all trade lifecycle events</p>
+                    <h1 className="text-xl font-bold">{t('activity_page.title', 'Activity Log')}</h1>
+                    <p className="text-sm text-tm-muted">{t('activity_page.subtitle', 'Track all trade lifecycle events')}</p>
                 </div>
                 <div className="flex gap-2 items-center">
                     <button onClick={fetchAll} className="w-9 h-9 rounded-full bg-tm-surface flex items-center justify-center text-tm-muted hover:text-white transition">
@@ -262,7 +264,7 @@ export default function ActivityPage() {
                 <div className="px-6 mb-3">
                     <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-xs text-amber-300">
                         <AlertTriangle className="w-4 h-4 shrink-0" />
-                        Tastytrade not connected — only virtual and signal activity shown.
+                        {t('activity_page.tt_not_connected', 'Tastytrade not connected — only virtual and signal activity shown.')}
                     </div>
                 </div>
             )}
@@ -279,7 +281,7 @@ export default function ActivityPage() {
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-tm-muted" />
                     <input
-                        placeholder="Filter by symbol, strategy or status..."
+                        placeholder={t('activity_page.filter_placeholder', 'Filter by symbol, strategy or status...')}
                         className="pl-9 h-10 w-full rounded-md border border-white/5 bg-tm-surface px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         value={filter}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilter(e.target.value)}
@@ -299,11 +301,11 @@ export default function ActivityPage() {
                 ) : filtered.length === 0 ? (
                     <div className="text-center py-12 glass-card">
                         <Activity className="w-12 h-12 text-tm-muted mx-auto mb-4 opacity-50" />
-                        <h3 className="text-lg font-semibold mb-2">No activity recorded</h3>
+                        <h3 className="text-lg font-semibold mb-2">{t('activity_page.no_activity_title', 'No activity recorded')}</h3>
                         <p className="text-tm-muted text-sm">
                             {accountNumber 
-                                ? 'No trades match the current filter.' 
-                                : 'Connect Tastytrade in Settings to see live transactions.'}
+                                ? t('activity_page.no_activity_tt', 'No trades match the current filter.')
+                                : t('activity_page.no_activity_connect', 'Connect Tastytrade in Settings to see live transactions.')}
                         </p>
                     </div>
                 ) : (
@@ -396,7 +398,7 @@ export default function ActivityPage() {
                                                 <div className={`w-2 h-2 rounded-full ring-4 ring-tm-surface ${virt.type === 'deposit' || virt.type === 'withdraw' ? 'bg-tm-purple' : 'bg-tm-green'}`} />
                                                 <div className="flex-1 flex justify-between">
                                                     <span className={virt.type === 'deposit' || virt.type === 'withdraw' ? 'text-tm-purple' : 'text-tm-green'}>
-                                                        {virt.type === 'deposit' || virt.type === 'withdraw' ? 'Ledger Updated' : 'Virtual Trade Executed'}
+                                                        {virt.type === 'deposit' || virt.type === 'withdraw' ? t('activity_page.ledger_updated', 'Ledger Updated') : t('activity_page.virtual_executed', 'Virtual Trade Executed')}
                                                     </span>
                                                     <span className="font-mono text-xs">{formatDate(virt.created_at)}</span>
                                                 </div>
@@ -407,7 +409,7 @@ export default function ActivityPage() {
                                             <div className="flex items-center gap-3 relative z-10">
                                                 <div className="w-2 h-2 rounded-full bg-tm-purple ring-4 ring-tm-surface" />
                                                 <div className="flex-1 flex justify-between">
-                                                    <span className="text-tm-muted">Signal Received</span>
+                                                    <span className="text-tm-muted">{t('activity_page.signal_received', 'Signal Received')}</span>
                                                     <span className="font-mono text-xs">{formatDate(tm.created_at)}</span>
                                                 </div>
                                             </div>
@@ -415,7 +417,7 @@ export default function ActivityPage() {
                                                 <div className="flex items-center gap-3 relative z-10">
                                                     <div className="w-2 h-2 rounded-full bg-blue-400 ring-4 ring-tm-surface" />
                                                     <div className="flex-1 flex justify-between">
-                                                        <span className="text-blue-300">Approved</span>
+                                                        <span className="text-blue-300">{t('activity_page.approved', 'Approved')}</span>
                                                         <span className="font-mono text-xs text-blue-300">{formatDate(tm.approved_at)}</span>
                                                     </div>
                                                 </div>
@@ -424,7 +426,7 @@ export default function ActivityPage() {
                                                 <div className="flex items-center gap-3 relative z-10">
                                                     <div className="w-2 h-2 rounded-full bg-tm-green ring-4 ring-tm-surface" />
                                                     <div className="flex-1 flex justify-between">
-                                                        <span className="text-tm-green font-medium">Executed</span>
+                                                        <span className="text-tm-green font-medium">{t('activity_page.executed', 'Executed')}</span>
                                                         <span className="font-mono text-xs text-tm-green">{formatDate(tm.executed_at)}</span>
                                                     </div>
                                                 </div>
@@ -434,7 +436,7 @@ export default function ActivityPage() {
                                                     <div className="w-2 h-2 mt-1 rounded-full bg-tm-red ring-4 ring-tm-surface shrink-0" />
                                                     <div className="flex-1">
                                                         <div className="flex justify-between mb-1">
-                                                            <span className="text-tm-red font-medium">Failed</span>
+                                                            <span className="text-tm-red font-medium">{t('activity_page.failed', 'Failed')}</span>
                                                         </div>
                                                         <div className="bg-tm-red/10 border border-tm-red/20 p-2 rounded text-xs text-tm-red font-mono break-all">
                                                             {tm.error_message}

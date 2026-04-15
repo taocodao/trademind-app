@@ -3,9 +3,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import {
     X, Sparkles, Copy, CheckCircle2, RefreshCw,
-    AlertCircle, Link2, Share2, Rocket, Target, BookOpen, Smile, ExternalLink, Image as ImageIcon
+    AlertCircle, Link2, Share2, Rocket, Target, BookOpen, Smile, ExternalLink, Image as ImageIcon, Gift
 } from 'lucide-react';
 import type { SocialPlatform } from '@/lib/composio';
+import { useTranslation } from 'react-i18next';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -106,6 +107,7 @@ interface ShareModalProps {
 export function ShareModal({
     promoCode, referralLink, connectedPlatforms, onClose, onRefreshConnections
 }: ShareModalProps) {
+    const { t } = useTranslation();
 
     // ── State ──────────────────────────────────────────────────────────────────
     const [platform, setPlatform]   = useState<SocialPlatform>('linkedin');
@@ -372,21 +374,29 @@ export function ShareModal({
             {/* Backdrop */}
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
 
-            {/* Modal */}
-            <div className="relative z-10 w-full sm:max-w-lg bg-[#141420] border border-white/10 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[calc(92dvh-4rem)] sm:max-h-[92dvh] mb-16 sm:mb-0 overflow-hidden">
+            {/* Modal — wider on desktop (max-w-2xl) */}
+            <div className="relative z-10 w-full sm:max-w-2xl bg-[#141420] border border-white/10 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[calc(92dvh-4rem)] sm:max-h-[92dvh] mb-16 sm:mb-0 overflow-hidden">
 
                 {/* ── Header ── */}
                 <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
                     <div>
-                        <h2 className="text-white font-black text-lg tracking-tight">Share & Earn</h2>
+                        <h2 className="text-white font-black text-lg tracking-tight">{t('share_earn.title', 'Share & Earn')}</h2>
                         <p className="text-zinc-500 text-[11px] mt-0.5">
                             Code <span className="text-tm-purple font-mono font-bold">{promoCode}</span>
-                            {' '}· auto-applied in your link
+                            {' '}· {t('share_earn.code_label', 'auto-applied in your link')}
                         </p>
                     </div>
                     <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors">
                         <X className="w-4 h-4 text-zinc-400" />
                     </button>
+                </div>
+
+                {/* ── Referral Description Banner ── */}
+                <div className="mx-5 mb-1 flex items-start gap-2.5 bg-gradient-to-r from-tm-purple/15 to-green-500/10 border border-tm-purple/25 rounded-xl px-4 py-3">
+                    <Gift className="w-4 h-4 text-tm-purple shrink-0 mt-0.5" />
+                    <p className="text-[12px] text-zinc-300 leading-snug">
+                        {t('share_earn.referral_desc', '💸 Refer a friend — you both earn $100 in free subscription days. Share your unique link and the rewards apply automatically.')}
+                    </p>
                 </div>
 
                 {/* ── Scrollable Body ── */}
@@ -513,15 +523,15 @@ export function ShareModal({
                             <div className="p-4 space-y-3">
                                 {/* Campaign: no need for duplicate variant pills — the Tone row above handles it */}
 
-                                {/* Editable textarea */}
+                                {/* Editable textarea — taller on desktop */}
                                 <textarea
                                     ref={textareaRef}
                                     value={editedPost}
                                     onChange={(e) => setEditedPost(e.target.value)}
-                                    placeholder="Your AI-generated post will appear here…"
-                                    className="w-full bg-transparent text-zinc-200 text-sm leading-relaxed resize-none focus:outline-none placeholder:text-zinc-600 min-h-[120px]"
+                                    placeholder={t('share_earn.placeholder', 'Your AI-generated post will appear here…')}
+                                    className="w-full bg-transparent text-zinc-200 text-sm leading-relaxed resize-none focus:outline-none placeholder:text-zinc-600 min-h-[200px] sm:min-h-[280px]"
                                     style={{ height: 'auto' }}
-                                    rows={6}
+                                    rows={10}
                                 />
 
                                 {/* Char count + cache badge */}
@@ -650,7 +660,7 @@ export function ShareModal({
                         {/* Secondary row: More Apps + Copy Referral Link + Copy fallback */}
                         {canShare && (
                             <p className="text-[10px] text-zinc-600 text-center -mb-1">
-                                <span className="text-zinc-500 font-medium">More Apps</span> opens your device's share panel — WhatsApp, Gmail, Discord, Outlook &amp; more
+                                <span className="text-zinc-500 font-medium">{t('share_earn.share_btn', 'Share…')}</span> opens your device&apos;s share panel — WhatsApp, Gmail, Discord, Outlook &amp; more
                             </p>
                         )}
                         <div className="flex gap-2">
@@ -663,8 +673,8 @@ export function ShareModal({
                                         bg-white/8 hover:bg-white/12 border border-white/10 text-zinc-300 transition-all active:scale-[0.98] disabled:opacity-40"
                                 >
                                     {shared
-                                        ? <><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Sent · Text Copied</>
-                                        : <><Share2 className="w-3.5 h-3.5" /> More Apps…</>
+                                        ? <><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> {t('share_earn.sent_copied', 'Sent · Text Copied')}</>
+                                        : <><Share2 className="w-3.5 h-3.5" /> {t('share_earn.share_btn', 'Share…')}</>
                                     }
                                 </button>
                             )}

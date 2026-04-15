@@ -56,8 +56,19 @@ export async function POST(
 
         const results = [];
 
+        // Idempotency DB check helper
+        const { getUserExecutionForSignal, createUserExecution } = await import('@/lib/db');
+
         for (const user of eligibleUsers) {
             const userId = user.user_id;
+
+            // Idempotency Guard - check if this user already executed this signal (live or virtual)
+            const existingExecution = await getUserExecutionForSignal(userId, id);
+            if (existingExecution && existingExecution.status === 'executed') {
+                console.log(`⏭️ [GHOST EXECUTOR] Skipping ${userId} — already executed signal ${id}`);
+                results.push({ userId, status: 'already_executed', live: existingExecution.source !== 'virtual' });
+                continue;
+            }
 
             // Attempt Live Brokerage Execution first!
             const tokens = await getTastytradeTokens(userId);
@@ -82,6 +93,10 @@ export async function POST(
                     const accountNumber = acctData.data.items[0].account['account-number'];
 
                     const txResult = await executeSignal(accessToken, accountNumber, signal, { front: '2025-01-01', back: '2025-01-01' });
+                    
+                    // Log the successful live execution to prevent duplicate ghost executions
+                    await createUserExecution(userId, id, 'executed', txResult.orderId || 'live_exec', 'live');
+                    
                     results.push({ userId, status: 'success', live: true });
                     console.log(`✅ [GHOST EXECUTOR] Tastytrade processed for ${userId}`);
                     continue; // Done!

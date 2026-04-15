@@ -325,7 +325,16 @@
         "qty_label": "Cantidad (Acciones)",
         "avg_price_label": "Costo Promedio / Acción ($)",
         "save": "Guardar",
-        "add": "Agregar"
+        "add": "Agregar",
+        "virtual": "VIRTUAL",
+        "add_virtual_funds_desc": "Agrega fondos virtuales para el libro de {{strategy}}.",
+        "remove_virtual_funds_desc": "Retira fondos virtuales para el libro de {{strategy}}.",
+        "edit_position_title": "Editar {{symbol}}",
+        "contracts": "contrato",
+        "contracts_plural": "contratos",
+        "legs": "PATA",
+        "legs_plural": "PATAS",
+        "exp": "Vence"
     },
     "activity_page": {
         "title": "Registro de Actividad",

@@ -325,7 +325,16 @@
         "qty_label": "数量（股）",
         "avg_price_label": "平均成本/股 ($)",
         "save": "保存",
-        "add": "添加"
+        "add": "添加",
+        "virtual": "虚拟",
+        "add_virtual_funds_desc": "向 {{strategy}} 账本存入虚拟资金。",
+        "remove_virtual_funds_desc": "从 {{strategy}} 账本提取虚拟资金。",
+        "edit_position_title": "编辑 {{symbol}}",
+        "contracts": "张",
+        "contracts_plural": "张",
+        "legs": "腿",
+        "legs_plural": "腿",
+        "exp": "到期日"
     },
     "activity_page": {
         "title": "活动日志",

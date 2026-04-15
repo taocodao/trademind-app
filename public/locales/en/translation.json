@@ -325,7 +325,16 @@
         "qty_label": "Quantity (Shares)",
         "avg_price_label": "Avg Cost / Share ($)",
         "save": "Save",
-        "add": "Add"
+        "add": "Add",
+        "virtual": "VIRTUAL",
+        "add_virtual_funds_desc": "Add virtual funds for the {{strategy}} ledger.",
+        "remove_virtual_funds_desc": "Remove virtual funds for the {{strategy}} ledger.",
+        "edit_position_title": "Edit {{symbol}}",
+        "contracts": "contract",
+        "contracts_plural": "contracts",
+        "legs": "LEG",
+        "legs_plural": "LEGS",
+        "exp": "Exp"
     },
     "activity_page": {
         "title": "Activity Log",

@@ -149,36 +149,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
                         // ── Language sync ──────────────────────────────────
                         const dbLang = data.preferredLanguage as Lang;
-                        // Normalize browser lang to 2-char code (e.g. 'zh-TW' → 'zh')
-                        const browserLang = (i18n.language?.slice(0, 2) || 'en') as Lang;
 
-                        if (dbLang && dbLang !== 'en') {
-                            // Returning user — restore their explicit DB language choice
+                        if (dbLang && ALLOWED_LANGS.includes(dbLang)) {
+                            if (i18n.language !== dbLang) {
+                                i18n.changeLanguage(dbLang);
+                            }
                             if (prev.preferredLanguage !== dbLang) {
                                 updated = { ...updated, preferredLanguage: dbLang };
-                                if (i18n.language !== dbLang) i18n.changeLanguage(dbLang);
                                 changed = true;
                             }
-                        } else if (dbLang === 'en' && ALLOWED_LANGS.includes(browserLang) && browserLang !== 'en') {
-                            // New user — they chose a language on the landing page.
-                            // The DB has the default 'en' but their browser/landing page
-                            // preference is browserLang. Save it to DB so next login on
-                            // any device restores the correct language.
-                            if (prev.preferredLanguage !== browserLang) {
-                                updated = { ...updated, preferredLanguage: browserLang };
-                                changed = true;
-                            }
-                            // Persist to DB async (non-blocking)
-                            getAccessToken().then(t => {
-                                fetch('/api/settings/language', {
-                                    method: 'PATCH',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        ...(t ? { Authorization: `Bearer ${t}` } : {}),
-                                    },
-                                    body: JSON.stringify({ language: browserLang }),
-                                }).catch(() => {});
-                            });
                         }
 
                         if (!changed) return prev;

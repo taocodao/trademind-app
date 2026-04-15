@@ -328,7 +328,7 @@ export default function PositionsPage() {
                     <h1 className="text-xl font-bold flex items-center gap-2">
                         {t('positions_page.title', 'Positions')}
                         <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-                            <WifiOff className="w-2.5 h-2.5" /> VIRTUAL
+                            <WifiOff className="w-2.5 h-2.5" /> {t('positions_page.virtual', 'VIRTUAL')}
                         </span>
                     </h1>
                     <p className="text-sm text-tm-muted">
@@ -355,38 +355,38 @@ export default function PositionsPage() {
                 <div className="glass-card p-5">
                     <div className="flex items-center gap-2 mb-4">
                         <Wallet className="w-5 h-5 text-tm-purple" />
-                        <h3 className="font-bold border-b border-transparent">Account Overview</h3>
+                        <h3 className="font-bold border-b border-transparent">{t('positions_page.account_overview', 'Account Overview')}</h3>
                         {/* Deposit / Withdraw — always visible for virtual account */}
                         <div className="ml-auto flex gap-2">
                             <button onClick={() => setShowTransferModal('deposit')} className="text-[10px] bg-green-500/20 text-green-400 px-3 py-1 rounded-full font-bold hover:bg-green-500/30 transition">
-                                DEPOSIT
+                                {t('positions_page.deposit', 'DEPOSIT')}
                             </button>
                             <button onClick={() => setShowTransferModal('withdraw')} className="text-[10px] bg-red-500/20 text-red-400 px-3 py-1 rounded-full font-bold hover:bg-red-500/30 transition">
-                                WITHDRAW
+                                {t('positions_page.withdraw', 'WITHDRAW')}
                             </button>
                         </div>
                     </div>
                     <div className="grid grid-cols-4 gap-4 text-center">
                         <div>
-                            <p className="text-[10px] text-tm-muted uppercase tracking-wider font-semibold mb-1">Total Value</p>
+                            <p className="text-[10px] text-tm-muted uppercase tracking-wider font-semibold mb-1">{t('positions_page.total_value', 'Total Value')}</p>
                             <p className="text-lg font-bold font-mono text-white">
                                 ${(balance?.netLiquidation || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                             </p>
                         </div>
                         <div>
-                            <p className="text-[10px] text-tm-muted uppercase tracking-wider font-semibold mb-1">Cash</p>
+                            <p className="text-[10px] text-tm-muted uppercase tracking-wider font-semibold mb-1">{t('positions_page.cash', 'Cash')}</p>
                             <p className="text-lg font-bold font-mono text-emerald-400">
                                 ${(balance?.cashAvailable || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                             </p>
                         </div>
                         <div>
-                            <p className="text-[10px] text-tm-muted uppercase tracking-wider font-semibold mb-1">Positions Value</p>
+                            <p className="text-[10px] text-tm-muted uppercase tracking-wider font-semibold mb-1">{t('positions_page.positions_value', 'Positions Value')}</p>
                             <p className="text-lg font-bold font-mono text-purple-400">
                                 ${((balance?.netLiquidation || 0) - (balance?.cashAvailable || 0)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                             </p>
                         </div>
                         <div>
-                            <p className="text-[10px] text-tm-muted uppercase tracking-wider font-semibold mb-1">Realized P&L</p>
+                            <p className="text-[10px] text-tm-muted uppercase tracking-wider font-semibold mb-1">{t('positions_page.realized_pnl', 'Realized P&L')}</p>
                             {realizedPnl !== null ? (
                                 <p className={`text-lg font-bold font-mono ${realizedPnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                                     {realizedPnl >= 0 ? '+' : ''}${realizedPnl.toLocaleString(undefined, { maximumFractionDigits: 0 })}
@@ -407,7 +407,7 @@ export default function PositionsPage() {
                             {showTransferModal === 'deposit' ? t('positions_page.deposit_title', 'Deposit Virtual Cash') : t('positions_page.withdraw_title', 'Withdraw Virtual Cash')}
                         </h3>
                         <p className="text-xs text-tm-muted mb-4">
-                            {showTransferModal === 'deposit' ? t('positions_page.add_position', 'Add') : 'Remove'} virtual funds for the {activeStrategyConfig?.label || activeStrategy} ledger.
+                            {t(showTransferModal === 'deposit' ? 'positions_page.add_virtual_funds_desc' : 'positions_page.remove_virtual_funds_desc', { strategy: activeStrategyConfig?.label || activeStrategy, defaultValue: showTransferModal === 'deposit' ? 'Add virtual funds for the {{strategy}} ledger.' : 'Remove virtual funds for the {{strategy}} ledger.' })}
                         </p>
                         <input
                             type="number"
@@ -483,18 +483,18 @@ export default function PositionsPage() {
                     <div className="bg-[#111] border border-white/10 p-5 rounded-xl w-full max-w-sm">
                         {/* Title */}
                         <h3 className="text-lg font-bold mb-1">
-                            {editPositionModal.symbol === '' ? 'Add Position' : `Edit ${editPositionModal.symbol}`}
+                            {editPositionModal.symbol === '' ? t('positions_page.add_position_modal_title', 'Add Position') : t('positions_page.edit_position_title', 'Edit {{symbol}}', { symbol: editPositionModal.symbol })}
                         </h3>
                         <p className="text-xs text-tm-muted mb-4">
                             {editPositionModal.symbol === ''
-                                ? 'Manually record a position in your shadow ledger.'
-                                : 'Update quantity or cost basis. Set qty to 0 to remove.'}
+                                ? t('positions_page.add_position_modal_desc', 'Manually record a position in your shadow ledger.')
+                                : t('positions_page.edit_position_modal_desc', 'Update quantity or cost basis. Set qty to 0 to remove.')}
                         </p>
 
                         {/* Symbol (add only) */}
                         {editPositionModal.symbol === '' && (
                             <div className="mb-3">
-                                <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">Symbol</label>
+                                <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">{t('positions_page.symbol', 'Symbol')}</label>
                                 <input
                                     type="text"
                                     value={addSymbol}
@@ -507,7 +507,7 @@ export default function PositionsPage() {
 
                         {/* Quantity */}
                         <div className="mb-3">
-                            <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">Quantity (Shares)</label>
+                            <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">{t('positions_page.qty_label', 'Quantity (Shares)')}</label>
                             <input
                                 type="number" min="0" step="1"
                                 value={editQuantity}
@@ -519,7 +519,7 @@ export default function PositionsPage() {
 
                         {/* Avg Price */}
                         <div className="mb-4">
-                            <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">Avg Cost / Share ($)</label>
+                            <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">{t('positions_page.avg_price_label', 'Avg Cost / Share ($)')}</label>
                             <input
                                 type="number" min="0" step="0.01"
                                 value={editAvgPrice}
@@ -536,7 +536,7 @@ export default function PositionsPage() {
                                 onClick={() => setEditPositionModal(null)}
                                 className="flex-1 py-3 rounded-lg font-bold bg-white/5 hover:bg-white/10 transition"
                             >
-                                Cancel
+                                {t('positions_page.cancel', 'Cancel')}
                             </button>
                             {editPositionModal.symbol !== '' && (
                                 <button
@@ -554,7 +554,7 @@ export default function PositionsPage() {
                             >
                                 {editLoading
                                     ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                    : editPositionModal.symbol === '' ? 'Add' : 'Save'
+                                    : (editPositionModal.symbol === '' ? t('positions_page.add', 'Add') : t('positions_page.save', 'Save'))
                                 }
                             </button>
                         </div>
@@ -667,7 +667,7 @@ export default function PositionsPage() {
                 <div className="px-6 mt-8 space-y-3">
                     <h2 className="text-sm font-bold text-tm-muted uppercase tracking-wider mb-2 flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                        Options Spreads · {activeStrategyConfig?.label || activeStrategy}
+                        {t('positions_page.options_spreads', 'Options Spreads')} · {activeStrategyConfig?.label || activeStrategy}
                     </h2>
                     {optionSpreads.map((spread) => (
                         <SpreadPositionCard key={spread.signalId} spread={spread} />
@@ -723,6 +723,7 @@ const LEG_ACTION_LABEL: Record<string, { short: string; color: string }> = {
 };
 
 function SpreadPositionCard({ spread }: { spread: SpreadGroup }) {
+    const { t } = useTranslation();
     const { label, color } = inferSpreadLabel(spread.legs);
     const colorMap: Record<string, string> = {
         emerald: 'border-emerald-500/20 from-emerald-500/5',
@@ -745,7 +746,7 @@ function SpreadPositionCard({ spread }: { spread: SpreadGroup }) {
     const firstLeg = spread.legs[0];
     const parsed0  = firstLeg ? parseOccSymbol(firstLeg.symbol) : null;
     const contracts = firstLeg?.quantity ?? 1;
-    const creditOrDebit = spread.limitPrice > 0 ? `$${spread.limitPrice.toFixed(2)}/contract` : null;
+    const creditOrDebit = spread.limitPrice > 0 ? `$${spread.limitPrice.toFixed(2)}/${t('positions_page.contracts', 'contract')}` : null;
 
     return (
         <div className={`glass-card p-5 border bg-gradient-to-br to-transparent ${cardCls}`}>
@@ -759,13 +760,13 @@ function SpreadPositionCard({ spread }: { spread: SpreadGroup }) {
                         <div className="flex items-center gap-2 mb-1">
                             <h3 className="font-bold text-base">{parsed0?.underlying || '—'} · {label}</h3>
                             <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold border ${accentCls}`}>
-                                {spread.legs.length} LEG{spread.legs.length !== 1 ? 'S' : ''}
+                                {spread.legs.length} {spread.legs.length !== 1 ? t('positions_page.legs_plural', 'LEGS') : t('positions_page.legs', 'LEG')}
                             </span>
                         </div>
                         <p className="text-xs text-tm-muted">
-                            {contracts} contract{contracts !== 1 ? 's' : ''}
+                            {contracts} {contracts !== 1 ? t('positions_page.contracts_plural', 'contracts') : t('positions_page.contracts', 'contract')}
                             {creditOrDebit ? ` · ${creditOrDebit}` : ''}
-                            {parsed0?.expiry ? ` · Exp ${parsed0.expiry}` : ''}
+                            {parsed0?.expiry ? ` · ${t('positions_page.exp', 'Exp')} ${parsed0.expiry}` : ''}
                         </p>
                     </div>
                 </div>

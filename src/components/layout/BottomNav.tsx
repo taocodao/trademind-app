@@ -23,7 +23,7 @@ export function BottomNav() {
         { name: 'AI',                               href: '/ai',        icon: Bot },
         { name: t('dashboard.nav.positions'),       href: '/positions', icon: Activity },
         { name: t('dashboard.nav.activity'),        href: '/activity',  icon: Bell },
-        { name: 'Refer',                            href: '/refer',     icon: Gift, highlight: true },
+        { name: t('dashboard.nav.refer', 'Refer'),  href: '/refer',     icon: Gift, highlight: true },
         { name: t('dashboard.nav.settings'),        href: '/settings',  icon: Settings },
     ], [t]);
 

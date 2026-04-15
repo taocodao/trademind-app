@@ -670,8 +670,8 @@ export function ShareModal({
 
                         {/* Secondary row: More Apps + Copy Referral Link + Copy fallback */}
                         {canShare && (
-                            <p className="text-[10px] text-zinc-600 text-center -mb-1 pt-1">
-                                <span className="text-zinc-500 font-medium">{t('share_earn.share_btn', 'Share…')}</span> {t('share_earn.open_device_share', "opens your device's share panel — WhatsApp, Gmail, Discord, Outlook & more")}
+                            <p className="text-[11px] text-zinc-400 text-center -mb-1 pt-1 bg-white/5 py-1.5 rounded-lg border border-white/5">
+                                <span className="text-zinc-200 font-bold">{t('share_earn.share_btn', 'Share…')}</span> {t('share_earn.open_device_share', "opens your device's share panel — WhatsApp, Gmail, Discord, Outlook & more")}
                             </p>
                         )}
                         <div className="flex gap-2 mt-1">
@@ -734,7 +734,7 @@ export function ShareModal({
 
                         {/* Media Kit link */}
                         <p className="text-center">
-                            <a href="/media-kit" target="_blank" rel="noopener noreferrer" className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors inline-flex items-center gap-1">
+                            <a href="/media-kit" target="_blank" rel="noopener noreferrer" className="text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors inline-flex items-center gap-1">
                                 <ImageIcon className="w-3 h-3" />
                                 {t('share_earn.media_kit', 'Download images & copy templates → Media Kit')}
                             </a>

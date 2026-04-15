@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
         // Get list of referred users with their progress
         const referralsResult = await query(
             `SELECT r.id, r.referred_user_id, r.stage1_paid, r.stage2_paid, r.annual_bonus_paid,
-                    r.signup_bonus_paid, r.created_at, u.first_name, u.last_name
+                    r.signup_bonus_paid, r.created_at, u.first_name, u.last_name, u.email
              FROM referrals r
              LEFT JOIN user_settings u ON u.user_id = r.referred_user_id
              WHERE r.referrer_user_id = $1
@@ -116,7 +116,7 @@ export async function GET(req: NextRequest) {
             },
             referrals: referralsResult.rows.map((r: any) => ({
                 id: r.id,
-                name: r.first_name ? `${r.first_name} ${(r.last_name?.[0] || '')}.` : 'Anonymous',
+                name: r.first_name ? `${r.first_name} ${(r.last_name?.[0] || '')}.` : r.email ? r.email.split('@')[0] : 'Anonymous',
                 signupBonusPaid: r.signup_bonus_paid,
                 stage1Paid: r.stage1_paid,
                 stage2Paid: r.stage2_paid,

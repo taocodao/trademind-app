@@ -336,20 +336,20 @@ export default function ActivityPage() {
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 <h3 className="font-bold text-base">
                                                     {item.symbol 
-                                                        || (isVirt && virt.type.toUpperCase()) 
+                                                        || (isVirt && t(`activity_page.action_${virt.type.toLowerCase()}`, virt.type).toUpperCase()) 
                                                         || (tm.signal_id ? `Signal #${tm.signal_id.slice(-6)}` : 'N/A')}
                                                 </h3>
                                                 {strategyBadge(item.strategy)}
                                                 {isTT && (
-                                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">LIVE</span>
+                                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">{t('activity_page.live', 'LIVE')}</span>
                                                 )}
                                                 {isVirt && (
-                                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">VIRTUAL</span>
+                                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">{t('activity_page.virtual_badge', 'VIRTUAL')}</span>
                                                 )}
                                             </div>
                                             <p className="text-sm text-tm-muted capitalize">
-                                                {isTT ? `${tt.action} · ${tt.quantity} ${tt.strategy === 'TurboCore' ? 'shares' : 'contracts'} @ $${Number(tt.price || 0).toFixed(2)}` 
-                                                : isVirt ? `${virt.type} ${virt.quantity ? `· ${virt.quantity} shares @ $${Number(virt.price || 0).toFixed(2)}` : ''}`
+                                                {isTT ? `${t(`activity_page.action_${tt.action.toLowerCase()}`, tt.action)} · ${tt.quantity} ${tt.strategy === 'TurboCore' ? t('activity_page.shares', 'shares') : t('activity_page.contracts', 'contracts')} @ $${Number(tt.price || 0).toFixed(2)}` 
+                                                : isVirt ? `${t(`activity_page.action_${virt.type.toLowerCase()}`, virt.type)} ${virt.quantity ? `· ${virt.quantity} ${t('activity_page.shares', 'shares')} @ $${Number(virt.price || 0).toFixed(2)}` : ''}`
                                                 : (tm.status || '').replace('_', ' ')}
                                             </p>
                                         </div>
@@ -357,14 +357,14 @@ export default function ActivityPage() {
                                     <div className="text-right shrink-0">
                                         {isTT ? (
                                             <>
-                                                <p className="text-xs text-tm-muted font-mono">Order: {tt.order_id}</p>
+                                                <p className="text-xs text-tm-muted font-mono">{t('activity_page.order', 'Order:')} {tt.order_id}</p>
                                                 <p className="text-xs text-tm-green">
                                                     {Number(tt.value) > 0 ? `+$${Number(tt.value).toFixed(2)}` : `-$${Math.abs(Number(tt.value)).toFixed(2)}`}
                                                 </p>
                                             </>
                                         ) : isVirt ? (
                                             <>
-                                                <p className="text-xs text-tm-muted font-mono">Virtual</p>
+                                                <p className="text-xs text-tm-muted font-mono">{t('activity_page.virtual_label', 'Virtual')}</p>
                                                 <p className={`text-xs ${virt.type === 'withdraw' || virt.type === 'buy' ? 'text-tm-red' : 'text-tm-green'}`}>
                                                     {virt.type === 'withdraw' || virt.type === 'buy' ? '-' : '+'}${Number(virt.amount || 0).toFixed(2)}
                                                 </p>
@@ -372,7 +372,7 @@ export default function ActivityPage() {
                                         ) : (
                                             <>
                                                 <p className="font-mono text-sm font-bold text-tm-muted">#{tm.id}</p>
-                                                {tm.order_id && <p className="text-xs text-tm-green">Order: {tm.order_id}</p>}
+                                                {tm.order_id && <p className="text-xs text-tm-green">{t('activity_page.order', 'Order:')} {tm.order_id}</p>}
                                             </>
                                         )}
                                     </div>
@@ -387,7 +387,7 @@ export default function ActivityPage() {
                                             <div className="flex items-center gap-3 relative z-10">
                                                 <div className="w-2 h-2 rounded-full bg-tm-green ring-4 ring-tm-surface" />
                                                 <div className="flex-1 flex justify-between">
-                                                    <span className="text-tm-green">{tt.description || 'Trade Executed'}</span>
+                                                    <span className="text-tm-green">{tt.description || t('activity_page.trade_executed', 'Trade Executed')}</span>
                                                     <span className="font-mono text-xs">{formatDate(tt.executed_at)}</span>
                                                 </div>
                                             </div>

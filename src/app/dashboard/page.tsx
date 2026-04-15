@@ -1100,10 +1100,10 @@ function DashboardContent() {
                                                 ? Math.max(0, Math.round((new Date(membership.trialEnd).getTime() - Date.now()) / 86400000))
                                                 : 0;
                                             const renewDate = membership.currentPeriodEnd
-                                                ? new Date(membership.currentPeriodEnd).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                                                ? new Date(membership.currentPeriodEnd).toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })
                                                 : '';
                                             const cancelDate = (membership.cancelAt || membership.currentPeriodEnd)
-                                                ? new Date((membership.cancelAt || membership.currentPeriodEnd)!).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                                                ? new Date((membership.cancelAt || membership.currentPeriodEnd)!).toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })
                                                 : '';
 
                                             if (membership.status === 'trialing') {

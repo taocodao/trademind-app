@@ -351,7 +351,17 @@
         "executed": "已执行",
         "failed": "失败",
         "shares": "股",
-        "contracts": "张"
+        "contracts": "张",
+        "all_strategies": "所有策略",
+        "live": "实盘",
+        "virtual_badge": "虚拟",
+        "virtual_label": "虚拟",
+        "trade_executed": "交易已执行",
+        "order": "订单：",
+        "action_buy": "买入",
+        "action_sell": "卖出",
+        "action_deposit": "存入",
+        "action_withdraw": "提取"
     },
     "share_earn": {
         "title": "分享赚取",

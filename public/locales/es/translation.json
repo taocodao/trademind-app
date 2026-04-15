@@ -351,7 +351,17 @@
         "executed": "Ejecutado",
         "failed": "Fallido",
         "shares": "acciones",
-        "contracts": "contratos"
+        "contracts": "contratos",
+        "all_strategies": "Todas las Estrategias",
+        "live": "EN VIVO",
+        "virtual_badge": "VIRTUAL",
+        "virtual_label": "Virtual",
+        "trade_executed": "Operación Ejecutada",
+        "order": "Orden:",
+        "action_buy": "Comprar",
+        "action_sell": "Vender",
+        "action_deposit": "Depositar",
+        "action_withdraw": "Retirar"
     },
     "share_earn": {
         "title": "Comparte y Gana",

@@ -1,5 +1,5 @@
-import React from 'react';
 import { StrategyConfig } from '@/lib/strategies';
+import { useTranslation } from 'react-i18next';
 
 interface StrategyTabsProps {
     strategies: StrategyConfig[];
@@ -9,6 +9,7 @@ interface StrategyTabsProps {
 }
 
 export function StrategyTabs({ strategies, activeKey, onChange, showAll = false }: StrategyTabsProps) {
+    const { t } = useTranslation();
     if (strategies.length <= 1 && !showAll) return null; // No tabs needed if only one strategy
 
     return (
@@ -21,7 +22,7 @@ export function StrategyTabs({ strategies, activeKey, onChange, showAll = false 
                             : 'bg-transparent border-transparent text-tm-muted hover:bg-white/5 hover:text-white/80'
                         }`}
                 >
-                    <span className="text-sm">All Strategies</span>
+                    <span className="text-sm">{t('activity_page.all_strategies', 'All Strategies')}</span>
                 </button>
             )}
 

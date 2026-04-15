@@ -351,7 +351,17 @@
         "executed": "Executed",
         "failed": "Failed",
         "shares": "shares",
-        "contracts": "contracts"
+        "contracts": "contracts",
+        "all_strategies": "All Strategies",
+        "live": "LIVE",
+        "virtual_badge": "VIRTUAL",
+        "virtual_label": "Virtual",
+        "trade_executed": "Trade Executed",
+        "order": "Order:",
+        "action_buy": "Buy",
+        "action_sell": "Sell",
+        "action_deposit": "Deposit",
+        "action_withdraw": "Withdraw"
     },
     "share_earn": {
         "title": "Share & Earn",

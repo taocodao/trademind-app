@@ -107,7 +107,7 @@ interface ShareModalProps {
 export function ShareModal({
     promoCode, referralLink, connectedPlatforms, onClose, onRefreshConnections
 }: ShareModalProps) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
 
     // ── State ──────────────────────────────────────────────────────────────────
     const [platform, setPlatform]   = useState<SocialPlatform>('linkedin');
@@ -203,6 +203,7 @@ export function ShareModal({
         setError('');
         setFromCache(false);
         try {
+            const currentLocale = i18n.language?.slice(0, 2).toLowerCase() || 'en';
             const res = await fetch('/api/social/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -212,6 +213,7 @@ export function ShareModal({
                     postMode: template === 'education' ? 'education' : 'referral',
                     tone,
                     forceRegenerate,
+                    locale: currentLocale,
                 }),
             });
             const data = await res.json();
@@ -235,7 +237,7 @@ export function ShareModal({
         } finally {
             setIsGenerating(false);
         }
-    }, [platform, template, tone]);
+    }, [platform, template, tone, i18n.language]);
 
     // Auto-generate on platform/template change — uses cache (forceRegenerate=false)
     useEffect(() => {
@@ -257,6 +259,15 @@ export function ShareModal({
             .catch(e => console.warn('[ShareModal] Bulk-gen failed:', e.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // Reset and regenerate when locale changes (different language cache slot)
+    // Only runs if the modal is already open and has generated content.
+    useEffect(() => {
+        if (!hasGenerated) return;
+        resetContent();
+        handleGenerate(true); // bypass cache — regenerate in the new language
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [i18n.language]);
 
     // ── Guided customization (Regenerate → user types request → OpenAI modifies) ──────
     const handleCustomize = useCallback(async () => {

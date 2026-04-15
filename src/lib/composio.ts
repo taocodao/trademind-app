@@ -105,15 +105,66 @@ export const REDDIT_SUBREDDITS = [
 // ── System Prompts ────────────────────────────────────────────────────────────
 
 /**
- * Build the system prompt for a given platform, post mode, and template style.
+ * Maps locale codes to full language names for the AI system prompt.
+ * Instructions are always in English even when requesting another output language
+ * ("non-native prompting" — GPT-4o performs best this way per research).
+ */
+const LANGUAGE_MAP: Record<string, string> = {
+    en: 'English',
+    es: 'Spanish',
+    zh: 'Simplified Chinese (Mandarin)',
+};
+
+/**
+ * Strips invisible Unicode characters from user-supplied content before sending
+ * to the OpenAI API. These can cause null-byte generation or corrupt streaming
+ * responses, especially with CJK Chinese output.
+ *
+ * Removes: non-breaking spaces, zero-width chars, BOM, bidi control chars.
+ */
+export function sanitizeForLLM(text: string): string {
+    return text
+        .replace(/[\u00A0\u200B\u200C\u200D\u2060]/g, ' ') // replace with regular space
+        .replace(/[\uFEFF\u200E\u200F\u202A-\u202E]/g, ''); // remove BOM and bidi markers
+}
+
+/**
+ * Build the system prompt for a given platform, post mode, template style, and locale.
+ *
  * postMode: 'referral' = promote TradeMind + include referral link
  *           'education' = share trading knowledge, soft CTA at end only
+ *
+ * locale: 'en' (default) | 'es' | 'zh'
+ *   When locale is not English, a CRITICAL language directive is prepended.
+ *   This directive is written in English even for non-English targets — GPT-4o
+ *   is most steerable with English system instructions (non-native prompting).
  */
 export function buildSystemPrompt(
     platform: SocialPlatform,
     postMode: PostMode = 'referral',
-    templateStyle: TemplateStyle = 'results'
+    templateStyle: TemplateStyle = 'results',
+    locale: string = 'en'
 ): string {
+    // ── Language directive (prepended for non-English output) ─────────────
+    const targetLanguage = LANGUAGE_MAP[locale] ?? 'English';
+    const languageDirective = locale !== 'en'
+        ? `CRITICAL OUTPUT LANGUAGE RULE — READ FIRST:
+You MUST write the ENTIRE social media post in ${targetLanguage} only.
+- Do NOT mix languages under any circumstances.
+- Do NOT include any English text whatsoever (except technical terms below).
+- All sentences, hashtags, calls-to-action, and commentary MUST be in ${targetLanguage}.
+- Failure to write entirely in ${targetLanguage} is a critical error.
+
+PRESERVE EXACTLY AS-IS (do not translate these):
+- The referral URL (copy it character-for-character)
+- Ticker symbols (e.g. TQQQ, QQQ, SGOV, SPY, NVDA)
+- Percentage figures and dollar amounts (e.g. 39%, $5,000, +21.4%)
+- The platform name: TradeMind or TradeMind.bot
+- Hashtags: keep them in ${targetLanguage} where natural, or use English if the platform expects English hashtags
+
+`
+        : '';
+
     const toneGuide: Record<TemplateStyle, string> = {
         results:     'Focus on concrete results and performance. Use first-person experience ("I made X trades", "The signal caught Y move").',
         educational: 'Focus on teaching — explain how options signals work, what IV means, how AI detects market conditions. Position yourself as a knowledgeable trader sharing insights.',
@@ -204,7 +255,7 @@ Write a YouTube video description for a ${postMode === 'education' ? 'trading ed
 ${base}`,
     };
 
-    return prompts[platform];
+    return `${languageDirective}${prompts[platform]}`;
 }
 
 // ── Tool Parameters ───────────────────────────────────────────────────────────

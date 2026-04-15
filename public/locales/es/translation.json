@@ -206,7 +206,12 @@
         "annual_badge": "Anual",
         "recent_activity": "Actividad Reciente",
         "no_activity": "Sin actividad aún.",
-        "update": "Actualización"
+        "update": "Actualización",
+        "your_referral_link": "Su enlace de recomendación — ¡hacer clic aplica automáticamente su código!",
+        "copy_code": "Copiar código",
+        "your_link": "Tu enlace:",
+        "referee_clicks": "El árbitro hace clic → la prueba gratuita se aplica automáticamente. No es necesario ingresar el código manualmente.",
+        "create_ai_post": "Crear publicación con IA y compartir"
     },
     "trust": {
         "title": "Integraciones Seguras y Encriptación Bancaria"
@@ -387,6 +392,10 @@
         "link_copied": "¡Enlace Copiado!",
         "reopen": "Reabrir",
         "copied": "¡Copiado!",
-        "copy_clipboard": "Copiar al Portapapeles"
+        "copy_clipboard": "Copiar al Portapapeles",
+        "open_platform": "Abrir {{label}} · Texto copiado al portapapeles",
+        "open_creator": "Abrir Creador de {{label}} · Texto copiado",
+        "open_device_share": "abre el panel de compartir de tu dispositivo — WhatsApp, Gmail, Discord, Outlook y más",
+        "media_kit": "Descargar imágenes y plantillas → Media Kit"
     }
 }

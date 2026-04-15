@@ -206,7 +206,12 @@
         "annual_badge": "年度",
         "recent_activity": "最近活动",
         "no_activity": "暂无活动。",
-        "update": "更新"
+        "update": "更新",
+        "your_referral_link": "您的推荐链接——点击后自动应用您的代码！",
+        "copy_code": "复制代码",
+        "your_link": "您的链接：",
+        "referee_clicks": "被推荐人点击 → 自动试用免费期。无需手动输入代码。",
+        "create_ai_post": "创建AI帖子并分享"
     },
     "trust": {
         "title": "安全集成与银行级加密"
@@ -387,6 +392,10 @@
         "link_copied": "链接已复制！",
         "reopen": "重新打开",
         "copied": "已复制！",
-        "copy_clipboard": "复制到剪贴板"
+        "copy_clipboard": "复制到剪贴板",
+        "open_platform": "打开 {{label}} · 文本已复制到剪贴板",
+        "open_creator": "打开 {{label}} 创作者区 · 文本已复制",
+        "open_device_share": "打开您设备的分享面板 —— WhatsApp、Gmail、Discord、Outlook 等",
+        "media_kit": "下载图片与文案模板 → 媒体套件"
     }
 }

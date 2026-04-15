@@ -206,7 +206,12 @@
         "annual_badge": "Annual",
         "recent_activity": "Recent Activity",
         "no_activity": "No activity yet.",
-        "update": "Update"
+        "update": "Update",
+        "your_referral_link": "Your Referral Link — click auto-applies your code!",
+        "copy_code": "Copy Code",
+        "your_link": "Your link:",
+        "referee_clicks": "Referee clicks → free trial auto-applied. No manual code entry needed.",
+        "create_ai_post": "Create AI Post & Share"
     },
     "trust": {
         "title": "Secure Integrations & Bank-Level Encryption"
@@ -387,6 +392,10 @@
         "link_copied": "Link Copied!",
         "reopen": "Re-open",
         "copied": "Copied!",
-        "copy_clipboard": "Copy to Clipboard"
+        "copy_clipboard": "Copy to Clipboard",
+        "open_platform": "Open {{label}} · Text Copied to Clipboard",
+        "open_creator": "Open {{label}} Creator · Text Copied",
+        "open_device_share": "opens your device's share panel — WhatsApp, Gmail, Discord, Outlook & more",
+        "media_kit": "Download images & copy templates → Media Kit"
     }
 }

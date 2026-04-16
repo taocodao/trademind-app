@@ -35,13 +35,17 @@ export async function POST(
               AND us.subscription_status IN ('active', 'trialing')
         `);
 
-        // Filter by strategy tier
+        // Filter by strategy tier — both_bundle gets ALL signals (Core AND Pro)
         const targetTiers: string[] = ['both_bundle'];
-        if (strategy.includes('PRO')) targetTiers.push('turbocore_pro');
-        else targetTiers.push('turbocore');
+        if (strategy.toUpperCase().includes('PRO')) {
+            targetTiers.push('turbocore_pro');
+        } else {
+            // Core signal: turbocore-tier users + both_bundle already included
+            targetTiers.push('turbocore');
+        }
 
         const eligibleUsers = usersRes.rows.filter(r => targetTiers.includes(r.subscription_tier));
-        console.log(`🤖 [GHOST EXECUTOR] Found ${eligibleUsers.length} eligible users.`);
+        console.log(`🤖 [GHOST EXECUTOR] Found ${eligibleUsers.length} eligible users for ${strategy}.`);
 
         const results = [];
 
@@ -80,6 +84,11 @@ async function processUserSignal(
         console.log(`⏭️ [GHOST] Skipping ${userId} — already executed ${signalId}`);
         results.push({ userId, status: 'already_executed' });
         return;
+    }
+    // If a previous 'failed' record exists from the old auto_approve path, we will
+    // upsert it to 'executed' below — don't skip, continue processing.
+    if (existingExecution?.status === 'failed') {
+        console.log(`♻️ [GHOST] Re-processing ${userId} — upgrading failed→executed for ${signalId}`);
     }
 
     // ── Resolve Tastytrade tokens ─────────────────────────────────────────────

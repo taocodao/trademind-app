@@ -1207,7 +1207,8 @@ function DashboardContent() {
                                         signal={signal}
                                         onExecute={handleTurboCoreExecute}
                                         executingId={executingId}
-                                        isExecuted={signal.userExecution?.status === 'executed'}
+                                        isExecuted={signal.userExecution != null && signal.userExecution.status === 'executed'}
+
                                         accountData={data}
                                         principalSetting={25000}
                                         shadowBalance={virtualBalance}

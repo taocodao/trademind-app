@@ -178,7 +178,7 @@ export function IVSwitchingSignalCard({ signal, onExecute, executingId, accountD
           <div style={{ color: "#a855f7", fontWeight: 700, fontSize: "22px" }}>
             {Math.round(signal.confidence * 100)}%
           </div>
-          <div style={{ color: "#6b7280", fontSize: "11px" }}>Confidence</div>
+          <div style={{ color: "#9ca3af", fontSize: "11px" }}>Confidence</div>
         </div>
       </div>
 
@@ -193,7 +193,7 @@ export function IVSwitchingSignalCard({ signal, onExecute, executingId, accountD
       {/* ── Equity Allocation ─────────────────────────────────────────────── */}
       {equityLegs.length > 0 && (
         <div style={{ marginBottom: "14px" }}>
-          <div style={{ color: "#6b7280", fontSize: "11px", fontWeight: 600, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          <div style={{ color: "#9ca3af", fontSize: "11px", fontWeight: 600, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
             Equity Allocation
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "6px" }}>
@@ -220,7 +220,7 @@ export function IVSwitchingSignalCard({ signal, onExecute, executingId, accountD
       {/* ── Options Overlay ───────────────────────────────────────────────── */}
       {optionsLegs.length > 0 && (
         <div style={{ marginBottom: "14px" }}>
-          <div style={{ color: "#6b7280", fontSize: "11px", fontWeight: 600, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          <div style={{ color: "#9ca3af", fontSize: "11px", fontWeight: 600, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
             Options Overlay
           </div>
           {optionsLegs.map((leg: any, i: number) => {
@@ -243,19 +243,19 @@ export function IVSwitchingSignalCard({ signal, onExecute, executingId, accountD
                       {parsed ? parsed.display : rawSym}
                     </span>
                     {leg.qty && leg.qty > 0 && (
-                      <span style={{ color: "#6b7280", fontSize: "12px" }}>×{leg.qty}</span>
+                      <span style={{ color: "#9ca3af", fontSize: "12px" }}>×{leg.qty}</span>
                     )}
                   </div>
                   <button
                     onClick={() => handleCopy(rawSym, copyKey)}
-                    style={{ background: "none", border: "none", cursor: "pointer", color: "#6b7280", padding: "4px" }}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: "4px" }}
                     title="Copy OCC symbol"
                   >
                     {copied === copyKey ? <ClipboardCheck size={14} color="#a855f7" /> : <Clipboard size={14} />}
                   </button>
                 </div>
                 {/* Small sub-line with raw OCC for advanced users */}
-                <div style={{ color: "#4b5563", fontSize: "10px", fontFamily: "monospace", marginTop: "4px", marginLeft: "2px" }}>
+                <div style={{ color: "#9ca3af", fontSize: "10px", fontFamily: "monospace", marginTop: "4px", marginLeft: "2px" }}>
                   {rawSym}
                 </div>
               </div>
@@ -268,7 +268,7 @@ export function IVSwitchingSignalCard({ signal, onExecute, executingId, accountD
       {signal.rationale && (
         <div style={{
           background: "rgba(0,0,0,0.2)", borderRadius: "8px", padding: "8px 14px",
-          fontSize: "12px", color: "#6b7280", marginBottom: "14px", lineHeight: "1.6",
+          fontSize: "12px", color: "#9ca3af", marginBottom: "14px", lineHeight: "1.6",
         }}>
           {signal.rationale}
         </div>
@@ -301,7 +301,7 @@ export function IVSwitchingSignalCard({ signal, onExecute, executingId, accountD
         </div>
       ) : isNoAction ? (
         <div style={{
-          textAlign: "center", color: "#6b7280", fontSize: "13px",
+          textAlign: "center", color: "#9ca3af", fontSize: "13px",
           padding: "12px", borderRadius: "10px",
           background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)",
         }}>
@@ -328,7 +328,7 @@ export function IVSwitchingSignalCard({ signal, onExecute, executingId, accountD
             )}
           </button>
           {!isLinked && (
-            <div style={{ textAlign: "center", color: "#6b7280", fontSize: "12px", marginTop: "8px" }}>
+            <div style={{ textAlign: "center", color: "#9ca3af", fontSize: "12px", marginTop: "8px" }}>
               ⚡ Connect Tastytrade for live execution · Virtual tracking active
             </div>
           )}

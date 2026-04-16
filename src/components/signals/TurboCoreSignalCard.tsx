@@ -350,7 +350,7 @@ export function TurboCoreSignalCard({
               {(confidence * 100).toFixed(1)}%
             </div>
 
-            <div className="text-xs text-white/40 font-medium">{t('dashboard.signals.ml_score', 'ML Score')}</div>
+            <div className="text-xs text-white/80 font-medium">{t('dashboard.signals.ml_score', 'ML Score')}</div>
           </div>
         </div>
 
@@ -404,13 +404,13 @@ export function TurboCoreSignalCard({
                 key={sym}
                 className="bg-[#111] p-3 rounded-lg border border-white/5 text-center"
               >
-                <div className="text-[10px] text-white/50 mb-1">{label}</div>
+                <div className="text-[10px] text-white/90 mb-1">{label}</div>
 
                 <div className={`font-mono text-sm font-bold ${colorClass}`}>
                   {targetStr}%
                 </div>
 
-                <div className="font-mono text-[10px] text-white/40 mt-1">
+                <div className="font-mono text-[10px] text-white/80 mt-1">
                   $
                   {dollarAmount.toLocaleString(undefined, {
                     maximumFractionDigits: 0,
@@ -424,7 +424,7 @@ export function TurboCoreSignalCard({
         {/* Capital basis label (replaces slider) */}
 
         <div className="mb-4 flex items-center justify-between px-2 py-2 bg-black/30 rounded-lg border border-white/5 text-xs">
-          <span className="text-white/50 flex items-center gap-1">
+          <span className="text-white/90 flex items-center gap-1">
             <DollarSign className="w-3.5 h-3.5 text-purple-400" />
 
             {t('dashboard.signals.virtual_balance', 'Virtual Balance')}
@@ -482,7 +482,7 @@ export function TurboCoreSignalCard({
                                     : "bg-purple-600 hover:bg-purple-500 text-white shadow-lg"
                                 }
 
-                                ${isExecuting ? "opacity-70 cursor-wait" : ""}
+                                ${isExecuting ? "opacity-100 cursor-wait" : ""}
 
                             `}
             >
@@ -494,7 +494,7 @@ export function TurboCoreSignalCard({
                     <AlertTriangle className="w-4 h-4" /> RISK OFF
                   </span>
 
-                  <span className="text-[10px] font-normal opacity-70">
+                  <span className="text-[10px] font-normal opacity-100">
                     Bear regime — 100% cash
                   </span>
                 </>
@@ -503,7 +503,7 @@ export function TurboCoreSignalCard({
                   <span className="flex items-center gap-1">
                     <Zap className="w-4 h-4" /> {isExecuting ? String(t('dashboard.signals.executing', 'EXECUTING...')).toUpperCase() : (isExecuted ? String(t('dashboard.signals.executed', 'EXECUTED')).toUpperCase() : t('dashboard.signals.submit_order', 'SUBMIT ORDER'))}
                   </span>
-                  <div className="text-[10px] text-white/40 text-center font-mono tracking-wider">
+                  <div className="text-[10px] text-white/80 text-center font-mono tracking-wider">
                     {t('dashboard.signals.submit_help', 'Virtual · integer shares · market price')}
                   </div>
                 </>
@@ -516,7 +516,7 @@ export function TurboCoreSignalCard({
             className="w-12 flex items-center justify-center rounded-lg bg-[#222] border border-white/10 hover:bg-[#333] transition-colors"
           >
             <ChevronDown
-              className={`w-5 h-5 text-white/60 transition-transform ${expanded ? "rotate-180" : ""}`}
+              className={`w-5 h-5 text-white/90 transition-transform ${expanded ? "rotate-180" : ""}`}
             />
           </button>
         </div>
@@ -544,7 +544,7 @@ export function TurboCoreSignalCard({
             </div>
 
             {signal.rationale && (
-              <p className="p-2 text-xs italic opacity-70">
+              <p className="p-2 text-xs italic opacity-100">
                 &quot;{signal.rationale}&quot;
               </p>
             )}
@@ -599,7 +599,7 @@ function ManualOrderPanel({
 
   if (orders.length === 0) {
     return (
-      <div className="text-xs text-white/40 italic text-center py-2">
+      <div className="text-xs text-white/80 italic text-center py-2">
         Set your shadow balance in Settings to see orders
       </div>
     );
@@ -607,7 +607,7 @@ function ManualOrderPanel({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-1.5 text-[10px] text-amber-400/80 font-semibold mb-1">
+      <div className="flex items-center gap-1.5 text-[10px] text-amber-400 font-semibold mb-1">
         <BookOpen className="w-3 h-3" />
         {t('dashboard.signals.manual_instructions', 'MANUAL ORDER INSTRUCTIONS - enter these in your broker')}
       </div>
@@ -629,7 +629,7 @@ function ManualOrderPanel({
                   {o.label}
                 </span>
 
-                <span className="text-white/30 text-[10px] ml-1">
+                <span className="text-white/70 text-[10px] ml-1">
                   · {o.orderType}
                 </span>
               </div>
@@ -641,7 +641,7 @@ function ManualOrderPanel({
                   ${o.dollarAmount.toFixed(0)}
                 </div>
 
-                <div className="text-white/30 text-[10px]">
+                <div className="text-white/70 text-[10px]">
                   {o.approxShares}
                 </div>
               </div>
@@ -654,7 +654,7 @@ function ManualOrderPanel({
                 {copiedIndex === i ? (
                   <ClipboardCheck className="w-3.5 h-3.5 text-green-400" />
                 ) : (
-                  <Clipboard className="w-3.5 h-3.5 text-white/30" />
+                  <Clipboard className="w-3.5 h-3.5 text-white/70" />
                 )}
               </button>
             </div>
@@ -668,7 +668,7 @@ function ManualOrderPanel({
         </div>
       ))}
 
-      <div className="text-[10px] text-yellow-400/50 text-center pt-1">
+      <div className="text-[10px] text-yellow-400/90 text-center pt-1">
         ⚡ {t('dashboard.signals.connect_tastytrade', 'Connect Tastytrade for live pricing & one-click execution')}
       </div>
     </div>

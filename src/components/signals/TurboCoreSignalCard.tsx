@@ -335,7 +335,7 @@ export function TurboCoreSignalCard({
                 </span>
 
                 {formattedTimestamp && (
-                  <span className="text-xs text-white/30 border-l border-white/10 pl-2">
+                  <span className="text-xs text-white/70 border-l border-white/20 pl-2">
                     {formattedTimestamp}
                   </span>
                 )}

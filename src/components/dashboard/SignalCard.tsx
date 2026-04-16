@@ -120,7 +120,7 @@ export function SignalCard({
                         <Clock className="w-3 h-3" />
                         {signal.symbol} · {signal.expiry}
                         {signal.createdAt && (
-                            <span className="opacity-75">
+                            <span className="opacity-100 font-medium">
                                 ({new Date(signal.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
                             </span>
                         )}

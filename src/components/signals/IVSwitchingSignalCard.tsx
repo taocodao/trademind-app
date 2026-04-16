@@ -170,7 +170,7 @@ export function IVSwitchingSignalCard({ signal, onExecute, executingId, accountD
               {meta.icon}&nbsp;{meta.label}
             </span>
           </div>
-          <div style={{ color: "#6b7280", fontSize: "13px" }}>
+          <div style={{ color: "#9ca3af", fontSize: "13px" }}>
             IV-Switching Composite Strategy · {new Date(signal.timestamp || signal.createdAt || Date.now()).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
           </div>
         </div>

@@ -12,7 +12,7 @@ import { executeSignal } from '@/lib/strategy-executor';
 import { createPosition, createUserExecution, getUserSettings } from '@/lib/db';
 import { executeVirtualOrders } from '@/lib/virtual-executor';
 import { getPrivyUserId } from '@/lib/auth-helpers';
-import pool from '@/lib/db';
+import pool, { getDefaultVirtualBalance } from '@/lib/db';
 
 export async function POST(
     request: Request,
@@ -400,7 +400,7 @@ async function buildVirtualOrdersFromSignal(signal: any, strategy: string, userI
 
     // 2. Fetch virtual balance and shadow positions DIRECTLY from DB
     //    (avoids cookie-forwarding failures on Vercel serverless)
-    let cashBalance = 25000;
+    let cashBalance = getDefaultVirtualBalance(strategy); // ✅ fixed: was hardcoded 25000
     const posMap = new Map<string, { qty: number; avgPrice: number }>();
     try {
         const [balRes, posRes] = await Promise.all([

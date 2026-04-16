@@ -813,6 +813,46 @@ export async function initializeUserTables(): Promise<void> {
             )
         `);
 
+
+        // ── Demo Performance (public track record, 3-day delayed) ────────────
+        await query(`
+            CREATE TABLE IF NOT EXISTS demo_performance (
+                id           SERIAL PRIMARY KEY,
+                account_id   VARCHAR(64) NOT NULL,
+                trade_date   DATE NOT NULL,
+                portfolio_nlv DECIMAL(15, 4) NOT NULL,
+                cash_balance  DECIMAL(15, 4) NOT NULL,
+                day_pnl      DECIMAL(15, 4),
+                pct_return   DECIMAL(10, 6),
+                strategy_mode VARCHAR(10),
+                published_at  TIMESTAMPTZ,
+                created_at    TIMESTAMPTZ DEFAULT NOW(),
+                UNIQUE(account_id, trade_date)
+            )
+        `);
+
+        // ── Seed demo virtual accounts (idempotent) ─────────────────────────
+        // demo_turbocore_core → $5K Core strategy
+        // demo_turbocore_pro  → $25K Pro strategy
+        await query(`
+            INSERT INTO virtual_accounts (user_id, strategy, cash_balance)
+            VALUES
+                ('demo_turbocore_core', 'TQQQ_TURBOCORE',     5000.00),
+                ('demo_turbocore_pro',  'TQQQ_TURBOCORE_PRO', 25000.00)
+            ON CONFLICT (user_id, strategy) DO NOTHING
+        `);
+
+        // Ensure demo users exist in user_settings so Ghost Executor can find them
+        await query(`
+            INSERT INTO user_settings (user_id, subscription_tier, subscription_status, global_auto_approve)
+            VALUES
+                ('demo_turbocore_core', 'turbocore',     'active', TRUE),
+                ('demo_turbocore_pro',  'turbocore_pro', 'active', TRUE)
+            ON CONFLICT (user_id) DO UPDATE SET
+                global_auto_approve = TRUE,
+                subscription_status = 'active'
+        `);
+
         console.log('✅ User tables initialized and migrated');
     } catch (error) {
         console.error('❌ Failed to initialize user tables:', error);

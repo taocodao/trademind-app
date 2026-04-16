@@ -110,7 +110,12 @@ export async function generateUserOrders(
     const { cashBalance, shadowPositions } = await fetchVirtualState(userId, strategyKey);
 
     // 2. Identify equity legs (handle both new format and legacy format)
-    const equityLegs: SignalLeg[] = (signal.legs || []).filter(l => l.leg_type === 'equity');
+    //    Backward-compat: treat legs with NO leg_type and a target_pct as equity legs.
+    //    Pro signals have mixed 'equity'/'options' in legs_override — we only want equity here.
+    const equityLegs: SignalLeg[] = (signal.legs || []).filter(l =>
+        l.leg_type === 'equity' ||
+        (!l.leg_type && typeof l.target_pct === 'number' && l.target_pct > 0 && l.target_pct <= 1)
+    );
     const equitySymbols = equityLegs.map(l => l.symbol);
 
     // 3. Fetch live prices (Yahoo Finance via internal /api/quotes)

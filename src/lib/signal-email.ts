@@ -1,13 +1,12 @@
 /**
  * Signal Email Notifications via Resend
  * ======================================
- * Sends human-readable order execution emails to users who have
- * email_signal_alerts = true in user_settings.
+ * Sends clean black-and-white execution confirmation emails to users
+ * who have email_signal_alerts = true in user_settings.
  *
- * All order instructions use plain English, e.g.:
+ * Order instructions use plain English, e.g.:
  *   "Buy 12 shares of TQQQ at Market Price"
  *   "Sell to Open 2 TQQQ $48.00 Put (exp. Apr 25) at Limit $0.45"
- *   "Buy to Close 2 TQQQ $48.00 Put — 50% profit target reached"
  */
 
 import type { DeltaOrder, OptionsOrder } from '@/lib/per-user-order-generator';
@@ -80,11 +79,11 @@ function buildSubject(data: SignalEmailData): string {
     const hasActivity = data.equityOrders.length > 0 || data.optionsCloses.length > 0 || data.optionsEntries.length > 0;
 
     if (!hasActivity) {
-        return `${strategyLabel} — No Changes Today (${dateStr})`;
+        return `[TradeMind] ${strategyLabel} — No Changes Today (${dateStr})`;
     }
 
     const regime = data.regime ? ` | ${data.regime.replace('_', ' ')}` : '';
-    return `${strategyLabel} Signal Executed — ${dateStr}${regime}`;
+    return `[TradeMind] ${strategyLabel} Signal Executed — ${dateStr}${regime}`;
 }
 
 // ─── Plain-Text Body ──────────────────────────────────────────────────────────
@@ -93,8 +92,8 @@ function buildTextBody(data: SignalEmailData): string {
     const lines: string[] = [];
     const strategyLabel = data.strategy.includes('PRO') ? 'TurboCore Pro' : 'TurboCore';
 
-    lines.push(`📊 TradeMind ${strategyLabel} — Daily Signal`);
-    lines.push('─'.repeat(48));
+    lines.push(`TradeMind ${strategyLabel} — Daily Signal`);
+    lines.push('='.repeat(48));
 
     if (data.regime) {
         lines.push(`Regime:     ${data.regime.replace(/_/g, ' ')}`);
@@ -107,160 +106,201 @@ function buildTextBody(data: SignalEmailData): string {
     }
     lines.push('');
 
-    // Closing positions
     if (data.optionsCloses.length > 0) {
-        lines.push('🔴 Closing Positions:');
+        lines.push('CLOSING POSITIONS:');
         for (const leg of data.optionsCloses) {
-            lines.push(`  • ${leg.instruction}`);
+            lines.push(`  - ${leg.instruction}`);
         }
         lines.push('');
     }
 
-    // Equity rebalance
     if (data.equityOrders.length > 0) {
-        lines.push('📈 Equity Rebalance:');
+        lines.push('EQUITY REBALANCE:');
         for (const order of data.equityOrders) {
-            lines.push(`  • ${order.instruction}`);
+            lines.push(`  - ${order.instruction}`);
         }
         lines.push('');
     } else {
-        lines.push('📈 Equity Rebalance:');
-        lines.push('  • No equity changes required — portfolio is at target allocation');
+        lines.push('EQUITY REBALANCE:');
+        lines.push('  - No equity changes required — portfolio is at target allocation');
         lines.push('');
     }
 
-    // New options entries
     if (data.optionsEntries.length > 0) {
-        lines.push('⚡ Options Orders:');
+        lines.push('OPTIONS ORDERS:');
         for (const leg of data.optionsEntries) {
-            lines.push(`  • ${leg.instruction}`);
+            lines.push(`  - ${leg.instruction}`);
         }
         lines.push('');
     } else if (data.skipOptions && data.skipReason) {
-        lines.push('⚡ Options Orders:');
-        lines.push(`  ℹ️ Skipped: ${data.skipReason}`);
+        lines.push('OPTIONS ORDERS:');
+        lines.push(`  Skipped: ${data.skipReason}`);
         lines.push('');
     }
 
-    // Execution status
-    lines.push('─'.repeat(48));
+    lines.push('-'.repeat(48));
     if (data.live) {
-        lines.push('✅ Execution: Live Tastytrade order submitted');
+        lines.push('Execution: Live Tastytrade order submitted');
     } else {
-        lines.push('📊 Execution: Virtual portfolio updated');
+        lines.push('Execution: Virtual portfolio updated');
     }
 
     lines.push('');
-    lines.push('View your portfolio at https://www.trademind.bot');
-    lines.push('');
-    lines.push('Manage email preferences in your account settings.');
+    lines.push('View your dashboard: https://www.trademind.bot/signals');
+    lines.push('Manage notifications: https://www.trademind.bot/settings');
 
     return lines.join('\n');
 }
 
-// ─── HTML Body ────────────────────────────────────────────────────────────────
+// ─── HTML Body — Clean Black & White ─────────────────────────────────────────
 
 function buildHtmlBody(data: SignalEmailData): string {
     const strategyLabel = data.strategy.includes('PRO') ? 'TurboCore Pro' : 'TurboCore';
+    const dateStr = new Date().toLocaleDateString('en-US', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+    });
 
-    const regimeColor: Record<string, string> = {
-        'BULL_STRONG': '#22c55e', 'BULL': '#86efac',
-        'SIDEWAYS': '#facc15', 'BEAR': '#f87171', 'CRASH': '#ef4444',
-    };
-    const regimeBg = regimeColor[data.regime || ''] || '#64748b';
-
+    // Closing positions section
     const closeLegsHtml = data.optionsCloses.length > 0 ? `
-        <div style="margin: 20px 0;">
-            <h3 style="color:#ef4444;margin:0 0 8px 0;font-size:14px;text-transform:uppercase;letter-spacing:0.05em;">
-                🔴 Closing Positions
-            </h3>
+        <div style="margin:0 0 24px 0">
+            <p style="margin:0 0 10px;color:#374151;font-size:11px;font-weight:700;
+                      text-transform:uppercase;letter-spacing:0.07em">Closing Positions</p>
             ${data.optionsCloses.map(l => `
-                <div style="background:#1e293b;border-left:3px solid #ef4444;padding:10px 14px;margin:4px 0;border-radius:4px;font-family:monospace;font-size:13px;color:#f1f5f9;">
+                <div style="background:#f9fafb;border:1px solid #e5e7eb;border-left:3px solid #374151;
+                            padding:10px 14px;margin:4px 0;border-radius:4px;font-family:monospace;
+                            font-size:13px;color:#111827">
                     ${escHtml(l.instruction)}
                 </div>`).join('')}
         </div>` : '';
 
+    // Equity rebalance section
     const equityHtml = `
-        <div style="margin: 20px 0;">
-            <h3 style="color:#22c55e;margin:0 0 8px 0;font-size:14px;text-transform:uppercase;letter-spacing:0.05em;">
-                📈 Equity Rebalance
-            </h3>
+        <div style="margin:0 0 24px 0">
+            <p style="margin:0 0 10px;color:#374151;font-size:11px;font-weight:700;
+                      text-transform:uppercase;letter-spacing:0.07em">Equity Rebalance</p>
             ${data.equityOrders.length > 0
                 ? data.equityOrders.map(o => `
-                    <div style="background:#1e293b;border-left:3px solid ${o.action === 'buy' ? '#22c55e' : '#f59e0b'};padding:10px 14px;margin:4px 0;border-radius:4px;font-family:monospace;font-size:13px;color:#f1f5f9;">
+                    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-left:3px solid ${o.action === 'buy' ? '#111827' : '#6b7280'};
+                                padding:10px 14px;margin:4px 0;border-radius:4px;font-family:monospace;
+                                font-size:13px;color:#111827">
                         ${escHtml(o.instruction)}
                     </div>`).join('')
-                : `<div style="background:#1e293b;padding:10px 14px;border-radius:4px;font-size:13px;color:#94a3b8;">
+                : `<div style="background:#f9fafb;border:1px solid #e5e7eb;padding:10px 14px;
+                              border-radius:4px;font-size:13px;color:#6b7280;">
                         No equity changes required — portfolio is at target allocation
                    </div>`}
         </div>`;
 
+    // Options section
     const optionsHtml = data.optionsEntries.length > 0 ? `
-        <div style="margin: 20px 0;">
-            <h3 style="color:#a78bfa;margin:0 0 8px 0;font-size:14px;text-transform:uppercase;letter-spacing:0.05em;">
-                ⚡ Options Orders
-            </h3>
+        <div style="margin:0 0 24px 0">
+            <p style="margin:0 0 10px;color:#374151;font-size:11px;font-weight:700;
+                      text-transform:uppercase;letter-spacing:0.07em">Options Orders</p>
             ${data.optionsEntries.map(l => `
-                <div style="background:#1e293b;border-left:3px solid #a78bfa;padding:10px 14px;margin:4px 0;border-radius:4px;font-family:monospace;font-size:13px;color:#f1f5f9;">
+                <div style="background:#f9fafb;border:1px solid #e5e7eb;border-left:3px solid #374151;
+                            padding:10px 14px;margin:4px 0;border-radius:4px;font-family:monospace;
+                            font-size:13px;color:#111827">
                     ${escHtml(l.instruction)}
                 </div>`).join('')}
         </div>` : data.skipOptions && data.skipReason ? `
-        <div style="margin: 20px 0;">
-            <h3 style="color:#a78bfa;margin:0 0 8px 0;font-size:14px;text-transform:uppercase;letter-spacing:0.05em;">
-                ⚡ Options Orders
-            </h3>
-            <div style="background:#1e293b;border-left:3px solid #64748b;padding:10px 14px;border-radius:4px;font-size:13px;color:#94a3b8;">
-                ℹ️ ${escHtml(data.skipReason || '')}
+        <div style="margin:0 0 24px 0">
+            <p style="margin:0 0 10px;color:#374151;font-size:11px;font-weight:700;
+                      text-transform:uppercase;letter-spacing:0.07em">Options Orders</p>
+            <div style="background:#f9fafb;border:1px solid #e5e7eb;padding:10px 14px;
+                        border-radius:4px;font-size:13px;color:#6b7280;">
+                Skipped: ${escHtml(data.skipReason || '')}
             </div>
         </div>` : '';
 
+    // Execution status
     const statusHtml = data.live
-        ? `<div style="background:#14532d;border:1px solid #22c55e;border-radius:6px;padding:12px 16px;margin:20px 0;color:#86efac;font-size:13px;">
-               ✅ <strong>Live Execution</strong> — Order submitted to Tastytrade
+        ? `<div style="background:#f9fafb;border:1px solid #e5e7eb;
+                      border-radius:6px;padding:12px 16px;margin:0 0 8px;
+                      color:#111827;font-size:13px;">
+               <strong>Live Execution</strong> — Order submitted to Tastytrade
            </div>`
-        : `<div style="background:#1e3a5f;border:1px solid #3b82f6;border-radius:6px;padding:12px 16px;margin:20px 0;color:#93c5fd;font-size:13px;">
-               📊 <strong>Virtual Portfolio</strong> — Your TradeMind virtual account has been updated
+        : `<div style="background:#f9fafb;border:1px solid #e5e7eb;
+                      border-radius:6px;padding:12px 16px;margin:0 0 8px;
+                      color:#374151;font-size:13px;">
+               <strong>Virtual Execution</strong> — Your TradeMind virtual account has been updated
            </div>`;
 
     return `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>TradeMind Signal</title></head>
-<body style="margin:0;padding:0;background:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-<div style="max-width:600px;margin:0 auto;padding:24px;">
-    <!-- Header -->
-    <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid #334155;border-radius:12px;padding:24px;margin-bottom:4px;">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-            <span style="font-size:24px;">🤖</span>
-            <div>
-                <div style="color:#f1f5f9;font-size:18px;font-weight:700;">TradeMind ${escHtml(strategyLabel)}</div>
-                <div style="color:#64748b;font-size:12px;">Daily Signal Report</div>
-            </div>
-        </div>
-        ${data.regime ? `<span style="background:${regimeBg}22;color:${regimeBg};border:1px solid ${regimeBg}44;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;">
-            ${escHtml(data.regime.replace(/_/g, ' '))}
-        </span>` : ''}
-        ${data.confidence ? `<span style="margin-left:8px;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:20px;padding:4px 12px;font-size:12px;">
-            Confidence: ${(data.confidence * 100).toFixed(0)}%
-        </span>` : ''}
-    </div>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>TradeMind Signal</title>
+</head>
+<body style="margin:0;padding:0;background:#f3f4f6;
+             font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="background:#f3f4f6;padding:32px 16px">
+  <tr><td>
+  <table width="600" cellpadding="0" cellspacing="0" border="0" align="center"
+         style="max-width:600px;background:#ffffff;border:1px solid #e5e7eb;
+                border-radius:8px;overflow:hidden">
 
-    <!-- Orders -->
-    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:20px;margin-top:4px;">
+    <!-- Header -->
+    <tr>
+      <td style="background:#111827;padding:24px 32px">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td>
+            <span style="font-size:20px;font-weight:800;color:#ffffff">TradeMind</span><br>
+            <span style="font-size:12px;color:#9ca3af">${escHtml(strategyLabel)} &middot; Execution Report</span>
+          </td>
+          <td align="right" style="vertical-align:middle">
+            ${data.regime ? `<span style="background:#374151;color:#f9fafb;padding:5px 14px;
+                         border-radius:20px;font-size:12px;font-weight:600">${escHtml(data.regime)}</span>` : ''}
+          </td>
+        </tr></table>
+      </td>
+    </tr>
+
+    <!-- Date bar -->
+    <tr>
+      <td style="padding:12px 32px;background:#f9fafb;border-bottom:1px solid #e5e7eb">
+        <span style="color:#6b7280;font-size:12px">${escHtml(dateStr)}</span>
+        ${data.confidence ? `<span style="margin-left:12px;color:#374151;font-size:12px;font-weight:600">Confidence: ${(data.confidence * 100).toFixed(0)}%</span>` : ''}
+      </td>
+    </tr>
+
+    <!-- Body -->
+    <tr><td style="padding:28px 32px">
+        ${data.rationale ? `<p style="border-left:3px solid #e5e7eb;padding:8px 14px;font-size:13px;
+                  color:#6b7280;margin:0 0 24px;line-height:1.7;font-style:italic">${escHtml(data.rationale)}</p>` : ''}
         ${closeLegsHtml}
         ${equityHtml}
         ${optionsHtml}
         ${statusHtml}
-    </div>
+
+        <!-- CTA -->
+        <div style="text-align:center;padding-top:20px">
+          <a href="https://www.trademind.bot/signals"
+             style="display:inline-block;background:#111827;color:#ffffff;
+                    padding:13px 36px;border-radius:6px;text-decoration:none;
+                    font-weight:700;font-size:14px">
+            View Your Dashboard &rarr;
+          </a>
+        </div>
+    </td></tr>
 
     <!-- Footer -->
-    <div style="text-align:center;padding:20px 0;color:#475569;font-size:12px;">
-        <a href="https://www.trademind.bot" style="color:#6366f1;text-decoration:none;">View Portfolio →</a>
-        &nbsp;&nbsp;|&nbsp;&nbsp;
-        <a href="https://www.trademind.bot/settings" style="color:#475569;text-decoration:none;">Manage Notifications</a>
-    </div>
-</div>
-</body></html>`;
+    <tr>
+      <td style="padding:18px 32px;border-top:1px solid #e5e7eb;background:#f9fafb;text-align:center">
+        <p style="color:#9ca3af;font-size:11px;margin:0 0 4px">TradeMind &middot; Automated Trade Signals</p>
+        <p style="color:#9ca3af;font-size:11px;margin:0">
+          <a href="https://www.trademind.bot/settings" style="color:#6b7280;text-decoration:underline">
+            Manage email preferences
+          </a>
+        </p>
+      </td>
+    </tr>
+  </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
 }
 
 function escHtml(str: string): string {

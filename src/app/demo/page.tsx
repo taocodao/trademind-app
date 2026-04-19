@@ -124,7 +124,68 @@ function formatDate(d: string) {
 
 function pct(v: number) { return `${(v * 100).toFixed(0)}%`; }
 
+// ─── Onboarding Flow Steps ───────────────────────────────────────────────────
+
+const ONBOARDING_STEPS = [
+    { num: 1, icon: "📧", title: "Add Email for Signal Alerts",       desc: "Go to Setup → enable email alerts so you get notified every time a new trade signal is generated.", tab: "setup" },
+    { num: 2, icon: "⚡", title: "Configure Auto-Approve",            desc: "In Setup, toggle Auto-Approve ON to let TurboCore execute trades automatically — or leave it OFF to manually review each signal first.", tab: "setup" },
+    { num: 3, icon: "🏦", title: "Connect Tastytrade (Optional)",     desc: "Link your Tastytrade account for real one-click execution. Skip this step to trade in Virtual Mode — everything still works, just paper-traded.", tab: "setup" },
+    { num: 4, icon: "📊", title: "Signals Arrive at 3:00 PM ET",      desc: "Every trading day at 3:00 PM ET, the AI engine evaluates market conditions and generates a rebalance signal for TurboCore and TurboCore Pro.", tab: "signals" },
+];
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
+
+function TabInfo({ color, icon, title, children }: { color: string; icon: React.ReactNode; title: string; children: React.ReactNode }) {
+    const colors: Record<string, string> = {
+        purple: "bg-purple-500/10 border-purple-500/30 text-purple-300",
+        blue:   "bg-blue-500/10 border-blue-500/30 text-blue-300",
+        emerald:"bg-emerald-500/10 border-emerald-500/30 text-emerald-300",
+        amber:  "bg-amber-500/10 border-amber-500/30 text-amber-300",
+        indigo: "bg-indigo-500/10 border-indigo-500/30 text-indigo-300",
+        rose:   "bg-rose-500/10 border-rose-500/30 text-rose-300",
+    };
+    return (
+        <div className={`border rounded-2xl p-4 mb-1 ${colors[color] || colors.purple}`}>
+            <div className="flex items-center gap-2 mb-2">
+                <span className="text-base">{icon}</span>
+                <span className="text-xs font-bold uppercase tracking-wider">{title}</span>
+            </div>
+            <div className="text-xs leading-relaxed text-white/70 space-y-1">{children}</div>
+        </div>
+    );
+}
+
+function OnboardingFlow({ onTabChange }: { onTabChange: (tab: string) => void }) {
+    return (
+        <div className="glass-card p-5 mb-2">
+            <div className="flex items-center gap-2 mb-4">
+                <Zap className="w-5 h-5 text-purple-400" />
+                <h3 className="font-bold text-sm">Getting Started — 4 Steps</h3>
+                <span className="ml-auto text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-bold">QUICK SETUP</span>
+            </div>
+            <div className="space-y-3">
+                {ONBOARDING_STEPS.map(step => (
+                    <button
+                        key={step.num}
+                        onClick={() => onTabChange(step.tab)}
+                        className="w-full text-left flex gap-3 group"
+                    >
+                        <div className="w-8 h-8 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-sm flex-shrink-0 group-hover:bg-purple-500/40 transition">
+                            {step.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-white group-hover:text-purple-300 transition flex items-center gap-1">
+                                Step {step.num}: {step.title}
+                                <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition" />
+                            </p>
+                            <p className="text-[11px] text-[#94a3b8] leading-relaxed mt-0.5">{step.desc}</p>
+                        </div>
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+}
 
 function DemoToast({ message, onClose }: { message: string; onClose: () => void }) {
     useEffect(() => {
@@ -264,12 +325,20 @@ function SignalCard({ signal, onApprove, onSkip }: { signal: typeof TURBOCORE_PR
 
 // ─── Tab: Dashboard ───────────────────────────────────────────────────────────
 
-function DashboardTab({ onToast }: { onToast: (m: string) => void }) {
+function DashboardTab({ onToast, onTabChange }: { onToast: (m: string) => void; onTabChange: (tab: string) => void }) {
     const [activeStrat, setActiveStrat] = useState<"core" | "pro">("pro");
     const signal = activeStrat === "pro" ? TURBOCORE_PRO_SIGNAL : TURBOCORE_SIGNAL;
 
     return (
         <div className="space-y-4">
+            {/* How it works */}
+            <TabInfo color="purple" icon="🏠" title="Your Command Center">
+                <p>This is where your active signals appear and where you can approve or execute trades. Every trading day at <strong className="text-white">3:00 PM ET</strong>, TurboCore's AI engine evaluates volatility conditions and generates a rebalancing signal for your portfolio.</p>
+                <p className="mt-1">Use the <strong className="text-white">Core / Pro</strong> tabs to switch between TurboCore (equity-only) and TurboCore Pro (equity + options overlays). Toggle <strong className="text-white">Auto-Approve</strong> in Setup to let trades execute automatically, or leave it off to review each signal here first.</p>
+            </TabInfo>
+
+            <OnboardingFlow onTabChange={onTabChange} />
+
             {/* Header banners */}
             <div className="glass-card px-4 py-3 flex items-center justify-between">
                 <div>
@@ -347,6 +416,11 @@ function DashboardTab({ onToast }: { onToast: (m: string) => void }) {
 function AITab({ onToast }: { onToast: (m: string) => void }) {
     return (
         <div className="space-y-6">
+            <TabInfo color="indigo" icon="🤖" title="AI Copilot — Your Personal Market Analyst">
+                <p>The AI Copilot gives you deeper insight into every trade signal and market condition. Use it to ask <strong className="text-white">"Why is TurboCore SIDEWAYS today?"</strong>, request a deep dive on any ticker, or get a morning briefing tailored to the current regime.</p>
+                <p className="mt-1">Each subscription tier includes <strong className="text-white">2 free AI feature picks</strong>. Additional features like Deep Dive, Strategy Builder, and Trade Debrief are available as $5/mo add-ons — activate only what you need.</p>
+            </TabInfo>
+
             {/* Header */}
             <div className="bg-[#1a1a2e]/80 border-b border-white/5 -mx-4 px-4 py-5">
                 <div className="flex items-center gap-3 mb-2">
@@ -443,6 +517,20 @@ function SignalsTab({ onToast }: { onToast: (m: string) => void }) {
 
     return (
         <div className="space-y-4">
+            <TabInfo color="emerald" icon="📊" title="How Signals Work">
+                <p>Signals are generated every trading day at <strong className="text-white">3:00 PM ET</strong>. The AI engine reads IV (Implied Volatility), momentum, and macro conditions to determine whether the market is in a <strong className="text-white">BULL, BEAR, or SIDEWAYS</strong> regime — then calculates the optimal portfolio allocation for each regime.</p>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                    <div className="bg-white/5 rounded-lg p-2.5">
+                        <p className="font-bold text-white text-[11px] mb-1">🏦 With Tastytrade Connected</p>
+                        <p>Click <strong className="text-white">Execute Trade</strong> (or Auto-Approve) → orders go live in your Tastytrade account instantly. Positions appear in the Positions tab in real-time.</p>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-2.5">
+                        <p className="font-bold text-white text-[11px] mb-1">💻 Virtual Mode (No Broker)</p>
+                        <p>Execute the trade manually using the order instructions shown, or skip it. The virtual ledger tracks your simulated portfolio based on the prices at signal time.</p>
+                    </div>
+                </div>
+            </TabInfo>
+
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-xl font-bold">Trade Signals</h1>
@@ -485,12 +573,17 @@ function PositionsTab({ onToast }: { onToast: (m: string) => void }) {
         pnlPct: ((p.currentPrice - p.avgPrice) / p.avgPrice) * 100,
     }));
     const totalMv = positions.reduce((s, p) => s + p.marketValue, 0);
-    const totalPnl = positions.reduce((s, p) => s + p.pnl, 0);
     const cash = 4600;
     const totalValue = totalMv + cash;
 
     return (
         <div className="space-y-5">
+            <TabInfo color="blue" icon="💼" title="Your Portfolio — Real or Virtual">
+                <p>This table shows all your open positions. If you connected Tastytrade, this reflects your <strong className="text-white">real live account</strong> — positions are pulled directly from your broker after each execution.</p>
+                <p className="mt-1">If you're in <strong className="text-white">Virtual Mode</strong>, this is your simulated ledger. You can <strong className="text-white">Deposit</strong> or <strong className="text-white">Withdraw</strong> virtual cash at any time, and manually add or remove positions. TurboCore automatically adjusts future signal sizes to match your current virtual balance — so the strategy always stays proportional to your capital.</p>
+                <p className="mt-1">TurboCore Pro users also see their <strong className="text-white">options spreads</strong> (ZEBRA, Bear Call Spread, CSP, LEAPS) tracked separately below the equity table.</p>
+            </TabInfo>
+
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-xl font-bold flex items-center gap-2">
@@ -651,6 +744,11 @@ function ActivityTab() {
 
     return (
         <div className="space-y-4">
+            <TabInfo color="amber" icon="⚡" title="Full Trade Lifecycle Log">
+                <p>Every signal, execution, deposit, and adjustment is recorded here with a precise timestamp. This is your complete audit trail — use it to verify that signals were acted on correctly and to review historical allocation changes.</p>
+                <p className="mt-1">Each event shows a <strong className="text-white">timeline</strong>: when the signal was received → when it was approved or skipped → when the virtual or live trade was executed. Filter by strategy (TurboCore vs TurboCore Pro) or search by symbol to find specific events quickly.</p>
+            </TabInfo>
+
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-xl font-bold">Activity Log</h1>
@@ -776,6 +874,19 @@ function ReferTab({ onToast }: { onToast: (m: string) => void }) {
 
     return (
         <div className="space-y-5">
+            <TabInfo color="rose" icon="🎁" title="Earn Free Subscription Days — For Both of You">
+                <p>Share your unique referral link with friends. When they sign up using your link, <strong className="text-white">you both get $50 in free subscription days</strong> — no waiting, applied automatically.</p>
+                <p className="mt-1">When their card is first charged after the trial, you both receive <strong className="text-white">another $50 in free days</strong> — that's <strong className="text-white">$100 total each</strong>. Credits are converted to free days based on your plan's daily rate, so you always get extra trading time instead of cash.</p>
+                <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+                    {[{step:"1",label:"Share your link",color:"text-purple-300"},{step:"2",label:"Friend signs up → Both get $50",color:"text-emerald-300"},{step:"3",label:"Friend's 1st charge → Both get $50 more",color:"text-amber-300"}].map(s => (
+                        <div key={s.step} className="bg-white/5 rounded-lg p-2">
+                            <p className={`font-black text-lg ${s.color}`}>{s.step}</p>
+                            <p className="text-[10px] leading-tight">{s.label}</p>
+                        </div>
+                    ))}
+                </div>
+            </TabInfo>
+
             <div>
                 <h1 className="text-xl font-bold">Referral Dashboard</h1>
             </div>
@@ -892,6 +1003,33 @@ function SetupTab({ onToast }: { onToast: (m: string) => void }) {
 
     return (
         <div className="space-y-4">
+            <TabInfo color="purple" icon="⚙️" title="First-Time Setup Checklist">
+                <p>Complete these 3 steps to get TurboCore running on your account:</p>
+                <div className="space-y-2 mt-2">
+                    <div className="flex items-start gap-2">
+                        <span className="w-5 h-5 rounded-full bg-purple-500/30 text-purple-300 text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
+                        <div>
+                            <p className="font-bold text-white text-[11px]">Enable Signal Email Alerts</p>
+                            <p>Enter your email address below so you receive a notification every time a new signal is ready. Without this, you must check the app manually at 3 PM ET.</p>
+                        </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                        <span className="w-5 h-5 rounded-full bg-emerald-500/30 text-emerald-300 text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
+                        <div>
+                            <p className="font-bold text-white text-[11px]">Set Auto-Approve (Recommended)</p>
+                            <p>With Auto-Approve ON, TurboCore executes each signal automatically — you don't need to be at your computer. With it OFF, you'll approve each trade manually in the Signals or Dashboard tab.</p>
+                        </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                        <span className="w-5 h-5 rounded-full bg-blue-500/30 text-blue-300 text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
+                        <div>
+                            <p className="font-bold text-white text-[11px]">Connect Tastytrade (Optional)</p>
+                            <p>Add your Tastytrade credentials to enable live order execution. Without it, all trades run in <strong className="text-white">Virtual Mode</strong> — orders are simulated against your virtual cash balance, positions are tracked in the Positions tab, and the strategy performance is fully measurable.</p>
+                        </div>
+                    </div>
+                </div>
+            </TabInfo>
+
             <div>
                 <h1 className="text-xl font-bold">Settings</h1>
                 <p className="text-sm text-[#94a3b8]">Configure your strategy</p>
@@ -1047,6 +1185,28 @@ function HeroScreen({ onStart }: { onStart: () => void }) {
                     The smartest automated trading copilot — AI-driven signals, options strategies, and portfolio automation.
                 </p>
 
+                {/* Process overview */}
+                <div className="text-left bg-white/5 border border-white/10 rounded-2xl p-5 mt-6">
+                    <p className="text-xs font-bold text-purple-300 uppercase tracking-wider mb-4">How It Works — End to End</p>
+                    <div className="space-y-3">
+                        {[
+                            { icon: "📧", title: "Set Up Your Account",          desc: "Subscribe → add your email for signal alerts → optionally connect Tastytrade for live execution." },
+                            { icon: "🤖", title: "AI Generates Signals at 3 PM ET", desc: "Every trading day, the ML engine reads volatility & momentum and calculates your optimal allocation." },
+                            { icon: "⚡", title: "Signals Auto-Execute or Wait for You", desc: "With Auto-Approve ON: orders go live instantly. With it OFF: review and approve each signal in the app." },
+                            { icon: "💼", title: "Positions Update Automatically",  desc: "Tastytrade users see live positions. Virtual users see their shadow ledger — deposit cash anytime." },
+                            { icon: "📈", title: "Track Everything in Activity Log",  desc: "Full audit trail of every signal, trade, virtual execution, and deposit across both strategies." },
+                        ].map((s, i) => (
+                            <div key={i} className="flex gap-3">
+                                <span className="text-xl flex-shrink-0">{s.icon}</span>
+                                <div>
+                                    <p className="text-sm font-bold text-white">{s.title}</p>
+                                    <p className="text-xs text-[#94a3b8] mt-0.5 leading-relaxed">{s.desc}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
                 {/* Ticker strip */}
                 <div className="flex items-center justify-center gap-4 bg-white/5 border border-white/10 rounded-2xl px-6 py-3">
                     {TICKER_DATA.map(t => (
@@ -1125,6 +1285,8 @@ export default function DemoPage() {
         );
     }
 
+    const handleTabChange = (tab: string) => setActiveTab(tab);
+
     return (
         <div className="min-h-screen bg-[#0A0A0F]">
             {/* Demo banner */}
@@ -1145,7 +1307,7 @@ export default function DemoPage() {
             {/* Main content */}
             <div className="max-w-4xl mx-auto w-full border-x border-white/5 min-h-screen">
                 <div className="px-4 pt-5 pb-32">
-                    {activeTab === "dashboard" && <DashboardTab onToast={showToast} />}
+                    {activeTab === "dashboard" && <DashboardTab onToast={showToast} onTabChange={handleTabChange} />}
                     {activeTab === "ai"        && <AITab onToast={showToast} />}
                     {activeTab === "signals"   && <SignalsTab onToast={showToast} />}
                     {activeTab === "positions" && <PositionsTab onToast={showToast} />}

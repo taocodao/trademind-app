@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import { useTranslation } from 'react-i18next';
-import { Languages, Users } from 'lucide-react';
+import { Languages, Zap } from 'lucide-react';
 
 export function MarketingHeader() {
     const { login, authenticated } = usePrivy();
@@ -19,10 +19,10 @@ export function MarketingHeader() {
     return (
         <header className="fixed top-0 left-0 right-0 z-50 bg-tm-bg/80 backdrop-blur-md border-b border-tm-border h-16">
             <div className="h-full px-6 flex items-center justify-between max-w-7xl mx-auto">
-                {/* Left: Refer a friend */}
-                <Link href="/refer" className="flex items-center gap-2 text-tm-muted hover:text-tm-purple transition-colors font-semibold text-sm">
-                    <Users className="w-5 h-5" />
-                    <span className="hidden sm:inline">{t('nav.refer')}</span>
+                {/* Left: Demo tour */}
+                <Link href="/demo" className="flex items-center gap-2 text-tm-purple hover:text-white transition-colors font-semibold text-sm border border-tm-purple/40 hover:border-tm-purple px-3 py-1.5 rounded-full hover:bg-tm-purple/10">
+                    <Zap className="w-4 h-4" />
+                    <span className="hidden sm:inline">Demo</span>
                 </Link>
 
                 {/* Center: Language Selector */}

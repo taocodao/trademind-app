@@ -1151,19 +1151,12 @@ function SetupTab({ onToast }: { onToast: (m: string) => void }) {
 // ─── Hero Screen ──────────────────────────────────────────────────────────────
 
 function HeroScreen({ onStart }: { onStart: () => void }) {
-    const [copiedCred, setCopiedCred] = useState(false);
     const [tickerIdx, setTickerIdx] = useState(0);
 
     useEffect(() => {
         const t = setInterval(() => setTickerIdx(i => (i + 1) % TICKER_DATA.length), 1500);
         return () => clearInterval(t);
     }, []);
-
-    const copyCreds = () => {
-        navigator.clipboard.writeText(`Email: ${DEMO_USER.email}\nPassword: ${DEMO_USER.password}`).catch(() => {});
-        setCopiedCred(true);
-        setTimeout(() => setCopiedCred(false), 2000);
-    };
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
@@ -1235,31 +1228,23 @@ function HeroScreen({ onStart }: { onStart: () => void }) {
                     </a>
                 </div>
 
-                {/* Demo credentials card */}
+                {/* Request access card */}
                 <div className="bg-[#1a1a2e]/80 border border-purple-500/30 rounded-2xl p-5 text-left">
                     <div className="flex items-center gap-2 mb-3">
                         <LogIn className="w-4 h-4 text-purple-400" />
-                        <p className="text-sm font-bold text-purple-300">Demo Account Credentials</p>
+                        <p className="text-sm font-bold text-purple-300">Want Full Demo Access?</p>
                     </div>
                     <p className="text-xs text-[#94a3b8] mb-4 leading-relaxed">
-                        Log in at <a href="https://trademind.bot" target="_blank" rel="noopener noreferrer" className="text-purple-400 underline">trademind.bot</a> with these credentials to explore the real app with live signals.
+                        To log in to the real TradeMind app with a demo account and explore live signals, send us an email with your name and a brief reason for your request. We'll send the credentials within 24 hours.
                     </p>
-                    <div className="space-y-2 font-mono text-sm">
-                        <div className="flex justify-between items-center bg-black/30 rounded-xl px-4 py-2.5 border border-white/5">
-                            <span className="text-[#94a3b8] text-xs">Email</span>
-                            <span className="text-white">{DEMO_USER.email}</span>
-                        </div>
-                        <div className="flex justify-between items-center bg-black/30 rounded-xl px-4 py-2.5 border border-white/5">
-                            <span className="text-[#94a3b8] text-xs">Password</span>
-                            <span className="text-white">{DEMO_USER.password}</span>
-                        </div>
-                    </div>
-                    <button
-                        onClick={copyCreds}
-                        className="mt-3 w-full py-2.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-sm font-bold text-purple-300 transition flex items-center justify-center gap-2"
+                    <a
+                        href="mailto:support@trademind.bot?subject=Demo%20Access%20Request&body=Hi%20TradeMind%20team%2C%0A%0AI%20would%20like%20to%20request%20demo%20access%20to%20the%20TradeMind%20platform.%0A%0AReason%3A%20"
+                        className="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-500 transition font-bold text-sm flex items-center justify-center gap-2"
                     >
-                        {copiedCred ? <><Check className="w-4 h-4" /> Copied!</> : <><Copy className="w-4 h-4" /> Copy Credentials</>}
-                    </button>
+                        <ExternalLink className="w-4 h-4" />
+                        Email support@trademind.bot
+                    </a>
+                    <p className="text-[11px] text-[#94a3b8] text-center mt-3">Include your name and reason for requesting access</p>
                 </div>
 
                 <p className="text-xs text-[#94a3b8]">No account required for the interactive tour below ↓</p>

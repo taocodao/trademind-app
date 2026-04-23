@@ -78,6 +78,8 @@ import { TQQQStatusBanner } from '@/components/dashboard/TQQQStatusBanner';
 
 import { TurboCoreSignalCard, type TurboCoreSignal } from '@/components/signals/TurboCoreSignalCard';
 
+import { QQQLEAPSSignalCard, isQQQLEAPSSignal } from '@/components/signals/QQQLEAPSSignalCard';
+
 import { Suspense } from 'react';
 
 import { useTranslation } from 'react-i18next';
@@ -1197,24 +1199,37 @@ function DashboardContent() {
                             <div className="flex flex-col items-center justify-center py-6 gap-2 border border-white/5 rounded-xl bg-black/20">
                                 <CheckCircle className="w-10 h-10 text-tm-green opacity-60" />
                                 <p className="font-semibold text-sm">{t('dashboard.aligned_title', 'Portfolio Target Aligned')}</p>
-                                <p className="text-xs text-tm-muted">{t('dashboard.aligned_desc', 'No pending ML target rebalances requested.')}</p>
+                                <p className="text-xs text-tm-muted">
+                                    {activeStrategy === 'QQQ_LEAPS'
+                                        ? t('dashboard.leaps_aligned_desc', 'No entry or exit signal today — regime not triggering.')
+                                        : t('dashboard.aligned_desc', 'No pending ML target rebalances requested.')}
+                                </p>
                             </div>
                         ) : (
                             <div className="space-y-3">
-                                {coreSignals.map(signal => (
-                                    <TurboCoreSignalCard
-                                        key={signal.id}
-                                        signal={signal}
-                                        onExecute={handleTurboCoreExecute}
-                                        executingId={executingId}
-                                        isExecuted={signal.userExecution != null && signal.userExecution.status === 'executed'}
-
-                                        accountData={data}
-                                        principalSetting={25000}
-                                        shadowBalance={virtualBalance}
-                                        shadowPositions={shadowPositions}
-                                    />
-                                ))}
+                                {coreSignals.map(signal =>
+                                    activeStrategy === 'QQQ_LEAPS' || isQQQLEAPSSignal(signal) ? (
+                                        <QQQLEAPSSignalCard
+                                            key={signal.id}
+                                            signal={signal as any}
+                                            onExecute={handleTurboCoreExecute as any}
+                                            executingId={executingId}
+                                            isExecuted={signal.userExecution != null && signal.userExecution.status === 'executed'}
+                                        />
+                                    ) : (
+                                        <TurboCoreSignalCard
+                                            key={signal.id}
+                                            signal={signal}
+                                            onExecute={handleTurboCoreExecute}
+                                            executingId={executingId}
+                                            isExecuted={signal.userExecution != null && signal.userExecution.status === 'executed'}
+                                            accountData={data}
+                                            principalSetting={25000}
+                                            shadowBalance={virtualBalance}
+                                            shadowPositions={shadowPositions}
+                                        />
+                                    )
+                                )}
 
                                 {!tastyLinked && (
                                     <div className="text-xs text-tm-muted text-center pt-1" dangerouslySetInnerHTML={{ __html: t('dashboard.track_only_notice', 'Not using Tastytrade? <span class="text-tm-purple">Track Only</span> monitors P&L without executing orders.') }} />

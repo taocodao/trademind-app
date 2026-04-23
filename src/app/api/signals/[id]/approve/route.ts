@@ -223,6 +223,29 @@ export async function POST(
                 return NextResponse.json(result);
 
             } else {
+                // ── 🛡️ LIVE EXECUTION DEDUP GUARD ─────────────────────────────────────────
+                // Atomically claim this signal execution slot BEFORE any TT order is submitted.
+                // ON CONFLICT DO NOTHING returns 0 rows if another request already claimed it,
+                // which means a parallel request or a double-click got here first — bail out.
+                try {
+                    const claimRes = await pool.query(
+                        `INSERT INTO user_signal_executions (user_id, signal_id, status, source, executed_at, created_at)
+                         VALUES ($1, $2, 'pending', $3, NOW(), NOW())
+                         ON CONFLICT (user_id, signal_id) DO NOTHING
+                         RETURNING id`,
+                        [userId, id, body.source || 'manual']
+                    );
+                    if (claimRes.rowCount === 0) {
+                        console.warn(`[Dedup] Signal ${id} already claimed for user ${userId} — aborting duplicate execution`);
+                        return NextResponse.json({ status: 'already_executed', error: 'Already executed' }, { status: 409 });
+                    }
+                    console.log(`[Dedup] Execution slot claimed for signal ${id}`);
+                } catch (claimErr) {
+                    // If the dedup check itself fails (e.g. table doesn't exist), log and continue.
+                    // Better to risk a duplicate than to block legitimate trades.
+                    console.warn('[Dedup] Could not claim execution slot (proceeding):', claimErr);
+                }
+
                 // For TurboCore strategies, pre-calculate virtual orders so live TT trade
                 // sizes match the UI Preview (which uses virtual $25k balance, not TT Net Liq)
                 const isTurboCore = ['TQQQ_TURBOCORE', 'TQQQ_TURBOCORE_PRO', 'REBALANCE'].includes(strategy);
@@ -268,7 +291,11 @@ export async function POST(
                             riskLevel: (await getUserSettings(userId))?.risk_level || 'moderate',
                             direction: signalData.direction,
                         });
-                        await createUserExecution(userId, id, 'executed', orderId, body.source || 'manual');
+                        // Update the pre-claimed 'pending' execution row to 'executed'
+                        await pool.query(
+                            `UPDATE user_signal_executions SET status = 'executed', order_id = $1 WHERE user_id = $2 AND signal_id = $3`,
+                            [orderId, userId, id]
+                        );
                     } catch (dbError) { console.error('Failed to save position:', dbError); }
 
                     return NextResponse.json({

@@ -74,25 +74,23 @@ export function ReferralPromoSection() {
                         <div className="flex items-center gap-2 justify-center mb-2">
                             <Mail className="w-4 h-4 text-purple-400" />
                             <p className="text-sm font-semibold text-white">
-                                Get your $100 referral link sent to your inbox
+                                {t('referral.email_cta_title', 'Get your $100 referral link sent to your inbox')}
                             </p>
                         </div>
                         <p className="text-xs text-zinc-500 mb-4 text-center">
-                            Enter your email and we'll send you the link&nbsp;
-                            <span className="text-purple-400 font-medium">{PROMO_URL}</span>
-                            &nbsp;— share it with friends to earn <strong className="text-white">$100 in free subscription days</strong> each.
+                            {t('referral.email_cta_desc', "Enter your email and we'll send you the link, simply click on the link and enjoy $100 in free subscription days.")}
                         </p>
 
                         {status === 'success' ? (
                             <div className="flex flex-col items-center gap-2 py-4">
                                 <CheckCircle2 className="w-10 h-10 text-green-400" />
-                                <p className="text-green-400 font-semibold text-sm">Link sent! Check your inbox.</p>
-                                <p className="text-zinc-500 text-xs">Didn't see it? Check spam, or&nbsp;
+                                <p className="text-green-400 font-semibold text-sm">{t('referral.email_cta_success', 'Link sent! Check your inbox.')}</p>
+                                <p className="text-zinc-500 text-xs">{t('referral.email_cta_spam', "Didn't see it? Check spam, or")}&nbsp;
                                     <button
                                         id="referral-resend-email"
                                         className="text-purple-400 underline text-xs"
                                         onClick={() => { setStatus('idle'); setEmail(''); }}
-                                    >try again</button>.
+                                    >{t('referral.email_cta_try_again', 'try again')}</button>.
                                 </p>
                             </div>
                         ) : (
@@ -104,7 +102,7 @@ export function ReferralPromoSection() {
                                         type="email"
                                         value={email}
                                         onChange={e => { setEmail(e.target.value); setStatus('idle'); setErrorMsg(''); }}
-                                        placeholder="your@email.com"
+                                        placeholder={t('referral.email_cta_placeholder', 'your@email.com')}
                                         required
                                         className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-zinc-600 text-sm focus:outline-none focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/30 transition-all"
                                     />
@@ -116,8 +114,8 @@ export function ReferralPromoSection() {
                                     className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-sm px-6 py-3 rounded-xl transition-all shadow-[0_0_20px_rgba(124,58,237,0.3)] hover:shadow-[0_0_30px_rgba(124,58,237,0.5)] whitespace-nowrap"
                                 >
                                     {status === 'loading'
-                                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</>
-                                        : <>Send My Link <ArrowRight className="w-4 h-4" /></>}
+                                        ? <><Loader2 className="w-4 h-4 animate-spin" /> {t('referral.email_cta_sending', 'Sending…')}</>
+                                        : <>{t('referral.email_cta_btn', 'Send My Link')} <ArrowRight className="w-4 h-4" /></>}
                                 </button>
                             </form>
                         )}

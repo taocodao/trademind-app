@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
     Home, Bot, TrendingUp, Briefcase, Activity, Gift, Settings, Zap,
     Copy, Check, ChevronDown, ArrowRight, Brain, BarChart3,
@@ -88,12 +89,12 @@ const TICKER_DATA = [
     { sym: "VIX",  chg: "-4.12%", pos: false },
 ];
 
-const AI_FEATURES = [
-    { key: "screenshot", title: "Screenshot Analysis",  icon: <FileSearch className="h-6 w-6 text-indigo-400" />,  price: 5, active: true,  desc: "Upload screenshots of trades or charts for instant AI analysis." },
-    { key: "deepdive",   title: "Deep Dive",           icon: <LineChart className="h-6 w-6 text-green-400" />,    price: 5, active: false, desc: "In-depth ticker analysis with live news catalysts and options risk profiling." },
-    { key: "briefing",   title: "Morning Briefing",    icon: <Coffee className="h-6 w-6 text-amber-400" />,       price: 5, active: true,  desc: "Daily morning market briefing tailored to the active TurboCore regime." },
-    { key: "strategy",   title: "Strategy Builder",    icon: <Target className="h-6 w-6 text-rose-400" />,        price: 5, active: false, desc: "Build realistic multi-leg options strategies optimized for your thesis." },
-    { key: "debrief",    title: "Trade Debrief",       icon: <Briefcase className="h-6 w-6 text-purple-400" />,   price: 5, active: false, desc: "Weekly performance review and educational insights on your closed trades." },
+const getAiFeatures = (t: any) => [
+    { key: "screenshot", title: t("Demo.ai.features.screenshotTitle"), icon: <FileSearch className="h-6 w-6 text-indigo-400" />, price: 5, active: true, desc: t("Demo.ai.features.screenshotDesc") },
+    { key: "deepdive", title: t("Demo.ai.features.deepdiveTitle"), icon: <LineChart className="h-6 w-6 text-green-400" />, price: 5, active: false, desc: t("Demo.ai.features.deepdiveDesc") },
+    { key: "briefing", title: t("Demo.ai.features.briefingTitle"), icon: <Coffee className="h-6 w-6 text-amber-400" />, price: 5, active: true, desc: t("Demo.ai.features.briefingDesc") },
+    { key: "strategy", title: t("Demo.ai.features.strategyTitle"), icon: <Target className="h-6 w-6 text-rose-400" />, price: 5, active: false, desc: t("Demo.ai.features.strategyDesc") },
+    { key: "debrief", title: t("Demo.ai.features.debriefTitle"), icon: <Briefcase className="h-6 w-6 text-purple-400" />, price: 5, active: false, desc: t("Demo.ai.features.debriefDesc") },
 ];
 
 const REFERRALS = [
@@ -126,11 +127,11 @@ function pct(v: number) { return `${(v * 100).toFixed(0)}%`; }
 
 // ─── Onboarding Flow Steps ───────────────────────────────────────────────────
 
-const ONBOARDING_STEPS = [
-    { num: 1, icon: "📧", title: "Add Email for Signal Alerts",       desc: "Go to Setup → enable email alerts so you get notified every time a new trade signal is generated.", tab: "setup" },
-    { num: 2, icon: "⚡", title: "Configure Auto-Approve",            desc: "In Setup, toggle Auto-Approve ON to let TurboCore execute trades automatically — or leave it OFF to manually review each signal first.", tab: "setup" },
-    { num: 3, icon: "🏦", title: "Connect Tastytrade (Optional)",     desc: "Link your Tastytrade account for real one-click execution. Skip this step to trade in Virtual Mode — everything still works, just paper-traded.", tab: "setup" },
-    { num: 4, icon: "📊", title: "Signals Arrive at 3:00 PM ET",      desc: "Every trading day at 3:00 PM ET, the AI engine evaluates market conditions and generates a rebalance signal for TurboCore and TurboCore Pro.", tab: "signals" },
+const getOnboardingSteps = (t: any) => [
+    { num: 1, icon: "📧", title: t("Demo.onboarding.step1"), desc: t("Demo.onboarding.step1Desc"), tab: "setup" },
+    { num: 2, icon: "⚡", title: t("Demo.onboarding.step2"), desc: t("Demo.onboarding.step2Desc"), tab: "setup" },
+    { num: 3, icon: "🏦", title: t("Demo.onboarding.step3"), desc: t("Demo.onboarding.step3Desc"), tab: "setup" },
+    { num: 4, icon: "📊", title: t("Demo.onboarding.step4"), desc: t("Demo.onboarding.step4Desc"), tab: "signals" },
 ];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -156,15 +157,17 @@ function TabInfo({ color, icon, title, children }: { color: string; icon: React.
 }
 
 function OnboardingFlow({ onTabChange }: { onTabChange: (tab: string) => void }) {
+    const { t } = useTranslation();
+    const steps = getOnboardingSteps(t);
     return (
         <div className="glass-card p-5 mb-2">
             <div className="flex items-center gap-2 mb-4">
                 <Zap className="w-5 h-5 text-purple-400" />
-                <h3 className="font-bold text-sm">Getting Started — 4 Steps</h3>
-                <span className="ml-auto text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-bold">QUICK SETUP</span>
+                <h3 className="font-bold text-sm">{t("Demo.onboarding.title")}</h3>
+                <span className="ml-auto text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-bold">{t("Demo.onboarding.quickSetup")}</span>
             </div>
             <div className="space-y-3">
-                {ONBOARDING_STEPS.map(step => (
+                {steps.map(step => (
                     <button
                         key={step.num}
                         onClick={() => onTabChange(step.tab)}
@@ -175,7 +178,7 @@ function OnboardingFlow({ onTabChange }: { onTabChange: (tab: string) => void })
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-bold text-white group-hover:text-purple-300 transition flex items-center gap-1">
-                                Step {step.num}: {step.title}
+                                {step.title}
                                 <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition" />
                             </p>
                             <p className="text-[11px] text-[#94a3b8] leading-relaxed mt-0.5">{step.desc}</p>
@@ -215,6 +218,7 @@ function ActionBadge({ action }: { action: string }) {
 // ─── Tab: Dashboard & Signals shared card ────────────────────────────────────
 
 function SignalCard({ signal, onApprove, onSkip }: { signal: typeof TURBOCORE_PRO_SIGNAL; onApprove: () => void; onSkip: () => void }) {
+    const { t } = useTranslation();
     const [expanded, setExpanded] = useState(true);
     const isPro = signal.strategy.includes("PRO");
 
@@ -233,12 +237,12 @@ function SignalCard({ signal, onApprove, onSkip }: { signal: typeof TURBOCORE_PR
                                 {signal.regime}
                             </span>
                         </div>
-                        <p className="text-xs text-[#94a3b8]">Target Rebalance · {signal.created_at}</p>
+                        <p className="text-xs text-[#94a3b8]">{t("Demo.signalCard.targetRebalance")} · {signal.created_at}</p>
                     </div>
                 </div>
                 <div className="text-right">
                     <p className="text-2xl font-black text-emerald-400">{pct(signal.confidence)}</p>
-                    <p className="text-[10px] text-[#94a3b8]">ML Score</p>
+                    <p className="text-[10px] text-[#94a3b8]">{t("Demo.signalCard.mlScore")}</p>
                 </div>
             </div>
 
@@ -257,7 +261,7 @@ function SignalCard({ signal, onApprove, onSkip }: { signal: typeof TURBOCORE_PR
             <div className="px-5 py-2 border-t border-white/5 flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2 text-xs text-[#94a3b8]">
                     <Wallet className="w-3.5 h-3.5" />
-                    Virtual Balance
+                    {t("Demo.signalCard.virtualBalance")}
                 </div>
                 <span className="text-sm font-bold font-mono text-white">
                     ${signal.virtualBalance.toLocaleString("en-US", { minimumFractionDigits: 3 })}
@@ -269,7 +273,7 @@ function SignalCard({ signal, onApprove, onSkip }: { signal: typeof TURBOCORE_PR
                 <div className="px-5 pb-3">
                     <div className="flex items-center gap-2 mb-2">
                         <Zap className="w-3.5 h-3.5 text-purple-400" />
-                        <span className="text-xs font-bold text-purple-300">Virtual Order Preview</span>
+                        <span className="text-xs font-bold text-purple-300">{t("Demo.signalCard.preview")}</span>
                     </div>
                     <div className="text-[10px] text-amber-400 font-bold mb-2">
                         ⚡ MANUAL ORDER INSTRUCTIONS — enter these in your broker
@@ -326,15 +330,16 @@ function SignalCard({ signal, onApprove, onSkip }: { signal: typeof TURBOCORE_PR
 // ─── Tab: Dashboard ───────────────────────────────────────────────────────────
 
 function DashboardTab({ onToast, onTabChange }: { onToast: (m: string) => void; onTabChange: (tab: string) => void }) {
+    const { t } = useTranslation();
     const [activeStrat, setActiveStrat] = useState<"core" | "pro">("pro");
     const signal = activeStrat === "pro" ? TURBOCORE_PRO_SIGNAL : TURBOCORE_SIGNAL;
 
     return (
         <div className="space-y-4">
             {/* How it works */}
-            <TabInfo color="purple" icon="🏠" title="Your Command Center">
-                <p>This is where your active signals appear and where you can approve or execute trades. Every trading day at <strong className="text-white">3:00 PM ET</strong>, TurboCore's AI engine evaluates volatility conditions and generates a rebalancing signal for your portfolio.</p>
-                <p className="mt-1">Use the <strong className="text-white">Core / Pro</strong> tabs to switch between TurboCore (equity-only) and TurboCore Pro (equity + options overlays). Toggle <strong className="text-white">Auto-Approve</strong> in Setup to let trades execute automatically, or leave it off to review each signal here first.</p>
+            <TabInfo color="purple" icon="🏠" title={t("Demo.dashboard.cmdCenter")}>
+                <p>{t("Demo.dashboard.cmdCenterP1")}<strong className="text-white">{t("Demo.dashboard.cmdCenterTime")}</strong>{t("Demo.dashboard.cmdCenterP2")}</p>
+                <p className="mt-1">{t("Demo.dashboard.cmdCenterP3")}<strong className="text-white">{t("Demo.dashboard.cmdCenterCorePro")}</strong>{t("Demo.dashboard.cmdCenterP4")}<strong className="text-white">{t("Demo.dashboard.cmdCenterAutoApprove")}</strong>{t("Demo.dashboard.cmdCenterP5")}</p>
             </TabInfo>
 
             <OnboardingFlow onTabChange={onTabChange} />
@@ -343,7 +348,7 @@ function DashboardTab({ onToast, onTabChange }: { onToast: (m: string) => void; 
             <div className="glass-card px-4 py-3 flex items-center justify-between">
                 <div>
                     <p className="text-sm font-bold text-white">{DEMO_USER.plan}</p>
-                    <p className="text-[11px] text-emerald-400">● Active Subscription</p>
+                    <p className="text-[11px] text-emerald-400">● {t("Demo.dashboard.activeSub")}</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <button className="text-[10px] bg-purple-500/20 text-purple-300 px-3 py-1.5 rounded-full font-bold">
@@ -358,8 +363,8 @@ function DashboardTab({ onToast, onTabChange }: { onToast: (m: string) => void; 
                     <div className="w-2.5 h-2.5 bg-white/20 rounded-sm" />
                 </div>
                 <div>
-                    <p className="text-sm font-semibold">Auto-Approve Trades</p>
-                    <p className="text-[11px] text-[#94a3b8]">Manually approve each signal before execution</p>
+                    <p className="text-sm font-semibold">{t("Demo.dashboard.autoApproveTitle")}</p>
+                    <p className="text-[11px] text-[#94a3b8]">{t("Demo.dashboard.autoApproveDesc")}</p>
                 </div>
             </div>
 
@@ -383,7 +388,7 @@ function DashboardTab({ onToast, onTabChange }: { onToast: (m: string) => void; 
             <div>
                 <div className="flex items-center justify-between mb-3">
                     <h2 className="text-sm font-bold text-[#94a3b8] uppercase tracking-wider">
-                        TurboCore {activeStrat === "pro" ? "Pro " : ""}Signals
+                        {activeStrat === "pro" ? t("Demo.dashboard.signalsTitlePro") : t("Demo.dashboard.signalsTitle")}
                     </h2>
                     <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded font-bold">
                         1 Active Target Change
@@ -391,8 +396,8 @@ function DashboardTab({ onToast, onTabChange }: { onToast: (m: string) => void; 
                 </div>
                 <SignalCard
                     signal={signal as any}
-                    onApprove={() => onToast("🎯 Demo mode — no real trades executed")}
-                    onSkip={() => onToast("↩️ Signal skipped (demo)")}
+                    onApprove={() => onToast("🎯 " + t("Demo.signalCard.toastDemo"))}
+                    onSkip={() => onToast("↩️ " + t("Demo.signalCard.toastSkip"))}
                 />
             </div>
 
@@ -401,8 +406,8 @@ function DashboardTab({ onToast, onTabChange }: { onToast: (m: string) => void; 
                 <div className="flex items-center gap-3">
                     <div className="w-5 h-5 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
                     <div>
-                        <p className="text-sm font-semibold text-purple-300">Computing IV-Switching overlay...</p>
-                        <p className="text-[11px] text-[#94a3b8]">Signal will update in a few seconds</p>
+                        <p className="text-sm font-semibold text-purple-300">{t("Demo.dashboard.computing")}</p>
+                        <p className="text-[11px] text-[#94a3b8]">{t("Demo.dashboard.signalUpdate")}</p>
                     </div>
                 </div>
                 <ChevronDown className="w-4 h-4 text-[#94a3b8]" />
@@ -414,20 +419,22 @@ function DashboardTab({ onToast, onTabChange }: { onToast: (m: string) => void; 
 // ─── Tab: AI ──────────────────────────────────────────────────────────────────
 
 function AITab({ onToast }: { onToast: (m: string) => void }) {
+    const { t } = useTranslation();
+    const aiFeatures = getAiFeatures(t);
     return (
         <div className="space-y-6">
-            <TabInfo color="indigo" icon="🤖" title="AI Copilot — Your Personal Market Analyst">
-                <p>The AI Copilot gives you deeper insight into every trade signal and market condition. Use it to ask <strong className="text-white">"Why is TurboCore SIDEWAYS today?"</strong>, request a deep dive on any ticker, or get a morning briefing tailored to the current regime.</p>
-                <p className="mt-1">Each subscription tier includes <strong className="text-white">2 free AI feature picks</strong>. Additional features like Deep Dive, Strategy Builder, and Trade Debrief are available as $5/mo add-ons — activate only what you need.</p>
+            <TabInfo color="indigo" icon="🤖" title={t("Demo.ai.title")}>
+                <p>{t("Demo.ai.descP1")}<strong className="text-white">{t("Demo.ai.descQuote")}</strong>{t("Demo.ai.descP2")}</p>
+                <p className="mt-1">{t("Demo.ai.descP3")}<strong className="text-white">{t("Demo.ai.descFreePicks")}</strong>{t("Demo.ai.descP4")}</p>
             </TabInfo>
 
             {/* Header */}
             <div className="bg-[#1a1a2e]/80 border-b border-white/5 -mx-4 px-4 py-5">
                 <div className="flex items-center gap-3 mb-2">
                     <Bot className="w-8 h-8 text-purple-400" />
-                    <h1 className="text-2xl font-bold">AI Copilot</h1>
+                    <h1 className="text-2xl font-bold">{t("Demo.ai.headerTitle")}</h1>
                 </div>
-                <p className="text-sm text-[#94a3b8]">Your personal market analyst powered by Perplexity Pro real-time engine.</p>
+                <p className="text-sm text-[#94a3b8]">{t("Demo.ai.headerDesc")}</p>
 
                 {/* Tier badge */}
                 <div className="mt-4 bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
@@ -440,7 +447,7 @@ function AITab({ onToast }: { onToast: (m: string) => void }) {
                             2 / 2 free picks used
                         </span>
                     </div>
-                    <p className="text-xs text-[#94a3b8] mt-1">Additional features are $5/mo each.</p>
+                    <p className="text-xs text-[#94a3b8] mt-1">{t("Demo.ai.additionalCost")}</p>
                 </div>
             </div>
 
@@ -450,11 +457,11 @@ function AITab({ onToast }: { onToast: (m: string) => void }) {
                     <BarChart3 className="h-5 w-5 text-[#94a3b8]" /> Available Features
                 </h2>
                 <div className="grid grid-cols-2 gap-3">
-                    {AI_FEATURES.map(f => (
+                    {aiFeatures.map(f => (
                         <div key={f.key} className={`glass-card p-4 relative overflow-hidden ${f.active ? "border-purple-500/30" : "border-white/10"}`}>
                             {f.active && (
                                 <div className="absolute top-2 right-2">
-                                    <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full font-bold">ACTIVE</span>
+                                    <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full font-bold">{t("Demo.ai.active")}</span>
                                 </div>
                             )}
                             <div className="mb-2">{f.icon}</div>
@@ -462,7 +469,7 @@ function AITab({ onToast }: { onToast: (m: string) => void }) {
                             <p className="text-[11px] text-[#94a3b8] leading-relaxed mb-3">{f.desc}</p>
                             {!f.active && (
                                 <button
-                                    onClick={() => onToast("💡 Demo mode — subscribe at trademind.bot to activate")}
+                                    onClick={() => onToast("💡 " + t("Demo.ai.toastDemoSub"))}
                                     className="text-[11px] font-bold text-purple-400 border border-purple-500/30 px-3 py-1.5 rounded-lg hover:bg-purple-500/10 transition w-full"
                                 >
                                     Add · $5/mo
@@ -497,8 +504,8 @@ function AITab({ onToast }: { onToast: (m: string) => void }) {
                     </div>
                     <div className="border-t border-white/5 pt-3">
                         <div className="flex gap-2">
-                            <input readOnly placeholder="Ask about your portfolio..." className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm placeholder:text-[#94a3b8] focus:outline-none" />
-                            <button onClick={() => onToast("💡 Log in to chat with the real AI Copilot")} className="bg-purple-600 hover:bg-purple-500 rounded-xl px-4 py-2.5 transition">
+                            <input readOnly placeholder={t("Demo.ai.chatPlaceholder")} className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm placeholder:text-[#94a3b8] focus:outline-none" />
+                            <button onClick={() => onToast("💡 " + t("Demo.ai.toastLogin"))} className="bg-purple-600 hover:bg-purple-500 rounded-xl px-4 py-2.5 transition">
                                 <ArrowRight className="w-4 h-4" />
                             </button>
                         </div>
@@ -512,33 +519,34 @@ function AITab({ onToast }: { onToast: (m: string) => void }) {
 // ─── Tab: Signals ─────────────────────────────────────────────────────────────
 
 function SignalsTab({ onToast }: { onToast: (m: string) => void }) {
+    const { t } = useTranslation();
     const [activeStrat, setActiveStrat] = useState<"core" | "pro">("pro");
     const signal = activeStrat === "pro" ? TURBOCORE_PRO_SIGNAL : TURBOCORE_SIGNAL;
 
     return (
         <div className="space-y-4">
-            <TabInfo color="emerald" icon="📊" title="How Signals Work">
-                <p>Signals are generated every trading day at <strong className="text-white">3:00 PM ET</strong>. The AI engine reads IV (Implied Volatility), momentum, and macro conditions to determine whether the market is in a <strong className="text-white">BULL, BEAR, or SIDEWAYS</strong> regime — then calculates the optimal portfolio allocation for each regime.</p>
+            <TabInfo color="emerald" icon="📊" title={t("Demo.signals.howWorks")}>
+                <p>{t("Demo.signals.worksP1")}<strong className="text-white">{t("Demo.signals.worksTime")}</strong>{t("Demo.signals.worksP2")}<strong className="text-white">{t("Demo.signals.worksRegimes")}</strong>{t("Demo.signals.worksP3")}</p>
                 <div className="grid grid-cols-2 gap-2 mt-2">
                     <div className="bg-white/5 rounded-lg p-2.5">
-                        <p className="font-bold text-white text-[11px] mb-1">🏦 With Tastytrade Connected</p>
-                        <p>Click <strong className="text-white">Execute Trade</strong> (or Auto-Approve) → orders go live in your Tastytrade account instantly. Positions appear in the Positions tab in real-time.</p>
+                        <p className="font-bold text-white text-[11px] mb-1">🏦 {t("Demo.signals.tastyConnected")}</p>
+                        <p>{t("Demo.signals.tastyDesc1")}<strong className="text-white">{t("Demo.signals.tastyExecBtn")}</strong>{t("Demo.signals.tastyDesc2")}</p>
                     </div>
                     <div className="bg-white/5 rounded-lg p-2.5">
-                        <p className="font-bold text-white text-[11px] mb-1">💻 Virtual Mode (No Broker)</p>
-                        <p>Execute the trade manually using the order instructions shown, or skip it. The virtual ledger tracks your simulated portfolio based on the prices at signal time.</p>
+                        <p className="font-bold text-white text-[11px] mb-1">💻 {t("Demo.signals.virtMode")}</p>
+                        <p>{t("Demo.signals.virtDesc")}</p>
                     </div>
                 </div>
             </TabInfo>
 
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-xl font-bold">Trade Signals</h1>
-                    <p className="text-sm text-[#94a3b8]">1 pending</p>
+                    <h1 className="text-xl font-bold">{t("Demo.signals.title")}</h1>
+                    <p className="text-sm text-[#94a3b8]">{t("Demo.signals.pending")}</p>
                 </div>
                 <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-full">
                     <Wifi className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-xs font-bold text-emerald-400">Connected</span>
+                    <span className="text-xs font-bold text-emerald-400">{t("Demo.signals.connected")}</span>
                 </div>
             </div>
 
@@ -556,8 +564,8 @@ function SignalsTab({ onToast }: { onToast: (m: string) => void }) {
 
             <SignalCard
                 signal={signal as any}
-                onApprove={() => onToast("🎯 Demo mode — no real trades executed")}
-                onSkip={() => onToast("↩️ Signal skipped (demo)")}
+                onApprove={() => onToast("🎯 " + t("Demo.signalCard.toastDemo"))}
+                onSkip={() => onToast("↩️ " + t("Demo.signalCard.toastSkip"))}
             />
         </div>
     );
@@ -566,6 +574,7 @@ function SignalsTab({ onToast }: { onToast: (m: string) => void }) {
 // ─── Tab: Positions ───────────────────────────────────────────────────────────
 
 function PositionsTab({ onToast }: { onToast: (m: string) => void }) {
+    const { t } = useTranslation();
     const positions = DEMO_POSITIONS.map(p => ({
         ...p,
         marketValue: p.qty * p.currentPrice,
@@ -578,19 +587,19 @@ function PositionsTab({ onToast }: { onToast: (m: string) => void }) {
 
     return (
         <div className="space-y-5">
-            <TabInfo color="blue" icon="💼" title="Your Portfolio — Real or Virtual">
-                <p>This table shows all your open positions. If you connected Tastytrade, this reflects your <strong className="text-white">real live account</strong> — positions are pulled directly from your broker after each execution.</p>
-                <p className="mt-1">If you're in <strong className="text-white">Virtual Mode</strong>, this is your simulated ledger. You can <strong className="text-white">Deposit</strong> or <strong className="text-white">Withdraw</strong> virtual cash at any time, and manually add or remove positions. TurboCore automatically adjusts future signal sizes to match your current virtual balance — so the strategy always stays proportional to your capital.</p>
-                <p className="mt-1">TurboCore Pro users also see their <strong className="text-white">options spreads</strong> (ZEBRA, Bear Call Spread, CSP, LEAPS) tracked separately below the equity table.</p>
+            <TabInfo color="blue" icon="💼" title={t("Demo.positions.title")}>
+                <p>{t("Demo.positions.p1")}<strong className="text-white">{t("Demo.positions.p1b")}</strong>{t("Demo.positions.p1c")}</p>
+                <p className="mt-1">{t("Demo.positions.p2")}<strong className="text-white">{t("Demo.positions.p2b")}</strong>{t("Demo.positions.p2c")}<strong className="text-white">{t("Demo.positions.p2d")}</strong>{t("Demo.positions.p2e")}<strong className="text-white">{t("Demo.positions.p2f")}</strong>{t("Demo.positions.p2g")}</p>
+                <p className="mt-1">{t("Demo.positions.p3")}<strong className="text-white">{t("Demo.positions.p3b")}</strong>{t("Demo.positions.p3c")}</p>
             </TabInfo>
 
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-xl font-bold flex items-center gap-2">
-                        Positions
-                        <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-bold">VIRTUAL</span>
+                        {t("Demo.positions.header")}
+                        <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-bold">{t("Demo.positions.virtual")}</span>
                     </h1>
-                    <p className="text-sm text-[#94a3b8]">{positions.length} equity · 2 spreads</p>
+                    <p className="text-sm text-[#94a3b8]">{t("Demo.positions.equitySpreads", { eqCount: positions.length, spCount: 2 })}</p>
                 </div>
                 <button className="w-9 h-9 rounded-full bg-[#1a1a2e] flex items-center justify-center text-[#94a3b8]">
                     <RefreshCw className="w-4 h-4" />
@@ -601,18 +610,18 @@ function PositionsTab({ onToast }: { onToast: (m: string) => void }) {
             <div className="glass-card p-5">
                 <div className="flex items-center gap-2 mb-4">
                     <Wallet className="w-5 h-5 text-purple-400" />
-                    <h3 className="font-bold">Account Overview</h3>
+                    <h3 className="font-bold">{t("Demo.positions.overview")}</h3>
                     <div className="ml-auto flex gap-2">
-                        <button onClick={() => onToast("💡 Demo mode — amounts are virtual")} className="text-[10px] bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full font-bold">DEPOSIT</button>
-                        <button onClick={() => onToast("💡 Demo mode — amounts are virtual")} className="text-[10px] bg-red-500/20 text-red-400 px-3 py-1 rounded-full font-bold">WITHDRAW</button>
+                        <button onClick={() => onToast("💡 " + t("Demo.positions.toastDemoVirt"))} className="text-[10px] bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full font-bold">{t("Demo.positions.deposit")}</button>
+                        <button onClick={() => onToast("💡 " + t("Demo.positions.toastDemoVirt"))} className="text-[10px] bg-red-500/20 text-red-400 px-3 py-1 rounded-full font-bold">{t("Demo.positions.withdraw")}</button>
                     </div>
                 </div>
                 <div className="grid grid-cols-4 gap-3 text-center">
                     {[
-                        { label: "Total Value",      val: formatCurrency(totalValue), color: "text-white" },
-                        { label: "Cash",             val: formatCurrency(cash),        color: "text-emerald-400" },
-                        { label: "Positions Value",  val: formatCurrency(totalMv),     color: "text-purple-400" },
-                        { label: "Realized P&L",     val: "+$847",                     color: "text-emerald-400" },
+                        { label: t("Demo.positions.totalValue"),      val: formatCurrency(totalValue), color: "text-white" },
+                        { label: t("Demo.positions.cash"),             val: formatCurrency(cash),        color: "text-emerald-400" },
+                        { label: t("Demo.positions.posValue"),  val: formatCurrency(totalMv),     color: "text-purple-400" },
+                        { label: t("Demo.positions.realizedPnl"),     val: "+$847",                     color: "text-emerald-400" },
                     ].map(({ label, val, color }) => (
                         <div key={label}>
                             <p className="text-[10px] text-[#94a3b8] uppercase tracking-wider font-semibold mb-1">{label}</p>
@@ -624,12 +633,12 @@ function PositionsTab({ onToast }: { onToast: (m: string) => void }) {
 
             {/* Equity Table */}
             <div>
-                <h2 className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider mb-2">Equity Holdings</h2>
+                <h2 className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider mb-2">{t("Demo.positions.equityHoldings")}</h2>
                 <div className="glass-card overflow-hidden">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="border-b border-white/5 bg-white/[0.02]">
-                                {["Symbol", "Price", "Cost/sh", "Market Value", "Unrealized G/L"].map(h => (
+                                {[t("Demo.positions.colSymbol"), t("Demo.positions.colPrice"), t("Demo.positions.colCost"), t("Demo.positions.colMv"), t("Demo.positions.colUgl")].map(h => (
                                     <th key={h} className="px-4 py-3 text-[10px] uppercase font-bold text-[#94a3b8] text-right first:text-left">{h}</th>
                                 ))}
                             </tr>
@@ -663,7 +672,7 @@ function PositionsTab({ onToast }: { onToast: (m: string) => void }) {
             <div>
                 <h2 className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider mb-2 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                    Options Spreads · TurboCore Pro
+                    {t("Demo.positions.optionsSpreads")}
                 </h2>
                 <div className="space-y-3">
                     {/* ZEBRA Spread */}
@@ -673,7 +682,7 @@ function PositionsTab({ onToast }: { onToast: (m: string) => void }) {
                                 <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center justify-center text-sm font-bold">2L</div>
                                 <div>
                                     <p className="font-bold text-sm">QQQ · Long Spread <span className="text-[9px] bg-purple-500/20 text-purple-400 border border-purple-500/30 px-1.5 py-0.5 rounded ml-1">2 LEGS</span></p>
-                                    <p className="text-xs text-[#94a3b8]">1 contract · $2.14/contract · Exp Apr 25</p>
+                                    <p className="text-xs text-[#94a3b8]">1 {t("Demo.positions.contract")} · $2.14/contract · {t("Demo.positions.exp")} Apr 25</p>
                                 </div>
                             </div>
                         </div>
@@ -686,7 +695,7 @@ function PositionsTab({ onToast }: { onToast: (m: string) => void }) {
                                     <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${leg.badge}`}>{leg.act}</span>
                                     <div>
                                         <p className="font-mono text-sm font-semibold">{leg.sym}</p>
-                                        <p className="text-[10px] text-[#94a3b8] font-mono">Exp {leg.exp}</p>
+                                        <p className="text-[10px] text-[#94a3b8] font-mono">{t("Demo.positions.exp")} {leg.exp}</p>
                                     </div>
                                 </div>
                                 <p className="text-xs font-mono text-[#94a3b8]">x1</p>
@@ -701,7 +710,7 @@ function PositionsTab({ onToast }: { onToast: (m: string) => void }) {
                                 <div className="w-10 h-10 rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/30 flex items-center justify-center text-sm font-bold">2L</div>
                                 <div>
                                     <p className="font-bold text-sm">QQQ · Bear Call Spread <span className="text-[9px] bg-orange-500/20 text-orange-400 border border-orange-500/30 px-1.5 py-0.5 rounded ml-1">2 LEGS</span></p>
-                                    <p className="text-xs text-[#94a3b8]">2 contracts · $1.85/contract · Exp May 2</p>
+                                    <p className="text-xs text-[#94a3b8]">2 {t("Demo.positions.contracts")} · $1.85/contract · {t("Demo.positions.exp")} May 2</p>
                                 </div>
                             </div>
                         </div>
@@ -714,7 +723,7 @@ function PositionsTab({ onToast }: { onToast: (m: string) => void }) {
                                     <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${leg.badge}`}>{leg.act}</span>
                                     <div>
                                         <p className="font-mono text-sm font-semibold">{leg.sym}</p>
-                                        <p className="text-[10px] text-[#94a3b8] font-mono">Exp {leg.exp}</p>
+                                        <p className="text-[10px] text-[#94a3b8] font-mono">{t("Demo.positions.exp")} {leg.exp}</p>
                                     </div>
                                 </div>
                                 <p className="text-xs font-mono text-[#94a3b8]">x2</p>
@@ -730,6 +739,7 @@ function PositionsTab({ onToast }: { onToast: (m: string) => void }) {
 // ─── Tab: Activity ────────────────────────────────────────────────────────────
 
 function ActivityTab() {
+    const { t } = useTranslation();
     const [filter, setFilter] = useState("");
     const [stratFilter, setStratFilter] = useState("all");
 
@@ -744,15 +754,15 @@ function ActivityTab() {
 
     return (
         <div className="space-y-4">
-            <TabInfo color="amber" icon="⚡" title="Full Trade Lifecycle Log">
-                <p>Every signal, execution, deposit, and adjustment is recorded here with a precise timestamp. This is your complete audit trail — use it to verify that signals were acted on correctly and to review historical allocation changes.</p>
-                <p className="mt-1">Each event shows a <strong className="text-white">timeline</strong>: when the signal was received → when it was approved or skipped → when the virtual or live trade was executed. Filter by strategy (TurboCore vs TurboCore Pro) or search by symbol to find specific events quickly.</p>
+            <TabInfo color="amber" icon="⚡" title={t("Demo.activity.title")}>
+                <p>{t("Demo.activity.p1")}</p>
+                <p className="mt-1">{t("Demo.activity.p2")}<strong className="text-white">{t("Demo.activity.p2b")}</strong>{t("Demo.activity.p2c")}</p>
             </TabInfo>
 
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-xl font-bold">Activity Log</h1>
-                    <p className="text-sm text-[#94a3b8]">Track all trade lifecycle events</p>
+                    <h1 className="text-xl font-bold">{t("Demo.activity.header")}</h1>
+                    <p className="text-sm text-[#94a3b8]">{t("Demo.activity.headerSub")}</p>
                 </div>
                 <div className="w-9 h-9 rounded-full bg-purple-500/20 flex items-center justify-center">
                     <Activity className="w-5 h-5 text-purple-400" />
@@ -767,7 +777,7 @@ function ActivityTab() {
                         onClick={() => setStratFilter(s)}
                         className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap border transition-all ${stratFilter === s ? "border-purple-500 text-white bg-purple-500/20" : "border-white/10 text-[#94a3b8]"}`}
                     >
-                        {s === "all" ? "All" : s === "turbocore" ? "TurboCore" : "TurboCore Pro"}
+                        {s === "all" ? t("Demo.activity.filterAll") : s === "turbocore" ? t("Demo.activity.filterTc") : t("Demo.activity.filterPro")}
                     </button>
                 ))}
             </div>
@@ -777,7 +787,7 @@ function ActivityTab() {
                 <input
                     value={filter}
                     onChange={e => setFilter(e.target.value)}
-                    placeholder="Filter by symbol, strategy or status..."
+                    placeholder={t("Demo.activity.search")}
                     className="w-full bg-[#1a1a2e] border border-white/10 rounded-xl pl-4 pr-4 py-2.5 text-sm placeholder:text-[#94a3b8] focus:outline-none focus:border-purple-500/50"
                 />
             </div>
@@ -807,7 +817,7 @@ function ActivityTab() {
                                             <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono uppercase ${item.strategy?.includes("pro") ? "bg-purple-500/20 text-purple-300" : "bg-blue-500/20 text-blue-300"}`}>
                                                 {item.strategy?.replace("tqqq_", "").replace("_", " ")}
                                             </span>
-                                            {isVirt && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">VIRTUAL</span>}
+                                            {isVirt && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">{t("Demo.positions.virtual")}</span>}
                                         </div>
                                         <p className="text-xs text-[#94a3b8] capitalize mt-0.5">
                                             {isVirt ? `${(item as any).type}${(item as any).quantity ? ` · ${(item as any).quantity} shares @ $${(item as any).price?.toFixed(2)}` : ""}`

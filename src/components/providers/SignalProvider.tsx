@@ -220,6 +220,8 @@ export function SignalProvider({ children }: SignalProviderProps) {
         if (signal.status !== 'pending') return;
         // Only skip if already submitted for execution (not just checked)
         if (processedSignalIds.current.has(signal.id)) return;
+        // Skip if already executed by the current user
+        if (signal.userExecution?.status === 'executed') return;
 
         const strategy = (signal.strategy || '').toLowerCase();
         
@@ -340,8 +342,12 @@ export function SignalProvider({ children }: SignalProviderProps) {
                 fetchAccountData();
             } else {
                 if (result.error && String(result.error).toLowerCase().includes('already executed')) {
-                    console.log(`ℹ️ Signal ${signal.id} already executed elsewhere. Removing from queue.`);
-                    setAllSignals(prev => prev.filter(s => s.id !== signal.id));
+                    console.log(`ℹ️ Signal ${signal.id} already executed elsewhere. Marking as executed on UI.`);
+                    setAllSignals(prev => prev.map(s =>
+                        s.id === signal.id
+                            ? { ...s, status: 'executed', userExecution: { status: 'executed', orderId: result.orderId || null, executedAt: new Date().toISOString() } }
+                            : s
+                    ));
                 } else {
                     console.error('❌ Auto-approve execution failed:', result.error);
                 }

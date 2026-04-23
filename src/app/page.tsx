@@ -8,6 +8,7 @@ import { PricingSection } from '@/components/marketing/PricingSection';
 import { ReferralPromoSection } from '@/components/marketing/ReferralPromoSection';
 import { TrustBadges } from '@/components/marketing/TrustBadges';
 import { LegalFooter } from '@/components/marketing/LegalFooter';
+import { LivePortfolioTracker } from '@/components/marketing/LivePortfolioTracker';
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import { ArrowRight } from 'lucide-react';
@@ -109,7 +110,7 @@ export default function SinglePageMarketing() {
                 </div>
 
                 {/* Video Showcase Section */}
-                <div className="w-full max-w-4xl z-10 mb-16 mx-auto group">
+                <div className="w-full max-w-4xl z-10 mb-10 mx-auto group">
                     <div className="relative rounded-2xl p-1 bg-gradient-to-b from-tm-purple/20 to-transparent shadow-[0_0_50px_rgba(124,58,237,0.15)] group-hover:shadow-[0_0_70px_rgba(124,58,237,0.3)] transition-all duration-500">
                         <video
                             key={i18n.language || 'en'}
@@ -123,6 +124,11 @@ export default function SinglePageMarketing() {
                             playsInline
                         />
                     </div>
+                </div>
+
+                {/* Live Strategy Portfolios (5-day delayed paper trading) */}
+                <div className="w-full max-w-5xl z-10 mb-12 mx-auto">
+                    <LivePortfolioTracker />
                 </div>
 
                 {/* Interactive Backtest Player */}

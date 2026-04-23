@@ -1,6 +1,8 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { Gift, ArrowRight, CalendarDays, Users2 } from 'lucide-react';
+import { Gift, ArrowRight, CalendarDays, Users2, Mail, CheckCircle2, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 // matches REFERRAL_FEE env default
@@ -19,6 +21,33 @@ function calcDays(credit: number, monthlyPrice: number) {
 
 export function ReferralPromoSection() {
     const { t } = useTranslation();
+    const PROMO_URL = 'https://trademind.bot/?ref=ACE79';
+
+    // Email capture state
+    const [email, setEmail] = useState('');
+    const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+    const [errorMsg, setErrorMsg] = useState('');
+
+    async function handleSendLink(e: React.FormEvent) {
+        e.preventDefault();
+        if (!email) return;
+        setStatus('loading');
+        setErrorMsg('');
+        try {
+            const res = await fetch('/api/email/referral-invite', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to send');
+            setStatus('success');
+        } catch (err: any) {
+            setErrorMsg(err.message || 'Something went wrong. Please try again.');
+            setStatus('error');
+        }
+    }
+
     return (
         <section className="w-full max-w-5xl mx-auto py-12 px-6 relative z-10 text-center">
             <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-white/10 rounded-2xl p-10 flex flex-col items-center shadow-2xl relative overflow-hidden">
@@ -30,14 +59,82 @@ export function ReferralPromoSection() {
                 </div>
 
                 <h2 className="text-3xl font-bold text-white mb-3 z-10">
-                    {t('referral.title', 'The $100 Referral Reward — For Both of You')}
+                    {t('referral.title', 'The $100 Anti-Fraud Referral')}
                 </h2>
                 <p className="text-zinc-400 max-w-2xl mx-auto mb-2 z-10">
                     {t('referral.desc', `Share your unique link. When a friend signs up using your code, you both get $${REFERRAL_HALF} in free subscription days — no waiting. When their card is first charged, you both receive another $${REFERRAL_HALF}. Total: $${REFERRAL_FEE} each, applied as extended subscription days.`)}
                 </p>
-                <p className="text-xs text-zinc-500 mb-8 z-10">
+                <p className="text-xs text-zinc-500 mb-6 z-10">
                     {t('referral.example', `Credit is applied as free days: credit ÷ plan daily rate. e.g. on TurboCore Monthly ($29/mo), $${REFERRAL_HALF} = ~${calcDays(REFERRAL_HALF, 29)} extra free days.`)}
                 </p>
+
+                {/* ── Email Capture Widget ─────────────────────────────── */}
+                <div className="w-full max-w-xl z-10 mb-10">
+                    <div className="bg-white/5 border border-purple-500/20 rounded-2xl p-6 backdrop-blur-sm shadow-[0_0_40px_rgba(124,58,237,0.1)]">
+                        <div className="flex items-center gap-2 justify-center mb-2">
+                            <Mail className="w-4 h-4 text-purple-400" />
+                            <p className="text-sm font-semibold text-white">
+                                Get your $100 referral link sent to your inbox
+                            </p>
+                        </div>
+                        <p className="text-xs text-zinc-500 mb-4 text-center">
+                            Enter your email and we'll send you the link&nbsp;
+                            <span className="text-purple-400 font-medium">{PROMO_URL}</span>
+                            &nbsp;— share it with friends to earn <strong className="text-white">$100 in free subscription days</strong> each.
+                        </p>
+
+                        {status === 'success' ? (
+                            <div className="flex flex-col items-center gap-2 py-4">
+                                <CheckCircle2 className="w-10 h-10 text-green-400" />
+                                <p className="text-green-400 font-semibold text-sm">Link sent! Check your inbox.</p>
+                                <p className="text-zinc-500 text-xs">Didn't see it? Check spam, or&nbsp;
+                                    <button
+                                        id="referral-resend-email"
+                                        className="text-purple-400 underline text-xs"
+                                        onClick={() => { setStatus('idle'); setEmail(''); }}
+                                    >try again</button>.
+                                </p>
+                            </div>
+                        ) : (
+                            <form onSubmit={handleSendLink} className="flex flex-col sm:flex-row gap-3">
+                                <div className="flex-1 relative">
+                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
+                                    <input
+                                        id="referral-email-input"
+                                        type="email"
+                                        value={email}
+                                        onChange={e => { setEmail(e.target.value); setStatus('idle'); setErrorMsg(''); }}
+                                        placeholder="your@email.com"
+                                        required
+                                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-zinc-600 text-sm focus:outline-none focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/30 transition-all"
+                                    />
+                                </div>
+                                <button
+                                    id="referral-send-link-btn"
+                                    type="submit"
+                                    disabled={status === 'loading'}
+                                    className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-sm px-6 py-3 rounded-xl transition-all shadow-[0_0_20px_rgba(124,58,237,0.3)] hover:shadow-[0_0_30px_rgba(124,58,237,0.5)] whitespace-nowrap"
+                                >
+                                    {status === 'loading'
+                                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</>
+                                        : <>Send My Link <ArrowRight className="w-4 h-4" /></>}
+                                </button>
+                            </form>
+                        )}
+
+                        {status === 'error' && (
+                            <p className="text-red-400 text-xs mt-2 text-center">{errorMsg}</p>
+                        )}
+                    </div>
+                </div>
+                {/* ── / Email Capture Widget ───────────────────────────── */}
+
+                {/* Divider */}
+                <div className="w-full flex items-center gap-4 mb-8 z-10">
+                    <div className="flex-1 h-px bg-white/8" />
+                    <span className="text-zinc-600 text-xs uppercase tracking-widest">How it works</span>
+                    <div className="flex-1 h-px bg-white/8" />
+                </div>
 
                 {/* Two-stage cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left mb-8 w-full z-10">

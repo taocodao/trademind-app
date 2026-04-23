@@ -23,6 +23,7 @@ import { ZebraSignalCard, isZebraSignal } from "@/components/zebra/ZebraSignalCa
 import { DVOSignalCard, isDVOSignal } from "@/components/dvo/DVOSignalCard";
 import { TurboBounceSignalCard, isTurboBounceSignal } from "@/components/signals/TurboBounceSignalCard";
 import { TurboCoreSignalCard } from "@/components/signals/TurboCoreSignalCard";
+import { QQQLEAPSSignalCard, isQQQLEAPSSignal } from "@/components/signals/QQQLEAPSSignalCard";
 import { useStrategyContext } from "@/components/providers/StrategyContext";
 import { StrategyTabs } from "@/components/ui/StrategyTabs";
 import { useSettings } from "@/components/providers/SettingsProvider";
@@ -299,6 +300,14 @@ export default function SignalsPage() {
                             onApprove={() => handleApproveClick(signal)}
                             onSkip={() => handleSkip(signal.id)}
                             isApproving={approving === signal.id}
+                        />
+                    ) : isQQQLEAPSSignal(signal) ? (
+                        <QQQLEAPSSignalCard
+                            key={signal.id}
+                            signal={signal as any}
+                            onExecute={() => handleApproveClick(signal)}
+                            executingId={approving}
+                            isExecuted={executedIds.has(signal.id)}
                         />
                     ) : (signal.strategy?.toLowerCase().includes('turbocore') || (signal as any).type === 'REBALANCE') ? (
                         <TurboCoreSignalCard

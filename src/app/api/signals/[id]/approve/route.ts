@@ -375,6 +375,27 @@ export async function POST(
  */
 async function buildVirtualOrdersFromSignal(signal: any, strategy: string, userId: string): Promise<any[]> {
     const isTurboCore = signal.type === 'REBALANCE' || String(signal.strategy).includes('TURBOCORE') || String(signal.strategy).includes('PRO');
+
+    // ── QQQ LEAPS: option-specific virtual order ─────────────────────────────
+    // Signals from signal_publisher/qqq_leaps.py carry strike/contracts/entry_px
+    // rather than TurboCore's target_pct legs — handle them explicitly.
+    if (String(signal.strategy).toUpperCase() === 'QQQ_LEAPS') {
+        const action = (signal.action || 'ENTER').toUpperCase();
+        if (action === 'HOLD') return []; // No trade on HOLD
+        const contracts = signal.contracts || 1;
+        const px = action === 'EXIT' ? (signal.exit_px || 0) : (signal.entry_px || 0);
+        return [{
+            symbol: 'QQQ_LEAPS',
+            action: action === 'EXIT' ? 'sell' : 'buy',
+            quantity: contracts,
+            price: px * 100, // notional per contract
+            instrument_type: 'option',
+            strike: signal.strike,
+            expiry: signal.expiry,
+            delta: signal.delta,
+        }];
+    }
+
     if (!isTurboCore) {
         // Individual equity/options signals (legacy/theta/zebra)
         return [{

@@ -396,17 +396,21 @@ function DashboardContent() {
 
     // Filter by the currently active strategy's key AND ensure it is from today
     const coreSignals = allSignals.filter(s => {
-        const isMatch = s.strategy?.toUpperCase() === activeStrategy.toUpperCase() ||
+        const stratKey = (s.strategy || '').toUpperCase();
+        const activeUp = activeStrategy.toUpperCase();
+        const isMatch = stratKey === activeUp ||
             // Temporary fallback for older 'rebalance' types that implicitly meant TQQQ_TURBOCORE
-            ((s as any).type === 'REBALANCE' && activeStrategy === 'TQQQ_TURBOCORE' && s.strategy === undefined);
-            
+            ((s as any).type === 'REBALANCE' && activeStrategy === 'TQQQ_TURBOCORE' && s.strategy === undefined) ||
+            // QQQ_LEAPS signals appear inside the Pro tab
+            (stratKey === 'QQQ_LEAPS' && activeUp === 'TQQQ_TURBOCORE_PRO');
+
         if (!isMatch) return false;
 
         // Strictly enforce that the signal was generated today (local browser time)
         const signalDate = new Date(s.createdAt || (s as any).timestamp || Date.now());
         const today = new Date();
         return signalDate.toDateString() === today.toDateString();
-    }).slice(0, 1) as unknown as TurboCoreSignal[];
+    }).slice(0, 2) as unknown as TurboCoreSignal[]; // up to 2: one Pro rebalance + one LEAPS
 
     const [recentOrders, setRecentOrders] = useState<any[]>([]);
 
@@ -1184,7 +1188,11 @@ function DashboardContent() {
                     />
 
                     <div className="flex items-center justify-between mb-3 mt-4">
-                        <h2 className="font-semibold text-sm">{t('dashboard.signals_header', '{{strategy}} Signals', { strategy: activeStrategyConfig?.label || 'TurboCore' })}</h2>
+                        <h2 className="font-semibold text-sm">
+                            {activeStrategy === 'TQQQ_TURBOCORE_PRO'
+                                ? t('dashboard.signals_header_pro', 'TurboCore Pro + LEAPS Signals')
+                                : t('dashboard.signals_header', '{{strategy}} Signals', { strategy: activeStrategyConfig?.label || 'TurboCore' })}
+                        </h2>
                         {coreSignals.length > 0 && (
                             <span className="text-xs bg-tm-purple/20 text-tm-purple px-2 py-0.5 rounded-full">
                                 {t(coreSignals.length === 1 ? 'dashboard.active_target_change' : 'dashboard.active_target_change_plural', '{{count}} Active Target Change', { count: coreSignals.length })}
@@ -1200,15 +1208,15 @@ function DashboardContent() {
                                 <CheckCircle className="w-10 h-10 text-tm-green opacity-60" />
                                 <p className="font-semibold text-sm">{t('dashboard.aligned_title', 'Portfolio Target Aligned')}</p>
                                 <p className="text-xs text-tm-muted">
-                                    {activeStrategy === 'QQQ_LEAPS'
-                                        ? t('dashboard.leaps_aligned_desc', 'No entry or exit signal today — regime not triggering.')
+                                    {activeStrategy === 'TQQQ_TURBOCORE_PRO'
+                                        ? t('dashboard.pro_aligned_desc', 'No rebalance or LEAPS signal today — portfolio on target.')
                                         : t('dashboard.aligned_desc', 'No pending ML target rebalances requested.')}
                                 </p>
                             </div>
                         ) : (
                             <div className="space-y-3">
                                 {coreSignals.map(signal =>
-                                    activeStrategy === 'QQQ_LEAPS' || isQQQLEAPSSignal(signal) ? (
+                                    isQQQLEAPSSignal(signal) ? (
                                         <QQQLEAPSSignalCard
                                             key={signal.id}
                                             signal={signal as any}

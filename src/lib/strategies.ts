@@ -1,4 +1,4 @@
-import { Brain, Zap, Activity, Layers } from 'lucide-react';
+import { Brain, Zap, Activity } from 'lucide-react';
 
 export interface StrategyConfig {
     key: string;                      // DB strategy key, e.g. 'TQQQ_TURBOCORE'
@@ -32,17 +32,8 @@ export const STRATEGIES: StrategyConfig[] = [
         managedSymbols: ['QQQ', 'QLD', 'TQQQ', 'QQQ_LEAPS', 'SGOV'],
         signalCardType: 'turbocore',
     },
-    {
-        key: 'QQQ_LEAPS',
-        label: 'QQQ LEAPS',
-        shortLabel: 'LEAPS',
-        description: 'ML-driven QQQ deep-ITM LEAPS call strategy with PMCC income layer',
-        icon: Layers,
-        color: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
-        managedSymbols: ['QQQ'],
-        signalCardType: 'generic',
-    },
 ];
+
 
 export function getStrategy(key: string): StrategyConfig | undefined {
     return STRATEGIES.find(s => s.key.toUpperCase() === key.toUpperCase());
@@ -56,10 +47,10 @@ export function getStrategiesForSubscription(tier: SubscriptionTier): string[] {
         case 'TURBOCORE':
             return ['TQQQ_TURBOCORE'];
         case 'TURBOCORE_PRO':
-            // Pro tier now includes LEAPS in place of old TurboCore Pro
-            return ['TQQQ_TURBOCORE_PRO', 'QQQ_LEAPS'];
+            // Pro tab shows both TurboCore Pro rebalance + QQQ LEAPS signals
+            return ['TQQQ_TURBOCORE_PRO'];
         case 'BOTH':
-            return ['TQQQ_TURBOCORE', 'TQQQ_TURBOCORE_PRO', 'QQQ_LEAPS'];
+            return ['TQQQ_TURBOCORE', 'TQQQ_TURBOCORE_PRO'];
         default:
             return [];
     }

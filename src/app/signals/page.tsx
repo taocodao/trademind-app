@@ -101,7 +101,9 @@ export default function SignalsPage() {
         const strat = (s.strategy || '').toLowerCase();
         // Fallback matching 'REBALANCE' type to 'TQQQ_TURBOCORE' if not explicitly defined
         const isLegacyRebalance = ((s as any).type === 'REBALANCE' && activeStrategy === 'TQQQ_TURBOCORE' && s.strategy === undefined);
-        if (strat !== activeStrategy.toLowerCase() && !isLegacyRebalance) {
+        // QQQ_LEAPS signals surface inside the Pro tab
+        const isLeapsUnderPro = strat === 'qqq_leaps' && activeStrategy === 'TQQQ_TURBOCORE_PRO';
+        if (strat !== activeStrategy.toLowerCase() && !isLegacyRebalance && !isLeapsUnderPro) {
             return false;
         }
 

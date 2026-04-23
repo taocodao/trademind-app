@@ -107,8 +107,7 @@ export async function POST(req: Request) {
 
         if (!RESEND_API_KEY) {
             console.warn('RESEND_API_KEY not configured — referral invite email skipped.');
-            // In dev/missing-key scenarios still return success so the UI flow works
-            return NextResponse.json({ success: true, dev: true });
+            return NextResponse.json({ error: 'Email service not configured on server. Add RESEND_API_KEY to Vercel env vars.' }, { status: 503 });
         }
 
         const res = await fetch('https://api.resend.com/emails', {
@@ -118,23 +117,51 @@ export async function POST(req: Request) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                from: 'TradeMind <hello@trademind.bot>',
+                from: 'TradeMind <signals@trademind.bot>',
                 to: [email],
                 subject: '🎁 Your $100 TradeMind Referral Link is here',
                 html: buildEmailHtml(email),
             }),
         });
 
+        const resBody = await res.json().catch(() => ({ raw: 'non-JSON response' }));
+
         if (!res.ok) {
-            const errText = await res.text();
-            console.error('Resend referral-invite error:', errText);
-            return NextResponse.json({ error: 'Failed to send email. Please try again.' }, { status: 502 });
+            // Surface the exact Resend error so it's visible in Vercel function logs
+            // AND returned to the client for debugging
+            console.error('[referral-invite] Resend API error:', JSON.stringify(resBody));
+            const resendMessage = (resBody as any)?.message || (resBody as any)?.name || JSON.stringify(resBody);
+            return NextResponse.json(
+                { error: `Resend error: ${resendMessage}` },
+                { status: 502 }
+            );
         }
 
+        console.log('[referral-invite] Email sent to', email, '— Resend id:', (resBody as any)?.id);
         return NextResponse.json({ success: true });
 
     } catch (err: any) {
-        console.error('Referral invite route error:', err);
-        return NextResponse.json({ error: 'Internal server error.' }, { status: 500 });
+        console.error('[referral-invite] Unexpected error:', err);
+        return NextResponse.json({ error: `Internal server error: ${err.message}` }, { status: 500 });
     }
+}
+
+// GET — quick health check: hit /api/email/referral-invite in browser to verify key + domain
+export async function GET() {
+    if (!RESEND_API_KEY) {
+        return NextResponse.json({ ok: false, reason: 'RESEND_API_KEY env var is missing on Vercel' });
+    }
+
+    // Check which domains are verified in this Resend account
+    const res = await fetch('https://api.resend.com/domains', {
+        headers: { 'Authorization': `Bearer ${RESEND_API_KEY}` },
+    });
+    const body = await res.json().catch(() => ({}));
+
+    return NextResponse.json({
+        ok: res.ok,
+        key_present: true,
+        key_prefix: RESEND_API_KEY.substring(0, 10) + '...',
+        domains: body,
+    });
 }

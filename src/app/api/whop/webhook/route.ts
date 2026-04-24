@@ -12,6 +12,7 @@ import { whopPlanToTier, sendWhopDM } from '@/lib/whop';
 import { query } from '@/lib/db';
 import { issueCredits } from '@/lib/credits';
 import { ensureReferralCode, recordReferralConversion, getReferrerByCode } from '@/lib/referrals';
+import { PRICING } from '@/lib/pricing-config';
 
 // Whop signs webhooks with HMAC — always verify before processing
 async function verifyWhopSignature(body: string, signature: string): Promise<boolean> {
@@ -116,10 +117,10 @@ async function handleMemberActivated(data: any) {
         console.warn('[Whop] Referral code generation failed:', e)
     );
 
-    // Issue trial signup bonus credits (25 credits = $2.50) if trial plan
+    // Issue $15 trial bonus credits (1500 cents) if this is the trial plan
     const isTrialPlan = planId === (process.env.WHOP_PLAN_TRIAL ?? '');
     if (isTrialPlan) {
-        await issueCredits(userId, 250, 'trial_bonus').catch(() => {});
+        await issueCredits(userId, PRICING.trial.creditCents, 'trial_bonus').catch(() => {});
     }
 
     // Handle referral attribution if present
@@ -129,7 +130,6 @@ async function handleMemberActivated(data: any) {
         if (referrer) {
             await recordReferralConversion(
                 referrer.userId, userId, referralCode,
-                isTrialPlan ? 'trial' : 'monthly',
                 'whop', tier
             ).catch(e => console.warn('[Whop] Referral record failed:', e));
         }

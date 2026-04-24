@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { PRICING, priceAfterTrialCredit, type PlanKey } from '@/lib/pricing-config';
-import { CheckCircle, Zap, Brain, Layers, Clock, ArrowRight, Star } from 'lucide-react';
+import { PRICING, creditsToBonusDays, type PlanKey } from '@/lib/pricing-config';
+import { CheckCircle, Zap, Brain, Layers, Clock, ArrowRight, Star, Gift } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -80,24 +80,24 @@ function CountdownTimer({ endsAt }: { endsAt: string }) {
 // ── Plan Card ─────────────────────────────────────────────────────────────────
 
 function PlanCard({
-    planKey, interval, creditAmount, isHighlighted,
+    planKey, interval, trialCreditCents, isHighlighted,
 }: {
     planKey: PlanKey;
     interval: Interval;
-    creditAmount: number;
+    trialCreditCents: number;
     isHighlighted: boolean;
 }) {
-    const plan   = PRICING.plans[planKey];
-    const Icon   = PLAN_ICONS[planKey];
-    const badge  = PLAN_BADGE[planKey];
-    const accent = PLAN_ACCENT[planKey];
-    const creditDollars = creditAmount / 100;
+    const plan    = PRICING.plans[planKey];
+    const Icon    = PLAN_ICONS[planKey];
+    const badge   = PLAN_BADGE[planKey];
+    const accent  = PLAN_ACCENT[planKey];
+    const isAnnual = interval === 'annual';
+    const bogoLabel = isAnnual ? '+ Year 2 Free (BOGO)' : null;
 
-    const basePrice   = interval === 'annual' ? plan.annual : plan.monthly;
-    const afterCredit = basePrice - creditDollars;
-    const isAnnual    = interval === 'annual';
-    const bogoLabel   = isAnnual ? '+ Year 2 Free' : null;
+    // Plan-specific bonus days from the $15 trial credit
+    const bonusDays = creditsToBonusDays(trialCreditCents, plan.monthly);
 
+    const basePrice = isAnnual ? plan.annual : plan.monthly;
     const checkoutUrl = `/api/stripe/checkout?plan=${planKey}&interval=${interval}&promo=${PRICING.trial.promoCode}`;
 
     return (
@@ -123,29 +123,28 @@ function PlanCard({
 
             {/* Pricing */}
             <div className="space-y-1">
-                {creditAmount > 0 && (
-                    <div className="flex items-center gap-2">
-                        <span className="text-gray-400 line-through text-sm">${basePrice}{isAnnual ? '/yr' : '/mo'}</span>
-                        <span className="text-green-400 text-xs font-semibold bg-green-400/10 px-2 py-0.5 rounded-full">
-                            −${creditDollars} trial credit
+                <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-extrabold text-white">${basePrice}</span>
+                    <span className="text-gray-400 text-sm">{isAnnual ? '/yr' : '/mo'}</span>
+                </div>
+                {isAnnual && (
+                    <p className="text-gray-500 text-xs">${plan.annualPerMonth.toFixed(2)}/mo effective</p>
+                )}
+
+                {/* Trial bonus days badge */}
+                {bonusDays > 0 && !isAnnual && (
+                    <div className="flex items-center gap-1.5 mt-2">
+                        <Gift className="w-3.5 h-3.5 text-green-400" />
+                        <span className="text-green-400 text-xs font-semibold">
+                            +{bonusDays} bonus days from your trial
                         </span>
                     </div>
-                )}
-                <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-extrabold text-white">${afterCredit.toFixed(0)}</span>
-                    <span className="text-gray-400 text-sm">{isAnnual ? '/yr' : ' first month'}</span>
-                </div>
-                {!isAnnual && (
-                    <p className="text-gray-500 text-xs">then ${plan.monthly}/mo</p>
                 )}
                 {bogoLabel && (
                     <div className="flex items-center gap-1.5 mt-1">
                         <Star className="w-3.5 h-3.5 text-amber-400" />
                         <span className="text-amber-400 text-xs font-semibold">{bogoLabel}</span>
                     </div>
-                )}
-                {isAnnual && (
-                    <p className="text-gray-500 text-xs">${plan.annualPerMonth.toFixed(2)}/mo effective</p>
                 )}
             </div>
 
@@ -282,7 +281,7 @@ export default function UpgradePage() {
     const [interval, setInterval]   = useState<Interval>('monthly');
     const [trialInfo, setTrialInfo] = useState<TrialInfo>({ trialEndsAt: null, converted: false });
     const [loading, setLoading]     = useState(true);
-    const creditAmount               = PRICING.trial.creditAmount; // always show $15 credit
+    const trialCreditCents = PRICING.trial.creditCents; // 1500 = $15
 
     useEffect(() => {
         if (!userId) { setLoading(false); return; }
@@ -318,7 +317,10 @@ export default function UpgradePage() {
                     </h1>
 
                     <p className="text-gray-400 text-lg mb-8">
-                        Apply your trial credit at checkout — your first month starts at <strong className="text-white">$14</strong>.
+                        Your $15 trial converts to bonus days on your subscription — no price change, just extra time.
+                        TurboCore gets <strong className="text-white">{creditsToBonusDays(trialCreditCents, PRICING.plans.turbocore.monthly)} days</strong>,
+                        Pro gets <strong className="text-white">{creditsToBonusDays(trialCreditCents, PRICING.plans.turbocore_pro.monthly)} days</strong>,
+                        Bundle gets <strong className="text-white">{creditsToBonusDays(trialCreditCents, PRICING.plans.both_bundle.monthly)} days</strong>.
                     </p>
 
                     {/* Countdown */}
@@ -372,7 +374,7 @@ export default function UpgradePage() {
                             key={key}
                             planKey={key}
                             interval={interval}
-                            creditAmount={creditAmount}
+                            trialCreditCents={trialCreditCents}
                             isHighlighted={key === 'turbocore_pro'}
                         />
                     ))}

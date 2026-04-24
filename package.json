@@ -18,6 +18,7 @@
     "@upstash/redis": "^1.36.1",
     "@vercel/blob": "^2.3.0",
     "@vercel/postgres": "^0.5.1",
+    "@whop/sdk": "^0.0.38",
     "elevenlabs": "^1.59.0",
     "framer-motion": "^12.34.3",
     "i18next": "^25.8.13",

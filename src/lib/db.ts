@@ -853,7 +853,72 @@ export async function initializeUserTables(): Promise<void> {
                 subscription_status = 'active'
         `);
 
+
+        // ── Whop Integration Columns ──────────────────────────────────────────
+        await query(`
+            ALTER TABLE user_settings
+              ADD COLUMN IF NOT EXISTS whop_user_id   VARCHAR(128) UNIQUE,
+              ADD COLUMN IF NOT EXISTS whop_plan_id   VARCHAR(128),
+              ADD COLUMN IF NOT EXISTS billing_source VARCHAR(20) DEFAULT 'stripe',
+              ADD COLUMN IF NOT EXISTS auth_provider  VARCHAR(20) DEFAULT 'privy',
+              ADD COLUMN IF NOT EXISTS referral_code  VARCHAR(30) UNIQUE
+        `);
+        await query(`CREATE INDEX IF NOT EXISTS idx_user_settings_whop_user ON user_settings(whop_user_id)`);
+        await query(`CREATE INDEX IF NOT EXISTS idx_user_settings_referral_code ON user_settings(referral_code)`);
+
+        // ── User Credits Ledger ───────────────────────────────────────────────
+        // 1 credit = $0.10 = 10 cents stored as INTEGER
+        await query(`
+            CREATE TABLE IF NOT EXISTS user_credits (
+                id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id          VARCHAR(128) NOT NULL,
+                amount           INTEGER NOT NULL,
+                source           VARCHAR(50) NOT NULL,
+                issued_at        TIMESTAMPTZ DEFAULT NOW(),
+                expires_at       TIMESTAMPTZ,
+                redeemed_at      TIMESTAMPTZ,
+                redeemed_against VARCHAR(128)
+            )
+        `);
+        await query(`CREATE INDEX IF NOT EXISTS idx_user_credits_user ON user_credits(user_id)`);
+        await query(`CREATE INDEX IF NOT EXISTS idx_user_credits_unredeemed ON user_credits(user_id) WHERE redeemed_at IS NULL`);
+
+        // ── Referral Events ───────────────────────────────────────────────────
+        await query(`
+            CREATE TABLE IF NOT EXISTS referral_events (
+                id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                referrer_id      VARCHAR(128) NOT NULL,
+                referred_id      VARCHAR(128) NOT NULL,
+                referral_code    VARCHAR(30),
+                converted_plan   VARCHAR(50),
+                converted_at     TIMESTAMPTZ DEFAULT NOW(),
+                referrer_credit  INTEGER DEFAULT 0,
+                referred_credit  INTEGER DEFAULT 0,
+                billing_source   VARCHAR(20) DEFAULT 'stripe',
+                UNIQUE(referred_id)
+            )
+        `);
+        await query(`CREATE INDEX IF NOT EXISTS idx_referral_events_referrer ON referral_events(referrer_id)`);
+
+        // ── Trial Conversions ─────────────────────────────────────────────────
+        await query(`
+            CREATE TABLE IF NOT EXISTS trial_conversions (
+                id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id           VARCHAR(128) NOT NULL,
+                trial_source      VARCHAR(20) DEFAULT 'whop',
+                trial_started_at  TIMESTAMPTZ DEFAULT NOW(),
+                trial_ended_at    TIMESTAMPTZ,
+                converted         BOOLEAN DEFAULT FALSE,
+                converted_plan    VARCHAR(50),
+                converted_at      TIMESTAMPTZ,
+                promo_code_used   VARCHAR(30),
+                UNIQUE(user_id)
+            )
+        `);
+        await query(`CREATE INDEX IF NOT EXISTS idx_trial_conversions_user ON trial_conversions(user_id)`);
+
         console.log('✅ User tables initialized and migrated');
+
     } catch (error) {
         console.error('❌ Failed to initialize user tables:', error);
         throw error;

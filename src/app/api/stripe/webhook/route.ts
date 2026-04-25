@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import pool from "@/lib/db";
 import { extendReferrerSubscription } from "@/lib/stripe-extend";
 import { resolvePromoCode } from "@/lib/promo-codes";
+import { PRICING } from "@/lib/pricing-config";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs'; // Required for raw body access in App Router
@@ -304,6 +305,54 @@ async function processWebhookEvent(event: Stripe.Event) {
 async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     const customerId = invoice.customer as string;
     const billingReason = invoice.billing_reason;
+    const subscriptionId = (invoice as any).subscription as string;
+
+    // ── Loyalty Credits: issued on every renewal cycle (month 1–5) ───────────
+    // billing_reason='subscription_cycle' = renewal after initial subscription_create.
+    // We derive month number from subscription.start_date vs invoice.period_start.
+    // Idempotency key: 'loyalty_month_N_<invoice.id>' — UNIQUE on (user_id, source)
+    // prevents double-credit even if Stripe delivers this event twice.
+    if (billingReason === 'subscription_cycle' && subscriptionId) {
+        try {
+            const sub = await stripe.subscriptions.retrieve(subscriptionId) as any;
+            const startDate: number = sub.start_date;         // Unix seconds — subscription creation
+            const periodStart: number = (invoice as any).period_start; // Unix seconds — this billing period
+
+            // Month number: 1-indexed (first renewal = month 1)
+            const monthsElapsed = Math.round((periodStart - startDate) / (30 * 24 * 3600));
+            const monthNumber = Math.max(1, monthsElapsed); // clamp to at least 1
+
+            const maxMonths = PRICING.loyalty.totalMonths; // default 5
+
+            if (monthNumber <= maxMonths) {
+                // Look up user from customer ID
+                const userRow = await pool.query(
+                    `SELECT user_id FROM user_settings WHERE stripe_customer_id = $1`,
+                    [customerId]
+                );
+                const userId = userRow.rows[0]?.user_id;
+
+                if (userId) {
+                    const loyaltySource = `loyalty_month_${monthNumber}_${invoice.id}`;
+                    const creditCents = PRICING.loyalty.creditCentsPerMonth; // default 2000 ($20)
+
+                    // ON CONFLICT DO NOTHING via UNIQUE constraint on (user_id, source)
+                    await pool.query(
+                        `INSERT INTO user_credits (user_id, amount, source, expires_at)
+                         VALUES ($1, $2, $3, NOW() + INTERVAL '90 days')
+                         ON CONFLICT (user_id, source) DO NOTHING`,
+                        [userId, creditCents, loyaltySource]
+                    );
+                    console.log(`🎁 Loyalty credit: $${(creditCents/100).toFixed(0)} issued to ${userId} (month ${monthNumber}/${maxMonths}, invoice ${invoice.id})`);
+                }
+            } else {
+                console.log(`[Loyalty] Month ${monthNumber} exceeds max ${maxMonths} — no credit issued (customer ${customerId})`);
+            }
+        } catch (loyaltyErr) {
+            // Non-fatal — log and continue to referral processing below
+            console.error('[Loyalty] Credit issuance failed (non-fatal):', loyaltyErr);
+        }
+    }
 
     // Find if this customer is a referred user
     const referralResult = await pool.query(
@@ -327,7 +376,6 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     const isFirstPayment = billingReason === "subscription_create";
     const isRenewal = billingReason === "subscription_cycle";
 
-    const subscriptionId = (invoice as any).subscription as string;
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
     const isAnnual = subscription.items.data[0].price.recurring?.interval === "year";
 

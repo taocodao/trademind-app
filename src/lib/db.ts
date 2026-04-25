@@ -882,6 +882,9 @@ export async function initializeUserTables(): Promise<void> {
         `);
         await query(`CREATE INDEX IF NOT EXISTS idx_user_credits_user ON user_credits(user_id)`);
         await query(`CREATE INDEX IF NOT EXISTS idx_user_credits_unredeemed ON user_credits(user_id) WHERE redeemed_at IS NULL`);
+        // Idempotency guard: prevents duplicate credits from Stripe webhook retries or cron double-runs
+        await query(`ALTER TABLE user_credits ALTER COLUMN source TYPE VARCHAR(200)`).catch(() => {});
+        await query(`CREATE UNIQUE INDEX IF NOT EXISTS user_credits_user_source_uidx ON user_credits (user_id, source) WHERE source IS NOT NULL`);
 
         // ── Referral Events ───────────────────────────────────────────────────
         await query(`

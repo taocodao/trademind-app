@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { PRICING, creditsToBonusDays, type PlanKey } from '@/lib/pricing-config';
 import { CheckCircle, Zap, Brain, Layers, Clock, ArrowRight, Star, Gift } from 'lucide-react';
@@ -274,7 +274,7 @@ function FAQSection() {
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
-export default function UpgradePage() {
+function UpgradePageInner() {
     const searchParams = useSearchParams();
     const userId       = searchParams.get('user') ?? '';
 
@@ -415,5 +415,17 @@ export default function UpgradePage() {
                 <p className="mt-1">Past performance does not indicate future results.</p>
             </footer>
         </div>
+    );
+}
+
+export default function UpgradePage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-black flex items-center justify-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-500 border-t-transparent" />
+            </div>
+        }>
+            <UpgradePageInner />
+        </Suspense>
     );
 }

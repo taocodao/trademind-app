@@ -14,41 +14,31 @@ import { issueCredits } from '@/lib/credits';
 import { ensureReferralCode, recordReferralConversion, getReferrerByCode } from '@/lib/referrals';
 import { PRICING } from '@/lib/pricing-config';
 
-// Whop signs webhooks with HMAC — always verify before processing
-async function verifyWhopSignature(body: string, signature: string): Promise<boolean> {
-    const secret = process.env.WHOP_WEBHOOK_SECRET ?? '';
-    if (!secret) {
-        console.warn('[Whop Webhook] WHOP_WEBHOOK_SECRET not set — skipping verification');
-        return true; // fail-open in dev; remove for prod
-    }
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-        'raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']
-    );
-    const sigBytes = Buffer.from(signature.replace('sha256=', ''), 'hex');
-    return crypto.subtle.verify('HMAC', key, sigBytes, encoder.encode(body));
-}
+// Webhook verification is now handled by the Whop SDK's unwrap method
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
     const body      = await req.text();
     const hdrs      = await headers();
-    const signature = hdrs.get('whop-signature') ?? '';
-
-    const valid = await verifyWhopSignature(body, signature);
-    if (!valid) {
-        console.error('[Whop Webhook] Signature verification failed');
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-    }
+    const headersObj = Object.fromEntries(hdrs.entries());
 
     let event: any;
     try {
-        event = JSON.parse(body);
-    } catch {
-        return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+        const secret = process.env.WHOP_WEBHOOK_SECRET ?? '';
+        if (!secret) {
+            console.warn('[Whop Webhook] WHOP_WEBHOOK_SECRET not set — skipping verification');
+            event = JSON.parse(body);
+        } else {
+            event = await import('@/lib/whop').then(m => m.whop).then(whopClient => 
+                whopClient.webhooks.unwrap(body, { headers: headersObj })
+            );
+        }
+    } catch (err: any) {
+        console.error('[Whop Webhook] Signature verification failed:', err.message);
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
-    // Whop sends event name in the 'event' field (some versions use 'action')
-    const action = (event.event ?? event.action ?? '') as string;
+    // Whop sends event name in the 'type' field (or 'event'/'action' in older versions)
+    const action = (event.type ?? event.event ?? event.action ?? '') as string;
     const data   = event.data ?? {};
 
     console.log(`[Whop Webhook] ${action} | user: ${data.user?.id ?? data.user_id ?? 'unknown'}`);

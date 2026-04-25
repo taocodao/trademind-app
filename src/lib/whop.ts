@@ -10,6 +10,7 @@ import Whop from '@whop/sdk';
 export const whop = new Whop({
     apiKey: process.env.WHOP_API_KEY ?? '',
     appID:  process.env.WHOP_APP_ID,
+    webhookKey: process.env.WHOP_WEBHOOK_SECRET ? btoa(process.env.WHOP_WEBHOOK_SECRET) : undefined,
 });
 
 /** Maps a Whop plan_id → our internal subscription_tier key */

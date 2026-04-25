@@ -47,25 +47,41 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
     }
 
-    const action = event.action as string;
+    // Whop sends event name in the 'event' field (some versions use 'action')
+    const action = (event.event ?? event.action ?? '') as string;
     const data   = event.data ?? {};
 
     console.log(`[Whop Webhook] ${action} | user: ${data.user?.id ?? data.user_id ?? 'unknown'}`);
 
     switch (action) {
-        case 'membership.went_valid':
+        // Membership activated — user paid, grant access + issue credits
+        case 'membership_activated':
             await handleMemberActivated(data);
             break;
-        case 'membership.went_invalid':
+
+        // Membership deactivated — revoke access, send churn-save DM
+        case 'membership_deactivated':
             await handleMemberCancelled(data);
             break;
-        case 'membership.renewed':
-            console.log(`[Whop Webhook] Renewal logged for ${data.user_id}`);
+
+        // Subscription set to cancel at period end — send retention DM early
+        case 'membership_cancel_at_period_end_changed':
+            if (data.cancel_at_period_end === true) {
+                await sendWhopDM(
+                    data.user?.id ?? data.user_id,
+                    `Hey — we noticed you turned off renewal. Before your access ends, reply "deal" for 30% off your next month, or "pause" to hold your spot for 30 days at no charge.`
+                ).catch(() => {});
+            }
             break;
-        case 'payment.succeeded':
-            // Tier already set by membership.went_valid — just log
-            console.log(`[Whop Webhook] Payment succeeded for ${data.user?.id}`);
+
+        // Payment events — membership_activated handles access; just log these
+        case 'payment_succeeded':
+            console.log(`[Whop Webhook] Payment succeeded for ${data.user?.id ?? data.user_id}`);
             break;
+        case 'payment_failed':
+            console.log(`[Whop Webhook] Payment failed for ${data.user?.id ?? data.user_id}`);
+            break;
+
         default:
             console.log(`[Whop Webhook] Unhandled event: ${action}`);
     }

@@ -1,0 +1,154 @@
+/**
+ * Whop Chat Bot Handler
+ * =====================
+ * POST /api/whop/chat-bot
+ *
+ * Registered as the Chat Bot endpoint in Whop dashboard → Apps → Chat Bot.
+ * Listens for messages starting with '!' and responds with live data.
+ *
+ * Commands:
+ *   !signal    Today's full TurboCore allocation
+ *   !regime    Current regime + confidence
+ *   !help      List all commands
+ *   !plan      Plan comparison with prices
+ *   !backtest  7-year performance summary
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { query } from '@/lib/db';
+import { postToWhopChannel } from '@/lib/whop';
+
+export const dynamic = 'force-dynamic';
+
+const REGIME_EMOJI: Record<string, string> = {
+    BULL:     '🟢',
+    SIDEWAYS: '🟡',
+    BEAR:     '🔴',
+};
+
+// ── Command handlers ──────────────────────────────────────────────────────────
+
+async function cmdSignal(): Promise<string> {
+    // Fetch today's latest signal from DB
+    const today = new Date().toISOString().split('T')[0];
+    const { rows } = await query(
+        `SELECT regime, confidence, allocation, created_at
+         FROM turbocore_signals
+         WHERE DATE(created_at) = $1
+         ORDER BY created_at DESC LIMIT 1`,
+        [today]
+    );
+
+    if (!rows.length) {
+        return `📊 No signal yet for today (${today}). Check back at 3 PM ET.`;
+    }
+
+    const s = rows[0];
+    const alloc = typeof s.allocation === 'string' ? JSON.parse(s.allocation) : s.allocation;
+    const emoji = REGIME_EMOJI[s.regime] ?? '📊';
+
+    return `**${emoji} TurboCore Signal — ${today}**
+Regime: **${s.regime}** | Confidence: ${s.confidence}%
+
+**Allocation:**
+• QQQ: ${alloc.QQQ ?? alloc.qqq ?? '—'}%
+• QLD: ${alloc.QLD ?? alloc.qld ?? '—'}%
+• TQQQ: ${alloc.TQQQ ?? alloc.tqqq ?? '—'}%
+• SGOV: ${alloc.SGOV ?? alloc.sgov ?? '—'}%
+
+_Full reasoning at trademind.bot/dashboard. Educational analysis only._`;
+}
+
+async function cmdRegime(): Promise<string> {
+    const { rows } = await query(
+        `SELECT regime, confidence FROM turbocore_signals
+         ORDER BY created_at DESC LIMIT 1`
+    );
+
+    if (!rows.length) return '📊 No signal data available yet.';
+
+    const { regime, confidence } = rows[0];
+    const emoji = REGIME_EMOJI[regime] ?? '📊';
+    return `${emoji} Current Regime: **${regime}** | Confidence: ${confidence}%`;
+}
+
+function cmdHelp(): string {
+    return `**TradeMind Bot Commands**
+
+\`!signal\` — Today's full TurboCore allocation
+\`!regime\` — Current market regime + confidence
+\`!plan\` — Subscription plan options and pricing
+\`!backtest\` — 7-year performance summary
+\`!help\` — Show this help message
+
+_Signals drop daily at 3 PM ET. Morning briefs at 8:15 AM ET._`;
+}
+
+function cmdPlan(): string {
+    return `**TradeMind Plans** (after your trial)
+
+• **TurboCore** $29/mo — daily signals, morning brief, auto-execution
+• **TurboCore Pro** $49/mo — signals + LEAPS strategy + enhanced ML
+• **Both Bundle** $69/mo — everything, unlimited
+
+Your $15 trial credit converts to bonus days at checkout.
+Upgrade at: trademind.bot/upgrade`;
+}
+
+function cmdBacktest(): string {
+    return `**TurboCore 7-Year Backtest (2018–2024)**
+
+• CAGR: **27.8%** (vs TQQQ 35% raw, with -83% 2022 drawdown)
+• Max Drawdown: **-5.1%** (vs TQQQ -83% in 2022)
+• Win Rate: **86%** (6 of 7 years positive)
+• 2022 (worst year): TurboCore **-5.1%** | TQQQ **-83%**
+
+Full methodology + data: trademind.bot
+_Past performance doesn't guarantee future results._`;
+}
+
+// ── Command map ───────────────────────────────────────────────────────────────
+
+const COMMANDS: Record<string, () => Promise<string> | string> = {
+    '!signal':   cmdSignal,
+    '!regime':   cmdRegime,
+    '!help':     cmdHelp,
+    '!plan':     cmdPlan,
+    '!backtest': cmdBacktest,
+};
+
+// ── Route handler ─────────────────────────────────────────────────────────────
+
+export async function POST(req: NextRequest): Promise<NextResponse> {
+    let body: any;
+    try {
+        body = await req.json();
+    } catch {
+        return new NextResponse('OK', { status: 200 });
+    }
+
+    const content: string = body?.content ?? body?.message ?? '';
+    const channelId: string = body?.channel_id ?? body?.channel ?? '';
+
+    // Only respond to ! commands
+    if (!content.startsWith('!') || !channelId) {
+        return new NextResponse('OK', { status: 200 });
+    }
+
+    const command = content.trim().toLowerCase().split(' ')[0];
+    const handler = COMMANDS[command];
+
+    if (handler) {
+        try {
+            const response = await handler();
+            await postToWhopChannel(channelId, response);
+        } catch (err) {
+            console.error(`[Chat Bot] Error handling ${command}:`, err);
+            await postToWhopChannel(channelId,
+                '⚠️ Something went wrong fetching that data. Try again in a moment.'
+            ).catch(() => {});
+        }
+    }
+
+    return new NextResponse('OK', { status: 200 });
+}

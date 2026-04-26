@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { postToWhopChannel } from '@/lib/whop';
+import { sendMorningBriefPushNotification } from '@/lib/whop-notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,6 +78,28 @@ Return JSON ONLY:
        VALUES ($1, $2, $3, $4, $5)`,
       [today, turboRegime, turboConf, mlScore, content]
     );
+
+    // Post to Whop announcements channel (non-fatal)
+    const channelId = process.env.WHOP_ANNOUNCEMENTS_CHANNEL_ID ?? '';
+    if (channelId) {
+      const regimeEmoji = turboRegime === 'BULL' ? '🟢' : turboRegime === 'BEAR' ? '🔴' : '🟡';
+      const bullets: string = Array.isArray(content.bullets)
+        ? content.bullets.map((b: any, i: number) => `${i + 1}. ${b.emoji ?? ''} ${b.text ?? b}`).join('\n')
+        : '';
+      const whopContent = `**${regimeEmoji} TurboCore Pre-Market Brief — ${today}**\n\n**Today's Regime:** ${turboRegime} (${turboConf}% confidence)\n\n${bullets}\n\n---\n_3:00 PM signal with exact allocation coming at market close. Stay disciplined._`;
+      await postToWhopChannel(channelId, whopContent).catch(e =>
+        console.warn('[Morning Brief] Whop post failed (non-fatal):', e)
+      );
+      // Log idempotently
+      await query(
+        `INSERT INTO whop_posts (post_type, channel_id, content, signal_date) VALUES ('morning_brief', $1, $2, $3) ON CONFLICT DO NOTHING`,
+        [channelId, whopContent, today]
+      ).catch(() => {});
+    }
+
+    // Push notification to all paid experience IDs (non-fatal)
+    await sendMorningBriefPushNotification(turboRegime, content.headline ?? `${turboRegime} regime today`)
+      .catch(e => console.warn('[Morning Brief] Push notification failed (non-fatal):', e));
 
     return NextResponse.json({ success: true, briefing: content });
 

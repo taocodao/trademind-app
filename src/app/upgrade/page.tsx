@@ -277,6 +277,8 @@ function FAQSection() {
 function UpgradePageInner() {
     const searchParams = useSearchParams();
     const userId       = searchParams.get('user') ?? '';
+    const fromTrial    = searchParams.get('from') === 'trial';
+    const fromWhop     = searchParams.get('ref') === 'whop';
 
     const [interval, setInterval]   = useState<Interval>('monthly');
     const [trialInfo, setTrialInfo] = useState<TrialInfo>({ trialEndsAt: null, converted: false });
@@ -301,7 +303,36 @@ function UpgradePageInner() {
             {/* Meta */}
             <title>TradeMind — Upgrade Your Plan</title>
 
-            {/* ── Hero ──────────────────────────────────────────────────────── */}
+            {/* ── Trial Migration Banner (shown when coming from Whop magic link) ── */}
+            {fromTrial && fromWhop && (
+                <div style={{
+                    background: 'linear-gradient(135deg, #4c1d95 0%, #1e1b4b 100%)',
+                    borderBottom: '1px solid rgba(124,58,237,0.4)',
+                    padding: '16px 24px',
+                    textAlign: 'center',
+                }}>
+                    <p style={{ margin: 0, color: '#c4b5fd', fontSize: '14px', fontWeight: 600 }}>
+                        ✅ Welcome back — your account is ready.{' '}
+                        <span style={{ color: '#fff' }}>
+                            Your 30-day trial history is saved. Pick a plan below to keep your daily signals running.
+                        </span>
+                    </p>
+                    <div style={{ marginTop: '6px' }}>
+                        <span style={{
+                            background: 'rgba(124,58,237,0.3)',
+                            border: '1px solid rgba(124,58,237,0.5)',
+                            borderRadius: '9999px',
+                            padding: '2px 12px',
+                            fontSize: '11px',
+                            color: '#c4b5fd',
+                            fontWeight: 700,
+                            letterSpacing: '0.05em',
+                        }}>
+                            30-DAY TRIAL MEMBER
+                        </span>
+                    </div>
+                </div>
+            )}
             <section className="relative overflow-hidden px-4 pt-16 pb-10 text-center">
                 <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 via-black to-black" />
                 <div className="relative max-w-2xl mx-auto">

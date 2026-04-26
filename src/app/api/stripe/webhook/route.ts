@@ -4,6 +4,7 @@ import pool from "@/lib/db";
 import { extendReferrerSubscription } from "@/lib/stripe-extend";
 import { resolvePromoCode } from "@/lib/promo-codes";
 import { PRICING } from "@/lib/pricing-config";
+import { sendWhopDM } from "@/lib/whop";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs'; // Required for raw body access in App Router
@@ -127,6 +128,14 @@ async function processWebhookEvent(event: Stripe.Event) {
 
             // Record card fingerprint for trial abuse prevention
             await recordCardFingerprint(userId, customerId);
+
+            // ── Whop Trial Migration Confirmation ──────────────────────────────
+            // If this email came from a Whop trial, mark it as migrated
+            if (email) {
+                await markWhopTrialMigrated(email, tier).catch(e =>
+                    console.warn('[Stripe Webhook] Whop trial migration mark failed (non-fatal):', e)
+                );
+            }
 
             // Store referral relationship if present
             if (referralCode) {
@@ -505,6 +514,31 @@ async function linkReferral(referralCode: string, referredUserId: string, referr
         console.error("Failed to link referral:", err);
         return null;
     }
+}
+
+// ── Whop Trial Migration Confirmation ─────────────────────────────────────
+// Called when a user who came from a Whop trial completes a Stripe checkout.
+// Marks whop_trials.migrated = true and sends a thank-you Whop DM.
+async function markWhopTrialMigrated(email: string, tier: string): Promise<void> {
+    const result = await pool.query(
+        `UPDATE whop_trials
+         SET migrated = TRUE, migrated_at = NOW(), migrated_tier = $1
+         WHERE email = $2 AND migrated = FALSE
+         RETURNING id, whop_user_id`,
+        [tier, email]
+    );
+
+    if (!result.rows.length) return; // Not a Whop trial — no-op
+
+    const { whop_user_id } = result.rows[0];
+
+    // Send a quick thank-you DM (non-fatal — they may have revoked Whop access)
+    await sendWhopDM(
+        whop_user_id,
+        `✅ **You're all set on trademind.bot.** Welcome to the full platform — signals continue daily. See you there.`
+    ).catch(() => {});
+
+    console.log(`[Stripe Webhook] Whop trial migrated: ${email} → ${tier}`);
 }
 
 // ── Tier mapping ───────────────────────────────────────────────────────────

@@ -74,16 +74,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 **Regime:** ${regime} | Confidence: ${confidence}%
 
 **Today's Allocation:**
-• QQQ: ${QQQ}%
-• QLD: ${QLD}%
-• TQQQ: ${TQQQ}%
-• SGOV: ${SGOV}%
+• QQQ: ${QQQ ?? 0}%
+• QLD: ${QLD ?? 0}%
+• TQQQ: ${TQQQ ?? 0}%
+• SGOV: ${SGOV ?? 0}%
 
 **Why:** ${reasoning}
 
 ---
 _Execute via any brokerage or one-tap via Tastytrade. Takes under 2 minutes._
 _Educational analysis only. Not personalized investment advice._`;
+
 
     const channelId = process.env.WHOP_ANNOUNCEMENTS_CHANNEL_ID ?? '';
     let messageId: string | null = null;

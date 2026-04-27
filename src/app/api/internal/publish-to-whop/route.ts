@@ -108,10 +108,10 @@ _Educational analysis only. Not personalized investment advice._`;
 
     // Log the post (idempotency guard for future calls)
     await query(
-        `INSERT INTO whop_posts (post_type, channel_id, content, signal_date)
-         VALUES ('signal', $1, $2, $3)
-         ON CONFLICT DO NOTHING`,
-        [channelId, content, date]
+        `INSERT INTO whop_posts (post_type, channel_id, content, signal_date, regime, confidence)
+         VALUES ('signal', $1, $2, $3, $4, $5)
+         ON CONFLICT (post_type, signal_date) DO NOTHING`,
+        [channelId, content, date, regime, confidence]
     );
 
     return NextResponse.json({ success: true, date, regime });

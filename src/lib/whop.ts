@@ -30,9 +30,10 @@ export function whopPlanToTier(planId: string): string {
         [process.env.WHOP_PLAN_BASE   ?? '__base__']:   'turbocore',
         [process.env.WHOP_PLAN_PRO    ?? '__pro__']:    'turbocore_pro',
         [process.env.WHOP_PLAN_BUNDLE ?? '__bundle__']: 'both_bundle',
-        [process.env.WHOP_PLAN_TRIAL  ?? '__trial__']:  'turbocore',  // trial = base access
+        // Trial = full Both Bundle access for 30 days
+        [process.env.WHOP_PLAN_TRIAL  ?? '__trial__']:  'both_bundle',
     };
-    return map[planId] ?? 'observer';
+    return map[planId] ?? 'both_bundle'; // default to both_bundle for any unknown trial plan
 }
 
 /** Post a message to a Whop channel — non-fatal */
@@ -45,11 +46,24 @@ export async function postToWhopChannel(channelId: string, content: string): Pro
     }
 }
 
-/** Send a DM to a Whop user — non-fatal */
+/**
+ * Send a DM to a Whop user.
+ * Correct pattern per Whop API docs:
+ *   1. Create (or retrieve) the DM channel for the user
+ *   2. Post a message into that channel
+ */
 export async function sendWhopDM(whopUserId: string, content: string): Promise<void> {
     if (!process.env.WHOP_API_KEY || !whopUserId) return;
     try {
-        await whop.messages.create({ channel_id: whopUserId, content });
+        // Step 1: Create DM channel (idempotent — returns existing channel if already open)
+        const dmChannel = await (whop as any).dmChannels.create({ user_id: whopUserId });
+        const channelId = dmChannel?.id ?? dmChannel?.channel_id;
+        if (!channelId) {
+            console.warn('[Whop] DM channel creation returned no ID — skipping');
+            return;
+        }
+        // Step 2: Send message into the DM channel
+        await whop.messages.create({ channel_id: channelId, content });
     } catch (e) {
         console.warn('[Whop] DM failed (non-fatal):', e);
     }

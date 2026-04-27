@@ -41,12 +41,26 @@ export default function SinglePageMarketing() {
         }
     }, [ready, authenticated, router]);
 
-    // ── TikTok / dark social attribution capture ──────────────────────────────
+    // ── TikTok / dark social attribution capture + Whop redirect ─────────────────
     // Store UTM params + referral code in localStorage on first visit.
     // These survive multi-session paths (user watches TikTok, visits days later, signs up).
+    // Also: if Whop redirects here after checkout (checkout_status=success),
+    // forward to /whop/welcome with all params preserved.
     useEffect(() => {
         try {
             const params = new URLSearchParams(window.location.search);
+
+            // ── Whop checkout redirect ─────────────────────────────────────────
+            // Whop appends checkout_status=success to the return URL.
+            // If that param is detected, redirect to the dedicated welcome page.
+            const checkoutStatus = params.get('checkout_status') ?? params.get('status');
+            const receiptId = params.get('receipt_id') ?? params.get('payment_id');
+            if (checkoutStatus === 'success' && receiptId) {
+                router.replace(`/whop/welcome?${params.toString()}`);
+                return;
+            }
+
+            // ── Referral code capture ────────────────────────────────────────────
             // Referral code from URL (e.g. trademind.bot/?ref=ERIC54)
             const ref = params.get('ref') || params.get('code');
             if (ref && !localStorage.getItem('tm_referralCode')) {
@@ -63,7 +77,7 @@ export default function SinglePageMarketing() {
         } catch {
             // localStorage may be unavailable in certain browsers — fail silently
         }
-    }, []);
+    }, [router]);
 
 
     useEffect(() => {

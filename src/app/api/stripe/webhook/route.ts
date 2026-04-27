@@ -5,6 +5,7 @@ import { extendReferrerSubscription } from "@/lib/stripe-extend";
 import { resolvePromoCode } from "@/lib/promo-codes";
 import { PRICING } from "@/lib/pricing-config";
 import { sendWhopDM } from "@/lib/whop";
+import { promoteToWhopCommunity, revokeWhopCommunity } from "@/lib/whop-community";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs'; // Required for raw body access in App Router
@@ -137,6 +138,19 @@ async function processWebhookEvent(event: Stripe.Event) {
                 );
             }
 
+            // ── Whop Community Promotion ────────────────────────────────────────
+            // If user came from Whop trial, promote them to free community tier
+            const whopUserRes = await pool.query(
+                `SELECT whop_user_id FROM user_settings WHERE user_id = $1`,
+                [userId]
+            );
+            const whopUserId = whopUserRes.rows[0]?.whop_user_id;
+            if (whopUserId) {
+                await promoteToWhopCommunity(whopUserId).catch(e =>
+                    console.warn('[Stripe Webhook] Whop community promotion failed (non-fatal):', e)
+                );
+            }
+
             // Store referral relationship if present
             if (referralCode) {
                 const referrerUserId = await linkReferral(referralCode, userId, customerId);
@@ -242,6 +256,16 @@ async function processWebhookEvent(event: Stripe.Event) {
                  WHERE stripe_customer_id = $1`,
                 [customerId]
             );
+
+            // Revoke Whop community access
+            const whopRes = await pool.query(
+                `SELECT whop_user_id FROM user_settings WHERE stripe_customer_id = $1`,
+                [customerId]
+            );
+            const canceledWhopUserId = whopRes.rows[0]?.whop_user_id;
+            if (canceledWhopUserId) {
+                await revokeWhopCommunity(canceledWhopUserId).catch(() => {});
+            }
 
             // Deactivate all AI feature subscriptions
             await pool.query(

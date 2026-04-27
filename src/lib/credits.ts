@@ -14,7 +14,13 @@ import Stripe from 'stripe';
 import { query } from '@/lib/db';
 import { creditsToBonusDays } from '@/lib/pricing-config';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '');
+/** Lazy Stripe getter — avoids crash at import time when STRIPE_SECRET_KEY is missing */
+function getStripe(): Stripe {
+    if (!process.env.STRIPE_SECRET_KEY) {
+        throw new Error('[Credits] STRIPE_SECRET_KEY is not configured');
+    }
+    return new Stripe(process.env.STRIPE_SECRET_KEY);
+}
 
 export type CreditSource =
     | 'loyalty'
@@ -91,7 +97,7 @@ export async function extendStripeSubscription(
         return { newPeriodEnd: new Date(), daysAdded: 0 };
     }
 
-    const sub = await stripe.subscriptions.retrieve(subscriptionId) as any;
+    const sub = await getStripe().subscriptions.retrieve(subscriptionId) as any;
 
     // If there's already a future trial_end (stacked extension), build on that
     const baseTimestamp: number =
@@ -101,7 +107,7 @@ export async function extendStripeSubscription(
 
     const newTrialEnd = baseTimestamp + bonusDays * 86400; // seconds
 
-    await stripe.subscriptions.update(subscriptionId, {
+    await getStripe().subscriptions.update(subscriptionId, {
         // trial_end accepts Unix timestamp — confirmed in Stripe billing docs
         trial_end: newTrialEnd as any,
         proration_behavior: 'none',

@@ -29,40 +29,29 @@ const REGIME_EMOJI: Record<string, string> = {
 // ── Command handlers ──────────────────────────────────────────────────────────
 
 async function cmdSignal(): Promise<string> {
-    // Fetch today's latest signal from DB
-    const today = new Date().toISOString().split('T')[0];
+    // Read from whop_posts — populated by EC2 signal bridge (/api/internal/publish-to-whop)
     const { rows } = await query(
-        `SELECT regime, confidence, allocation, created_at
-         FROM turbocore_signals
-         WHERE DATE(created_at) = $1
-         ORDER BY created_at DESC LIMIT 1`,
-        [today]
+        `SELECT content, signal_date, regime, confidence
+         FROM whop_posts
+         WHERE post_type = 'signal'
+         ORDER BY signal_date DESC LIMIT 1`
     );
 
     if (!rows.length) {
+        const today = new Date().toISOString().split('T')[0];
         return `📊 No signal yet for today (${today}). Check back at 3 PM ET.`;
     }
 
-    const s = rows[0];
-    const alloc = typeof s.allocation === 'string' ? JSON.parse(s.allocation) : s.allocation;
-    const emoji = REGIME_EMOJI[s.regime] ?? '📊';
-
-    return `**${emoji} TurboCore Signal — ${today}**
-Regime: **${s.regime}** | Confidence: ${s.confidence}%
-
-**Allocation:**
-• QQQ: ${alloc.QQQ ?? alloc.qqq ?? '—'}%
-• QLD: ${alloc.QLD ?? alloc.qld ?? '—'}%
-• TQQQ: ${alloc.TQQQ ?? alloc.tqqq ?? '—'}%
-• SGOV: ${alloc.SGOV ?? alloc.sgov ?? '—'}%
-
-_Full reasoning at trademind.bot/dashboard. Educational analysis only._`;
+    // Return the already-formatted signal content posted by the EC2 bridge
+    return rows[0].content;
 }
 
 async function cmdRegime(): Promise<string> {
+    // Read regime/confidence from whop_posts (populated by EC2 bridge)
     const { rows } = await query(
-        `SELECT regime, confidence FROM turbocore_signals
-         ORDER BY created_at DESC LIMIT 1`
+        `SELECT regime, confidence FROM whop_posts
+         WHERE post_type = 'signal' AND regime IS NOT NULL
+         ORDER BY signal_date DESC LIMIT 1`
     );
 
     if (!rows.length) return '📊 No signal data available yet.';

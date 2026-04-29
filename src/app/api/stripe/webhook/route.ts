@@ -572,6 +572,8 @@ function determineTierFromPrice(priceId: string): string {
         [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_ANNUAL_PRICE_ID || ""]: "turbocore",
         [process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID || ""]: "turbocore_pro",
         [process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID || ""]: "turbocore_pro",
+        [process.env.NEXT_PUBLIC_STRIPE_LEAPS_MONTHLY_PRICE_ID || ""]: "qqq_leaps",
+        [process.env.NEXT_PUBLIC_STRIPE_LEAPS_ANNUAL_PRICE_ID || ""]: "qqq_leaps",
         [process.env.NEXT_PUBLIC_STRIPE_BUNDLE_MONTHLY_PRICE_ID || ""]: "both_bundle",
         [process.env.NEXT_PUBLIC_STRIPE_BUNDLE_ANNUAL_PRICE_ID || ""]: "both_bundle",
     };

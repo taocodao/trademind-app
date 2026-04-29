@@ -49,6 +49,30 @@ export async function PATCH(req: NextRequest) {
              );
         }
 
+        if (body.turbocore_auto_approve !== undefined) {
+             await query(
+                 `INSERT INTO user_settings (user_id, turbocore_auto_approve) VALUES ($2, $1)
+                  ON CONFLICT (user_id) DO UPDATE SET turbocore_auto_approve = $1`,
+                 [body.turbocore_auto_approve, userId]
+             );
+        }
+
+        if (body.turbocore_pro_auto_approve !== undefined) {
+             await query(
+                 `INSERT INTO user_settings (user_id, turbocore_pro_auto_approve) VALUES ($2, $1)
+                  ON CONFLICT (user_id) DO UPDATE SET turbocore_pro_auto_approve = $1`,
+                 [body.turbocore_pro_auto_approve, userId]
+             );
+        }
+
+        if (body.leaps_auto_approve !== undefined) {
+             await query(
+                 `INSERT INTO user_settings (user_id, leaps_auto_approve) VALUES ($2, $1)
+                  ON CONFLICT (user_id) DO UPDATE SET leaps_auto_approve = $1`,
+                 [body.leaps_auto_approve, userId]
+             );
+        }
+
         if (body.has_completed_onboarding !== undefined) {
              await query(
                  `INSERT INTO user_settings (user_id, has_completed_onboarding) VALUES ($2, $1) 

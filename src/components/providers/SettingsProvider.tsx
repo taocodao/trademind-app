@@ -23,7 +23,9 @@ interface AppSettings {
     tastytrade: TastytradeSettings;
     investmentPrincipal: Record<string, number>; // strategy key -> amount
     riskLevel: RiskLevel;
-    autoApproval: boolean;
+    autoApproval: boolean; // Legacy global — kept for backward compat
+    // Per-strategy auto-approval (Option A: all three independent)
+    autoApprovalByStrategy: Record<string, boolean>;
     turboBounceMode: 'MODE_A' | 'MODE_B';
     shadowLedger: Record<string, ShadowLedger>; // strategy key -> shadow ledger
     subscription_tier?: string;
@@ -36,6 +38,7 @@ interface SettingsContextValue {
     setInvestmentPrincipal: (strategy: string, amount: number) => void;
     setRiskLevel: (level: RiskLevel) => void;
     setAutoApproval: (enabled: boolean) => void;
+    setStrategyAutoApproval: (strategy: string, enabled: boolean) => void;
     setTurboBounceMode: (mode: 'MODE_A' | 'MODE_B') => void;
     updateShadowLedger: (strategy: string, updates: Partial<ShadowLedger>) => void;
     clearSettings: () => void;
@@ -47,6 +50,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     investmentPrincipal: {},
     riskLevel: 'MEDIUM',
     autoApproval: false,
+    autoApprovalByStrategy: {},
     turboBounceMode: 'MODE_B',
     shadowLedger: {},
     preferredLanguage: 'en',
@@ -58,6 +62,7 @@ const SettingsContext = createContext<SettingsContextValue>({
     setInvestmentPrincipal: (_strategy: string, _amount: number) => { },
     setRiskLevel: (_level: RiskLevel) => { },
     setAutoApproval: (_enabled: boolean) => { },
+    setStrategyAutoApproval: (_strategy: string, _enabled: boolean) => { },
     setTurboBounceMode: (_mode: 'MODE_A' | 'MODE_B') => { },
     updateShadowLedger: (_strategy: string, _updates: Partial<ShadowLedger>) => { },
     clearSettings: () => { },
@@ -147,6 +152,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
                             changed = true;
                         }
 
+                        // ── Per-strategy auto-approve sync ──────────────────
+                        if (data.strategyAutoApprove) {
+                            const merged = { ...(prev.autoApprovalByStrategy || {}), ...data.strategyAutoApprove };
+                            updated = { ...updated, autoApprovalByStrategy: merged };
+                            changed = true;
+                        }
+
                         // ── Language sync ──────────────────────────────────
                         const dbLang = data.preferredLanguage as Lang;
 
@@ -227,6 +239,37 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    const setStrategyAutoApproval = async (strategy: string, enabled: boolean) => {
+        const updated = {
+            ...settings,
+            autoApprovalByStrategy: { ...settings.autoApprovalByStrategy, [strategy]: enabled },
+        };
+        persist(updated);
+        // Push per-strategy state to backend
+        try {
+            const token = await getAccessToken();
+            // Map strategy key -> DB column name
+            const colMap: Record<string, string> = {
+                TQQQ_TURBOCORE:     'turbocore_auto_approve',
+                TQQQ_TURBOCORE_PRO: 'turbocore_pro_auto_approve',
+                QQQ_LEAPS:          'leaps_auto_approve',
+            };
+            const col = colMap[strategy];
+            if (col) {
+                await fetch('/api/settings/notifications', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    },
+                    body: JSON.stringify({ [col]: enabled }),
+                });
+            }
+        } catch (err) {
+            console.error('Failed to sync per-strategy auto approve', err);
+        }
+    };
+
     // setLanguage — applies immediately to i18n, persists to localStorage + DB
     const setLanguage = async (lang: Lang) => {
         i18n.changeLanguage(lang);                          // instant UI update
@@ -273,6 +316,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             setInvestmentPrincipal,
             setRiskLevel,
             setAutoApproval,
+            setStrategyAutoApproval,
             setTurboBounceMode,
             updateShadowLedger,
             clearSettings,

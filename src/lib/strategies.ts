@@ -1,4 +1,4 @@
-import { Brain, Zap, Activity } from 'lucide-react';
+import { Brain, Zap, Activity, Layers } from 'lucide-react';
 
 export interface StrategyConfig {
     key: string;                      // DB strategy key, e.g. 'TQQQ_TURBOCORE'
@@ -8,7 +8,7 @@ export interface StrategyConfig {
     icon: typeof Brain;               // Lucide icon component
     color: string;                    // Tailwind accent color class
     managedSymbols: string[];         // Symbols this strategy trades
-    signalCardType: 'turbocore' | 'turbobounce' | 'theta' | 'calendar' | 'generic';
+    signalCardType: 'turbocore' | 'turbobounce' | 'theta' | 'calendar' | 'generic' | 'qqq_leaps';
 }
 
 export const STRATEGIES: StrategyConfig[] = [
@@ -24,13 +24,23 @@ export const STRATEGIES: StrategyConfig[] = [
     },
     {
         key: 'TQQQ_TURBOCORE_PRO',
-        label: 'TurboCore Pro',
+        label: 'Turbo Pro',
         shortLabel: 'Pro',
-        description: 'Enhanced allocation with advanced ML regime detection',
+        description: 'IV-Switching composite: CSP, ZEBRA, Bear Call Spreads, Crash Hedge',
         icon: Zap,
         color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
-        managedSymbols: ['QQQ', 'QLD', 'TQQQ', 'QQQ_LEAPS', 'SGOV'],
-        signalCardType: 'turbocore',
+        managedSymbols: ['QQQ', 'QQQM', 'TQQQ', 'SQQQ'],
+        signalCardType: 'turbocore',  // routes internally to IVSwitchingSignalCard
+    },
+    {
+        key: 'QQQ_LEAPS',
+        label: 'QQQ LEAPS',
+        shortLabel: 'LEAPS',
+        description: 'ML-powered QQQ LEAPS call strategy — ENTER / EXIT / HOLD signals',
+        icon: Layers,
+        color: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+        managedSymbols: ['QQQ'],
+        signalCardType: 'qqq_leaps',
     },
 ];
 
@@ -40,17 +50,20 @@ export function getStrategy(key: string): StrategyConfig | undefined {
 }
 
 // User Subscription Tiers
-export type SubscriptionTier = 'TURBOCORE' | 'TURBOCORE_PRO' | 'BOTH';
+export type SubscriptionTier = 'TURBOCORE' | 'TURBOCORE_PRO' | 'QQQ_LEAPS' | 'BOTH';
 
 export function getStrategiesForSubscription(tier: SubscriptionTier): string[] {
     switch (tier) {
         case 'TURBOCORE':
             return ['TQQQ_TURBOCORE'];
         case 'TURBOCORE_PRO':
-            // Pro tab shows both TurboCore Pro rebalance + QQQ LEAPS signals
+            // Pro tab shows IV-Switching signals (TQQQ_TURBOCORE_PRO)
             return ['TQQQ_TURBOCORE_PRO'];
+        case 'QQQ_LEAPS':
+            return ['QQQ_LEAPS'];
         case 'BOTH':
-            return ['TQQQ_TURBOCORE', 'TQQQ_TURBOCORE_PRO'];
+            // All Access bundle gets all three strategies
+            return ['TQQQ_TURBOCORE', 'TQQQ_TURBOCORE_PRO', 'QQQ_LEAPS'];
         default:
             return [];
     }

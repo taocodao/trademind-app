@@ -400,9 +400,7 @@ function DashboardContent() {
         const activeUp = activeStrategy.toUpperCase();
         const isMatch = stratKey === activeUp ||
             // Temporary fallback for older 'rebalance' types that implicitly meant TQQQ_TURBOCORE
-            ((s as any).type === 'REBALANCE' && activeStrategy === 'TQQQ_TURBOCORE' && s.strategy === undefined) ||
-            // QQQ_LEAPS signals appear inside the Pro tab
-            (stratKey === 'QQQ_LEAPS' && activeUp === 'TQQQ_TURBOCORE_PRO');
+            ((s as any).type === 'REBALANCE' && activeStrategy === 'TQQQ_TURBOCORE' && s.strategy === undefined);
 
         if (!isMatch) return false;
 
@@ -1189,9 +1187,7 @@ function DashboardContent() {
 
                     <div className="flex items-center justify-between mb-3 mt-4">
                         <h2 className="font-semibold text-sm">
-                            {activeStrategy === 'TQQQ_TURBOCORE_PRO'
-                                ? t('dashboard.signals_header_pro', 'TurboCore Pro + LEAPS Signals')
-                                : t('dashboard.signals_header', '{{strategy}} Signals', { strategy: activeStrategyConfig?.label || 'TurboCore' })}
+                            {t('dashboard.signals_header', '{{strategy}} Signals', { strategy: activeStrategyConfig?.label || 'TurboCore' })}
                         </h2>
                         {coreSignals.length > 0 && (
                             <span className="text-xs bg-tm-purple/20 text-tm-purple px-2 py-0.5 rounded-full">
@@ -1208,8 +1204,10 @@ function DashboardContent() {
                                 <CheckCircle className="w-10 h-10 text-tm-green opacity-60" />
                                 <p className="font-semibold text-sm">{t('dashboard.aligned_title', 'Portfolio Target Aligned')}</p>
                                 <p className="text-xs text-tm-muted">
-                                    {activeStrategy === 'TQQQ_TURBOCORE_PRO'
-                                        ? t('dashboard.pro_aligned_desc', 'No rebalance or LEAPS signal today — portfolio on target.')
+                                    {activeStrategy === 'QQQ_LEAPS'
+                                        ? t('dashboard.leaps_aligned_desc', 'No LEAPS ENTER/EXIT signal today — position on target.')
+                                        : activeStrategy === 'TQQQ_TURBOCORE_PRO'
+                                        ? t('dashboard.pro_aligned_desc', 'No IV-Switching signal today — portfolio on target.')
                                         : t('dashboard.aligned_desc', 'No pending ML target rebalances requested.')}
                                 </p>
                             </div>

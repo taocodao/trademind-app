@@ -75,7 +75,10 @@ function buildSubject(data: SignalEmailData): string {
     const dateStr = new Date().toLocaleDateString('en-US', {
         weekday: 'short', month: 'short', day: 'numeric',
     });
-    const strategyLabel = data.strategy.includes('PRO') ? 'TurboCore Pro' : 'TurboCore';
+    const stratUp = data.strategy.toUpperCase();
+    const strategyLabel =
+        stratUp.includes('LEAPS') ? 'QQQ LEAPS'  :
+        stratUp.includes('PRO')   ? 'Turbo Pro'   : 'TurboCore';
     const hasActivity = data.equityOrders.length > 0 || data.optionsCloses.length > 0 || data.optionsEntries.length > 0;
 
     if (!hasActivity) {
@@ -90,7 +93,10 @@ function buildSubject(data: SignalEmailData): string {
 
 function buildTextBody(data: SignalEmailData): string {
     const lines: string[] = [];
-    const strategyLabel = data.strategy.includes('PRO') ? 'TurboCore Pro' : 'TurboCore';
+    const stratUp = data.strategy.toUpperCase();
+    const strategyLabel =
+        stratUp.includes('LEAPS') ? 'QQQ LEAPS'  :
+        stratUp.includes('PRO')   ? 'Turbo Pro'   : 'TurboCore';
 
     lines.push(`TradeMind ${strategyLabel} — Daily Signal`);
     lines.push('='.repeat(48));
@@ -155,7 +161,10 @@ function buildTextBody(data: SignalEmailData): string {
 // ─── HTML Body — Clean Black & White ─────────────────────────────────────────
 
 function buildHtmlBody(data: SignalEmailData): string {
-    const strategyLabel = data.strategy.includes('PRO') ? 'TurboCore Pro' : 'TurboCore';
+    const stratUp = data.strategy.toUpperCase();
+    const strategyLabel =
+        stratUp.includes('LEAPS') ? 'QQQ LEAPS'  :
+        stratUp.includes('PRO')   ? 'Turbo Pro'   : 'TurboCore';
     const dateStr = new Date().toLocaleDateString('en-US', {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     });

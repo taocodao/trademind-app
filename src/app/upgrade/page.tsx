@@ -19,18 +19,21 @@ interface TrialInfo {
 const PLAN_ICONS: Record<PlanKey, React.ComponentType<any>> = {
     turbocore:     Brain,
     turbocore_pro: Zap,
+    qqq_leaps:     Layers,
     both_bundle:   Layers,
 };
 
 const PLAN_ACCENT: Record<PlanKey, string> = {
     turbocore:     'from-purple-500/20 to-purple-600/5 border-purple-500/30',
     turbocore_pro: 'from-indigo-500/20 to-indigo-600/5 border-indigo-500/30',
-    both_bundle:   'from-amber-500/20 to-amber-600/5 border-amber-500/30',
+    qqq_leaps:     'from-amber-500/20 to-amber-600/5 border-amber-500/30',
+    both_bundle:   'from-emerald-500/20 to-emerald-600/5 border-emerald-500/30',
 };
 
 const PLAN_BADGE: Record<PlanKey, string | null> = {
     turbocore:     null,
     turbocore_pro: 'Most Popular',
+    qqq_leaps:     'New',
     both_bundle:   'Best Value',
 };
 
@@ -176,20 +179,21 @@ function PlanCard({
 // ── Comparison Table ──────────────────────────────────────────────────────────
 
 const COMPARE_FEATURES = [
-    { label: 'TurboCore ML Signal',        turbocore: true,  turbocore_pro: true,  both_bundle: true  },
-    { label: 'SMA200 Gate',                turbocore: true,  turbocore_pro: true,  both_bundle: true  },
-    { label: 'Tastytrade Auto-Execution',  turbocore: true,  turbocore_pro: true,  both_bundle: true  },
-    { label: 'Enhanced ML Regime',         turbocore: false, turbocore_pro: true,  both_bundle: true  },
-    { label: 'VIX Positioning',            turbocore: false, turbocore_pro: true,  both_bundle: true  },
-    { label: 'QQQ LEAPS Strategy',         turbocore: false, turbocore_pro: true,  both_bundle: true  },
-    { label: 'Early Signal Access',        turbocore: false, turbocore_pro: true,  both_bundle: true  },
-    { label: 'TurboBounce Alpha',          turbocore: false, turbocore_pro: false, both_bundle: true  },
-    { label: 'Portfolio Allocation Tools', turbocore: false, turbocore_pro: false, both_bundle: true  },
-    { label: 'Founder Office Hours',       turbocore: false, turbocore_pro: false, both_bundle: true  },
+    { label: 'TurboCore ML Signal',          turbocore: true,  turbocore_pro: true,  qqq_leaps: false, both_bundle: true  },
+    { label: 'SMA200 Gate',                  turbocore: true,  turbocore_pro: true,  qqq_leaps: false, both_bundle: true  },
+    { label: 'Tastytrade Auto-Execution',    turbocore: true,  turbocore_pro: true,  qqq_leaps: false, both_bundle: true  },
+    { label: 'IV-Switching (CSP/ZEBRA/CCS)', turbocore: false, turbocore_pro: true,  qqq_leaps: false, both_bundle: true  },
+    { label: 'Crash Hedge (SQQQ Mode)',      turbocore: false, turbocore_pro: true,  qqq_leaps: false, both_bundle: true  },
+    { label: 'Early Signal Access',          turbocore: false, turbocore_pro: true,  qqq_leaps: true,  both_bundle: true  },
+    { label: 'QQQ LEAPS ML Signal',          turbocore: false, turbocore_pro: false, qqq_leaps: true,  both_bundle: true  },
+    { label: 'LEAPS Position Tracking',      turbocore: false, turbocore_pro: false, qqq_leaps: true,  both_bundle: true  },
+    { label: 'TurboBounce Alpha',            turbocore: false, turbocore_pro: false, qqq_leaps: false, both_bundle: true  },
+    { label: 'Portfolio Allocation Tools',   turbocore: false, turbocore_pro: false, qqq_leaps: false, both_bundle: true  },
+    { label: 'Founder Office Hours',         turbocore: false, turbocore_pro: false, qqq_leaps: false, both_bundle: true  },
 ];
 
 function CompareTable({ interval }: { interval: Interval }) {
-    const plans: PlanKey[] = ['turbocore', 'turbocore_pro', 'both_bundle'];
+    const plans: PlanKey[] = ['turbocore', 'turbocore_pro', 'qqq_leaps', 'both_bundle'];
     return (
         <div className="overflow-x-auto rounded-xl border border-white/10">
             <table className="w-full text-sm">
@@ -350,8 +354,8 @@ function UpgradePageInner() {
                     <p className="text-gray-400 text-lg mb-8">
                         Your $15 trial converts to bonus days on your subscription — no price change, just extra time.
                         TurboCore gets <strong className="text-white">{creditsToBonusDays(trialCreditCents, PRICING.plans.turbocore.monthly)} days</strong>,
-                        Pro gets <strong className="text-white">{creditsToBonusDays(trialCreditCents, PRICING.plans.turbocore_pro.monthly)} days</strong>,
-                        Bundle gets <strong className="text-white">{creditsToBonusDays(trialCreditCents, PRICING.plans.both_bundle.monthly)} days</strong>.
+                        Pro &amp; LEAPS get <strong className="text-white">{creditsToBonusDays(trialCreditCents, PRICING.plans.turbocore_pro.monthly)} days</strong>,
+                        All Access gets <strong className="text-white">{creditsToBonusDays(trialCreditCents, PRICING.plans.both_bundle.monthly)} days</strong>.
                     </p>
 
                     {/* Countdown */}
@@ -397,10 +401,10 @@ function UpgradePageInner() {
                 </div>
             </div>
 
-            {/* ── Plan Cards ─────────────────────────────────────────────────── */}
-            <section className="max-w-5xl mx-auto px-4 mb-16">
+            {/* ── Plan Cards — 3 main plans ──────────────────────────────────── */}
+            <section className="max-w-5xl mx-auto px-4 mb-8">
                 <div className="grid md:grid-cols-3 gap-6 items-start">
-                    {(['turbocore', 'turbocore_pro', 'both_bundle'] as PlanKey[]).map(key => (
+                    {(['turbocore', 'turbocore_pro', 'qqq_leaps'] as PlanKey[]).map(key => (
                         <PlanCard
                             key={key}
                             planKey={key}
@@ -409,6 +413,48 @@ function UpgradePageInner() {
                             isHighlighted={key === 'turbocore_pro'}
                         />
                     ))}
+                </div>
+            </section>
+
+            {/* ── All Access Bundle Banner ───────────────────────────────────── */}
+            <section className="max-w-5xl mx-auto px-4 mb-16">
+                <div className="relative rounded-2xl border bg-gradient-to-r from-emerald-500/10 via-indigo-500/10 to-amber-500/10 border-emerald-500/20 p-6">
+                    <div className="absolute -top-3 left-8">
+                        <span className="bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-full">Best Value</span>
+                    </div>
+                    <div className="flex flex-col md:flex-row md:items-center gap-6">
+                        <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="p-2 rounded-lg bg-white/10">
+                                    <Layers className="w-5 h-5 text-white" />
+                                </div>
+                                <h3 className="font-bold text-xl text-white">{PRICING.plans.both_bundle.label}</h3>
+                            </div>
+                            <p className="text-gray-400 text-sm mb-3">{PRICING.plans.both_bundle.description}</p>
+                            <div className="flex flex-wrap gap-2">
+                                {PRICING.plans.both_bundle.features.map(f => (
+                                    <span key={f} className="flex items-center gap-1 text-xs text-gray-300 bg-white/5 border border-white/10 rounded-full px-3 py-1">
+                                        <CheckCircle className="w-3 h-3 text-emerald-400 flex-shrink-0" />{f}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="flex flex-col items-center md:items-end gap-3 shrink-0">
+                            <div>
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-4xl font-extrabold text-white">${interval === 'annual' ? PRICING.plans.both_bundle.annual : PRICING.plans.both_bundle.monthly}</span>
+                                    <span className="text-gray-400 text-sm">{interval === 'annual' ? '/yr' : '/mo'}</span>
+                                </div>
+                                {interval === 'annual' && <p className="text-gray-500 text-xs">${PRICING.plans.both_bundle.annualPerMonth.toFixed(2)}/mo effective</p>}
+                            </div>
+                            <a
+                                href={`/api/stripe/checkout?plan=both_bundle&interval=${interval}&promo=${PRICING.trial.promoCode}`}
+                                className="flex items-center justify-center gap-2 rounded-xl py-3 px-8 font-bold text-sm transition-all bg-emerald-600 hover:bg-emerald-500 text-white"
+                            >
+                                Get All Access <ArrowRight className="w-4 h-4" />
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </section>
 

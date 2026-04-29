@@ -34,6 +34,7 @@ export async function GET(req: NextRequest) {
                     current_period_end, trial_end, stripe_price_id, cancel_at_period_end,
                     cancel_at, email_signal_alerts, email, has_completed_onboarding,
                     global_auto_approve, preferred_language,
+                    turbocore_auto_approve, turbocore_pro_auto_approve, leaps_auto_approve,
                     app_trial_count, app_trial_started_at, app_trial_tier,
                     app_trial_2_started_at
              FROM user_settings WHERE user_id = $1`,
@@ -84,6 +85,11 @@ export async function GET(req: NextRequest) {
                 email: row.email || null,
                 hasCompletedOnboarding: row.has_completed_onboarding ?? false,
                 globalAutoApprove: row.global_auto_approve !== false,
+                strategyAutoApprove: {
+                    TQQQ_TURBOCORE:     row.turbocore_auto_approve ?? false,
+                    TQQQ_TURBOCORE_PRO: row.turbocore_pro_auto_approve ?? false,
+                    QQQ_LEAPS:          row.leaps_auto_approve ?? false,
+                },
                 preferredLanguage: row.preferred_language || 'en',
                 appTrialCount: row.app_trial_count || 0,
                 appTrialAvailable: false,
@@ -138,6 +144,11 @@ export async function GET(req: NextRequest) {
             email: row.email || null,
             hasCompletedOnboarding: row.has_completed_onboarding ?? false,
             globalAutoApprove: row.global_auto_approve !== false,
+            strategyAutoApprove: {
+                TQQQ_TURBOCORE:     row.turbocore_auto_approve ?? false,
+                TQQQ_TURBOCORE_PRO: row.turbocore_pro_auto_approve ?? false,
+                QQQ_LEAPS:          row.leaps_auto_approve ?? false,
+            },
             preferredLanguage: row.preferred_language || 'en',
             appTrialCount: trialCount,
             appTrialAvailable,

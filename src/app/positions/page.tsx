@@ -64,9 +64,16 @@ export default function PositionsPage() {
     const [onboardingAmount, setOnboardingAmount] = useState('');
     const [realizedPnl, setRealizedPnl] = useState<number | null>(null);
 
+    const INITIAL_BY_STRATEGY: Record<string, number> = {
+        TQQQ_TURBOCORE: 5000,
+        TQQQ_TURBOCORE_PRO: 25000,
+        QQQ_LEAPS: 25000,
+    };
+
     const handleOnboardingSubmit = async () => {
         if (!onboardingAmount) return;
-        const diff = parseFloat(onboardingAmount) - 25000;
+        const initialCapital = INITIAL_BY_STRATEGY[activeStrategy] ?? 25000;
+        const diff = parseFloat(onboardingAmount) - initialCapital;
         const action = diff > 0 ? 'deposit' : 'withdraw';
         const absoluteAmount = Math.abs(diff);
 
@@ -454,7 +461,9 @@ export default function PositionsPage() {
                         </div>
                         <h3 className="text-lg font-bold text-center mb-2">{t('positions_page.set_capital_title', 'Set Your Starting Capital')}</h3>
                         <p className="text-xs text-tm-muted text-center mb-6 leading-relaxed">
-                            {t('positions_page.set_capital_desc', "Enter the amount you're starting with. This initializes your virtual portfolio to mirror real position sizing from TurboCore signals.")}
+                            {activeStrategy === 'QQQ_LEAPS'
+                                ? "Enter the capital you're allocating to QQQ LEAPS. This tracks your LEAPS positions by notional cost (entry price × 100 × contracts)."
+                                : t('positions_page.set_capital_desc', "Enter the amount you're starting with. This initializes your virtual portfolio to mirror real position sizing from TurboCore signals.")}
                         </p>
                         <input
                             type="number"
@@ -599,7 +608,7 @@ export default function PositionsPage() {
                                     equityPositions.map((pos) => {
                                         const isProfit = pos.unrealizedPnl >= 0;
                                         const symbolColors: Record<string, string> = {
-                                            'QQQ': 'text-blue-400',
+                                            'QQQ': activeStrategy === 'QQQ_LEAPS' ? 'text-amber-400' : 'text-blue-400',
                                             'QLD': 'text-indigo-400',
                                             'TQQQ': 'text-purple-400',
                                             'SGOV': 'text-emerald-400',

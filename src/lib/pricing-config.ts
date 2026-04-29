@@ -30,31 +30,49 @@ export const PRICING = {
         },
         turbocore_pro: {
             key: 'turbocore_pro',
-            label: 'TurboCore Pro',
+            label: 'Turbo Pro',
             monthly: 49,
             annual: 399,
             annualPerMonth: 33.25,
             annualSavingsPct: 32,
-            description: 'Enhanced ML Regime Detection, Dynamic VIX Positioning, Early Signal Access',
+            description: 'IV-Switching Composite Strategy: CSP, ZEBRA, Bear Call Spreads, Crash Hedge',
             features: [
                 'Everything in TurboCore',
-                'Enhanced ML Regime Detection',
-                'Dynamic VIX Positioning',
-                'QQQ LEAPS Strategy',
+                'IV-Switching Composite (CSP / ZEBRA / CCS)',
+                'Crash Hedge Mode (SQQQ)',
+                'Options Overlay Execution',
                 'Early Signal Access',
                 'Priority Support',
             ],
         },
+        qqq_leaps: {
+            key: 'qqq_leaps',
+            label: 'QQQ LEAPS',
+            monthly: 49,
+            annual: 399,
+            annualPerMonth: 33.25,
+            annualSavingsPct: 32,
+            description: 'ML-Powered QQQ Long-Term Equity Anticipation Securities — ENTER / EXIT / HOLD signals',
+            features: [
+                'Daily ML LEAPS Signal (ENTER / EXIT / HOLD)',
+                'QQQ LEAPS Call Selection (0.70+ delta, 12-month)',
+                'Regime Detection (BULL_STRONG / BULL / CHOPPY / BEAR)',
+                'Virtual LEAPS Position Tracking',
+                'Manual Order Instructions',
+                'Signal History',
+            ],
+        },
         both_bundle: {
             key: 'both_bundle',
-            label: 'Both Bundle',
-            monthly: 69,
-            annual: 549,
-            annualPerMonth: 45.75,
-            annualSavingsPct: 33,
-            description: 'All models + TurboBounce Alpha, Portfolio Allocation Tooling, Founder Office Hours',
+            label: 'All Access',
+            monthly: 89,
+            annual: 699,
+            annualPerMonth: 58.25,
+            annualSavingsPct: 35,
+            description: 'All three strategies + TurboBounce Alpha, Portfolio Allocation Tooling, Founder Office Hours',
             features: [
-                'Everything in Pro',
+                'Everything in Turbo Pro',
+                'QQQ LEAPS Strategy',
                 'TurboBounce Alpha Signals',
                 'Portfolio Allocation Tooling',
                 'Founder Office Hours',
@@ -67,7 +85,7 @@ export const PRICING = {
     trial: {
         price: 15,
         durationDays: 30,
-        // Whop trial gives full Bundle access so the user experiences everything
+        // Whop trial gives full All Access so the user experiences everything
         accessTier: 'both_bundle',
         // $15 returned as credits (stored as cents). Bonus days = plan-specific.
         creditCents: 1500,
@@ -82,7 +100,8 @@ export const PRICING = {
         effectiveMonthlyPerPlan: {
             turbocore:     10.38,   // $249 / 24 months
             turbocore_pro: 16.63,   // $399 / 24
-            both_bundle:   22.88,   // $549 / 24
+            qqq_leaps:     16.63,   // $399 / 24
+            both_bundle:   29.13,   // $699 / 24
         },
     },
 
@@ -107,7 +126,8 @@ export const PRICING = {
         // Day equivalents at default:
         //   TurboCore $29:  floor(100 * 30 / 29) = 103 days
         //   Pro       $49:  floor(100 * 30 / 49) = 61  days
-        //   Bundle    $69:  floor(100 * 30 / 69) = 43  days
+        //   LEAPS     $49:  floor(100 * 30 / 49) = 61  days
+        //   Bundle    $89:  floor(100 * 30 / 89) = 33  days
         referralBothSidesCents: parseInt(process.env.REFERRAL_CREDIT_CENTS ?? '10000', 10),
     },
 } as const;
@@ -120,10 +140,10 @@ export type PlanKey = keyof typeof PRICING.plans;
  *
  * Example outputs:
  *   creditsToBonusDays(1500, 29) → 15   ($15 on TurboCore)
- *   creditsToBonusDays(1500, 49) →  9   ($15 on Pro)
- *   creditsToBonusDays(1500, 69) →  6   ($15 on Bundle)
+ *   creditsToBonusDays(1500, 49) →  9   ($15 on Pro or LEAPS)
+ *   creditsToBonusDays(1500, 89) →  5   ($15 on All Access)
  *   creditsToBonusDays(2000, 29) → 20   ($20 loyalty on TurboCore)
- *   creditsToBonusDays(10000, 69) → 43  ($100 referral on Bundle)
+ *   creditsToBonusDays(10000, 89) → 33  ($100 referral on All Access)
  */
 export function creditsToBonusDays(creditCents: number, planMonthlyPrice: number): number {
     if (creditCents <= 0 || planMonthlyPrice <= 0) return 0;

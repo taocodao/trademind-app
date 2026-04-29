@@ -101,9 +101,8 @@ export default function SignalsPage() {
         const strat = (s.strategy || '').toLowerCase();
         // Fallback matching 'REBALANCE' type to 'TQQQ_TURBOCORE' if not explicitly defined
         const isLegacyRebalance = ((s as any).type === 'REBALANCE' && activeStrategy === 'TQQQ_TURBOCORE' && s.strategy === undefined);
-        // QQQ_LEAPS signals surface inside the Pro tab
-        const isLeapsUnderPro = strat === 'qqq_leaps' && activeStrategy === 'TQQQ_TURBOCORE_PRO';
-        if (strat !== activeStrategy.toLowerCase() && !isLegacyRebalance && !isLeapsUnderPro) {
+        // QQQ_LEAPS signals now live exclusively on their own tab — no more Pro alias
+        if (strat !== activeStrategy.toLowerCase() && !isLegacyRebalance) {
             return false;
         }
 
@@ -370,6 +369,60 @@ export default function SignalsPage() {
                                 </div>
                                 <div className="text-xs text-tm-muted bg-blue-500/10 border border-blue-500/20 p-2 rounded">
                                     This will intelligently size, route, and execute notional market orders to achieve these precise target allocations.
+                                </div>
+                            </div>
+                        ) : isQQQLEAPSSignal(confirmModal) ? (
+                            <div className="bg-tm-surface rounded-xl p-4 mb-4">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                                        <TrendingUp className="w-5 h-5 text-amber-400" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold">QQQ LEAPS</h3>
+                                        <p className="text-sm text-tm-muted">{(confirmModal as any).action} Signal</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                    {(confirmModal as any).strike && (
+                                        <div>
+                                            <p className="text-tm-muted">Strike</p>
+                                            <p className="font-mono font-semibold">${(confirmModal as any).strike}</p>
+                                        </div>
+                                    )}
+                                    {(confirmModal as any).expiry && (
+                                        <div>
+                                            <p className="text-tm-muted">Expiry</p>
+                                            <p className="font-semibold">{(confirmModal as any).expiry}</p>
+                                        </div>
+                                    )}
+                                    {(confirmModal as any).contracts && (
+                                        <div>
+                                            <p className="text-tm-muted">Contracts</p>
+                                            <p className="font-mono font-semibold">{(confirmModal as any).contracts}</p>
+                                        </div>
+                                    )}
+                                    {(confirmModal as any).entry_px && (
+                                        <div>
+                                            <p className="text-tm-muted">Entry Price</p>
+                                            <p className="font-mono font-semibold">${(confirmModal as any).entry_px?.toFixed(2)}</p>
+                                        </div>
+                                    )}
+                                    {(confirmModal as any).confidence && (
+                                        <div>
+                                            <p className="text-tm-muted">ML Score</p>
+                                            <p className="font-mono font-semibold text-amber-400">{((confirmModal as any).confidence * 100).toFixed(1)}%</p>
+                                        </div>
+                                    )}
+                                    {(confirmModal as any).regime && (
+                                        <div>
+                                            <p className="text-tm-muted">Regime</p>
+                                            <p className="font-semibold">{(confirmModal as any).regime?.replace(/_/g, ' ')}</p>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="text-xs text-tm-muted bg-amber-500/10 border border-amber-500/20 p-2 rounded mt-3">
+                                    This will log a virtual LEAPS position to your QQQ LEAPS shadow ledger.
                                 </div>
                             </div>
                         ) : (

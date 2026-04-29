@@ -214,6 +214,8 @@ export default function ActivityPage() {
             matchesStrategy = stratKey === 'tqqq_turbocore' || stratKey === 'turbocore' || isLegacyRebalance;
         } else if (activeLower === 'tqqq_turbocore_pro') {
             matchesStrategy = stratKey === 'tqqq_turbocore_pro' || stratKey === 'pro';
+        } else if (activeLower === 'qqq_leaps') {
+            matchesStrategy = stratKey === 'qqq_leaps';
         } else {
             matchesStrategy = stratKey === activeLower;
         }

@@ -80,6 +80,8 @@ export async function POST(req: NextRequest) {
             [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_ANNUAL_PRICE_ID  || '']: 29, // use monthly rate
             [process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID       || '']: 49,
             [process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID        || '']: 49,
+            [process.env.NEXT_PUBLIC_STRIPE_LEAPS_MONTHLY_PRICE_ID     || '']: 49,
+            [process.env.NEXT_PUBLIC_STRIPE_LEAPS_ANNUAL_PRICE_ID      || '']: 49,
             [process.env.NEXT_PUBLIC_STRIPE_BUNDLE_MONTHLY_PRICE_ID    || '']: 69,
             [process.env.NEXT_PUBLIC_STRIPE_BUNDLE_ANNUAL_PRICE_ID     || '']: 69,
         };
@@ -117,6 +119,7 @@ export async function POST(req: NextRequest) {
         const annualPriceIds = [
             process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_ANNUAL_PRICE_ID,
             process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID,
+            process.env.NEXT_PUBLIC_STRIPE_LEAPS_ANNUAL_PRICE_ID,
             process.env.NEXT_PUBLIC_STRIPE_BUNDLE_ANNUAL_PRICE_ID,
         ].filter(Boolean);
 

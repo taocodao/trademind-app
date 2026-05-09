@@ -68,6 +68,8 @@ function cmdHelp(): string {
 \`!regime\` — Current market regime + confidence
 \`!plan\` — Subscription plan options and pricing
 \`!backtest\` — 7-year performance summary
+\`!review\` — Leave a review on Whop
+\`!refer\` — Earn 40% commission by referring friends
 \`!help\` — Show this help message
 
 _Signals drop daily at 3 PM ET. Morning briefs at 8:15 AM ET._`;
@@ -96,6 +98,32 @@ Full methodology + data: trademind.bot
 _Past performance doesn't guarantee future results._`;
 }
 
+function cmdReview(): string {
+    return `**Enjoying TradeMind? Leave us a review 🙏**
+
+Your honest feedback helps other traders find us and helps us improve.
+
+→ Go to our Whop page and scroll to **Reviews**
+→ whop.com/trademind
+
+Takes 30 seconds. Thank you!`;
+}
+
+function cmdRefer(): string {
+    return `**Earn commission by sharing TradeMind 💰**
+
+As a member you earn **40% commission** on every trial you refer.
+
+How to get your link:
+→ Go to **whop.com/dashboard** → Affiliates
+→ Find TradeMind and copy your unique referral link
+
+Share it on TikTok, Twitter, or with trading friends.
+You earn on the $15 trial AND if they convert to a monthly plan.
+
+_Your $15 trial credit also applies toward your own subscription._`;
+}
+
 // ── Command map ───────────────────────────────────────────────────────────────
 
 const COMMANDS: Record<string, () => Promise<string> | string> = {
@@ -104,6 +132,8 @@ const COMMANDS: Record<string, () => Promise<string> | string> = {
     '!help':     cmdHelp,
     '!plan':     cmdPlan,
     '!backtest': cmdBacktest,
+    '!review':   cmdReview,
+    '!refer':    cmdRefer,
 };
 
 // ── Route handler ─────────────────────────────────────────────────────────────

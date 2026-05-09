@@ -302,7 +302,25 @@ async function processWebhookEvent(event: Stripe.Event) {
         case "invoice.payment_failed": {
             const invoice = event.data.object as Stripe.Invoice;
             const customerId = invoice.customer as string;
-            console.log(`💳 Payment failed for customer ${customerId}`);
+
+            // Look up user — if they came from Whop, send a payment recovery DM
+            // (NOT a winback DM — this is involuntary churn, different message)
+            const failedUserRes = await pool.query(
+                `SELECT user_id, whop_user_id FROM user_settings WHERE stripe_customer_id = $1`,
+                [customerId]
+            );
+            const failedUser = failedUserRes.rows[0];
+            if (failedUser?.whop_user_id) {
+                await sendWhopDM(
+                    failedUser.whop_user_id,
+                    `⚠️ **Your TradeMind payment didn't go through.**\n\n` +
+                    `Your signals are paused until your payment method is updated.\n\n` +
+                    `→ Fix it now at **trademind.bot/dashboard** → Account → Update Card\n\n` +
+                    `_Takes under 1 minute. Your signal history is preserved._`
+                ).catch(() => {});
+            }
+
+            console.log(`💳 Payment failed for customer ${customerId}${failedUser?.whop_user_id ? ' — recovery DM sent' : ''}`);
             break;
         }
 

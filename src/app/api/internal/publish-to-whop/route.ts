@@ -68,7 +68,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     const emoji = REGIME_EMOJI[regime] ?? '📊';
-    const { QQQ, QLD, TQQQ, SGOV } = allocation;
+    // Default all legs to 0 to prevent 'undefined%' in channel posts when
+    // the EC2 signal omits a leg (e.g. QLD is absent in non-leveraged regimes)
+    const { QQQ = 0, QLD = 0, TQQQ = 0, SGOV = 0 } = allocation ?? {};
 
     const content = `**${emoji} TURBOCORE SIGNAL — ${date}**
 **Regime:** ${regime} | Confidence: ${confidence}%

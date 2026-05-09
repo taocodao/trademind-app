@@ -200,6 +200,49 @@ _Educational analysis only. Not personalized investment advice._`
         );
     }
 
+    // 9. Queue mid-trial drip messages
+    // Day 3: signal recap check-in
+    // Day 7: mid-trial check-in + review request
+    const upgradeUrl = process.env.NEXT_PUBLIC_APP_URL
+        ? `${process.env.NEXT_PUBLIC_APP_URL}/upgrade`
+        : 'https://trademind.bot/upgrade';
+
+    await query(
+        `INSERT INTO scheduled_messages (user_id, message_type, send_at, content)
+         VALUES ($1, 'mid_trial_day3', NOW() + INTERVAL '3 days', $2)`,
+        [
+            userId,
+            `👋 Hey ${firstName} — quick check-in after your first 3 days.\n\n` +
+            `You should have received your first TurboCore signals by now. ` +
+            `If you missed any, type **!signal** in chat to see the latest allocation.\n\n` +
+            `**A few things to try this week:**\n` +
+            `• Type \`!regime\` to see the current market regime\n` +
+            `• Type \`!backtest\` to see the 7-year strategy performance\n` +
+            `• Check TurboCore 101 in the Courses tab\n\n` +
+            `Questions? Reply here or ask in #general-chat.\n\n` +
+            `_Educational analysis only. Not personalized investment advice._`,
+        ]
+    ).catch(() => {});
+
+    await query(
+        `INSERT INTO scheduled_messages (user_id, message_type, send_at, content)
+         VALUES ($1, 'mid_trial_day7', NOW() + INTERVAL '7 days', $2)`,
+        [
+            userId,
+            `📊 **Week 1 complete, ${firstName}.**\n\n` +
+            `You've been following TurboCore signals for 7 days. ` +
+            `Here's a reminder of what you're testing:\n\n` +
+            `• **CAGR 27.8%** over 7 years\n` +
+            `• **Max Drawdown -5.1%** (vs TQQQ -83% in 2022)\n` +
+            `• **Win Rate 86%** — 6 of 7 years positive\n\n` +
+            `If you're finding value, we'd love a review — it helps other traders find TradeMind:\n` +
+            `→ Type **!review** in chat for the link\n\n` +
+            `23 days left in your trial. When it ends you'll get a link to continue on trademind.bot.\n` +
+            `Plans from $29/mo: ${upgradeUrl}\n\n` +
+            `_Educational analysis only. Not personalized investment advice._`,
+        ]
+    ).catch(() => {});
+
     console.log(`[Whop] ✅ Member activated: ${email} → ${tier} (trial ends ${endDate})`);
 }
 
@@ -273,6 +316,26 @@ async function handleMemberCancelled(data: any) {
         `INSERT INTO scheduled_messages (user_id, message_type, send_at)
          VALUES ($1, 'winback', NOW() + INTERVAL '48 hours')`,
         [userId]
+    ).catch(() => {});
+
+    // 7. Queue T+7 survey DM — second re-engagement touch after churn
+    const upgradeUrl = process.env.NEXT_PUBLIC_APP_URL
+        ? `${process.env.NEXT_PUBLIC_APP_URL}/upgrade`
+        : 'https://trademind.bot/upgrade';
+    await query(
+        `INSERT INTO scheduled_messages (user_id, message_type, send_at, content)
+         VALUES ($1, 'churn_survey_day7', NOW() + INTERVAL '7 days', $2)`,
+        [
+            userId,
+            `Quick question — what would have made TradeMind worth keeping?\n\n` +
+            `Reply with a number:\n` +
+            `1️⃣ Price was too high\n` +
+            `2️⃣ Didn't see enough signals\n` +
+            `3️⃣ Technical issues\n` +
+            `4️⃣ Found a better alternative\n\n` +
+            `Your feedback genuinely helps us improve.\n\n` +
+            `Changed your mind? Re-activate here: ${upgradeUrl}`,
+        ]
     ).catch(() => {});
 
     console.log(`[Whop] Member deactivated: ${userId} — magic link sent`);

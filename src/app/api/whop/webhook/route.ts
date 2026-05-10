@@ -93,26 +93,36 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 // ── Handlers ──────────────────────────────────────────────────────────────────
 
 async function handleMemberActivated(data: any) {
-    const user       = data.user ?? {};
-    const planId     = data.plan_id ?? data.membership?.plan_id ?? '';
-    const tier       = whopPlanToTier(planId);
-    const userId     = user.id ?? data.user_id;
-    const email      = user.email ?? '';
-    const name       = user.name ?? user.username ?? '';
-    const firstName  = name.split(' ')[0] ?? 'Trader';
+    const user         = data.user ?? {};
+    // Branch on plan.id first — the reliable discriminator per Whop docs
+    const planId       = data.plan_id ?? data.plan?.id ?? data.membership?.plan_id ?? '';
+    const userId       = user.id ?? data.user_id;
+    const email        = user.email ?? '';
+    const name         = user.name ?? user.username ?? '';
+    const firstName    = name.split(' ')[0] ?? 'Trader';
     const membershipId = data.id ?? data.membership_id ?? '';
-
-    // trial_ends_at from Whop payload (renewal_period_end or expires_at)
-    const trialEndsAt = data.renewal_period_end
-        ? new Date(data.renewal_period_end)
-        : data.expires_at
-        ? new Date(data.expires_at)
-        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // fallback: +30 days
 
     if (!userId) {
         console.error('[Whop Webhook] No user_id in activation event');
         return;
     }
+
+    // ── Observer (free) plan branch ──────────────────────────────────────────
+    const observerPlanId = process.env.WHOP_PLAN_OBSERVER ?? '';
+    if (observerPlanId && planId === observerPlanId) {
+        await handleObserverActivated({ userId, email, firstName });
+        return;
+    }
+
+    // ── Paid trial branch (default) ──────────────────────────────────────────
+    const tier = whopPlanToTier(planId);
+    // Do NOT use renewal_period_end to discriminate free vs paid (may be null or misleading)
+    // Use +30 days as the canonical trial length; the deactivation webhook is the true end signal
+    const trialEndsAt = data.renewal_period_end
+        ? new Date(data.renewal_period_end)
+        : data.expires_at
+        ? new Date(data.expires_at)
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
     // 1. Upsert into user_settings (same table as Stripe subscribers)
     await query(
@@ -224,26 +234,56 @@ _Educational analysis only. Not personalized investment advice._`
         ]
     ).catch(() => {});
 
+    // Day 7: dynamic — cron builds this with the actual signal from 7 days ago
     await query(
-        `INSERT INTO scheduled_messages (user_id, message_type, send_at, content)
-         VALUES ($1, 'mid_trial_day7', NOW() + INTERVAL '7 days', $2)`,
-        [
-            userId,
-            `📊 **Week 1 complete, ${firstName}.**\n\n` +
-            `You've been following TurboCore signals for 7 days. ` +
-            `Here's a reminder of what you're testing:\n\n` +
-            `• **CAGR 27.8%** over 7 years\n` +
-            `• **Max Drawdown -5.1%** (vs TQQQ -83% in 2022)\n` +
-            `• **Win Rate 86%** — 6 of 7 years positive\n\n` +
-            `If you're finding value, we'd love a review — it helps other traders find TradeMind:\n` +
-            `→ Type **!review** in chat for the link\n\n` +
-            `23 days left in your trial. When it ends you'll get a link to continue on trademind.bot.\n` +
-            `Plans from $29/mo: ${upgradeUrl}\n\n` +
-            `_Educational analysis only. Not personalized investment advice._`,
-        ]
+        `INSERT INTO scheduled_messages (user_id, message_type, send_at)
+         VALUES ($1, 'mid_trial_day7_dynamic', NOW() + INTERVAL '7 days')`,
+        [userId]
     ).catch(() => {});
 
-    console.log(`[Whop] ✅ Member activated: ${email} → ${tier} (trial ends ${endDate})`);
+    console.log(`[Whop] Member activated: ${email} -> ${tier} (trial ends ${endDate})`);
+}
+
+// ── Observer (free) tier activation ───────────────────────────────────────────
+async function handleObserverActivated({ userId, email, firstName }: {
+    userId: string; email: string; firstName: string;
+}) {
+    const upgradeUrl = process.env.NEXT_PUBLIC_APP_URL
+        ? `${process.env.NEXT_PUBLIC_APP_URL}/upgrade`
+        : 'https://trademind.bot/upgrade';
+
+    // Upsert as observer tier — open-ended access (no renewal_period_end logic)
+    await query(
+        `INSERT INTO user_settings
+             (user_id, email, subscription_tier, subscription_status, billing_source, auth_provider, whop_user_id, created_at, updated_at)
+         VALUES ($1, $2, 'observer', 'active', 'whop', 'whop', $1, NOW(), NOW())
+         ON CONFLICT (user_id) DO UPDATE SET
+             subscription_tier = LEAST(user_settings.subscription_tier, 'observer'),
+             updated_at        = NOW()`,
+        [userId, email]
+    );
+
+    // FOMO welcome DM — show what paid members get, CTA to $15 trial
+    await sendWhopDM(userId,
+        `Welcome to TradeMind Observer, ${firstName}!
+
+You can see the #daily-regime-preview and #wins-and-misses channels, where you'll get context on how the ML regime model reads the market.
+
+Here's what paid trial members get that you don't see yet:
+• Full TurboCore allocation (QQQ / QLD / TQQQ / SGOV %) every day at 3 PM ET
+• Live chatbot commands: !signal, !regime, !backtest, !record
+• Morning brief at 8:15 AM ET before market open
+• TurboCore 101 course in the Courses tab
+
+The $15 trial unlocks all of that for 30 full days:
+-> ${upgradeUrl}
+
+Questions? Ask in #general-chat.
+
+_Educational analysis only. Not personalized investment advice._`
+    ).catch(() => {});
+
+    console.log(`[Whop] Observer activated: ${email} (${userId})`);
 }
 
 async function handleMemberCancelled(data: any) {

@@ -122,7 +122,16 @@ export async function register() {
                 )
             `);
 
+
+            // ── Migration 10: whop_posts return enrichment columns ────────────
+            // Populated by EC2 scripts/populate_signal_returns.py after market close
+            await query(`ALTER TABLE whop_posts ADD COLUMN IF NOT EXISTS qqq_return_5d         NUMERIC(6,2)`);
+            await query(`ALTER TABLE whop_posts ADD COLUMN IF NOT EXISTS qqq_price_signal_date NUMERIC(10,2)`);
+            await query(`ALTER TABLE whop_posts ADD COLUMN IF NOT EXISTS qqq_price_5d_later    NUMERIC(10,2)`);
+            await query(`ALTER TABLE whop_posts ADD COLUMN IF NOT EXISTS return_populated_at   TIMESTAMPTZ`);
+
             console.log('[instrumentation] DB migrations complete');
+
         } catch (e: any) {
             console.warn('[instrumentation] Migration skipped:', e.message);
         }

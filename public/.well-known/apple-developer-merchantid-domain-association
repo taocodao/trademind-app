@@ -1,0 +1,9 @@
+PLACEHOLDER - Replace this file with the actual Apple Pay merchant association file content from Whop.
+
+Steps to complete Apple Pay verification:
+1. Go to Whop Dashboard → Settings → Checkout → Apple Pay → Configure
+2. Download the apple-developer-merchantid-domain-association file Whop provides
+3. Replace the contents of THIS file with the exact downloaded file content (no formatting changes)
+4. Deploy to Vercel
+5. Verify at: https://trademind.bot/.well-known/apple-developer-merchantid-domain-association
+6. Return to Whop dashboard and click Verify Domain

@@ -30,6 +30,41 @@ If the timing wasn't right, reply "**pause**" to hold your spot 30 days at no co
 ${UPGRADE_URL}`,
 };
 
+/** Dynamically builds the Day 7 drip message with the actual signal from 7 days ago */
+async function buildDay7DynamicMessage(): Promise<string> {
+    const { rows } = await query(
+        `SELECT signal_date, regime, confidence
+         FROM whop_posts
+         WHERE post_type = 'signal' AND regime IS NOT NULL
+           AND signal_date <= CURRENT_DATE - INTERVAL '6 days'
+         ORDER BY signal_date DESC LIMIT 1`
+    );
+    const REGIME_EMOJI: Record<string, string> = { BULL: '🟢', SIDEWAYS: '🟡', BEAR: '🔴' };
+
+    const signalLine = rows.length
+        ? `7 days ago, TurboCore signaled **${rows[0].regime}** ${REGIME_EMOJI[rows[0].regime] ?? ''} with **${rows[0].confidence}% confidence**. ` +
+          `Type \`!record\` in chat to see every signal called since you joined and how QQQ moved after.`
+        : `Type \`!record\` in chat to see every signal called since you joined.`;
+
+    return `📊 **Week 1 complete.**
+
+${signalLine}
+
+Here's the system you've been running on:
+• **CAGR 27.8%** over 7 years (2018–2024 backtest)
+• **Max Drawdown -5.1%** — vs TQQQ -83% in 2022
+• **Win Rate 86%** — 6 of 7 years positive
+
+Full track record: trademind.bot/results
+
+If you're finding value, type **!review** in chat — it takes 30 seconds and helps other traders find us.
+
+23 days left in your trial. Plans from $29/mo: ${UPGRADE_URL}
+
+_Educational analysis only. Not personalized investment advice._`;
+}
+
+
 export async function GET(req: NextRequest): Promise<NextResponse> {
     const auth = req.headers.get('authorization');
     if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -50,11 +85,17 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
     for (const msg of pending) {
         try {
-            const content = msg.content
-                ?? WINBACK_MESSAGES[msg.message_type]
-                ?? WINBACK_MESSAGES.default;
+            let content: string;
+            if (msg.message_type === 'mid_trial_day7_dynamic') {
+                content = await buildDay7DynamicMessage();
+            } else {
+                content = msg.content
+                    ?? WINBACK_MESSAGES[msg.message_type]
+                    ?? WINBACK_MESSAGES.default;
+            }
 
             await sendWhopDM(msg.user_id, content);
+
 
             await query(
                 `UPDATE scheduled_messages SET sent = TRUE, sent_at = NOW() WHERE id = $1`,

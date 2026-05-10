@@ -66,6 +66,8 @@ function cmdHelp(): string {
 
 \`!signal\` — Today's full TurboCore allocation
 \`!regime\` — Current market regime + confidence
+\`!record\` — Last 30 days of signal history
+\`!methodology\` — How the ML regime model works
 \`!plan\` — Subscription plan options and pricing
 \`!backtest\` — 7-year performance summary
 \`!review\` — Leave a review on Whop
@@ -94,8 +96,49 @@ function cmdBacktest(): string {
 • Win Rate: **86%** (6 of 7 years positive)
 • 2022 (worst year): TurboCore **-5.1%** | TQQQ **-83%**
 
-Full methodology + data: trademind.bot
+Full methodology + data: trademind.bot/results
 _Past performance doesn't guarantee future results._`;
+}
+
+async function cmdRecord(): Promise<string> {
+    const { rows } = await query(
+        `SELECT signal_date, regime, confidence
+         FROM whop_posts
+         WHERE post_type = 'signal' AND regime IS NOT NULL
+           AND signal_date >= CURRENT_DATE - INTERVAL '30 days'
+         ORDER BY signal_date DESC
+         LIMIT 15`
+    );
+    if (!rows.length) return '📊 No signal history available yet. Check back after the first signal drops.';
+
+    const EMOJI: Record<string, string> = { BULL: '🟢', SIDEWAYS: '🟡', BEAR: '🔴' };
+    const lines = rows.map((r: any) =>
+        `• ${r.signal_date} — ${EMOJI[r.regime] ?? '📊'} **${r.regime}** (${r.confidence}% confidence)`
+    );
+    return `**TradeMind Signal Record — Last 30 Days**
+
+${lines.join('\n')}
+
+Full track record with returns: trademind.bot/results
+_Past performance doesn't guarantee future results._`;
+}
+
+function cmdMethodology(): string {
+    return `**How TradeMind's ML Regime Model Works**
+
+1. Each day the model reads macro inputs: VIX level, SPY momentum, volume profile, and multi-timeframe trend indicators.
+
+2. A trained classifier maps those inputs to one of three **market regimes**: BULL, SIDEWAYS, or BEAR.
+
+3. Each regime has pre-optimized allocations across QQQ, QLD (2×), TQQQ (3×), and SGOV (cash) — sized for that regime's risk profile.
+
+4. Backtested on 7 years (2018–2024) using walk-forward methodology — never trained on future data.
+   Result: CAGR 27.8%, Max Drawdown -5.1%.
+
+_We don't predict stock prices. We classify what kind of market we're in and position accordingly._
+
+Questions? Ask in #general-chat.
+_Educational analysis only. Not personalized investment advice._`;
 }
 
 function cmdReview(): string {
@@ -127,13 +170,15 @@ _Your $15 trial credit also applies toward your own subscription._`;
 // ── Command map ───────────────────────────────────────────────────────────────
 
 const COMMANDS: Record<string, () => Promise<string> | string> = {
-    '!signal':   cmdSignal,
-    '!regime':   cmdRegime,
-    '!help':     cmdHelp,
-    '!plan':     cmdPlan,
-    '!backtest': cmdBacktest,
-    '!review':   cmdReview,
-    '!refer':    cmdRefer,
+    '!signal':      cmdSignal,
+    '!regime':      cmdRegime,
+    '!help':        cmdHelp,
+    '!plan':        cmdPlan,
+    '!backtest':    cmdBacktest,
+    '!record':      cmdRecord,
+    '!methodology': cmdMethodology,
+    '!review':      cmdReview,
+    '!refer':       cmdRefer,
 };
 
 // ── Route handler ─────────────────────────────────────────────────────────────

@@ -71,14 +71,57 @@ export async function GET(req: NextRequest) {
         const stripeTier: string = row.subscription_tier || 'observer';
         const stripeStatus: string | null = row.subscription_status || null;
 
+        // ── Self-Healing: Cross-check whop_trials by email ────────────────────
+        // If the user paid on Whop but their user_settings row still has
+        // billing_source='stripe' (the default), auto-fix it now.
+        // This handles accounts mis-linked before the CASE-statement bug was fixed.
+        let healedWhopEnd: Date | null = null;
+        let healedWhopDays = 30;
+        if (row.billing_source !== 'whop' && row.email) {
+            try {
+                const whopTrialRow = await pool.query(
+                    `SELECT trial_ends_at, trial_started_at FROM whop_trials
+                     WHERE LOWER(email) = LOWER($1)
+                     ORDER BY trial_started_at DESC LIMIT 1`,
+                    [row.email]
+                );
+                if (whopTrialRow.rows.length > 0) {
+                    const wt = whopTrialRow.rows[0];
+                    healedWhopEnd = wt.trial_ends_at ? new Date(wt.trial_ends_at) : null;
+                    if (healedWhopEnd) {
+                        const durationDays = wt.trial_started_at
+                            ? Math.round((healedWhopEnd.getTime() - new Date(wt.trial_started_at).getTime()) / 86400000)
+                            : 30;
+                        healedWhopDays = durationDays > 45 ? 60 : 30;
+                        // Patch user_settings so future calls don't re-heal
+                        await pool.query(
+                            `UPDATE user_settings SET
+                                billing_source      = 'whop',
+                                whop_trial_ends_at  = $1,
+                                whop_trial_days     = $2,
+                                subscription_tier   = CASE WHEN $3::timestamptz > NOW() THEN 'full_access' ELSE 'observer' END,
+                                subscription_status = CASE WHEN $3::timestamptz > NOW() THEN 'active' ELSE 'canceled' END,
+                                app_trial_count     = 0,
+                                updated_at          = NOW()
+                             WHERE user_id = $4
+                               AND (stripe_price_id IS NULL OR subscription_status NOT IN ('active','trialing','past_due'))`,
+                            [healedWhopEnd.toISOString(), healedWhopDays, healedWhopEnd.toISOString(), userId]
+                        );
+                        console.log(`[Tier API] Self-healed Whop trial for ${userId} (${row.email}): ends ${healedWhopEnd.toISOString()}`);
+                    }
+                }
+            } catch (healErr) {
+                console.warn('[Tier API] Self-heal cross-check failed (non-fatal):', healErr);
+            }
+        }
+
         // ── Whop trial branch: check whop_trial_ends_at BEFORE Stripe fast-path
-        // This fixes the identity split bug — Privy DID row now has the real
-        // Whop trial expiry propagated from link-account.
-        const isWhopUser     = row.billing_source === 'whop';
-        const whopEnd        = row.whop_trial_ends_at ? new Date(row.whop_trial_ends_at) : null;
-        const whopTrialDays  = row.whop_trial_days || 30;
-        const whopActive     = isWhopUser && whopEnd && whopEnd > new Date();
-        const whopExpired    = isWhopUser && whopEnd && whopEnd <= new Date();
+        // Also picks up the self-healed values computed above.
+        const isWhopUser    = row.billing_source === 'whop' || healedWhopEnd !== null;
+        const whopEnd       = healedWhopEnd ?? (row.whop_trial_ends_at ? new Date(row.whop_trial_ends_at) : null);
+        const whopTrialDays = healedWhopDays || row.whop_trial_days || 30;
+        const whopActive    = isWhopUser && whopEnd && whopEnd > new Date();
+        const whopExpired   = isWhopUser && whopEnd && whopEnd <= new Date();
 
         if (whopActive) {
             return NextResponse.json({

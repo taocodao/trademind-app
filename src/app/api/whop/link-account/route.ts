@@ -92,11 +92,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             whop_trial_ends_at = EXCLUDED.whop_trial_ends_at,
             whop_trial_days   = EXCLUDED.whop_trial_days,
             billing_source    = CASE
-                WHEN user_settings.billing_source = 'stripe' THEN 'stripe'
+                WHEN user_settings.subscription_tier NOT IN ('observer', 'turbocore') AND user_settings.billing_source = 'stripe' THEN 'stripe'
                 ELSE 'whop'
             END,
             subscription_status = CASE
-                WHEN user_settings.billing_source = 'stripe' THEN user_settings.subscription_status
+                WHEN user_settings.subscription_tier NOT IN ('observer', 'turbocore') AND user_settings.billing_source = 'stripe' THEN user_settings.subscription_status
                 ELSE EXCLUDED.subscription_status
             END,
             subscription_tier = CASE

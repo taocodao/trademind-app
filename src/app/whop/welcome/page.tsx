@@ -36,7 +36,7 @@ function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export default function WhopWelcomePage() {
+function WhopWelcomeContent() {
     const router  = useRouter();
     const params  = useSearchParams();
     // ?days=30 or ?days=60 set by next.config.mjs rewrite from Whop redirect URL
@@ -367,5 +367,17 @@ export default function WhopWelcomePage() {
                 .animate-fadeIn { animation: fadeIn 0.4s ease-out; }
             `}</style>
         </main>
+    );
+}
+
+export default function WhopWelcomePage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-black flex items-center justify-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-500 border-t-transparent" />
+            </div>
+        }>
+            <WhopWelcomeContent />
+        </Suspense>
     );
 }

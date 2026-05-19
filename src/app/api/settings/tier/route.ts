@@ -72,12 +72,11 @@ export async function GET(req: NextRequest) {
         const stripeStatus: string | null = row.subscription_status || null;
 
         // ── Self-Healing: Cross-check whop_trials by email ────────────────────
-        // If the user paid on Whop but their user_settings row still has
-        // billing_source='stripe' (the default), auto-fix it now.
-        // This handles accounts mis-linked before the CASE-statement bug was fixed.
+        // Reconciles the identity split bug. Always ensures user_settings has
+        // the LATEST trial_ends_at from whop_trials.
         let healedWhopEnd: Date | null = null;
         let healedWhopDays = 30;
-        if (row.billing_source !== 'whop' && row.email) {
+        if (row.email) {
             try {
                 const whopTrialRow = await pool.query(
                     `SELECT trial_ends_at, trial_started_at FROM whop_trials
@@ -87,13 +86,17 @@ export async function GET(req: NextRequest) {
                 );
                 if (whopTrialRow.rows.length > 0) {
                     const wt = whopTrialRow.rows[0];
-                    healedWhopEnd = wt.trial_ends_at ? new Date(wt.trial_ends_at) : null;
-                    if (healedWhopEnd) {
+                    const wtEnd = wt.trial_ends_at ? new Date(wt.trial_ends_at) : null;
+                    const currEnd = row.whop_trial_ends_at ? new Date(row.whop_trial_ends_at) : null;
+
+                    // Heal if Whop has a newer trial, or if billing_source is wrong
+                    if (wtEnd && (!currEnd || wtEnd.getTime() > currEnd.getTime() || row.billing_source !== 'whop')) {
+                        healedWhopEnd = wtEnd;
                         const durationDays = wt.trial_started_at
                             ? Math.round((healedWhopEnd.getTime() - new Date(wt.trial_started_at).getTime()) / 86400000)
                             : 30;
                         healedWhopDays = durationDays > 45 ? 60 : 30;
-                        // Patch user_settings so future calls don't re-heal
+                        // Patch user_settings
                         await pool.query(
                             `UPDATE user_settings SET
                                 billing_source      = 'whop',

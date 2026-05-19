@@ -71,13 +71,16 @@ export async function GET(req: NextRequest) {
         const stripeTier: string = row.subscription_tier || 'observer';
         const stripeStatus: string | null = row.subscription_status || null;
 
-        // ── Self-Healing: Cross-check whop_trials by email ────────────────────
-        // Reconciles the identity split bug. Always ensures user_settings has
-        // the LATEST trial_ends_at from whop_trials.
+        // ── Self-Healing: Dual-path reconciliation ───────────────────────────
+        // Problem: Whop webhook writes user_settings keyed by whop_user_id.
+        // Tier API reads user_settings keyed by Privy DID. Different rows.
+        // Path 1: whop_trials by email (works when email is synced)
+        // Path 2: matching Whop user_settings row by email (catches delayed webhooks)
         let healedWhopEnd: Date | null = null;
         let healedWhopDays = 30;
-        if (row.email) {
-            try {
+        try {
+            if (row.email) {
+                // Path 1: whop_trials
                 const whopTrialRow = await pool.query(
                     `SELECT trial_ends_at, trial_started_at FROM whop_trials
                      WHERE LOWER(email) = LOWER($1)
@@ -88,34 +91,57 @@ export async function GET(req: NextRequest) {
                     const wt = whopTrialRow.rows[0];
                     const wtEnd = wt.trial_ends_at ? new Date(wt.trial_ends_at) : null;
                     const currEnd = row.whop_trial_ends_at ? new Date(row.whop_trial_ends_at) : null;
-
-                    // Heal if Whop has a newer trial, or if billing_source is wrong
                     if (wtEnd && (!currEnd || wtEnd.getTime() > currEnd.getTime() || row.billing_source !== 'whop')) {
                         healedWhopEnd = wtEnd;
-                        const durationDays = wt.trial_started_at
-                            ? Math.round((healedWhopEnd.getTime() - new Date(wt.trial_started_at).getTime()) / 86400000)
+                        const dur = wt.trial_started_at
+                            ? Math.round((wtEnd.getTime() - new Date(wt.trial_started_at).getTime()) / 86400000)
                             : 30;
-                        healedWhopDays = durationDays > 45 ? 60 : 30;
-                        // Patch user_settings
-                        await pool.query(
-                            `UPDATE user_settings SET
-                                billing_source      = 'whop',
-                                whop_trial_ends_at  = $1,
-                                whop_trial_days     = $2,
-                                subscription_tier   = CASE WHEN $3::timestamptz > NOW() THEN 'full_access' ELSE 'observer' END,
-                                subscription_status = CASE WHEN $3::timestamptz > NOW() THEN 'active' ELSE 'canceled' END,
-                                app_trial_count     = 0,
-                                updated_at          = NOW()
-                             WHERE user_id = $4
-                               AND (stripe_price_id IS NULL OR subscription_status NOT IN ('active','trialing','past_due'))`,
-                            [healedWhopEnd.toISOString(), healedWhopDays, healedWhopEnd.toISOString(), userId]
-                        );
-                        console.log(`[Tier API] Self-healed Whop trial for ${userId} (${row.email}): ends ${healedWhopEnd.toISOString()}`);
+                        healedWhopDays = dur > 45 ? 60 : 30;
                     }
                 }
-            } catch (healErr) {
-                console.warn('[Tier API] Self-heal cross-check failed (non-fatal):', healErr);
+
+                // Path 2: Whop-keyed user_settings row with same email
+                if (!healedWhopEnd) {
+                    const whopUserRow = await pool.query(
+                        `SELECT whop_trial_ends_at, whop_trial_days
+                         FROM user_settings
+                         WHERE LOWER(email) = LOWER($1)
+                           AND billing_source = 'whop'
+                           AND user_id != $2
+                           AND whop_trial_ends_at IS NOT NULL
+                         ORDER BY whop_trial_ends_at DESC LIMIT 1`,
+                        [row.email, userId]
+                    );
+                    if (whopUserRow.rows.length > 0) {
+                        const wr = whopUserRow.rows[0];
+                        const wrEnd = wr.whop_trial_ends_at ? new Date(wr.whop_trial_ends_at) : null;
+                        const currEnd = row.whop_trial_ends_at ? new Date(row.whop_trial_ends_at) : null;
+                        if (wrEnd && (!currEnd || wrEnd.getTime() > currEnd.getTime() || row.billing_source !== 'whop')) {
+                            healedWhopEnd = wrEnd;
+                            healedWhopDays = wr.whop_trial_days || 30;
+                        }
+                    }
+                }
             }
+
+            if (healedWhopEnd) {
+                await pool.query(
+                    `UPDATE user_settings SET
+                        billing_source      = 'whop',
+                        whop_trial_ends_at  = $1,
+                        whop_trial_days     = $2,
+                        subscription_tier   = CASE WHEN $3::timestamptz > NOW() THEN 'full_access' ELSE 'observer' END,
+                        subscription_status = CASE WHEN $3::timestamptz > NOW() THEN 'active' ELSE 'canceled' END,
+                        app_trial_count     = 0,
+                        updated_at          = NOW()
+                     WHERE user_id = $4
+                       AND (stripe_price_id IS NULL OR subscription_status NOT IN ('active','trialing','past_due'))`,
+                    [healedWhopEnd.toISOString(), healedWhopDays, healedWhopEnd.toISOString(), userId]
+                );
+                console.log(`[Tier API] Self-healed ${userId} via ${row.email}: ends ${healedWhopEnd.toISOString()} (${healedWhopDays}d)`);
+            }
+        } catch (healErr) {
+            console.warn('[Tier API] Self-heal failed (non-fatal):', healErr);
         }
 
         // ── Whop trial branch: check whop_trial_ends_at BEFORE Stripe fast-path

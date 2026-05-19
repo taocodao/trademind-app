@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
-import { whopPlanToTier, whopPlanTrialDays, sendWhopDM } from '@/lib/whop';
+import { whopPlanToTier, whopPlanTrialDays, extractProductSlug, isWhopTrialProduct, sendWhopDM } from '@/lib/whop';
 import { query } from '@/lib/db';
 import { issueCredits } from '@/lib/credits';
 import { ensureReferralCode, recordReferralConversion, getReferrerByCode } from '@/lib/referrals';
@@ -94,13 +94,24 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
 async function handleMemberActivated(data: any) {
     const user         = data.user ?? {};
-    // Branch on plan.id first — the reliable discriminator per Whop docs
+
+    // ── Primary: extract product URL slug (from Whop dashboard "Product URL" field)
+    // This is the human-readable slug, e.g. "trademind-algo-signals-30day"
+    // It's more stable than plan IDs and requires no env var configuration.
+    // extractProductSlug() checks all known Whop payload locations.
+    const productSlug = extractProductSlug(data);
+
+    // Keep plan_id available as a secondary key (stored in DB, used for logging)
     const planId       = data.plan_id ?? data.plan?.id ?? data.membership?.plan_id ?? '';
+    const slugOrId     = productSlug || planId; // use slug preferentially
+
     const userId       = user.id ?? data.user_id;
     const email        = user.email ?? '';
     const name         = user.name ?? user.username ?? '';
     const firstName    = name.split(' ')[0] ?? 'Trader';
     const membershipId = data.id ?? data.membership_id ?? '';
+
+    console.log(`[Whop Webhook] Activation — slug: "${productSlug}", plan_id: "${planId}", user: ${userId}`);
 
     if (!userId) {
         console.error('[Whop Webhook] No user_id in activation event');
@@ -115,8 +126,9 @@ async function handleMemberActivated(data: any) {
     }
 
     // ── Paid trial branch (default) ──────────────────────────────────────
-    const tier = whopPlanToTier(planId);
-    const trialDays = whopPlanTrialDays(planId); // 30 or 60 based on plan
+    // whopPlanToTier and whopPlanTrialDays use the slug (or plan ID as fallback)
+    const tier      = whopPlanToTier(slugOrId);
+    const trialDays = whopPlanTrialDays(slugOrId); // 60 for free-trial slug, 30 for 30day slug
     const trialEndsAt = data.renewal_period_end
         ? new Date(data.renewal_period_end)
         : data.expires_at
@@ -166,14 +178,13 @@ async function handleMemberActivated(data: any) {
         console.warn('[Whop] Referral code generation failed:', e)
     );
 
-    // 3. Issue trial bonus credits ($10 or $20 depending on plan)
-    const trial30PlanId = process.env.WHOP_PLAN_TRIAL_30 ?? '';
-    const trial60PlanId = process.env.WHOP_PLAN_TRIAL_60 ?? '';
-    const isTrialPlan = planId === trial30PlanId || planId === trial60PlanId;
-    if (isTrialPlan) {
-        // Credit amount matches the trial fee paid: $10 (1000 cents) or $20 (2000 cents)
-        const creditCents = planId === trial60PlanId ? 2000 : 1000;
+    // 3. Issue trial bonus credits ($10 or $20 depending on product)
+    // Uses isWhopTrialProduct() which matches by slug — no env vars needed.
+    if (isWhopTrialProduct(slugOrId)) {
+        // $20 credit for 60-day product, $10 for 30-day product
+        const creditCents = trialDays === 60 ? 2000 : 1000;
         await issueCredits(userId, creditCents, 'trial_bonus').catch(() => {});
+        console.log(`[Whop] Trial bonus: $${creditCents/100} issued to ${userId} (${trialDays}-day plan)`);
     }
 
     // 6. Handle referral attribution

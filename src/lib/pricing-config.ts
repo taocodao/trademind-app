@@ -166,10 +166,22 @@ export function stripeCheckoutUrl(
 }
 
 /**
- * Resolve trial config from a Whop plan ID.
- * Returns the matching trial object or the 30-day default.
+ * Resolve trial config from a product slug or plan ID.
+ * Matches the 60-day product by its slug pattern.
+ * Returns trial_30 config for the 30-day product (default).
+ *
+ * Slug matching (no env vars needed):
+ *   "trademind-signal-free-trial"  → trial_60 (60-day $20)
+ *   "trademind-algo-signals-30day" → trial_30 (30-day $10)
  */
-export function trialConfigFromPlanId(planId: string): (typeof PRICING.trials.trial_30) | (typeof PRICING.trials.trial_60) {
-    const is60 = planId === (process.env.WHOP_PLAN_TRIAL_60 ?? '__trial60__');
+export function trialConfigFromPlanId(slugOrPlanId: string): (typeof PRICING.trials.trial_30) | (typeof PRICING.trials.trial_60) {
+    const is60 = (
+        slugOrPlanId === 'trademind-signal-free-trial' ||
+        slugOrPlanId.includes('free-trial') ||
+        slugOrPlanId.includes('60day') ||
+        slugOrPlanId.includes('60-day') ||
+        // Fallback: env var for staging/test environments
+        (!!process.env.WHOP_PLAN_TRIAL_60 && slugOrPlanId === process.env.WHOP_PLAN_TRIAL_60)
+    );
     return is60 ? PRICING.trials.trial_60 : PRICING.trials.trial_30;
 }

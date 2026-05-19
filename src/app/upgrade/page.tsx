@@ -3,45 +3,42 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { PRICING, creditsToBonusDays, type PlanKey } from '@/lib/pricing-config';
-import { CheckCircle, Zap, Brain, Layers, Clock, ArrowRight, Star, Gift } from 'lucide-react';
+import { CheckCircle, Zap, Brain, Layers, Clock, ArrowRight, Star, Gift, Calendar } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Interval = 'monthly' | 'annual';
+type Interval = 'monthly' | 'annual' | 'biennial';
 
 interface TrialInfo {
     trialEndsAt: string | null;
+    trialDays: number;
     converted: boolean;
 }
 
-// ── Plan metadata for rendering ───────────────────────────────────────────────
+// ── Plan metadata ─────────────────────────────────────────────────────────────
 
 const PLAN_ICONS: Record<PlanKey, React.ComponentType<any>> = {
-    turbocore:     Brain,
-    turbocore_pro: Zap,
-    qqq_leaps:     Layers,
-    both_bundle:   Layers,
+    turbocore_pro_bundle: Brain,
+    qqq_leaps:            Layers,
+    full_access:          Zap,
 };
 
 const PLAN_ACCENT: Record<PlanKey, string> = {
-    turbocore:     'from-purple-500/20 to-purple-600/5 border-purple-500/30',
-    turbocore_pro: 'from-indigo-500/20 to-indigo-600/5 border-indigo-500/30',
-    qqq_leaps:     'from-amber-500/20 to-amber-600/5 border-amber-500/30',
-    both_bundle:   'from-emerald-500/20 to-emerald-600/5 border-emerald-500/30',
+    turbocore_pro_bundle: 'from-purple-500/20 to-purple-600/5 border-purple-500/30',
+    qqq_leaps:            'from-amber-500/20 to-amber-600/5 border-amber-500/30',
+    full_access:          'from-emerald-500/20 to-emerald-600/5 border-emerald-500/30',
 };
 
 const PLAN_BADGE: Record<PlanKey, string | null> = {
-    turbocore:     null,
-    turbocore_pro: 'Most Popular',
-    qqq_leaps:     'New',
-    both_bundle:   'Best Value',
+    turbocore_pro_bundle: 'Most Popular',
+    qqq_leaps:            null,
+    full_access:          'Best Value',
 };
 
 // ── Countdown Timer ───────────────────────────────────────────────────────────
 
 function CountdownTimer({ endsAt }: { endsAt: string }) {
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
-
     useEffect(() => {
         const target = new Date(endsAt).getTime();
         const tick = () => {
@@ -58,9 +55,7 @@ function CountdownTimer({ endsAt }: { endsAt: string }) {
         const id = setInterval(tick, 1000);
         return () => clearInterval(id);
     }, [endsAt]);
-
     const pad = (n: number) => String(n).padStart(2, '0');
-
     return (
         <div className="flex items-center gap-3 justify-center">
             {[
@@ -90,18 +85,22 @@ function PlanCard({
     trialCreditCents: number;
     isHighlighted: boolean;
 }) {
-    const plan    = PRICING.plans[planKey];
-    const Icon    = PLAN_ICONS[planKey];
-    const badge   = PLAN_BADGE[planKey];
-    const accent  = PLAN_ACCENT[planKey];
-    const isAnnual = interval === 'annual';
-    const bogoLabel = isAnnual ? '+ Year 2 Free (BOGO)' : null;
+    const plan   = PRICING.plans[planKey];
+    const Icon   = PLAN_ICONS[planKey];
+    const badge  = PLAN_BADGE[planKey];
+    const accent = PLAN_ACCENT[planKey];
 
-    // Plan-specific bonus days from the $15 trial credit
     const bonusDays = creditsToBonusDays(trialCreditCents, plan.monthly);
 
-    const basePrice = isAnnual ? plan.annual : plan.monthly;
-    const checkoutUrl = `/api/stripe/checkout?plan=${planKey}&interval=${interval}&promo=${PRICING.trial.promoCode}`;
+    const displayPrice = interval === 'annual'   ? `$${plan.annual}/yr`
+                       : interval === 'biennial'  ? `$${plan.biennial}/2yr`
+                       : `$${plan.monthly}/mo`;
+
+    const subText = interval === 'annual'  ? `$${plan.annualPerMonth.toFixed(2)}/mo · 30% off`
+                  : interval === 'biennial' ? `$${plan.biennialPerMonth.toFixed(2)}/mo · 40% off`
+                  : null;
+
+    const checkoutUrl = `/api/stripe/checkout?plan=${planKey}&interval=${interval}`;
 
     return (
         <div className={`
@@ -124,36 +123,24 @@ function PlanCard({
                 <h3 className="font-bold text-lg text-white">{plan.label}</h3>
             </div>
 
-            {/* Pricing */}
             <div className="space-y-1">
                 <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-extrabold text-white">${basePrice}</span>
-                    <span className="text-gray-400 text-sm">{isAnnual ? '/yr' : '/mo'}</span>
+                    <span className="text-3xl font-extrabold text-white">{displayPrice}</span>
                 </div>
-                {isAnnual && (
-                    <p className="text-gray-500 text-xs">${plan.annualPerMonth.toFixed(2)}/mo effective</p>
-                )}
+                {subText && <p className="text-green-400 text-xs font-semibold">{subText}</p>}
 
-                {/* Trial bonus days badge */}
-                {bonusDays > 0 && !isAnnual && (
+                {bonusDays > 0 && interval === 'monthly' && (
                     <div className="flex items-center gap-1.5 mt-2">
                         <Gift className="w-3.5 h-3.5 text-green-400" />
                         <span className="text-green-400 text-xs font-semibold">
-                            +{bonusDays} bonus days from your trial
+                            +{bonusDays} bonus days from your trial fee
                         </span>
-                    </div>
-                )}
-                {bogoLabel && (
-                    <div className="flex items-center gap-1.5 mt-1">
-                        <Star className="w-3.5 h-3.5 text-amber-400" />
-                        <span className="text-amber-400 text-xs font-semibold">{bogoLabel}</span>
                     </div>
                 )}
             </div>
 
-            {/* Features */}
             <ul className="space-y-2 flex-1">
-                {plan.features.map(f => (
+                {plan.features.map((f: string) => (
                     <li key={f} className="flex items-start gap-2 text-sm text-gray-300">
                         <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
                         {f}
@@ -179,21 +166,26 @@ function PlanCard({
 // ── Comparison Table ──────────────────────────────────────────────────────────
 
 const COMPARE_FEATURES = [
-    { label: 'TurboCore ML Signal',          turbocore: true,  turbocore_pro: true,  qqq_leaps: false, both_bundle: true  },
-    { label: 'SMA200 Gate',                  turbocore: true,  turbocore_pro: true,  qqq_leaps: false, both_bundle: true  },
-    { label: 'Tastytrade Auto-Execution',    turbocore: true,  turbocore_pro: true,  qqq_leaps: false, both_bundle: true  },
-    { label: 'IV-Switching (CSP/ZEBRA/CCS)', turbocore: false, turbocore_pro: true,  qqq_leaps: false, both_bundle: true  },
-    { label: 'Crash Hedge (SQQQ Mode)',      turbocore: false, turbocore_pro: true,  qqq_leaps: false, both_bundle: true  },
-    { label: 'Early Signal Access',          turbocore: false, turbocore_pro: true,  qqq_leaps: true,  both_bundle: true  },
-    { label: 'QQQ LEAPS ML Signal',          turbocore: false, turbocore_pro: false, qqq_leaps: true,  both_bundle: true  },
-    { label: 'LEAPS Position Tracking',      turbocore: false, turbocore_pro: false, qqq_leaps: true,  both_bundle: true  },
-    { label: 'TurboBounce Alpha',            turbocore: false, turbocore_pro: false, qqq_leaps: false, both_bundle: true  },
-    { label: 'Portfolio Allocation Tools',   turbocore: false, turbocore_pro: false, qqq_leaps: false, both_bundle: true  },
-    { label: 'Founder Office Hours',         turbocore: false, turbocore_pro: false, qqq_leaps: false, both_bundle: true  },
+    { label: 'TurboCore ML Signal (daily)',   turbocore_pro_bundle: true,  qqq_leaps: false, full_access: true  },
+    { label: 'SMA200 Regime Gate',            turbocore_pro_bundle: true,  qqq_leaps: false, full_access: true  },
+    { label: 'Tastytrade Auto-Execution',     turbocore_pro_bundle: true,  qqq_leaps: false, full_access: true  },
+    { label: 'IV-Switching (CSP/ZEBRA/CCS)',  turbocore_pro_bundle: true,  qqq_leaps: false, full_access: true  },
+    { label: 'Crash Hedge (SQQQ Mode)',       turbocore_pro_bundle: true,  qqq_leaps: false, full_access: true  },
+    { label: 'QQQ LEAPS ML Signal',           turbocore_pro_bundle: false, qqq_leaps: true,  full_access: true  },
+    { label: 'LEAPS Position Tracking',       turbocore_pro_bundle: false, qqq_leaps: true,  full_access: true  },
+    { label: 'TurboBounce Alpha',             turbocore_pro_bundle: false, qqq_leaps: false, full_access: true  },
+    { label: 'Portfolio Allocation Tools',    turbocore_pro_bundle: false, qqq_leaps: false, full_access: true  },
+    { label: 'Founder Office Hours',          turbocore_pro_bundle: false, qqq_leaps: false, full_access: true  },
 ];
 
 function CompareTable({ interval }: { interval: Interval }) {
-    const plans: PlanKey[] = ['turbocore', 'turbocore_pro', 'qqq_leaps', 'both_bundle'];
+    const plans: PlanKey[] = ['turbocore_pro_bundle', 'qqq_leaps', 'full_access'];
+    const priceLabel = (p: PlanKey) => {
+        const plan = PRICING.plans[p];
+        if (interval === 'annual')   return `$${plan.annual}/yr`;
+        if (interval === 'biennial') return `$${plan.biennial}/2yr`;
+        return `$${plan.monthly}/mo`;
+    };
     return (
         <div className="overflow-x-auto rounded-xl border border-white/10">
             <table className="w-full text-sm">
@@ -203,9 +195,7 @@ function CompareTable({ interval }: { interval: Interval }) {
                         {plans.map(p => (
                             <th key={p} className="text-center p-4 text-white font-semibold">
                                 {PRICING.plans[p].label}
-                                <div className="text-gray-400 font-normal text-xs mt-0.5">
-                                    ${interval === 'annual' ? PRICING.plans[p].annual + '/yr' : PRICING.plans[p].monthly + '/mo'}
-                                </div>
+                                <div className="text-gray-400 font-normal text-xs mt-0.5">{priceLabel(p)}</div>
                             </th>
                         ))}
                     </tr>
@@ -233,20 +223,20 @@ function CompareTable({ interval }: { interval: Interval }) {
 
 const FAQ_ITEMS = [
     {
-        q: 'What happens to my trial data?',
-        a: 'Your signal history, virtual portfolio, and performance data carry over automatically when you subscribe — nothing is lost.',
+        q: 'What happens to my trial fee?',
+        a: 'Your $10 or $20 trial fee is refunded as Stripe subscription credit and automatically extends your first billing period by bonus days.',
     },
     {
-        q: 'Does the $15 credit expire?',
-        a: `Yes — the credit expires ${PRICING.trial.promoExpireDays} days after your trial ends. Enter code ${PRICING.trial.promoCode} at checkout before the timer hits zero.`,
+        q: 'How does the $100 × 4 month credit installment work?',
+        a: 'When you subscribe monthly, we automatically issue $100 credit each month for the first 4 months, offsetting your bill. Net cost = plan price minus applied credit.',
     },
     {
-        q: 'What is the BOGO offer?',
-        a: 'When you choose annual billing, you get a second year free. You pay once, you are locked in at today\'s price for two full years.',
+        q: 'What is the 2-year plan?',
+        a: 'The 2-year plan locks in your price for 24 months at 40% off the monthly rate. Billed as a single payment via Stripe\'s 24-month billing interval.',
     },
     {
         q: 'Can I cancel anytime?',
-        a: 'Yes. Monthly plans cancel at the end of the billing period. Annual plans are non-refundable after 14 days.',
+        a: 'Yes. Monthly plans cancel at the end of the billing period. Annual/2-year plans are non-refundable after 14 days.',
     },
     {
         q: 'Do I need a Tastytrade account?',
@@ -279,35 +269,29 @@ function FAQSection() {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 function UpgradePageInner() {
-    const searchParams = useSearchParams();
-    const userId       = searchParams.get('user') ?? '';
-    const fromTrial    = searchParams.get('from') === 'trial';
-    const fromWhop     = searchParams.get('ref') === 'whop';
+    const searchParams  = useSearchParams();
+    const fromTrial     = searchParams.get('from') === 'trial';
+    const fromWhop      = searchParams.get('ref')  === 'whop';
+    const trialDaysParam = parseInt(searchParams.get('days') ?? '30', 10);
+    const trialFee       = trialDaysParam === 60 ? 20 : 10;
 
     const [interval, setInterval]   = useState<Interval>('monthly');
-    const [trialInfo, setTrialInfo] = useState<TrialInfo>({ trialEndsAt: null, converted: false });
-    const [loading, setLoading]     = useState(true);
-    const trialCreditCents = PRICING.trial.creditCents; // 1500 = $15
+    const [trialInfo, setTrialInfo] = useState<TrialInfo>({ trialEndsAt: null, trialDays: 30, converted: false });
+    const [loading, setLoading]     = useState(false);
 
-    useEffect(() => {
-        if (!userId) { setLoading(false); return; }
-        fetch(`/api/whop/trial-status?user=${userId}`)
-            .then(r => r.ok ? r.json() : null)
-            .then(d => d && setTrialInfo({ trialEndsAt: d.trialEndsAt, converted: d.converted }))
-            .finally(() => setLoading(false));
-    }, [userId]);
+    // Trial credit = trial fee paid (either 1000 or 2000 cents)
+    const trialCreditCents = trialFee * 100;
 
-    // Figure out credit expiry for urgency copy
+    // Credit expiry: 7 days after trial ends
     const creditExpiry = trialInfo.trialEndsAt
-        ? new Date(new Date(trialInfo.trialEndsAt).getTime() + PRICING.trial.promoExpireDays * 86400000).toISOString()
+        ? new Date(new Date(trialInfo.trialEndsAt).getTime() + 7 * 86400000).toISOString()
         : null;
 
     return (
         <div className="min-h-screen bg-black text-white" style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
-            {/* Meta */}
-            <title>TradeMind — Upgrade Your Plan</title>
+            <title>TradeMind — Choose Your Plan</title>
 
-            {/* ── Trial Migration Banner (shown when coming from Whop magic link) ── */}
+            {/* ── Trial Banner ─────────────────────────────────────────────── */}
             {fromTrial && fromWhop && (
                 <div style={{
                     background: 'linear-gradient(135deg, #4c1d95 0%, #1e1b4b 100%)',
@@ -318,47 +302,33 @@ function UpgradePageInner() {
                     <p style={{ margin: 0, color: '#c4b5fd', fontSize: '14px', fontWeight: 600 }}>
                         ✅ Welcome back — your account is ready.{' '}
                         <span style={{ color: '#fff' }}>
-                            Your 30-day trial history is saved. Pick a plan below to keep your daily signals running.
+                            Your {trialDaysParam}-day trial history is saved. Your ${trialFee} trial fee
+                            becomes bonus days when you pick a plan below.
                         </span>
                     </p>
-                    <div style={{ marginTop: '6px' }}>
-                        <span style={{
-                            background: 'rgba(124,58,237,0.3)',
-                            border: '1px solid rgba(124,58,237,0.5)',
-                            borderRadius: '9999px',
-                            padding: '2px 12px',
-                            fontSize: '11px',
-                            color: '#c4b5fd',
-                            fontWeight: 700,
-                            letterSpacing: '0.05em',
-                        }}>
-                            30-DAY TRIAL MEMBER
-                        </span>
-                    </div>
                 </div>
             )}
+
+            {/* ── Hero ─────────────────────────────────────────────────────── */}
             <section className="relative overflow-hidden px-4 pt-16 pb-10 text-center">
                 <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 via-black to-black" />
                 <div className="relative max-w-2xl mx-auto">
                     <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-full px-4 py-1.5 text-green-400 text-sm font-medium mb-6">
-                        <CheckCircle className="w-4 h-4" /> Your $15 trial credit is waiting
+                        <Gift className="w-4 h-4" /> ${trialFee} trial fee converts to bonus days
                     </div>
 
                     <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
-                        Your trial is ending.<br />
+                        Continue with full access.<br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-400">
-                            Your $15 isn't gone.
+                            Your ${trialFee} isn't gone.
                         </span>
                     </h1>
 
                     <p className="text-gray-400 text-lg mb-8">
-                        Your $15 trial converts to bonus days on your subscription — no price change, just extra time.
-                        TurboCore gets <strong className="text-white">{creditsToBonusDays(trialCreditCents, PRICING.plans.turbocore.monthly)} days</strong>,
-                        Pro &amp; LEAPS get <strong className="text-white">{creditsToBonusDays(trialCreditCents, PRICING.plans.turbocore_pro.monthly)} days</strong>,
-                        All Access gets <strong className="text-white">{creditsToBonusDays(trialCreditCents, PRICING.plans.both_bundle.monthly)} days</strong>.
+                        Three strategies. One platform.
+                        Pick the plan that fits — monthly, yearly (30% off), or 2-year (40% off).
                     </p>
 
-                    {/* Countdown */}
                     {creditExpiry && (
                         <div className="bg-white/5 border border-white/10 rounded-2xl p-5 mb-4">
                             <p className="text-sm text-gray-400 mb-3 flex items-center justify-center gap-2">
@@ -368,93 +338,66 @@ function UpgradePageInner() {
                             <CountdownTimer endsAt={creditExpiry} />
                         </div>
                     )}
-
-                    {!loading && !trialInfo.trialEndsAt && (
-                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4 text-sm text-gray-400">
-                            Use code <code className="text-white font-mono bg-white/10 px-2 py-0.5 rounded">{PRICING.trial.promoCode}</code> at checkout to apply your $15 credit.
-                        </div>
-                    )}
                 </div>
             </section>
 
             {/* ── Billing Toggle ─────────────────────────────────────────────── */}
             <div className="flex justify-center gap-1 mb-10 px-4">
                 <div className="bg-white/5 border border-white/10 rounded-xl p-1 flex">
-                    {(['monthly', 'annual'] as Interval[]).map(i => (
+                    {(['monthly', 'annual', 'biennial'] as Interval[]).map(i => (
                         <button
                             key={i}
                             onClick={() => setInterval(i)}
-                            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
+                            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                                 interval === i ? 'bg-white text-black' : 'text-gray-400 hover:text-white'
                             }`}
                         >
-                            {i === 'monthly' ? 'Monthly' : (
+                            {i === 'monthly' ? 'Monthly'
+                             : i === 'annual' ? (
                                 <span className="flex items-center gap-2">
-                                    Annual
-                                    <span className="bg-amber-400/20 text-amber-400 text-xs px-2 py-0.5 rounded-full font-bold">
-                                        BOGO
+                                    Yearly
+                                    <span className="bg-green-400/20 text-green-400 text-xs px-2 py-0.5 rounded-full font-bold">
+                                        −30%
                                     </span>
                                 </span>
-                            )}
+                             ) : (
+                                <span className="flex items-center gap-2">
+                                    2-Year
+                                    <span className="bg-amber-400/20 text-amber-400 text-xs px-2 py-0.5 rounded-full font-bold">
+                                        −40%
+                                    </span>
+                                </span>
+                             )}
                         </button>
                     ))}
                 </div>
             </div>
 
-            {/* ── Plan Cards — 3 main plans ──────────────────────────────────── */}
-            <section className="max-w-5xl mx-auto px-4 mb-8">
+            {/* ── Plan Cards ─────────────────────────────────────────────────── */}
+            <section className="max-w-5xl mx-auto px-4 mb-16">
                 <div className="grid md:grid-cols-3 gap-6 items-start">
-                    {(['turbocore', 'turbocore_pro', 'qqq_leaps'] as PlanKey[]).map(key => (
+                    {(['turbocore_pro_bundle', 'qqq_leaps', 'full_access'] as PlanKey[]).map(key => (
                         <PlanCard
                             key={key}
                             planKey={key}
                             interval={interval}
                             trialCreditCents={trialCreditCents}
-                            isHighlighted={key === 'turbocore_pro'}
+                            isHighlighted={key === 'full_access'}
                         />
                     ))}
                 </div>
             </section>
 
-            {/* ── All Access Bundle Banner ───────────────────────────────────── */}
-            <section className="max-w-5xl mx-auto px-4 mb-16">
-                <div className="relative rounded-2xl border bg-gradient-to-r from-emerald-500/10 via-indigo-500/10 to-amber-500/10 border-emerald-500/20 p-6">
-                    <div className="absolute -top-3 left-8">
-                        <span className="bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-full">Best Value</span>
-                    </div>
-                    <div className="flex flex-col md:flex-row md:items-center gap-6">
-                        <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                                <div className="p-2 rounded-lg bg-white/10">
-                                    <Layers className="w-5 h-5 text-white" />
-                                </div>
-                                <h3 className="font-bold text-xl text-white">{PRICING.plans.both_bundle.label}</h3>
-                            </div>
-                            <p className="text-gray-400 text-sm mb-3">{PRICING.plans.both_bundle.description}</p>
-                            <div className="flex flex-wrap gap-2">
-                                {PRICING.plans.both_bundle.features.map(f => (
-                                    <span key={f} className="flex items-center gap-1 text-xs text-gray-300 bg-white/5 border border-white/10 rounded-full px-3 py-1">
-                                        <CheckCircle className="w-3 h-3 text-emerald-400 flex-shrink-0" />{f}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="flex flex-col items-center md:items-end gap-3 shrink-0">
-                            <div>
-                                <div className="flex items-baseline gap-1">
-                                    <span className="text-4xl font-extrabold text-white">${interval === 'annual' ? PRICING.plans.both_bundle.annual : PRICING.plans.both_bundle.monthly}</span>
-                                    <span className="text-gray-400 text-sm">{interval === 'annual' ? '/yr' : '/mo'}</span>
-                                </div>
-                                {interval === 'annual' && <p className="text-gray-500 text-xs">${PRICING.plans.both_bundle.annualPerMonth.toFixed(2)}/mo effective</p>}
-                            </div>
-                            <a
-                                href={`/api/stripe/checkout?plan=both_bundle&interval=${interval}&promo=${PRICING.trial.promoCode}`}
-                                className="flex items-center justify-center gap-2 rounded-xl py-3 px-8 font-bold text-sm transition-all bg-emerald-600 hover:bg-emerald-500 text-white"
-                            >
-                                Get All Access <ArrowRight className="w-4 h-4" />
-                            </a>
-                        </div>
-                    </div>
+            {/* ── Credit Installment Callout ─────────────────────────────────── */}
+            <section className="max-w-3xl mx-auto px-4 mb-16">
+                <div className="rounded-2xl border border-purple-500/20 bg-gradient-to-r from-purple-900/20 to-indigo-900/20 p-6 text-center">
+                    <Calendar className="w-8 h-8 text-purple-400 mx-auto mb-3" />
+                    <h3 className="text-lg font-bold text-white mb-2">Monthly Credit Installment</h3>
+                    <p className="text-gray-400 text-sm leading-relaxed max-w-xl mx-auto">
+                        Subscribe monthly and receive <span className="text-white font-semibold">$100 credit automatically</span> for
+                        your first 4 months — offsetting your bill each month. Total value: $400 applied directly
+                        to your subscription.
+                    </p>
                 </div>
             </section>
 
@@ -468,9 +411,9 @@ function UpgradePageInner() {
             <section className="max-w-4xl mx-auto px-4 mb-16">
                 <div className="grid md:grid-cols-3 gap-4">
                     {[
-                        { stat: '27.8%', label: 'CAGR backtested on TQQQ (2017–2024)' },
-                        { stat: '−5.1%', label: 'Max drawdown in 2022 vs TQQQ −83%' },
-                        { stat: '3 PM ET', label: 'Daily signal, every market day' },
+                        { stat: '39.3%', label: 'CAGR — 3× S&P average' },
+                        { stat: '86%',   label: 'Win rate — 7-year backtest' },
+                        { stat: '−5.1%', label: 'Max drawdown vs TQQQ −83%' },
                     ].map(({ stat, label }) => (
                         <div key={stat} className="text-center bg-white/5 border border-white/10 rounded-xl p-5">
                             <p className="text-3xl font-extrabold text-white mb-1">{stat}</p>
@@ -486,7 +429,6 @@ function UpgradePageInner() {
                 <FAQSection />
             </section>
 
-            {/* ── Footer ─────────────────────────────────────────────────────── */}
             <footer className="border-t border-white/10 py-8 text-center text-gray-500 text-xs px-4">
                 <p>TradeMind · Educational analysis only · Not personalized investment advice</p>
                 <p className="mt-1">Past performance does not indicate future results.</p>

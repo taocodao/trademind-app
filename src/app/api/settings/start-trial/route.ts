@@ -46,11 +46,21 @@ export async function POST(req: NextRequest) {
 
         // Fetch current state
         const res = await pool.query(
-            `SELECT subscription_tier, subscription_status,
+            `SELECT subscription_tier, subscription_status, billing_source,
                     app_trial_count, app_trial_started_at, app_trial_tier, app_trial_2_started_at
              FROM user_settings WHERE user_id = $1`,
             [userId]
         );
+
+        // ── Block for Whop-billed users ───────────────────────────────────────
+        // Whop users have a real paid trial (whop_trial_ends_at). The in-app
+        // trial system must never run for them — it would corrupt their access.
+        if (res.rows.length > 0 && res.rows[0].billing_source === 'whop') {
+            return NextResponse.json({
+                error: 'Whop trial already active — in-app trial not applicable.',
+                code:  'WHOP_TRIAL_ACTIVE',
+            }, { status: 409 });
+        }
 
         const TRIAL_FEATURES_LIMIT: Record<string, number> = {
             observer: 0, turbocore: 1, turbocore_pro: 1, both_bundle: 2,

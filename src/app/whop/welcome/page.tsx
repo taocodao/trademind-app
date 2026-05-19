@@ -15,8 +15,8 @@
  *   6. Redirect to /dashboard (now fully authenticated + entitled)
  */
 
-import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy, useLoginWithEmail } from '@privy-io/react-auth';
 import { CheckCircle, Mail, Loader2, ArrowRight, Zap, Shield, Star } from 'lucide-react';
 
@@ -38,8 +38,12 @@ function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 
 export default function WhopWelcomePage() {
     const router  = useRouter();
+    const params  = useSearchParams();
+    // ?days=30 or ?days=60 set by next.config.mjs rewrite from Whop redirect URL
+    const trialDays = parseInt(params.get('days') ?? '30', 10);
+    const trialFee  = trialDays === 60 ? 20 : 10;
     const { authenticated, getAccessToken, ready } = usePrivy();
-    const { sendCode, loginWithCode, state: privyEmailState } = useLoginWithEmail();
+    const { sendCode, loginWithCode } = useLoginWithEmail();
 
     const [stage, setStage]       = useState<Stage>('landing');
     const [email, setEmail]       = useState('');
@@ -186,17 +190,18 @@ export default function WhopWelcomePage() {
                             Payment confirmed! 🎉
                         </h1>
                         <p className="text-gray-400 mb-8 leading-relaxed">
-                            Your 30-day TradeMind trial is active. You now have full access to the{' '}
-                            <span className="text-purple-400 font-semibold">Both Bundle</span> — daily signals,
-                            TurboCore Pro, LEAPS strategy, and the community.
+                            Your <span className="text-purple-400 font-semibold">{trialDays}-day Full Access trial</span> is active.
+                            You have complete access to all 3 strategies: TurboCore, Turbo Pro, and QQQ LEAPS.
+                            Your <span className="text-green-400 font-semibold">${trialFee} trial fee</span> will
+                            convert to bonus subscription days when you upgrade.
                         </p>
 
                         {/* Value props */}
                         <div className="grid grid-cols-3 gap-3 mb-8">
                             {[
-                                { icon: Zap,    label: 'Daily Signals', sub: '3 PM ET' },
-                                { icon: Star,   label: 'Both Bundle',   sub: 'Full access' },
-                                { icon: Shield, label: '30 Days',       sub: 'Trial period' },
+                                { icon: Zap,    label: 'All 3 Strategies', sub: 'Full Access' },
+                                { icon: Star,   label: `${trialDays} Days`,  sub: 'Trial period' },
+                                { icon: Shield, label: `$${trialFee} Refunded`, sub: 'As bonus days' },
                             ].map(({ icon: Icon, label, sub }) => (
                                 <div key={label} className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
                                     <Icon className="w-5 h-5 text-purple-400 mx-auto mb-1" />
@@ -342,7 +347,7 @@ export default function WhopWelcomePage() {
                         </h2>
                         <p className="text-gray-400 text-sm">
                             {stage === 'done'
-                                ? 'Your Both Bundle trial is active. Welcome to TradeMind.'
+                                ? `Your ${trialDays}-day Full Access trial is active. Welcome to TradeMind.`
                                 : 'Linking your trial. This only takes a moment.'}
                         </p>
                     </div>

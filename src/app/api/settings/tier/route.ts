@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
 
         const result = await pool.query(
             `SELECT subscription_tier, subscription_status, billing_interval,
+                    billing_source, whop_trial_ends_at, whop_trial_days,
                     current_period_end, trial_end, stripe_price_id, cancel_at_period_end,
                     cancel_at, email_signal_alerts, email, has_completed_onboarding,
                     global_auto_approve, preferred_language,
@@ -69,6 +70,75 @@ export async function GET(req: NextRequest) {
         const row = result.rows[0];
         const stripeTier: string = row.subscription_tier || 'observer';
         const stripeStatus: string | null = row.subscription_status || null;
+
+        // ── Whop trial branch: check whop_trial_ends_at BEFORE Stripe fast-path
+        // This fixes the identity split bug — Privy DID row now has the real
+        // Whop trial expiry propagated from link-account.
+        const isWhopUser     = row.billing_source === 'whop';
+        const whopEnd        = row.whop_trial_ends_at ? new Date(row.whop_trial_ends_at) : null;
+        const whopTrialDays  = row.whop_trial_days || 30;
+        const whopActive     = isWhopUser && whopEnd && whopEnd > new Date();
+        const whopExpired    = isWhopUser && whopEnd && whopEnd <= new Date();
+
+        if (whopActive) {
+            return NextResponse.json({
+                tier:                   stripeTier,
+                status:                 'active',
+                billingSource:          'whop',
+                billingInterval:        null,
+                currentPeriodEnd:       null,
+                trialEnd:               whopEnd!.toISOString(),
+                priceId:                null,
+                cancelAtPeriodEnd:      false,
+                cancelAt:               null,
+                emailSignalAlerts:      row.email_signal_alerts === true,
+                email:                  row.email || null,
+                hasCompletedOnboarding: row.has_completed_onboarding ?? false,
+                globalAutoApprove:      row.global_auto_approve !== false,
+                strategyAutoApprove: {
+                    TQQQ_TURBOCORE:     row.turbocore_auto_approve ?? false,
+                    TQQQ_TURBOCORE_PRO: row.turbocore_pro_auto_approve ?? false,
+                    QQQ_LEAPS:          row.leaps_auto_approve ?? false,
+                },
+                preferredLanguage:      row.preferred_language || 'en',
+                appTrialCount:          0,
+                appTrialAvailable:      false,   // ← blocks start-trial auto-fire (Bug #4 fix)
+                appTrialStatus:         'active',
+                appTrialEnd:            whopEnd!.toISOString(),
+                appTrialTier:           stripeTier,
+                trialDaysTotal:         whopTrialDays,
+            });
+        }
+
+        if (whopExpired) {
+            return NextResponse.json({
+                tier:                   'observer',
+                status:                 'expired',
+                billingSource:          'whop',
+                billingInterval:        null,
+                currentPeriodEnd:       null,
+                trialEnd:               whopEnd!.toISOString(),
+                priceId:                null,
+                cancelAtPeriodEnd:      false,
+                cancelAt:               null,
+                emailSignalAlerts:      row.email_signal_alerts === true,
+                email:                  row.email || null,
+                hasCompletedOnboarding: row.has_completed_onboarding ?? false,
+                globalAutoApprove:      row.global_auto_approve !== false,
+                strategyAutoApprove: {
+                    TQQQ_TURBOCORE:     row.turbocore_auto_approve ?? false,
+                    TQQQ_TURBOCORE_PRO: row.turbocore_pro_auto_approve ?? false,
+                    QQQ_LEAPS:          row.leaps_auto_approve ?? false,
+                },
+                preferredLanguage:      row.preferred_language || 'en',
+                appTrialCount:          0,
+                appTrialAvailable:      false,
+                appTrialStatus:         'expired',
+                appTrialEnd:            whopEnd!.toISOString(),
+                appTrialTier:           'full_access',
+                trialDaysTotal:         whopTrialDays,
+            });
+        }
 
         // ── Active Stripe subscription always wins over in-app trial ──────────
         if (['active', 'trialing', 'past_due'].includes(stripeStatus ?? '')) {

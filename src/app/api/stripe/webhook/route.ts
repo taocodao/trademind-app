@@ -231,7 +231,11 @@ async function processWebhookEvent(event: Stripe.Event) {
             );
             
             // Auto-set free_features_limit based on new tier
-            const newFreeLimit = tier === 'both_bundle' ? 2 : ['turbocore', 'turbocore_pro'].includes(tier) ? 1 : 0;
+            const newFreeLimit = [
+                'full_access', 'turbocore_pro_bundle', 'qqq_leaps',
+                // legacy keys (kept for safety during migration period)
+                'both_bundle', 'turbocore_pro',
+            ].includes(tier) ? 2 : tier === 'turbocore' ? 1 : 0;
             await pool.query(
                 `UPDATE user_settings SET free_features_limit = $1 WHERE stripe_customer_id = $2`,
                 [newFreeLimit, customerId]
@@ -366,42 +370,56 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     if (billingReason === 'subscription_cycle' && subscriptionId) {
         try {
             const sub = await stripe.subscriptions.retrieve(subscriptionId) as any;
-            const startDate: number = sub.start_date;         // Unix seconds — subscription creation
-            const periodStart: number = (invoice as any).period_start; // Unix seconds — this billing period
+            const startDate: number = sub.start_date;
+            const periodStart: number = (invoice as any).period_start;
 
             // Month number: 1-indexed (first renewal = month 1)
             const monthsElapsed = Math.round((periodStart - startDate) / (30 * 24 * 3600));
-            const monthNumber = Math.max(1, monthsElapsed); // clamp to at least 1
+            const monthNumber = Math.max(1, monthsElapsed);
 
-            const maxMonths = PRICING.loyalty.totalMonths; // default 5
+            const maxLoyaltyMonths = PRICING.loyalty.totalMonths; // default 5
+            const maxInstallmentMonths = PRICING.creditInstallment.installmentCount; // 4
 
-            if (monthNumber <= maxMonths) {
-                // Look up user from customer ID
-                const userRow = await pool.query(
-                    `SELECT user_id FROM user_settings WHERE stripe_customer_id = $1`,
-                    [customerId]
-                );
-                const userId = userRow.rows[0]?.user_id;
+            // Look up user from customer ID
+            const userRow = await pool.query(
+                `SELECT user_id FROM user_settings WHERE stripe_customer_id = $1`,
+                [customerId]
+            );
+            const userId = userRow.rows[0]?.user_id;
 
-                if (userId) {
+            if (userId) {
+                // ── Loyalty Credits (months 1–N) ──────────────────────────────
+                if (monthNumber <= maxLoyaltyMonths) {
                     const loyaltySource = `loyalty_month_${monthNumber}_${invoice.id}`;
-                    const creditCents = PRICING.loyalty.creditCentsPerMonth; // default 2000 ($20)
-
-                    // ON CONFLICT DO NOTHING via UNIQUE constraint on (user_id, source)
+                    const creditCents = PRICING.loyalty.creditCentsPerMonth;
                     await pool.query(
                         `INSERT INTO user_credits (user_id, amount, source, expires_at)
                          VALUES ($1, $2, $3, NOW() + INTERVAL '90 days')
                          ON CONFLICT (user_id, source) DO NOTHING`,
                         [userId, creditCents, loyaltySource]
                     );
-                    console.log(`🎁 Loyalty credit: $${(creditCents/100).toFixed(0)} issued to ${userId} (month ${monthNumber}/${maxMonths}, invoice ${invoice.id})`);
+                    console.log(`🎁 Loyalty credit: $${(creditCents/100).toFixed(0)} issued to ${userId} (month ${monthNumber}/${maxLoyaltyMonths})`);
                 }
-            } else {
-                console.log(`[Loyalty] Month ${monthNumber} exceeds max ${maxMonths} — no credit issued (customer ${customerId})`);
+
+                // ── Installment Credits ($25 × 4 months = $100 total) ─────────
+                // Issued for the first 4 billing cycles (months 1–4) to offset
+                // the post-trial monthly cost. Idempotent: source includes invoice.id.
+                if (monthNumber <= maxInstallmentMonths) {
+                    const installSource = `installment_month_${monthNumber}_${invoice.id}`;
+                    const installCents = PRICING.creditInstallment.creditCentsPerInstallment; // 2500 = $25
+                    await pool.query(
+                        `INSERT INTO user_credits (user_id, amount, source, expires_at)
+                         VALUES ($1, $2, $3, NOW() + INTERVAL '30 days')
+                         ON CONFLICT (user_id, source) DO NOTHING`,
+                        [userId, installCents, installSource]
+                    );
+                    console.log(`💳 Installment credit: $${(installCents/100).toFixed(0)} issued to ${userId} (month ${monthNumber}/${maxInstallmentMonths})`);
+                } else {
+                    console.log(`[Installment] Month ${monthNumber} exceeds 4 — no installment credit (customer ${customerId})`);
+                }
             }
         } catch (loyaltyErr) {
-            // Non-fatal — log and continue to referral processing below
-            console.error('[Loyalty] Credit issuance failed (non-fatal):', loyaltyErr);
+            console.error('[Credits] Loyalty/installment issuance failed (non-fatal):', loyaltyErr);
         }
     }
 
@@ -583,18 +601,29 @@ async function markWhopTrialMigrated(email: string, tier: string): Promise<void>
     console.log(`[Stripe Webhook] Whop trial migrated: ${email} → ${tier}`);
 }
 
-// ── Tier mapping ───────────────────────────────────────────────────────────
+// ── Tier mapping from Stripe price ID ────────────────────────────────────────
 function determineTierFromPrice(priceId: string): string {
     const prices: Record<string, string> = {
-        [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_MONTHLY_PRICE_ID || ""]: "turbocore",
-        [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_ANNUAL_PRICE_ID || ""]: "turbocore",
-        [process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID || ""]: "turbocore_pro",
-        [process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID || ""]: "turbocore_pro",
-        [process.env.NEXT_PUBLIC_STRIPE_LEAPS_MONTHLY_PRICE_ID || ""]: "qqq_leaps",
-        [process.env.NEXT_PUBLIC_STRIPE_LEAPS_ANNUAL_PRICE_ID || ""]: "qqq_leaps",
-        [process.env.NEXT_PUBLIC_STRIPE_BUNDLE_MONTHLY_PRICE_ID || ""]: "both_bundle",
-        [process.env.NEXT_PUBLIC_STRIPE_BUNDLE_ANNUAL_PRICE_ID || ""]: "both_bundle",
+        // New plan keys (primary)
+        [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_PRO_BUNDLE_MONTHLY_PRICE_ID  || '']: 'turbocore_pro_bundle',
+        [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_PRO_BUNDLE_ANNUAL_PRICE_ID   || '']: 'turbocore_pro_bundle',
+        [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_PRO_BUNDLE_BIENNIAL_PRICE_ID || '']: 'turbocore_pro_bundle',
+        [process.env.NEXT_PUBLIC_STRIPE_QQQ_LEAPS_MONTHLY_PRICE_ID             || '']: 'qqq_leaps',
+        [process.env.NEXT_PUBLIC_STRIPE_QQQ_LEAPS_ANNUAL_PRICE_ID              || '']: 'qqq_leaps',
+        [process.env.NEXT_PUBLIC_STRIPE_QQQ_LEAPS_BIENNIAL_PRICE_ID            || '']: 'qqq_leaps',
+        [process.env.NEXT_PUBLIC_STRIPE_FULL_ACCESS_MONTHLY_PRICE_ID            || '']: 'full_access',
+        [process.env.NEXT_PUBLIC_STRIPE_FULL_ACCESS_ANNUAL_PRICE_ID             || '']: 'full_access',
+        [process.env.NEXT_PUBLIC_STRIPE_FULL_ACCESS_BIENNIAL_PRICE_ID           || '']: 'full_access',
+        // Legacy keys — kept during migration so existing subscribers aren't affected
+        [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_MONTHLY_PRICE_ID || '']: 'turbocore',
+        [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_ANNUAL_PRICE_ID  || '']: 'turbocore',
+        [process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID       || '']: 'turbocore_pro_bundle',
+        [process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID        || '']: 'turbocore_pro_bundle',
+        [process.env.NEXT_PUBLIC_STRIPE_LEAPS_MONTHLY_PRICE_ID     || '']: 'qqq_leaps',
+        [process.env.NEXT_PUBLIC_STRIPE_LEAPS_ANNUAL_PRICE_ID      || '']: 'qqq_leaps',
+        [process.env.NEXT_PUBLIC_STRIPE_BUNDLE_MONTHLY_PRICE_ID    || '']: 'full_access',
+        [process.env.NEXT_PUBLIC_STRIPE_BUNDLE_ANNUAL_PRICE_ID     || '']: 'full_access',
     };
-    delete prices[""];
-    return prices[priceId] || "observer";
+    delete prices[''];
+    return prices[priceId] || 'observer';
 }

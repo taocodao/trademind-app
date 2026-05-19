@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
-import { whopPlanToTier, sendWhopDM } from '@/lib/whop';
+import { whopPlanToTier, whopPlanTrialDays, sendWhopDM } from '@/lib/whop';
 import { query } from '@/lib/db';
 import { issueCredits } from '@/lib/credits';
 import { ensureReferralCode, recordReferralConversion, getReferrerByCode } from '@/lib/referrals';
@@ -114,28 +114,31 @@ async function handleMemberActivated(data: any) {
         return;
     }
 
-    // ── Paid trial branch (default) ──────────────────────────────────────────
+    // ── Paid trial branch (default) ──────────────────────────────────────
     const tier = whopPlanToTier(planId);
-    // Do NOT use renewal_period_end to discriminate free vs paid (may be null or misleading)
-    // Use +30 days as the canonical trial length; the deactivation webhook is the true end signal
+    const trialDays = whopPlanTrialDays(planId); // 30 or 60 based on plan
     const trialEndsAt = data.renewal_period_end
         ? new Date(data.renewal_period_end)
         : data.expires_at
         ? new Date(data.expires_at)
-        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        : new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
 
-    // 1. Upsert into user_settings (same table as Stripe subscribers)
     await query(
         `INSERT INTO user_settings
-            (user_id, email, first_name, subscription_tier, billing_source, auth_provider, whop_user_id, whop_plan_id, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, 'whop', 'whop', $5, $6, NOW(), NOW())
+            (user_id, email, first_name, subscription_tier, subscription_status,
+             billing_source, auth_provider, whop_user_id, whop_plan_id,
+             whop_trial_ends_at, whop_trial_days, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, 'active', 'whop', 'whop', $5, $6, $7, $8, NOW(), NOW())
          ON CONFLICT (user_id) DO UPDATE SET
-            subscription_tier = EXCLUDED.subscription_tier,
-            billing_source    = 'whop',
-            whop_user_id      = EXCLUDED.whop_user_id,
-            whop_plan_id      = EXCLUDED.whop_plan_id,
-            updated_at        = NOW()`,
-        [userId, email, firstName, tier, userId, planId]
+            subscription_tier   = EXCLUDED.subscription_tier,
+            subscription_status = 'active',
+            billing_source      = 'whop',
+            whop_user_id        = EXCLUDED.whop_user_id,
+            whop_plan_id        = EXCLUDED.whop_plan_id,
+            whop_trial_ends_at  = EXCLUDED.whop_trial_ends_at,
+            whop_trial_days     = EXCLUDED.whop_trial_days,
+            updated_at          = NOW()`,
+        [userId, email, firstName, tier, userId, planId, trialEndsAt.toISOString(), trialDays]
     );
 
     // 2. Upsert into whop_trials for full lifecycle tracking
@@ -163,10 +166,14 @@ async function handleMemberActivated(data: any) {
         console.warn('[Whop] Referral code generation failed:', e)
     );
 
-    // 5. Issue $15 trial bonus credits if this is the trial plan
-    const isTrialPlan = planId === (process.env.WHOP_PLAN_TRIAL ?? '');
+    // 3. Issue trial bonus credits ($10 or $20 depending on plan)
+    const trial30PlanId = process.env.WHOP_PLAN_TRIAL_30 ?? '';
+    const trial60PlanId = process.env.WHOP_PLAN_TRIAL_60 ?? '';
+    const isTrialPlan = planId === trial30PlanId || planId === trial60PlanId;
     if (isTrialPlan) {
-        await issueCredits(userId, PRICING.trial.creditCents, 'trial_bonus').catch(() => {});
+        // Credit amount matches the trial fee paid: $10 (1000 cents) or $20 (2000 cents)
+        const creditCents = planId === trial60PlanId ? 2000 : 1000;
+        await issueCredits(userId, creditCents, 'trial_bonus').catch(() => {});
     }
 
     // 6. Handle referral attribution
@@ -180,23 +187,32 @@ async function handleMemberActivated(data: any) {
         }
     }
 
-    // 7. Send welcome DM with trial end date
+    // 7. Send welcome DM with trial end date and correct duration
     const endDate = trialEndsAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
     await sendWhopDM(userId,
         `👋 **Welcome to TradeMind, ${firstName}!**
 
-Your 30-day trial runs until **${endDate}**. Here's what to do right now:
+Your **${trialDays}-day Full Access trial** runs until **${endDate}**. You have complete access to all 3 strategies.
 
-**1. Turn on push notifications** — that's how the 3 PM TurboCore signal reaches you every trading day.
+**Start here:**
+
+**1. Turn on push notifications** — the TurboCore signal arrives at 3 PM ET every trading day.
 
 **2. Check #morning-brief** every day at 8:15 AM ET before market open.
 
 **3. When the 3 PM signal drops** — execute in any brokerage in under 2 minutes.
 
-**4. Start TurboCore 101** — the course in the Courses tab covers the full strategy in 30 minutes.
+**4. Start TurboCore 101** — the 30-minute course in the Courses tab.
 
 ---
-On **${endDate}**, you'll get a link to continue on trademind.bot — no new signup needed, your history carries over.
+On **${endDate}**, you'll get a magic link to continue on trademind.bot.
+Your **$${trialDays === 60 ? 20 : 10} trial fee converts to bonus subscription days** at checkout — no wasted money.
+
+**Plans after trial:**
+• Turbo Core + Pro  $69/mo
+• QQQ LEAPS         $59/mo
+• Full Access (all) $100/mo  ← same as your trial
+Yearly plans: 30% off · 2-year: 40% off
 
 Questions? Ask in #general-chat.
 
@@ -291,9 +307,12 @@ async function handleMemberCancelled(data: any) {
     const email  = data.user?.email ?? '';
     if (!userId) return;
 
-    // 1. Revoke access
+    // 1. Revoke access (set status + tier)
     await query(
-        `UPDATE user_settings SET subscription_tier = 'observer', updated_at = NOW()
+        `UPDATE user_settings
+         SET subscription_tier   = 'observer',
+             subscription_status = 'canceled',
+             updated_at          = NOW()
          WHERE whop_user_id = $1`,
         [userId]
     );
@@ -387,7 +406,7 @@ function buildMigrationDm(firstName: string, magicLink: string | null): string {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://trademind.bot';
     const link = magicLink ?? `${baseUrl}/upgrade`;
 
-    return `⏰ **Your TradeMind 30-day trial has ended.**
+    return `⏰ **Your TradeMind trial has ended.**
 
 Thanks for being part of the community, ${firstName}.
 
@@ -396,11 +415,15 @@ Your account on **trademind.bot** is already set up with your trial history. Cli
 👉 ${link}
 
 **Choose your plan:**
-• **TurboCore** $29/mo — daily signals, morning brief, auto-execution
-• **TurboCore Pro** $49/mo — signals + LEAPS + enhanced ML
-• **Both Bundle** $69/mo — everything, unlimited
+• **Turbo Core + Pro** $69/mo — TurboCore signal + IV-Switching options
+• **QQQ LEAPS**        $59/mo — ML-powered LEAPS ENTER / EXIT signals
+• **Full Access**      $100/mo — all 3 strategies (same as your trial)
 
-The link is valid for 7 days. Your $15 trial credit converts to bonus days at checkout.
+**Yearly plans: 30% off · 2-year: 40% off**
+
+Your trial fee ($10 or $20) converts to **bonus subscription days** — no money wasted.
+
+Link valid for 7 days.
 
 _Educational analysis only. Not personalized investment advice._`;
 }

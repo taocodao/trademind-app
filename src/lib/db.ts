@@ -866,6 +866,44 @@ export async function initializeUserTables(): Promise<void> {
         await query(`CREATE INDEX IF NOT EXISTS idx_user_settings_whop_user ON user_settings(whop_user_id)`);
         await query(`CREATE INDEX IF NOT EXISTS idx_user_settings_referral_code ON user_settings(referral_code)`);
 
+        // ── Whop Trial Duration Columns (Bug Fix + 30/60-day trial support) ───
+        // whop_trial_ends_at: actual Whop trial expiry written by webhook (fixes identity split bug)
+        // whop_trial_days:    30 or 60, for dashboard countdown display
+        await query(`
+            ALTER TABLE user_settings
+              ADD COLUMN IF NOT EXISTS whop_trial_ends_at  TIMESTAMPTZ,
+              ADD COLUMN IF NOT EXISTS whop_trial_days     SMALLINT DEFAULT 30
+        `);
+
+        // ── Tier Key Rename Migration ─────────────────────────────────────────
+        // both_bundle   → full_access         ($89 → $100)
+        // turbocore_pro → turbocore_pro_bundle (standalone → bundled with TurboCore)
+        await query(`UPDATE user_settings SET subscription_tier='full_access',         updated_at=NOW() WHERE subscription_tier='both_bundle'`).catch(()=>{});
+        await query(`UPDATE user_settings SET subscription_tier='turbocore_pro_bundle', updated_at=NOW() WHERE subscription_tier='turbocore_pro'`).catch(()=>{});
+        await query(`UPDATE user_settings SET app_trial_tier='full_access',            updated_at=NOW() WHERE app_trial_tier='both_bundle'`).catch(()=>{});
+
+        // ── Backfill Broken Whop Users ────────────────────────────────────────
+        // Fixes users who paid on Whop but had their trial corrupted by the
+        // in-app 14-day auto-start (identity split bug). Copies correct
+        // trial_ends_at from whop_trials into user_settings.
+        await query(`
+            UPDATE user_settings us
+            SET
+              subscription_status  = CASE WHEN wt.trial_ends_at > NOW() THEN 'active' ELSE 'canceled' END,
+              whop_trial_ends_at   = wt.trial_ends_at,
+              whop_trial_days      = CASE
+                                       WHEN EXTRACT(EPOCH FROM (wt.trial_ends_at - wt.trial_started_at)) > 45*86400
+                                       THEN 60 ELSE 30 END,
+              subscription_tier    = CASE WHEN wt.trial_ends_at > NOW() THEN 'full_access' ELSE 'observer' END,
+              app_trial_count      = 0,
+              app_trial_started_at = NULL,
+              updated_at           = NOW()
+            FROM whop_trials wt
+            WHERE us.whop_user_id = wt.whop_user_id
+              AND us.billing_source = 'whop'
+              AND us.whop_trial_ends_at IS NULL
+        `).catch(()=>{}); // Non-fatal — whop_trials may not exist in fresh envs
+
         // ── User Credits Ledger ───────────────────────────────────────────────
         // 1 credit = $0.10 = 10 cents stored as INTEGER
         await query(`

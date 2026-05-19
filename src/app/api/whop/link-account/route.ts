@@ -66,28 +66,38 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     // ── 4. Merge: upsert user_settings keyed by Privy DID ────────────────────
     // If user already exists (signed up before finding this page), update their record.
-    // If new, create with both_bundle tier from the trial.
+    // If new, create with full_access tier from the trial.
+    // KEY FIX: copy whop_trial_ends_at + whop_trial_days so the tier API
+    //          can read the correct Whop trial without the identity split.
     await query(
         `INSERT INTO user_settings (
             user_id, email, subscription_tier, subscription_status,
             billing_source, auth_provider,
             whop_user_id, whop_plan_id,
+            whop_trial_ends_at, whop_trial_days,
             app_trial_tier, app_trial_started_at,
             created_at, updated_at
          ) VALUES (
             $1, $2, $3, $4,
             'whop', 'privy',
             $5, $6,
-            'both_bundle', NOW(),
+            $7, $8,
+            'full_access', NOW(),
             NOW(), NOW()
          )
          ON CONFLICT (user_id) DO UPDATE SET
-            email          = COALESCE(user_settings.email, EXCLUDED.email),
-            whop_user_id   = EXCLUDED.whop_user_id,
-            whop_plan_id   = COALESCE(user_settings.whop_plan_id, EXCLUDED.whop_plan_id),
-            billing_source = CASE
+            email             = COALESCE(user_settings.email, EXCLUDED.email),
+            whop_user_id      = EXCLUDED.whop_user_id,
+            whop_plan_id      = COALESCE(user_settings.whop_plan_id, EXCLUDED.whop_plan_id),
+            whop_trial_ends_at = EXCLUDED.whop_trial_ends_at,
+            whop_trial_days   = EXCLUDED.whop_trial_days,
+            billing_source    = CASE
                 WHEN user_settings.billing_source = 'stripe' THEN 'stripe'
                 ELSE 'whop'
+            END,
+            subscription_status = CASE
+                WHEN user_settings.billing_source = 'stripe' THEN user_settings.subscription_status
+                ELSE EXCLUDED.subscription_status
             END,
             subscription_tier = CASE
                 WHEN user_settings.subscription_tier NOT IN ('observer', 'turbocore') THEN user_settings.subscription_tier
@@ -97,12 +107,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         [
             privyUserId,
             trial.email,
-            isActive ? 'both_bundle' : 'observer',
+            isActive ? 'full_access' : 'observer',
             isActive ? 'active' : 'canceled',
             trial.whop_user_id,
             trial.whop_plan_id,
+            trial.trial_ends_at,
+            // Infer trial days from duration (>45 days = 60-day plan)
+            trial.trial_ends_at
+                ? Math.round((new Date(trial.trial_ends_at).getTime() - new Date(trial.trial_started_at ?? Date.now()).getTime()) / (24*60*60*1000)) > 45
+                    ? 60 : 30
+                : 30,
         ]
     );
+
 
     // ── 5. Log the link in trial_conversions for tracking ────────────────────
     await query(

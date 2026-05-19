@@ -4,6 +4,10 @@
  * Single import used across all Whop-related routes.
  * Plan IDs are read from env vars set after Whop store setup.
  *
+ * Trial Plans (2):
+ *   WHOP_PLAN_TRIAL_30  — 30-day $10 trial (trademind-algo-signals-30day)
+ *   WHOP_PLAN_TRIAL_60  — 60-day $20 trial (trademind-algo-signals-60day)
+ *
  * Sandbox mode: set WHOP_SANDBOX=true in .env.local to point at
  * sandbox-api.whop.com for testing with Whop test cards.
  * Remove / set to false before deploying to production.
@@ -24,16 +28,32 @@ if (isSandbox) {
     console.warn('[Whop] ⚠️  SANDBOX MODE — not production');
 }
 
-/** Maps a Whop plan_id → our internal subscription_tier key */
+/**
+ * Maps a Whop plan_id → our internal subscription_tier key.
+ *
+ * Trial plans map to 'full_access' (all 3 strategies).
+ * Paid recurring plans map to their respective tier.
+ */
 export function whopPlanToTier(planId: string): string {
     const map: Record<string, string> = {
-        [process.env.WHOP_PLAN_BASE   ?? '__base__']:   'turbocore',
-        [process.env.WHOP_PLAN_PRO    ?? '__pro__']:    'turbocore_pro',
-        [process.env.WHOP_PLAN_BUNDLE ?? '__bundle__']: 'both_bundle',
-        // Trial = full Both Bundle access for 30 days
-        [process.env.WHOP_PLAN_TRIAL  ?? '__trial__']:  'both_bundle',
+        // Trial plans — both grant full_access for trial duration
+        [process.env.WHOP_PLAN_TRIAL_30 ?? '__trial30__']: 'full_access',
+        [process.env.WHOP_PLAN_TRIAL_60 ?? '__trial60__']: 'full_access',
+        // Recurring paid plans
+        [process.env.WHOP_PLAN_PRO      ?? '__pro__']:     'turbocore_pro_bundle',
+        [process.env.WHOP_PLAN_LEAPS    ?? '__leaps__']:   'qqq_leaps',
+        [process.env.WHOP_PLAN_BUNDLE   ?? '__bundle__']:  'full_access',
     };
-    return map[planId] ?? 'both_bundle'; // default to both_bundle for any unknown trial plan
+    return map[planId] ?? 'full_access'; // default to full_access for unknown trial plans
+}
+
+/**
+ * Returns the trial duration in days for a given Whop plan ID.
+ * 60-day plan → 60. Everything else → 30 (default).
+ */
+export function whopPlanTrialDays(planId: string): number {
+    if (planId === (process.env.WHOP_PLAN_TRIAL_60 ?? '__trial60__')) return 60;
+    return 30;
 }
 
 /** Post a message to a Whop channel — non-fatal */

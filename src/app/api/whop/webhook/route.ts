@@ -159,6 +159,28 @@ async function handleMemberActivated(data: any) {
         ? new Date(data.expires_at)
         : new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
 
+    // ── Step 1: Determine the canonical user_id to write against ─────────────
+    // CRITICAL: If a user_settings row already exists for this email (i.e. the
+    // user logged into TradeMind via Privy before buying on Whop), we MUST update
+    // THAT row — not create a new orphan row keyed by the Whop user ID.
+    // Without this, the webhook and the Privy session write to completely separate
+    // rows and the subscription never shows up in the user's dashboard.
+    let canonicalUserId = userId; // default: Whop user ID (fallback for new users)
+
+    if (email) {
+        const existingRow = await query(
+            `SELECT user_id FROM user_settings
+             WHERE LOWER(email) = LOWER($1)
+             ORDER BY updated_at DESC LIMIT 1`,
+            [email]
+        );
+        if (existingRow.rows.length > 0) {
+            canonicalUserId = existingRow.rows[0].user_id;
+            console.log(`[Whop Webhook] Matched existing user by email: ${email} → ${canonicalUserId}`);
+        }
+    }
+
+    // ── Step 2: Write subscription data to the canonical row ─────────────────
     await query(
         `INSERT INTO user_settings
             (user_id, email, first_name, subscription_tier, subscription_status,
@@ -166,6 +188,7 @@ async function handleMemberActivated(data: any) {
              whop_trial_ends_at, whop_trial_days, updated_at)
          VALUES ($1, $2, $3, $4, 'active', 'whop', 'whop', $5, $6, $7, $8, NOW())
          ON CONFLICT (user_id) DO UPDATE SET
+            email               = COALESCE(user_settings.email, EXCLUDED.email),
             subscription_tier   = EXCLUDED.subscription_tier,
             subscription_status = 'active',
             billing_source      = 'whop',
@@ -174,7 +197,7 @@ async function handleMemberActivated(data: any) {
             whop_trial_ends_at  = EXCLUDED.whop_trial_ends_at,
             whop_trial_days     = EXCLUDED.whop_trial_days,
             updated_at          = NOW()`,
-        [userId, email, firstName, tier, userId, planId, trialEndsAt.toISOString(), trialDays]
+        [canonicalUserId, email, firstName, tier, userId, planId, trialEndsAt.toISOString(), trialDays]
     );
 
     // 2. Upsert into whop_trials for full lifecycle tracking

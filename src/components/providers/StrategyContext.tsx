@@ -36,14 +36,17 @@ export function StrategyProvider({ children }: { children: ReactNode }) {
                     .then(r => r.json())
                     .then(d => {
                         const tierKeys = getStrategiesForSubscription(
-                            d.tier === 'turbocore'     ? 'TURBOCORE'     :
-                            d.tier === 'turbocore_pro' ? 'TURBOCORE_PRO' :
-                            d.tier === 'qqq_leaps'     ? 'QQQ_LEAPS'     :
-                            d.tier === 'both_bundle'   ? 'BOTH'          : '' as any
+                            d.tier === 'turbocore'             ? 'TURBOCORE'     :
+                            d.tier === 'turbocore_pro'         ? 'TURBOCORE_PRO' :
+                            d.tier === 'qqq_leaps'             ? 'QQQ_LEAPS'     :
+                            d.tier === 'both_bundle'           ? 'BOTH'          :
+                            d.tier === 'full_access'           ? 'BOTH'          :
+                            d.tier === 'turbocore_pro_bundle'  ? 'BOTH'          : '' as any
                         );
                         
-                        // If user is a bundle holder, ensure ALL THREE strategies are enabled
-                        if (d.tier === 'both_bundle') {
+                        // If user is a full-access holder (any variant), ensure ALL strategies are enabled
+                        const isFullAccess = ['both_bundle', 'full_access', 'turbocore_pro_bundle'].includes(d.tier);
+                        if (isFullAccess) {
                             const current = new Set(userStrategies);
                             let changed = false;
                             tierKeys.forEach(k => {
@@ -53,9 +56,9 @@ export function StrategyProvider({ children }: { children: ReactNode }) {
                                 }
                             });
                             if (changed) {
-                                console.log('🔄 StrategyContext: Auto-enabling all three strategies for All Access user');
+                                console.log('🔄 StrategyContext: Auto-enabling all strategies for Full Access user (tier:', d.tier, ')');
                                 setUserStrategies(Array.from(current));
-                                return; // setUserStrategies will trigger a re-run of this hook
+                                return;
                             }
                         }
                         

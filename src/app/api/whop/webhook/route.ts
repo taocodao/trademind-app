@@ -21,15 +21,15 @@ import { generateMigrationToken } from '@/lib/migration';
 // Webhook verification is handled by the Whop SDK's unwrap method
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-    const body      = await req.text();
-    const hdrs      = await headers();
-    const headersObj = Object.fromEntries(hdrs.entries());
-
-    // Log raw payload for debugging regardless of verification outcome
-    console.log('[Whop Webhook] Received POST, body length:', body.length, '| first 200 chars:', body.slice(0, 200));
-
-    let event: any;
     try {
+        const body      = await req.text();
+        const hdrs      = await headers();
+        const headersObj = Object.fromEntries(hdrs.entries());
+
+        // Log raw payload for debugging regardless of verification outcome
+        console.log('[Whop Webhook] Received POST, body length:', body.length, '| first 200 chars:', body.slice(0, 200));
+
+        let event: any;
         const secret = process.env.WHOP_WEBHOOK_SECRET ?? '';
         if (!secret) {
             console.warn('[Whop Webhook] WHOP_WEBHOOK_SECRET not set — skipping verification');
@@ -48,70 +48,70 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
                 console.log('[Whop Webhook] Raw parsed event (sig failed):', JSON.stringify(event).slice(0, 500));
             }
         }
+
+        // Whop v1 API uses dot notation: 'membership.activated'
+        // Some older event versions used underscore: 'membership_activated'
+        // We handle both for safety.
+        const action = (event.type ?? event.event ?? event.action ?? '') as string;
+        const data   = event.data ?? {};
+        const userEmail = data.user?.email ?? data.email ?? 'unknown';
+        const userId    = data.user?.id ?? data.user_id ?? 'unknown';
+
+        console.log(`[Whop Webhook] event="${action}" user=${userId} email=${userEmail}`);
+
+        switch (action) {
+            // Membership activated (dot notation — Whop v1 current)
+            case 'membership.activated':
+            // Legacy underscore fallback
+            case 'membership_activated':
+                await handleMemberActivated(data);
+                break;
+
+            // Payment succeeded — also trigger activation in case membership event is missed
+            case 'payment.succeeded':
+            case 'payment_succeeded':
+                console.log(`[Whop Webhook] Payment succeeded for ${userId} (${userEmail})`);
+                // payment.succeeded fires before membership.activated — activation handled there
+                break;
+
+            // Membership deactivated
+            case 'membership.went_invalid':
+            case 'membership_deactivated':
+                await handleMemberCancelled(data);
+                break;
+
+            // Cancel at period end
+            case 'membership.cancel_at_period_end_changed':
+            case 'membership_cancel_at_period_end_changed':
+                if (data.cancel_at_period_end === true) {
+                    await sendWhopDM(
+                        userId,
+                        `Hey — we noticed you turned off renewal. Before your access ends, reply "deal" for 30% off your next month, or "pause" to hold your spot for 30 days at no charge.`
+                    ).catch(() => {});
+                }
+                break;
+
+            case 'payment.failed':
+            case 'payment_failed':
+                console.log(`[Whop Webhook] Payment failed for ${userId} (${userEmail})`);
+                break;
+
+            default:
+                console.log(`[Whop Webhook] Unhandled event: "${action}" — full payload keys: ${Object.keys(event).join(', ')}`);
+        }
+
+        // Log to whop_events for analytics (non-fatal)
+        await query(
+            `INSERT INTO whop_events (event_type, user_id, metadata, created_at)
+             VALUES ($1, $2, $3, NOW())`,
+            [action, data.user?.id ?? data.user_id ?? null, JSON.stringify(data)]
+        ).catch(() => {});
+
+        return NextResponse.json({ received: true });
     } catch (err: any) {
-        console.error('[Whop Webhook] Fatal parse error:', err.message);
-        return NextResponse.json({ error: 'Parse error' }, { status: 400 });
+        console.error('[Whop Webhook] Unhandled exception:', err.message, err.stack);
+        return NextResponse.json({ error: 'Internal Server Error', message: err.message, stack: err.stack }, { status: 500 });
     }
-
-    // Whop v1 API uses dot notation: 'membership.activated'
-    // Some older event versions used underscore: 'membership_activated'
-    // We handle both for safety.
-    const action = (event.type ?? event.event ?? event.action ?? '') as string;
-    const data   = event.data ?? {};
-    const userEmail = data.user?.email ?? data.email ?? 'unknown';
-    const userId    = data.user?.id ?? data.user_id ?? 'unknown';
-
-    console.log(`[Whop Webhook] event="${action}" user=${userId} email=${userEmail}`);
-
-    switch (action) {
-        // Membership activated (dot notation — Whop v1 current)
-        case 'membership.activated':
-        // Legacy underscore fallback
-        case 'membership_activated':
-            await handleMemberActivated(data);
-            break;
-
-        // Payment succeeded — also trigger activation in case membership event is missed
-        case 'payment.succeeded':
-        case 'payment_succeeded':
-            console.log(`[Whop Webhook] Payment succeeded for ${userId} (${userEmail})`);
-            // payment.succeeded fires before membership.activated — activation handled there
-            break;
-
-        // Membership deactivated
-        case 'membership.went_invalid':
-        case 'membership_deactivated':
-            await handleMemberCancelled(data);
-            break;
-
-        // Cancel at period end
-        case 'membership.cancel_at_period_end_changed':
-        case 'membership_cancel_at_period_end_changed':
-            if (data.cancel_at_period_end === true) {
-                await sendWhopDM(
-                    userId,
-                    `Hey — we noticed you turned off renewal. Before your access ends, reply "deal" for 30% off your next month, or "pause" to hold your spot for 30 days at no charge.`
-                ).catch(() => {});
-            }
-            break;
-
-        case 'payment.failed':
-        case 'payment_failed':
-            console.log(`[Whop Webhook] Payment failed for ${userId} (${userEmail})`);
-            break;
-
-        default:
-            console.log(`[Whop Webhook] Unhandled event: "${action}" — full payload keys: ${Object.keys(event).join(', ')}`);
-    }
-
-    // Log to whop_events for analytics (non-fatal)
-    await query(
-        `INSERT INTO whop_events (event_type, user_id, metadata, created_at)
-         VALUES ($1, $2, $3, NOW())`,
-        [action, data.user?.id ?? data.user_id ?? null, JSON.stringify(data)]
-    ).catch(() => {});
-
-    return NextResponse.json({ received: true });
 }
 
 // ── Handlers ──────────────────────────────────────────────────────────────────

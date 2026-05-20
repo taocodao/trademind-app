@@ -1,0 +1,1 @@
+fetch('https://trademind.bot/api/whop/webhook', { method: 'POST', body: JSON.stringify({ type: 'membership_activated', data: { user: { id: 'test', email: 't@t.com' }, plan: { id: 'test' } } }) }).then(r => r.text()).then(console.log).catch(console.error);

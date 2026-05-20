@@ -4,27 +4,50 @@ import pool from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-// Helper — extract userId from cookie or Bearer token
-async function resolveUserId(req: NextRequest): Promise<string | null> {
+// Helper — extract userId AND email from Privy cookie / Bearer token.
+// Privy stores linked accounts (including the login email) in the JWT payload
+// under the 'privy:linked_accounts' claim. We extract that here so every
+// authenticated request can sync the email into user_settings.
+interface ResolvedIdentity {
+    userId: string;
+    email:  string | null;
+}
+
+async function resolveIdentity(req: NextRequest): Promise<ResolvedIdentity | null> {
     const cookieStore = await cookies();
-    let userId = cookieStore.get('privy-user-id')?.value;
-    if (!userId) {
-        const authHeader = req.headers.get('Authorization');
-        if (authHeader?.startsWith('Bearer ')) {
-            const token = authHeader.slice(7);
-            try {
-                const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
-                userId = payload?.sub || payload?.privy_did || '';
-            } catch { /* malformed token */ }
-        }
+    let userId  = cookieStore.get('privy-user-id')?.value ?? '';
+    let email: string | null = null;
+
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.slice(7);
+        try {
+            const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
+            if (!userId) userId = payload?.sub || payload?.privy_did || '';
+
+            // Extract email from Privy linked_accounts claim
+            // Privy JWT contains 'privy:linked_accounts' → array of { type, address? }
+            const linked: Array<{ type: string; address?: string }> =
+                payload?.['privy:linked_accounts'] ?? [];
+            const emailAccount = linked.find((a) => a.type === 'email' && a.address);
+            if (emailAccount?.address) email = emailAccount.address.toLowerCase().trim();
+        } catch { /* malformed token */ }
     }
-    return userId || null;
+
+    return userId ? { userId, email } : null;
+}
+
+// Legacy helper kept for routes that only need the userId
+async function resolveUserId(req: NextRequest): Promise<string | null> {
+    const identity = await resolveIdentity(req);
+    return identity?.userId ?? null;
 }
 
 export async function GET(req: NextRequest) {
     try {
-        const userId = await resolveUserId(req);
-        if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+        const identity = await resolveIdentity(req);
+        if (!identity) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+        const { userId, email: privyEmail } = identity;
 
         const TRIAL_DAYS = parseInt(process.env.FREE_TRIAL_DAYS || '14', 10);
         const TRIAL_TIER = process.env.FREE_TRIAL_TIER || 'both_bundle';
@@ -42,8 +65,21 @@ export async function GET(req: NextRequest) {
             [userId]
         );
 
-        // ── New user: no row yet — first trial not started ────────────────────
+        // ── New user: no row yet ─────────────────────────────────────────────
+        // Create a minimal row immediately so future Whop webhook reconciliation
+        // can match by email. Without this, the email lookup always fails.
         if (result.rows.length === 0) {
+            if (privyEmail) {
+                // Seed a row with the email so Whop self-healing can find this user
+                await pool.query(
+                    `INSERT INTO user_settings (user_id, email, updated_at)
+                     VALUES ($1, $2, NOW())
+                     ON CONFLICT (user_id) DO UPDATE SET
+                         email      = COALESCE(user_settings.email, EXCLUDED.email),
+                         updated_at = NOW()`,
+                    [userId, privyEmail]
+                ).catch(() => {}); // non-fatal
+            }
             return NextResponse.json({
                 tier: 'observer',
                 status: null,
@@ -54,7 +90,7 @@ export async function GET(req: NextRequest) {
                 cancelAtPeriodEnd: false,
                 cancelAt: null,
                 emailSignalAlerts: false,
-                email: null,
+                email: privyEmail,
                 hasCompletedOnboarding: false,
                 globalAutoApprove: true,
                 preferredLanguage: 'en',
@@ -68,6 +104,21 @@ export async function GET(req: NextRequest) {
         }
 
         const row = result.rows[0];
+
+        // ── Sync email from Privy JWT → user_settings if missing ─────────────
+        // This is the permanent fix for the Whop/Privy identity mismatch:
+        // Privy holds the user's email but the DB row may have been created
+        // without it (e.g. via a wallet or social OAuth). We backfill it now
+        // on every authenticated request so Whop reconciliation always works.
+        if (privyEmail && !row.email) {
+            await pool.query(
+                `UPDATE user_settings SET email = $1, updated_at = NOW()
+                 WHERE user_id = $2 AND email IS NULL`,
+                [privyEmail, userId]
+            ).catch(() => {}); // non-fatal — don't block the response
+            row.email = privyEmail; // reflect in current response too
+        }
+
         const stripeTier: string = row.subscription_tier || 'observer';
         const stripeStatus: string | null = row.subscription_status || null;
 

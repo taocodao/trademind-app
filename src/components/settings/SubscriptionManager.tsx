@@ -79,7 +79,17 @@ interface MembershipInfo {
 }
 
 export function SubscriptionManager() {
-    const { getAccessToken } = usePrivy();
+    const { getAccessToken, user } = usePrivy();
+
+    // Extract email from Privy user object — works for email/OTP, Google, Apple OAuth.
+    // This is passed as X-User-Email to the tier API so the server can sync it
+    // into user_settings without relying on JWT claims (access tokens lack email).
+    const privyUserEmail: string =
+        (user as any)?.email?.address ||
+        (user?.linkedAccounts?.find((a: any) => a.type === 'email') as any)?.address ||
+        (user?.linkedAccounts?.find((a: any) => a.type === 'google_oauth') as any)?.email ||
+        (user?.linkedAccounts?.find((a: any) => a.type === 'apple_oauth') as any)?.email ||
+        '';
     const searchParams       = useSearchParams();
     const isMockExpired      = searchParams?.get('mockExpired') === 'true';
 
@@ -97,9 +107,10 @@ export function SubscriptionManager() {
 
     const refreshMembership = async () => {
         const token = await getAccessToken();
-        const res   = await fetch('/api/settings/tier', {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        const extraHeaders: Record<string, string> = {};
+        if (token) extraHeaders['Authorization'] = `Bearer ${token}`;
+        if (privyUserEmail) extraHeaders['X-User-Email'] = privyUserEmail;
+        const res   = await fetch('/api/settings/tier', { headers: extraHeaders });
         const d = await res.json();
         if (d.tier) setMembership(d);
     };

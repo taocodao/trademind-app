@@ -4,10 +4,16 @@ import pool from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-// Helper — extract userId AND email from Privy cookie / Bearer token.
-// Privy stores linked accounts (including the login email) in the JWT payload
-// under the 'privy:linked_accounts' claim. We extract that here so every
-// authenticated request can sync the email into user_settings.
+// Helper — extract userId AND email from Privy cookie / Bearer token + X-User-Email header.
+//
+// IMPORTANT: The Privy *access* token (sent as Bearer) does NOT contain the user's email
+// in its payload — the email lives in the Privy ID token, which the frontend does not send.
+// The correct approach is:
+//   - userId  ← Bearer token sub claim (or privy-user-id cookie)
+//   - email   ← X-User-Email header, explicitly set by the frontend from usePrivy().user
+//
+// The frontend (SubscriptionManager.tsx) extracts the email from user.linkedAccounts and
+// sends it as X-User-Email, making it reliably available here on every authenticated request.
 interface ResolvedIdentity {
     userId: string;
     email:  string | null;
@@ -18,19 +24,17 @@ async function resolveIdentity(req: NextRequest): Promise<ResolvedIdentity | nul
     let userId  = cookieStore.get('privy-user-id')?.value ?? '';
     let email: string | null = null;
 
+    // Primary email source: explicit header from the frontend (most reliable)
+    const headerEmail = req.headers.get('X-User-Email') ?? req.headers.get('x-user-email');
+    if (headerEmail) email = headerEmail.toLowerCase().trim();
+
+    // userId from Bearer token
     const authHeader = req.headers.get('Authorization');
-    if (authHeader?.startsWith('Bearer ')) {
+    if (authHeader?.startsWith('Bearer ') && !userId) {
         const token = authHeader.slice(7);
         try {
             const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
-            if (!userId) userId = payload?.sub || payload?.privy_did || '';
-
-            // Extract email from Privy linked_accounts claim
-            // Privy JWT contains 'privy:linked_accounts' → array of { type, address? }
-            const linked: Array<{ type: string; address?: string }> =
-                payload?.['privy:linked_accounts'] ?? [];
-            const emailAccount = linked.find((a) => a.type === 'email' && a.address);
-            if (emailAccount?.address) email = emailAccount.address.toLowerCase().trim();
+            userId = payload?.sub || payload?.privy_did || '';
         } catch { /* malformed token */ }
     }
 

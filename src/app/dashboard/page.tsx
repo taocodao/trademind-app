@@ -989,6 +989,14 @@ function DashboardContent() {
                     const TrialBanner = trialActive && membership.appTrialEnd ? (() => {
                         const daysLeft = Math.max(0, Math.ceil((new Date(membership.appTrialEnd).getTime() - Date.now()) / 86400000));
                         const trialNum = membership.appTrialStatus === 'second_trial_active' ? 2 : 1;
+                        const tierLabel = ({
+                            full_access: 'Full Access',
+                            both_bundle: 'Full Access',
+                            turbocore_pro_bundle: 'Turbo Core + Pro',
+                            qqq_leaps: 'QQQ LEAPS',
+                            turbocore: 'TurboCore',
+                        } as Record<string, string>)[(membership as any).appTrialTier] || 'Full Access';
+                        const isWhopTrial = (membership as any).billingSource === 'whop';
                         return (
                             <div className="glass-card p-3 flex items-center gap-3 border-tm-purple/30 bg-gradient-to-r from-tm-purple/10 to-blue-500/10">
                                 <div className="w-8 h-8 rounded-full bg-tm-purple/20 flex items-center justify-center shrink-0">
@@ -996,7 +1004,9 @@ function DashboardContent() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-xs font-bold text-white">
-                                        {t('dashboard.trial_banner', 'Free Trial #{{trialNum}} — {{tier}} Access', { trialNum, tier: membership.appTrialTier.replace('_', ' ') })}
+                                        {isWhopTrial
+                                            ? `Whop Trial — ${tierLabel} (${membership.trialDaysTotal || 30} days)`
+                                            : `Free Trial #${trialNum} — ${tierLabel}`}
                                     </p>
                                     <p className="text-[10px] text-tm-muted">
                                         {daysLeft > 0 ? t(daysLeft === 1 ? 'dashboard.days_remaining' : 'dashboard.days_remaining_plural', '{{days}} days remaining · No credit card needed yet', { days: daysLeft }) : t('dashboard.expires_today', 'Expires today!')}

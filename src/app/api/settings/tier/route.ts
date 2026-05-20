@@ -66,11 +66,11 @@ export async function GET(req: NextRequest) {
         );
 
         // ── New user: no row yet ─────────────────────────────────────────────
-        // Create a minimal row immediately so future Whop webhook reconciliation
-        // can match by email. Without this, the email lookup always fails.
+        // Seed the row with the Privy email immediately, then check inline for
+        // a Whop trial so a user who bought before logging in sees their trial
+        // on the very first page load — not after a second refresh.
         if (result.rows.length === 0) {
             if (privyEmail) {
-                // Seed a row with the email so Whop self-healing can find this user
                 await pool.query(
                     `INSERT INTO user_settings (user_id, email, updated_at)
                      VALUES ($1, $2, NOW())
@@ -78,28 +78,85 @@ export async function GET(req: NextRequest) {
                          email      = COALESCE(user_settings.email, EXCLUDED.email),
                          updated_at = NOW()`,
                     [userId, privyEmail]
-                ).catch(() => {}); // non-fatal
+                ).catch(() => {});
+
+                // Check for existing Whop trial data for this email
+                try {
+                    // Path 1: whop_trials table
+                    const wt = await pool.query(
+                        `SELECT trial_ends_at, trial_started_at FROM whop_trials
+                         WHERE LOWER(email) = LOWER($1)
+                         ORDER BY trial_ends_at DESC LIMIT 1`,
+                        [privyEmail]
+                    );
+                    let whopEnd: Date | null = null;
+                    let whopDays = 30;
+                    let whopTier = 'full_access';
+                    if (wt.rows.length > 0 && wt.rows[0].trial_ends_at) {
+                        whopEnd = new Date(wt.rows[0].trial_ends_at);
+                        const dur = wt.rows[0].trial_started_at
+                            ? Math.round((whopEnd.getTime() - new Date(wt.rows[0].trial_started_at).getTime()) / 86400000)
+                            : 30;
+                        whopDays = dur > 45 ? 60 : 30;
+                    }
+                    // Path 2: whop-keyed user_settings row for same email
+                    if (!whopEnd) {
+                        const ws = await pool.query(
+                            `SELECT whop_trial_ends_at, whop_trial_days, subscription_tier
+                             FROM user_settings
+                             WHERE LOWER(email) = LOWER($1)
+                               AND billing_source = 'whop'
+                               AND user_id != $2
+                               AND whop_trial_ends_at IS NOT NULL
+                             ORDER BY whop_trial_ends_at DESC LIMIT 1`,
+                            [privyEmail, userId]
+                        );
+                        if (ws.rows.length > 0 && ws.rows[0].whop_trial_ends_at) {
+                            whopEnd  = new Date(ws.rows[0].whop_trial_ends_at);
+                            whopDays = ws.rows[0].whop_trial_days || 30;
+                            whopTier = ws.rows[0].subscription_tier || 'full_access';
+                        }
+                    }
+                    if (whopEnd && whopEnd > new Date()) {
+                        // Write Whop data onto the freshly-created Privy row
+                        await pool.query(
+                            `UPDATE user_settings SET
+                                billing_source      = 'whop',
+                                subscription_tier   = $1,
+                                subscription_status = 'active',
+                                whop_trial_ends_at  = $2,
+                                whop_trial_days     = $3,
+                                app_trial_count     = 0,
+                                updated_at          = NOW()
+                             WHERE user_id = $4`,
+                            [whopTier, whopEnd.toISOString(), whopDays, userId]
+                        ).catch(() => {});
+                        return NextResponse.json({
+                            tier: whopTier, status: 'active', billingSource: 'whop',
+                            billingInterval: null, currentPeriodEnd: null,
+                            trialEnd: whopEnd.toISOString(), priceId: null,
+                            cancelAtPeriodEnd: false, cancelAt: null,
+                            emailSignalAlerts: false, email: privyEmail,
+                            hasCompletedOnboarding: false, globalAutoApprove: true,
+                            strategyAutoApprove: { TQQQ_TURBOCORE: false, TQQQ_TURBOCORE_PRO: false, QQQ_LEAPS: false },
+                            preferredLanguage: 'en',
+                            appTrialCount: 0, appTrialAvailable: false,
+                            appTrialStatus: 'active', appTrialEnd: whopEnd.toISOString(),
+                            appTrialTier: whopTier, trialDaysTotal: whopDays,
+                        });
+                    }
+                } catch { /* non-fatal — fall through to observer */ }
             }
             return NextResponse.json({
-                tier: 'observer',
-                status: null,
-                billingInterval: null,
-                currentPeriodEnd: null,
-                trialEnd: null,
-                priceId: null,
-                cancelAtPeriodEnd: false,
-                cancelAt: null,
-                emailSignalAlerts: false,
-                email: privyEmail,
-                hasCompletedOnboarding: false,
-                globalAutoApprove: true,
+                tier: 'observer', status: null, billingInterval: null,
+                currentPeriodEnd: null, trialEnd: null, priceId: null,
+                cancelAtPeriodEnd: false, cancelAt: null,
+                emailSignalAlerts: false, email: privyEmail,
+                hasCompletedOnboarding: false, globalAutoApprove: true,
                 preferredLanguage: 'en',
-                appTrialCount: 0,
-                appTrialAvailable: true,
-                appTrialStatus: 'not_started',
-                appTrialEnd: null,
-                appTrialTier: TRIAL_TIER,
-                trialDaysTotal: TRIAL_DAYS,
+                appTrialCount: 0, appTrialAvailable: true,
+                appTrialStatus: 'not_started', appTrialEnd: null,
+                appTrialTier: TRIAL_TIER, trialDaysTotal: TRIAL_DAYS,
             });
         }
 

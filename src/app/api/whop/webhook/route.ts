@@ -53,43 +53,55 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         return NextResponse.json({ error: 'Parse error' }, { status: 400 });
     }
 
-    // Whop sends event name in the 'type' field (or 'event'/'action' in older versions)
+    // Whop v1 API uses dot notation: 'membership.activated'
+    // Some older event versions used underscore: 'membership_activated'
+    // We handle both for safety.
     const action = (event.type ?? event.event ?? event.action ?? '') as string;
     const data   = event.data ?? {};
+    const userEmail = data.user?.email ?? data.email ?? 'unknown';
+    const userId    = data.user?.id ?? data.user_id ?? 'unknown';
 
-    console.log(`[Whop Webhook] ${action} | user: ${data.user?.id ?? data.user_id ?? 'unknown'}`);
+    console.log(`[Whop Webhook] event="${action}" user=${userId} email=${userEmail}`);
 
     switch (action) {
-        // Membership activated — user paid, grant access + issue credits
+        // Membership activated (dot notation — Whop v1 current)
+        case 'membership.activated':
+        // Legacy underscore fallback
         case 'membership_activated':
             await handleMemberActivated(data);
             break;
 
-        // Membership deactivated — revoke access, send migration link
+        // Payment succeeded — also trigger activation in case membership event is missed
+        case 'payment.succeeded':
+        case 'payment_succeeded':
+            console.log(`[Whop Webhook] Payment succeeded for ${userId} (${userEmail})`);
+            // payment.succeeded fires before membership.activated — activation handled there
+            break;
+
+        // Membership deactivated
+        case 'membership.went_invalid':
         case 'membership_deactivated':
             await handleMemberCancelled(data);
             break;
 
-        // Subscription set to cancel at period end — send retention DM early
+        // Cancel at period end
+        case 'membership.cancel_at_period_end_changed':
         case 'membership_cancel_at_period_end_changed':
             if (data.cancel_at_period_end === true) {
                 await sendWhopDM(
-                    data.user?.id ?? data.user_id,
+                    userId,
                     `Hey — we noticed you turned off renewal. Before your access ends, reply "deal" for 30% off your next month, or "pause" to hold your spot for 30 days at no charge.`
                 ).catch(() => {});
             }
             break;
 
-        // Payment events — membership_activated handles access; just log these
-        case 'payment_succeeded':
-            console.log(`[Whop Webhook] Payment succeeded for ${data.user?.id ?? data.user_id}`);
-            break;
+        case 'payment.failed':
         case 'payment_failed':
-            console.log(`[Whop Webhook] Payment failed for ${data.user?.id ?? data.user_id}`);
+            console.log(`[Whop Webhook] Payment failed for ${userId} (${userEmail})`);
             break;
 
         default:
-            console.log(`[Whop Webhook] Unhandled event: ${action}`);
+            console.log(`[Whop Webhook] Unhandled event: "${action}" — full payload keys: ${Object.keys(event).join(', ')}`);
     }
 
     // Log to whop_events for analytics (non-fatal)

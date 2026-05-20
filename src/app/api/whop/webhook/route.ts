@@ -163,8 +163,8 @@ async function handleMemberActivated(data: any) {
         `INSERT INTO user_settings
             (user_id, email, first_name, subscription_tier, subscription_status,
              billing_source, auth_provider, whop_user_id, whop_plan_id,
-             whop_trial_ends_at, whop_trial_days, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, 'active', 'whop', 'whop', $5, $6, $7, $8, NOW(), NOW())
+             whop_trial_ends_at, whop_trial_days, updated_at)
+         VALUES ($1, $2, $3, $4, 'active', 'whop', 'whop', $5, $6, $7, $8, NOW())
          ON CONFLICT (user_id) DO UPDATE SET
             subscription_tier   = EXCLUDED.subscription_tier,
             subscription_status = 'active',
@@ -306,8 +306,8 @@ async function handleObserverActivated({ userId, email, firstName }: {
     // Upsert as observer tier — open-ended access (no renewal_period_end logic)
     await query(
         `INSERT INTO user_settings
-             (user_id, email, subscription_tier, subscription_status, billing_source, auth_provider, whop_user_id, created_at, updated_at)
-         VALUES ($1, $2, 'observer', 'active', 'whop', 'whop', $1, NOW(), NOW())
+             (user_id, email, subscription_tier, subscription_status, billing_source, auth_provider, whop_user_id, updated_at)
+         VALUES ($1, $2, 'observer', 'active', 'whop', 'whop', $1, NOW())
          ON CONFLICT (user_id) DO UPDATE SET
              subscription_tier = LEAST(user_settings.subscription_tier, 'observer'),
              updated_at        = NOW()`,

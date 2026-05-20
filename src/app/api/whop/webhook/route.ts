@@ -25,6 +25,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const hdrs      = await headers();
     const headersObj = Object.fromEntries(hdrs.entries());
 
+    // Log raw payload for debugging regardless of verification outcome
+    console.log('[Whop Webhook] Received POST, body length:', body.length, '| first 200 chars:', body.slice(0, 200));
+
     let event: any;
     try {
         const secret = process.env.WHOP_WEBHOOK_SECRET ?? '';
@@ -32,13 +35,22 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             console.warn('[Whop Webhook] WHOP_WEBHOOK_SECRET not set — skipping verification');
             event = JSON.parse(body);
         } else {
-            event = await import('@/lib/whop').then(m => m.whop).then(whopClient =>
-                whopClient.webhooks.unwrap(body, { headers: headersObj })
-            );
+            try {
+                event = await import('@/lib/whop').then(m => m.whop).then(whopClient =>
+                    whopClient.webhooks.unwrap(body, { headers: headersObj })
+                );
+            } catch (sigErr: any) {
+                // Signature failed — try parsing anyway and log for debugging
+                console.error('[Whop Webhook] Signature verification failed:', sigErr.message, '| Attempting raw parse for debug');
+                try { event = JSON.parse(body); }
+                catch { return NextResponse.json({ error: 'Invalid signature and invalid JSON' }, { status: 401 }); }
+                // Re-log parsed event so we can see what Whop is actually sending
+                console.log('[Whop Webhook] Raw parsed event (sig failed):', JSON.stringify(event).slice(0, 500));
+            }
         }
     } catch (err: any) {
-        console.error('[Whop Webhook] Signature verification failed:', err.message);
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+        console.error('[Whop Webhook] Fatal parse error:', err.message);
+        return NextResponse.json({ error: 'Parse error' }, { status: 400 });
     }
 
     // Whop sends event name in the 'type' field (or 'event'/'action' in older versions)

@@ -18,37 +18,46 @@ import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
+// GET ?email=xxx&secret=yyy  — browser-friendly version
+export async function GET(req: NextRequest): Promise<NextResponse> {
+    const secret = req.nextUrl.searchParams.get('secret');
+    if (!secret || secret !== process.env.INTERNAL_API_SECRET) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    const email = req.nextUrl.searchParams.get('email')?.toLowerCase().trim();
+    if (!email) return NextResponse.json({ error: 'email required' }, { status: 400 });
+    return healUser(email);
+}
+
 export async function POST(req: NextRequest): Promise<NextResponse> {
     const secret = req.headers.get('x-admin-secret');
     if (!secret || secret !== process.env.INTERNAL_API_SECRET) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-
     let body: { email?: string };
     try { body = await req.json(); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
-
     const email = body.email?.toLowerCase().trim();
     if (!email) return NextResponse.json({ error: 'email required' }, { status: 400 });
+    return healUser(email);
+}
 
-    // ── Step 1: Find best Whop trial in whop_trials ───────────────────────
+async function healUser(email: string): Promise<NextResponse> {
+    // Step 1: whop_trials
     const trialRows = await query(
         `SELECT trial_ends_at, trial_started_at, whop_user_id
-         FROM whop_trials
-         WHERE LOWER(email) = $1
+         FROM whop_trials WHERE LOWER(email) = $1
          ORDER BY trial_ends_at DESC LIMIT 5`,
         [email]
     );
 
-    // ── Step 2: Also find best user_settings row with billing_source='whop' ─
+    // Step 2: user_settings (all rows for this email)
     const whopSettingRows = await query(
-        `SELECT user_id, whop_trial_ends_at, whop_trial_days, subscription_tier, subscription_status
-         FROM user_settings
-         WHERE LOWER(email) = $1
+        `SELECT user_id, whop_trial_ends_at, whop_trial_days, billing_source, subscription_tier, subscription_status
+         FROM user_settings WHERE LOWER(email) = $1
          ORDER BY updated_at DESC`,
         [email]
     );
 
-    // Pick the best (latest) trial end date across both sources
     let bestEnd: Date | null = null;
     let bestDays = 30;
     let source = 'none';
@@ -77,46 +86,46 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (!bestEnd) {
         return NextResponse.json({
             healed: false,
-            reason: 'No Whop trial found for this email in whop_trials or user_settings',
+            reason: 'No Whop trial found for this email',
             trialRows: trialRows.rows,
-            settingRows: whopSettingRows.rows.map(r => ({ user_id: r.user_id, billing_source: r.billing_source, whop_trial_ends_at: r.whop_trial_ends_at })),
+            settingRows: whopSettingRows.rows.map(r => ({
+                user_id: r.user_id, billing_source: r.billing_source,
+                whop_trial_ends_at: r.whop_trial_ends_at, tier: r.subscription_tier
+            })),
         }, { status: 404 });
     }
 
     const isActive = bestEnd > new Date();
-    const tier = isActive ? 'full_access' : 'observer';
-    const status = isActive ? 'active' : 'canceled';
+    const tier   = isActive ? 'full_access' : 'observer';
+    const status = isActive ? 'active'      : 'canceled';
 
-    // ── Step 3: Update ALL user_settings rows for this email ─────────────
+    // Step 3: Update ALL rows for this email (no Stripe guard — this is explicit admin action)
     const updateResult = await query(
         `UPDATE user_settings SET
-            billing_source      = 'whop',
-            whop_trial_ends_at  = $1,
-            whop_trial_days     = $2,
-            subscription_tier   = $3,
-            subscription_status = $4,
-            app_trial_count     = 0,
+            billing_source       = 'whop',
+            whop_trial_ends_at   = $1,
+            whop_trial_days      = $2,
+            subscription_tier    = $3,
+            subscription_status  = $4,
+            app_trial_count      = 0,
             app_trial_started_at = NULL,
-            updated_at          = NOW()
+            updated_at           = NOW()
          WHERE LOWER(email) = $5
            AND (stripe_price_id IS NULL OR subscription_status NOT IN ('active','trialing','past_due'))`,
         [bestEnd.toISOString(), bestDays, tier, status, email]
     );
 
-    console.log(`[Admin Heal] ${email} → ${tier} until ${bestEnd.toISOString()} (${bestDays}d, source: ${source}), rows updated: ${updateResult.rowCount}`);
+    console.log(`[Admin Heal] ${email} → ${tier} until ${bestEnd.toISOString()} (${bestDays}d, source: ${source}), rows: ${updateResult.rowCount}`);
 
     return NextResponse.json({
-        healed: true,
-        email,
-        tier,
-        status,
+        healed: true, email, tier, status,
         trialEndsAt: bestEnd.toISOString(),
         trialDays: bestDays,
         daysRemaining: Math.ceil((bestEnd.getTime() - Date.now()) / 86400000),
         source,
         rowsUpdated: updateResult.rowCount,
         allFoundRows: {
-            whopTrials: trialRows.rows.map(r => ({ whop_user_id: r.whop_user_id, trial_ends_at: r.trial_ends_at })),
+            whopTrials:   trialRows.rows.map(r => ({ whop_user_id: r.whop_user_id, trial_ends_at: r.trial_ends_at })),
             userSettings: whopSettingRows.rows.map(r => ({ user_id: r.user_id, billing_source: r.billing_source, whop_trial_ends_at: r.whop_trial_ends_at, tier: r.subscription_tier })),
         },
     });

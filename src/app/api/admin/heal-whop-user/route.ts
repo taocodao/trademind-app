@@ -18,14 +18,55 @@ import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-// GET ?email=xxx&secret=yyy  — browser-friendly version
+// GET ?email=xxx&secret=yyy              — heal by email
+// GET ?secret=yyy&diagnose=true          — show all recent Whop records
+// GET ?secret=yyy&fix_user_id=wh_xxx&days=30  — force-fix by Whop user_id
 export async function GET(req: NextRequest): Promise<NextResponse> {
     const secret = req.nextUrl.searchParams.get('secret');
     if (!secret || secret !== process.env.INTERNAL_API_SECRET) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
+
+    // Diagnostic mode — show all recent Whop data in DB
+    if (req.nextUrl.searchParams.get('diagnose') === 'true') {
+        const [events, trials, settings] = await Promise.all([
+            query(`SELECT user_id, event_type, created_at,
+                          (metadata->>'user_id') AS whop_user_id,
+                          (metadata->>'email') AS email
+                   FROM whop_events ORDER BY created_at DESC LIMIT 20`),
+            query(`SELECT whop_user_id, email, trial_started_at, trial_ends_at FROM whop_trials ORDER BY trial_started_at DESC LIMIT 20`),
+            query(`SELECT user_id, email, billing_source, whop_trial_ends_at, whop_trial_days, subscription_tier, subscription_status, updated_at
+                   FROM user_settings WHERE billing_source = 'whop' OR user_id LIKE 'wh_%' ORDER BY updated_at DESC LIMIT 20`),
+        ]);
+        return NextResponse.json({ whopEvents: events.rows, whopTrials: trials.rows, whopSettings: settings.rows });
+    }
+
+    // Force-fix by whop_user_id (when email doesn't match)
+    const fixUserId = req.nextUrl.searchParams.get('fix_user_id');
+    const days = parseInt(req.nextUrl.searchParams.get('days') || '30', 10);
+    if (fixUserId) {
+        const trialEndsAt = new Date(Date.now() + days * 86400000);
+        await query(
+            `UPDATE user_settings SET
+                billing_source      = 'whop',
+                whop_trial_ends_at  = $1,
+                whop_trial_days     = $2,
+                subscription_tier   = 'full_access',
+                subscription_status = 'active',
+                app_trial_count     = 0,
+                updated_at          = NOW()
+             WHERE user_id = $3`,
+            [trialEndsAt.toISOString(), days, fixUserId]
+        );
+        return NextResponse.json({
+            fixed: true, user_id: fixUserId, days,
+            trialEndsAt: trialEndsAt.toISOString(),
+            daysRemaining: days,
+        });
+    }
+
     const email = req.nextUrl.searchParams.get('email')?.toLowerCase().trim();
-    if (!email) return NextResponse.json({ error: 'email required' }, { status: 400 });
+    if (!email) return NextResponse.json({ error: 'email or diagnose=true or fix_user_id required' }, { status: 400 });
     return healUser(email);
 }
 

@@ -150,14 +150,31 @@ async function handleMemberActivated(data: any) {
     }
 
     // ── Paid trial branch (default) ──────────────────────────────────────
-    // whopPlanToTier and whopPlanTrialDays use the slug (or plan ID as fallback)
-    const tier      = whopPlanToTier(slugOrId);
-    const trialDays = whopPlanTrialDays(slugOrId); // 60 for free-trial slug, 30 for 30day slug
-    const trialEndsAt = data.renewal_period_end
-        ? new Date(data.renewal_period_end)
-        : data.expires_at
-        ? new Date(data.expires_at)
-        : new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
+    const tier = whopPlanToTier(slugOrId);
+
+    // Whop stores the membership expiry in different fields across API versions.
+    // We check every known field so we never incorrectly fall back to 30 days.
+    const whopExpiryRaw =
+        data.renewal_period_end ??
+        data.expires_at ??
+        data.valid_until ??
+        data.expiration_at ??
+        data.membership?.valid_until ??
+        data.membership?.expires_at ??
+        data.access_pass?.expires_at ??
+        null;
+
+    const trialEndsAt = whopExpiryRaw
+        ? new Date(whopExpiryRaw)
+        : new Date(Date.now() + whopPlanTrialDays(slugOrId) * 24 * 60 * 60 * 1000);
+
+    // Derive trialDays from ACTUAL expiry when Whop provides it — ensures 60-day
+    // purchases are stored correctly even if slug matching fails.
+    const trialDays = whopExpiryRaw
+        ? Math.max(1, Math.round((trialEndsAt.getTime() - Date.now()) / 86400000))
+        : whopPlanTrialDays(slugOrId);
+
+    console.log(`[Whop Webhook] trialDays=${trialDays} trialEndsAt=${trialEndsAt.toISOString()} expirySource=${whopExpiryRaw ? 'whop_field' : 'slug_fallback(' + slugOrId + ')'}`);
 
     // ── Step 1: Determine the canonical user_id to write against ─────────────
     // CRITICAL: If a user_settings row already exists for this email (i.e. the

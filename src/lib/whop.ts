@@ -34,7 +34,7 @@ if (isSandbox) {
 // No env vars needed — slugs are stable and human-readable.
 
 export const WHOP_SLUG_30DAY = 'trademind-algo-signals-30day';  // $10, 30 days
-export const WHOP_SLUG_60DAY = 'trademind-signal-free-trial';   // $20, 60 days
+export const WHOP_SLUG_60DAY = 'trademind-algo-signals-60day';  // $20, 60 days
 
 /**
  * Extract the product URL slug from a Whop webhook payload.

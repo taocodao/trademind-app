@@ -64,7 +64,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             case 'membership.activated':
             // Legacy underscore fallback
             case 'membership_activated':
-                await handleMemberActivated(data);
+                await handleMemberActivated(data, body);
                 break;
 
             // Payment succeeded — also trigger activation in case membership event is missed
@@ -116,26 +116,39 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
 // ── Handlers ──────────────────────────────────────────────────────────────────
 
-async function handleMemberActivated(data: any) {
+async function handleMemberActivated(data: any, rawBody: string) {
     const user         = data.user ?? {};
 
-    // ── Primary: extract product URL slug (from Whop dashboard "Product URL" field)
-    // This is the human-readable slug, e.g. "trademind-algo-signals-30day"
-    // It's more stable than plan IDs and requires no env var configuration.
-    // extractProductSlug() checks all known Whop payload locations.
-    const productSlug = extractProductSlug(data);
+    // ── HARDCODED product identification ─────────────────────────────────────
+    // There are exactly TWO products. We identify them by their slug strings.
+    // These slugs appear in the Whop Product URL field and the checkout redirect URL.
+    //   30-day $10  → "trademind-algo-signals-30day"
+    //   60-day $20  → "trademind-algo-signals-60day"
+    //
+    // We search the FULL raw payload JSON as a string so it doesn't matter which
+    // nested field Whop uses — if the slug is anywhere in the payload, we find it.
+    const SLUG_60 = 'trademind-algo-signals-60day';
+    const SLUG_30 = 'trademind-algo-signals-30day';
 
-    // Keep plan_id available as a secondary key (stored in DB, used for logging)
-    const planId       = data.plan_id ?? data.plan?.id ?? data.membership?.plan_id ?? '';
-    const slugOrId     = productSlug || planId; // use slug preferentially
+    const rawBodyStr = typeof rawBody === 'string' ? rawBody : JSON.stringify(data);
+    const is60Day = rawBodyStr.includes(SLUG_60);
+    const is30Day = rawBodyStr.includes(SLUG_30);
+    const trialDays = is60Day ? 60 : 30;  // hardcoded — only two products exist
+
+    // Also extract slug for tier mapping and logging
+    const productSlug = is60Day ? SLUG_60 : is30Day ? SLUG_30 : (extractProductSlug(data) || '');
+    const planId      = data.plan_id ?? data.plan?.id ?? data.membership?.plan_id ?? '';
+    const slugOrId    = productSlug || planId;
+
+    console.log(`[Whop Webhook] Activation — slug: "${productSlug}" trialDays=${trialDays} (is60Day=${is60Day} is30Day=${is30Day}) user: ${data.user?.id ?? data.user_id}`);
+    // Full payload dump so we can verify field locations in production
+    console.log('[Whop Webhook] Full payload:', rawBodyStr.slice(0, 1500));
 
     const userId       = user.id ?? data.user_id;
     const email        = user.email ?? '';
     const name         = user.name ?? user.username ?? '';
     const firstName    = name.split(' ')[0] ?? 'Trader';
     const membershipId = data.id ?? data.membership_id ?? '';
-
-    console.log(`[Whop Webhook] Activation — slug: "${productSlug}", plan_id: "${planId}", user: ${userId}`);
 
     if (!userId) {
         console.error('[Whop Webhook] No user_id in activation event');
@@ -152,8 +165,8 @@ async function handleMemberActivated(data: any) {
     // ── Paid trial branch (default) ──────────────────────────────────────
     const tier = whopPlanToTier(slugOrId);
 
-    // Whop stores the membership expiry in different fields across API versions.
-    // We check every known field so we never incorrectly fall back to 30 days.
+    // trialDays is already hardcoded above from slug detection.
+    // trialEndsAt: use Whop's explicit expiry if provided, otherwise calculate from trialDays.
     const whopExpiryRaw =
         data.renewal_period_end ??
         data.expires_at ??
@@ -166,15 +179,9 @@ async function handleMemberActivated(data: any) {
 
     const trialEndsAt = whopExpiryRaw
         ? new Date(whopExpiryRaw)
-        : new Date(Date.now() + whopPlanTrialDays(slugOrId) * 24 * 60 * 60 * 1000);
+        : new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
 
-    // Derive trialDays from ACTUAL expiry when Whop provides it — ensures 60-day
-    // purchases are stored correctly even if slug matching fails.
-    const trialDays = whopExpiryRaw
-        ? Math.max(1, Math.round((trialEndsAt.getTime() - Date.now()) / 86400000))
-        : whopPlanTrialDays(slugOrId);
-
-    console.log(`[Whop Webhook] trialDays=${trialDays} trialEndsAt=${trialEndsAt.toISOString()} expirySource=${whopExpiryRaw ? 'whop_field' : 'slug_fallback(' + slugOrId + ')'}`);
+    console.log(`[Whop Webhook] trialDays=${trialDays} trialEndsAt=${trialEndsAt.toISOString()} expirySource=${whopExpiryRaw ? 'whop_field' : 'hardcoded_slug_' + trialDays + 'd'}`);
 
     // ── Step 1: Determine the canonical user_id to write against ─────────────
     // CRITICAL: If a user_settings row already exists for this email (i.e. the

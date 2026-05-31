@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generatePostVariations } from '@/lib/promo/perplexity';
 import { GeneratePostRequest, GeneratePostResponse } from '@/lib/promo/types';
 import { getServerSession } from '@/lib/promo/auth';
-import { sql } from '@vercel/postgres';
+import { query } from '@/lib/db';
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,12 +33,13 @@ export async function POST(req: NextRequest) {
     // Log to DB (fire-and-forget, don't block the response)
     try {
       for (let i = 0; i < variations.length; i++) {
-        await sql`
-          INSERT INTO generated_posts 
+        await query(
+          `INSERT INTO generated_posts 
             (user_id, platform, theme, tone, variation_index, post_content, referral_code, char_count, compliance_verified)
           VALUES 
-            (${session.userId}, ${platform}, ${theme}, ${tone}, ${i}, ${variations[i]}, ${referralCode || null}, ${variations[i].length}, ${complianceStatus[i]})
-        `;
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [session.userId, platform, theme, tone, i, variations[i], referralCode || null, variations[i].length, complianceStatus[i]]
+        );
       }
     } catch (dbErr) {
       // DB logging failure shouldn't block the user

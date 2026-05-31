@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from '@/lib/promo/auth';
-import { sql } from '@vercel/postgres';
+import { query } from '@/lib/db';
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,16 +15,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    await sql`
-      INSERT INTO post_library (user_id, generated_post_id, platform, post_content, label)
-      VALUES (${session.userId}, ${generatedPostId || null}, ${platform}, ${postContent}, ${label || null})
-    `;
+    await query(
+      `INSERT INTO post_library (user_id, generated_post_id, platform, post_content, label)
+      VALUES ($1, $2, $3, $4, $5)`,
+      [session.userId, generatedPostId || null, platform, postContent, label || null]
+    );
 
     // Mark as saved in generated_posts if we have the id
     if (generatedPostId) {
-      await sql`
-        UPDATE generated_posts SET saved_to_library = TRUE WHERE id = ${generatedPostId}
-      `;
+      await query(
+        `UPDATE generated_posts SET saved_to_library = TRUE WHERE id = $1`,
+        [generatedPostId]
+      );
     }
 
     return NextResponse.json({ success: true });

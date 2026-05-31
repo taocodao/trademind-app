@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from '@/lib/promo/auth';
-import { sql } from '@vercel/postgres';
+import { query } from '@/lib/db';
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
     const platformFilter = platform !== 'all' ? `AND pl.platform = '${platform}'` : '';
 
-    const result = await sql.query(`
+    const result = await query(`
       SELECT pl.id, pl.platform, pl.post_content, pl.label, pl.created_at,
              gp.theme, gp.tone
       FROM post_library pl
@@ -44,7 +44,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     const { id } = await req.json();
-    await sql`DELETE FROM post_library WHERE id = ${id} AND user_id = ${session.userId}`;
+    await query(`DELETE FROM post_library WHERE id = $1 AND user_id = $2`, [id, session.userId]);
 
     return NextResponse.json({ success: true });
   } catch (err: unknown) {

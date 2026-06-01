@@ -28,6 +28,7 @@ export function BottomNav() {
     ], [t]);
 
     if (!mounted || !ready || !authenticated) return null;
+    if (pathname.startsWith('/review')) return null;
 
     // Do not show on public marketing pages (but /refer IS shown when logged in)
     const publicRoutes = ['/', '/how-it-works', '/results', '/family'];

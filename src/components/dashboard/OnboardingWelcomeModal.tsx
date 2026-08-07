@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { SignalEmailAlertsSettings } from '@/components/settings/SignalEmailAlertsSettings';
-import { TQQQAutoApproveSettings } from '@/components/settings/TQQQAutoApproveSettings';
 import { TastytradeCredentials } from '@/components/settings/TastytradeCredentials';
 import { X } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
@@ -111,7 +110,6 @@ export function OnboardingWelcomeModal() {
                             <p className="text-sm text-zinc-300 mb-4">
                                 Configure how aggressively the system automatically approves trades matching your strategies. Leave it universally enabled for a hands-off experience!
                             </p>
-                            <TQQQAutoApproveSettings />
                         </div>
                     )}
 

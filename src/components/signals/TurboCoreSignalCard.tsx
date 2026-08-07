@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 
 import { useTranslation } from "react-i18next";
-import { IVSwitchingSignalCard } from "./IVSwitchingSignalCard";
 
 export interface TurboCoreSignal {
   id: number;
@@ -114,29 +113,9 @@ export function TurboCoreSignalCard({
 
   const isExecuting = executingId === String(signal.id);
 
-  // If the backend flagged this as a partial (ML-regime) signal that is still
-  // waiting for the IV-Switching overlay to compute, show a pending state
-  // instead of the premature RISK OFF button.
-  const ivPending = !!(signal as any).iv_switching_pending;
-
-  // ── Signal type router ──────────────────────────────────────────────────────
-  // IV-Switching signals (CSP/ZEBRA/CCS) carry an iv_switching_order_id
-  // or have an action like OPEN_CSP, OPEN_ZEBRA, OPEN_CCS, OPEN_SQQQ.
-  // Route these to the dedicated IVSwitchingSignalCard.
-  const ivSwitchingAction = (signal as any).iv_switching_order_id ||
-    (signal.action && /^(OPEN_|NO_ACTION$)/.test(signal.action));
-  if (ivSwitchingAction) {
-    return (
-      <IVSwitchingSignalCard
-        signal={signal as any}
-        onExecute={onExecute}
-        executingId={executingId}
-        accountData={accountData}
-        isExecuted={isExecuted}
-      />
-    );
-  }
-  // ── End of signal router ──────────────────────────────────────────────
+  // Canonical TurboCore Pro v3.3 signals are complete REBALANCE signals —
+  // the IV-Switching overlay has been retired, so no pending state exists.
+  const ivPending = false;
 
   const [expanded, setExpanded] = useState(false);
 

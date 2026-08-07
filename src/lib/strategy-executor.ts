@@ -441,57 +441,37 @@ const executeTurboCoreStrategy: StrategyExecutor = async (
  * Add new strategies here - key is the strategy name from backend
  */
 const STRATEGY_EXECUTORS: Record<string, StrategyExecutor> = {
-    // Theta strategies
-    'theta': executeThetaStrategy,
-    'Theta Cash-Secured Put': executeThetaStrategy,
+    // ── Canonical lineup (see CANONICAL_STRATEGIES.md) ─────────────────────
 
-    // Diagonal spread strategies (unified: PMCC/PMCP + Calendar)
-    'diagonal': executeDiagonalStrategy,
-    'diagonal-spread': executeDiagonalStrategy,
-    'Diagonal Spread': executeDiagonalStrategy,
-    'BULL_DIAGONAL': executeDiagonalStrategy,
-    'BEAR_DIAGONAL': executeDiagonalStrategy,
-    'NEUTRAL_DIAGONAL': executeDiagonalStrategy,
-
-    // Legacy calendar support (backward compat)
-    'calendar': executeDiagonalStrategy,
-    'calendar-spread': executeDiagonalStrategy,
-    'Calendar Spread': executeDiagonalStrategy,
-
-    // DVO strategies (put selling = same execution as theta)
-    'dvo': executeThetaStrategy,
-    'SHORT_PUT': executeThetaStrategy,
-    'deep-value': executeThetaStrategy,
-
-    // ZEBRA & TurboBounce — Managed by EC2 for live pricing/multi-leg
-    'zebra': executeServerManagedStrategy,
-    'ZEBRA': executeServerManagedStrategy,
-    'turbobounce': executeServerManagedStrategy,
-    'TurboBounce': executeServerManagedStrategy,
-
-    // TurboCore natively executed on Vercel
-    'tqqq_turbocore': executeTurboCoreStrategy,
-    'TQQQ_TURBOCORE': executeTurboCoreStrategy,
+    // TurboCore Pro — ETF rebalance natively executed on Vercel
     'tqqq_turbocore_pro': executeTurboCoreStrategy,
     'TQQQ_TURBOCORE_PRO': executeTurboCoreStrategy,
     'rebalance': executeTurboCoreStrategy,
     'REBALANCE': executeTurboCoreStrategy,
+
+    // Legacy TQQQ TurboCore allocator signals map onto the canonical ETF executor
+    'tqqq_turbocore': executeTurboCoreStrategy,
+    'TQQQ_TURBOCORE': executeTurboCoreStrategy,
+
+    // QQQ LEAPS — options orders are user-approved and routed via Tastytrade
+    'qqq_leaps': executeServerManagedStrategy,
+    'QQQ_LEAPS': executeServerManagedStrategy,
 };
 
 /**
  * Get the appropriate executor for a signal's strategy
  */
-export function getStrategyExecutor(strategy?: string): StrategyExecutor {
+export function getStrategyExecutor(strategy?: string): StrategyExecutor | null {
     if (!strategy) {
-        console.warn('⚠️ No strategy specified, defaulting to diagonal spread');
-        return executeDiagonalStrategy;
+        console.warn('⚠️ No strategy specified — only canonical strategies are executable');
+        return null;
     }
 
     const executor = STRATEGY_EXECUTORS[strategy];
 
     if (!executor) {
-        console.warn(`⚠️ Unknown strategy "${strategy}", defaulting to diagonal spread`);
-        return executeDiagonalStrategy;
+        console.warn(`⚠️ Strategy "${strategy}" is retired — not executable`);
+        return null;
     }
 
     return executor;
@@ -509,6 +489,13 @@ export async function executeSignal(
     const executor = getStrategyExecutor(signal.strategy);
 
     console.log(`🎯 Strategy: ${signal.strategy || 'default'}`);
+
+    if (!executor) {
+        throw new Error(
+            `Strategy "${signal.strategy}" is not executable — only the canonical ` +
+            `strategies (TQQQ_TURBOCORE_PRO, QQQ_LEAPS) can be executed.`
+        );
+    }
 
     try {
         const result = await executor(accessToken, accountNumber, signal, defaultExpiry);

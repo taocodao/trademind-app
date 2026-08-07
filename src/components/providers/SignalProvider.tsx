@@ -131,9 +131,8 @@ const SignalContext = createContext<SignalContextValue>({
     isAutoApproving: false,
 });
 
-const CHANNELS = [
-    'turbobounce'
-];
+// Canonical strategies publish on dedicated channels; no legacy channels remain.
+const CHANNELS: string[] = [];
 
 // Risk Limits (Hardcoded safeguards for auto-approve)
 const RISK_LIMITS = {
@@ -594,4 +593,4 @@ export function SignalProvider({ children }: SignalProviderProps) {
 }
 
 // Helper for filtering
-const strats = ['turbobounce', 'diagonal', 'theta', 'test_strategy', 'calendar-spread'];
+const strats = ['test_strategy'];

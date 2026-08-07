@@ -4,14 +4,15 @@ import { useState, useEffect } from 'react';
 import { SignalEmailAlertsSettings } from '@/components/settings/SignalEmailAlertsSettings';
 import { TQQQAutoApproveSettings } from '@/components/settings/TQQQAutoApproveSettings';
 import { TastytradeCredentials } from '@/components/settings/TastytradeCredentials';
+import { StrategyRiskSettings } from '@/components/settings/StrategyRiskSettings';
 import { X } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 
-type Tab = 'emails' | 'autoApprove' | 'broker';
+type Tab = 'strategies' | 'emails' | 'autoApprove' | 'broker';
 
 export function OnboardingWelcomeModal() {
     const { getAccessToken } = usePrivy();
-    const [activeTab, setActiveTab] = useState<Tab>('emails');
+    const [activeTab, setActiveTab] = useState<Tab>('strategies');
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(true);
 
@@ -74,6 +75,12 @@ export function OnboardingWelcomeModal() {
                     {/* Tabs */}
                     <div className="flex items-center gap-6 mt-6 text-sm font-semibold border-b border-transparent">
                         <button 
+                            onClick={() => setActiveTab('strategies')}
+                            className={`pb-3 transition-colors border-b-2 ${activeTab === 'strategies' ? 'border-tm-purple text-tm-purple' : 'border-transparent text-tm-muted hover:text-white'}`}
+                        >
+                            Strategies
+                        </button>
+                        <button 
                             onClick={() => setActiveTab('emails')}
                             className={`pb-3 transition-colors border-b-2 ${activeTab === 'emails' ? 'border-tm-purple text-tm-purple' : 'border-transparent text-tm-muted hover:text-white'}`}
                         >
@@ -95,6 +102,16 @@ export function OnboardingWelcomeModal() {
                 </div>
 
                 <div className="p-6 bg-black/40 overflow-y-auto">
+                    {activeTab === 'strategies' && (
+                        <div className="animate-in slide-in-from-right-4 duration-300 fade-in">
+                            <h3 className="font-semibold mb-3 text-tm-purple">Strategy Configuration</h3>
+                            <p className="text-sm text-zinc-300 mb-4">
+                                Set your risk level and starting capital for each strategy. Signals will be tailored to your risk preference, and P&L will be tracked against your principal.
+                            </p>
+                            <StrategyRiskSettings />
+                        </div>
+                    )}
+
                     {activeTab === 'emails' && (
                         <div className="animate-in slide-in-from-right-4 duration-300 fade-in">
                             <h3 className="font-semibold mb-3 text-tm-purple">Signal Email Alerts</h3>

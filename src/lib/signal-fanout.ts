@@ -1,27 +1,29 @@
 /**
- * Signal Fan-Out Engine
- * =====================
- * Processes a new signal from the backend and fans it out to all users
- * who have configured that strategy. For each user:
- *   1. Selects the correct risk tier from the signal payload
- *   2. Generates per-user delta orders based on their virtual account state
- *   3. Pre-executes the orders into their virtual account
- *   4. Sends an email with the signal + orders + virtual P&L snapshot
+ * Signal Fan-Out Engine (account-centric)
+ * =======================================
+ * Processes a new signal from the backend and fans it out to every NAMED
+ * ACCOUNT subscribed to that strategy. For each account:
+ *   1. Selects the risk tier from the signal payload (account.risk_level)
+ *   2. Generates delta orders sized to the account's current NLV
+ *   3. Pre-executes the orders into the account's ledger (account_activities)
+ *   4. Saves an NLV snapshot and emails the account owner
  *
- * This replaces the old model where signals were generic and users had to
- * manually approve them. Now signals are pre-executed virtually and users
- * receive an email they can use to manually enter the same orders in their
- * real brokerage account.
+ * The account model is the primary path. The legacy per-user functions
+ * (fanoutSignalToUsers / processUserSignal) are preserved at the bottom for
+ * back-compat but are no longer called by the notify route.
  */
 
-import pool, {
-    getUserStrategySettings,
-    getVirtualAccountPrincipal,
-    saveVirtualPnlSnapshot,
-    getVirtualBalance,
-} from '@/lib/db';
-import { generateUserOrders, type GenericSignal, type SignalLeg } from '@/lib/per-user-order-generator';
-import { executeVirtualOrders } from '@/lib/virtual-executor';
+import pool from '@/lib/db';
+import {
+    listAccountsByStrategy,
+    getAccount,
+    saveAccountPnlSnapshot,
+    getAccountPositions,
+    initializeAccountTables,
+    type Account,
+} from '@/lib/accounts';
+import { generateAccountOrders, executeAccountOrders } from '@/lib/account-executor';
+import type { GenericSignal, SignalLeg } from '@/lib/per-user-order-generator';
 import { sendSignalEmail } from '@/lib/signal-email';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -44,58 +46,55 @@ interface SignalData {
 interface FanoutResult {
     signalId: string;
     strategy: string;
-    usersProcessed: number;
-    usersEmailed: number;
+    accountsProcessed: number;
+    accountsEmailed: number;
     errors: string[];
 }
 
 // ─── Main Export ─────────────────────────────────────────────────────────────
 
 /**
- * Fan out a signal to all users who have configured the strategy.
- * Called when a new signal arrives from the backend.
+ * Fan out a signal to all accounts subscribed to the signal's strategy.
+ * Called when a new signal arrives from the backend (notify route).
  */
 export async function fanoutSignal(signalId: string, signalData: SignalData): Promise<FanoutResult> {
     const strategy = signalData.strategy;
     const result: FanoutResult = {
         signalId,
         strategy,
-        usersProcessed: 0,
-        usersEmailed: 0,
+        accountsProcessed: 0,
+        accountsEmailed: 0,
         errors: [],
     };
 
     try {
-        // 1. Find all users who have configured this strategy
-        const usersRes = await pool.query(
-            `SELECT DISTINCT user_id FROM user_strategy_settings WHERE strategy = $1`,
-            [strategy]
-        );
+        await initializeAccountTables();
 
-        if (usersRes.rows.length === 0) {
-            console.log(`[Fanout] No users configured for strategy ${strategy}`);
+        // 1. Find all accounts subscribed to this strategy
+        const accounts = await listAccountsByStrategy(strategy);
+
+        if (accounts.length === 0) {
+            console.log(`[Fanout] No accounts subscribed to strategy ${strategy}`);
             return result;
         }
 
-        console.log(`[Fanout] Processing signal ${signalId} for ${usersRes.rows.length} users`);
+        console.log(`[Fanout] Processing signal ${signalId} for ${accounts.length} account(s)`);
 
-        // 2. Process each user
-        for (const row of usersRes.rows) {
-            const userId = row.user_id;
+        // 2. Process each account
+        for (const account of accounts) {
             try {
-                await processUserSignal(userId, signalId, signalData);
-                result.usersProcessed++;
-                result.usersEmailed++; // Assume email sent unless error
+                const emailed = await processAccountSignal(account, signalId, signalData);
+                result.accountsProcessed++;
+                if (emailed) result.accountsEmailed++;
             } catch (err) {
-                const msg = `User ${userId}: ${err instanceof Error ? err.message : String(err)}`;
+                const msg = `Account ${account.id} (${account.name}): ${err instanceof Error ? err.message : String(err)}`;
                 console.error(`[Fanout] ${msg}`);
                 result.errors.push(msg);
             }
         }
 
-        console.log(`[Fanout] Completed signal ${signalId}: ${result.usersProcessed} processed, ${result.errors.length} errors`);
+        console.log(`[Fanout] Completed signal ${signalId}: ${result.accountsProcessed} accounts, ${result.errors.length} errors`);
         return result;
-
     } catch (err) {
         console.error(`[Fanout] Fatal error processing signal ${signalId}:`, err);
         result.errors.push(`Fatal: ${err instanceof Error ? err.message : String(err)}`);
@@ -103,71 +102,51 @@ export async function fanoutSignal(signalId: string, signalData: SignalData): Pr
     }
 }
 
-// ─── Per-User Processing ─────────────────────────────────────────────────────
+// ─── Per-Account Processing ──────────────────────────────────────────────────
 
-async function processUserSignal(userId: string, signalId: string, signalData: SignalData): Promise<void> {
-    const strategy = signalData.strategy;
+async function processAccountSignal(account: Account, signalId: string, signalData: SignalData): Promise<boolean> {
+    // 1. Select the tier for this account's risk level
+    const tieredSignal = selectTier(signalData, account.risk_level);
+    tieredSignal.id = signalId;
 
-    // 1. Get user's risk tier for this strategy
-    const settings = await getUserStrategySettings(userId, strategy);
-    const riskLevel = settings?.risk_level || 'moderate';
+    // 2. Generate delta orders sized to the account
+    const orders = await generateAccountOrders(tieredSignal, account.id);
 
-    // 2. Select the correct tier from the signal payload
-    const tieredSignal = selectTier(signalData, riskLevel);
-
-    // 3. Generate per-user orders
-    const userOrders = await generateUserOrders(tieredSignal, userId, strategy);
-
-    // 4. Pre-execute into virtual account
-    if (userOrders.equityOrders.length > 0) {
-        const execResult = await executeVirtualOrders(
-            userId,
-            signalId,
-            strategy,
-            userOrders.equityOrders.map(o => ({
-                symbol: o.symbol,
-                action: o.action,
-                quantity: o.quantity,
-                price: o.price,
-            }))
-        );
-
-        if (!execResult.success && !execResult.alreadyExecuted) {
-            throw new Error(`Virtual execution failed for user ${userId}`);
+    // 3. Pre-execute into the account ledger (idempotent per account+signal)
+    if (orders.equityOrders.length > 0) {
+        const exec = await executeAccountOrders(account.id, signalId, orders.equityOrders);
+        if (!exec.success && !exec.alreadyExecuted) {
+            throw new Error('Virtual execution failed');
         }
     }
 
-    // 5. Compute P&L snapshot
-    const principal = await getVirtualAccountPrincipal(userId, strategy);
-    const balanceInfo = await getVirtualBalance(userId, strategy);
-    const positionsValue = userOrders.virtualNlv - balanceInfo.balance;
-    const today = new Date().toISOString().split('T')[0];
+    // 4. Snapshot NLV vs principal
+    const fresh = await getAccount(account.id);
+    if (fresh) {
+        const positions = await getAccountPositions(account.id);
+        const positionsValue = orders.virtualNlv - fresh.cash_balance;
+        const today = new Date().toISOString().split('T')[0];
+        await saveAccountPnlSnapshot(account.id, today, fresh.cash_balance, positionsValue, fresh.initial_principal);
+    }
 
-    await saveVirtualPnlSnapshot(
-        userId,
-        strategy,
-        today,
-        balanceInfo.balance,
-        positionsValue,
-        principal
-    );
-
-    // 6. Send email
-    const userEmail = await getUserEmail(userId);
-    if (userEmail) {
-        await sendSignalEmail(userEmail, {
-            strategy,
+    // 5. Email the account owner
+    const email = await getUserEmail(account.user_id);
+    if (email) {
+        await sendSignalEmail(email, {
+            strategy: account.strategy,
             regime: signalData.regime,
             confidence: signalData.confidence,
-            rationale: signalData.rationale,
-            equityOrders: userOrders.equityOrders,
-            optionsCloses: [], // TODO: wire options exit scanner
-            optionsEntries: userOrders.optionsOrders,
-            skipOptions: userOrders.skipOptions,
-            skipReason: userOrders.skipReason,
-            live: false, // virtual execution, not live brokerage
+            rationale: `${signalData.rationale || ''} [${account.name} · ${account.risk_level}]`,
+            equityOrders: orders.equityOrders,
+            optionsCloses: [],
+            optionsEntries: orders.optionsOrders,
+            skipOptions: orders.skipOptions,
+            skipReason: orders.skipReason,
+            live: false,
         });
+        return true;
     }
+    return false;
 }
 
 // ─── Tier Selection ──────────────────────────────────────────────────────────
@@ -179,11 +158,10 @@ async function processUserSignal(userId: string, signalId: string, signalData: S
 function selectTier(signalData: SignalData, riskLevel: 'conservative' | 'moderate' | 'aggressive'): GenericSignal {
     const tiers = signalData.tiers;
 
-    // If no tiers present, use the flat signal as-is (back-compat)
     if (!tiers || !tiers[riskLevel]) {
         console.log(`[Fanout] No tiers in signal, using flat allocation for ${riskLevel}`);
         return {
-            id: '', // Will be set by caller
+            id: '',
             strategy: signalData.strategy,
             regime: signalData.regime,
             confidence: signalData.confidence,
@@ -192,23 +170,16 @@ function selectTier(signalData: SignalData, riskLevel: 'conservative' | 'moderat
         };
     }
 
-    // Select the tier's allocation
     const tierData = tiers[riskLevel];
     const allocation = tierData.target_allocation || {};
-
-    // Convert allocation to legs format
     const legs: SignalLeg[] = Object.entries(allocation)
         .filter(([_, pct]) => pct > 0)
-        .map(([symbol, target_pct]) => ({
-            symbol,
-            target_pct,
-            leg_type: 'equity' as const,
-        }));
+        .map(([symbol, target_pct]) => ({ symbol, target_pct, leg_type: 'equity' as const }));
 
     console.log(`[Fanout] Selected ${riskLevel} tier: ${JSON.stringify(allocation)}`);
 
     return {
-        id: '', // Will be set by caller
+        id: '',
         strategy: signalData.strategy,
         regime: signalData.regime,
         confidence: signalData.confidence,
@@ -221,10 +192,7 @@ function selectTier(signalData: SignalData, riskLevel: 'conservative' | 'moderat
 
 async function getUserEmail(userId: string): Promise<string | null> {
     try {
-        const res = await pool.query(
-            `SELECT email FROM users WHERE id = $1`,
-            [userId]
-        );
+        const res = await pool.query(`SELECT email FROM users WHERE id = $1`, [userId]);
         return res.rows[0]?.email || null;
     } catch (err) {
         console.warn(`[Fanout] Failed to fetch email for user ${userId}:`, err);

@@ -3,10 +3,20 @@ import { Platform, Tone, Theme, PostGenerationContext } from './types';
 import { SYSTEM_PROMPTS, TONE_MODIFIERS, buildUserPrompt } from './prompts';
 import { enforceCompliance, hasCompliance } from './compliance';
 
-const perplexityClient = new OpenAI({
-  apiKey: process.env.PERPLEXITY_API_KEY,
-  baseURL: 'https://api.perplexity.ai',
-});
+// Lazy-init the client so module import never throws at build time when
+// PERPLEXITY_API_KEY isn't set (Next.js collects page data at build time,
+// which imports this module). The route already guards on the key at runtime.
+let _perplexityClient: OpenAI | null = null;
+
+function getPerplexityClient(): OpenAI {
+  if (!_perplexityClient) {
+    _perplexityClient = new OpenAI({
+      apiKey: process.env.PERPLEXITY_API_KEY || 'missing-key',
+      baseURL: 'https://api.perplexity.ai',
+    });
+  }
+  return _perplexityClient;
+}
 
 function parseVariations(raw: string): string[] {
   // Split on --- separator (as instructed in system prompt)
@@ -34,7 +44,7 @@ export async function generatePostVariations(
   const toneModifier = TONE_MODIFIERS[tone];
   const userPrompt = buildUserPrompt(theme, tone, ctx, customThemeText);
 
-  const response = await perplexityClient.chat.completions.create({
+  const response = await getPerplexityClient().chat.completions.create({
     model: 'sonar-pro',
     messages: [
       { role: 'system', content: `${systemPrompt}\n\nTone: ${toneModifier}` },

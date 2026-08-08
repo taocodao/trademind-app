@@ -1,22 +1,28 @@
 /**
- * Daily Mark-to-Market Cron Job
- * =============================
- * Runs once per day (after market close) to snapshot each user's virtual
- * account NLV and compute P&L vs their initial principal.
+ * Daily Mark-to-Market Cron Job (account-centric)
+ * ================================================
+ * Runs once per day (after market close) to snapshot each NAMED account's NLV
+ * and compute P&L vs its initial principal.
  *
- * Populates virtual_pnl_history for charting and performance tracking.
+ * Populates account_pnl_history for charting and performance tracking.
  *
  * Trigger: Vercel Cron (vercel.json) or manual POST
  */
 
 import { NextResponse } from 'next/server';
-import pool, { saveVirtualPnlSnapshot } from '@/lib/db';
+import pool from '@/lib/db';
+import {
+    initializeAccountTables,
+    getAccountPositions,
+    saveAccountPnlSnapshot,
+    type Account,
+} from '@/lib/accounts';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 300; // 5 minutes for large user bases
+export const maxDuration = 300; // 5 minutes for large account bases
 
 interface MarkToMarketResult {
-    usersProcessed: number;
+    accountsProcessed: number;
     snapshotsCreated: number;
     errors: string[];
 }
@@ -31,95 +37,70 @@ export async function POST(req: Request) {
     }
 
     const result: MarkToMarketResult = {
-        usersProcessed: 0,
+        accountsProcessed: 0,
         snapshotsCreated: 0,
         errors: [],
     };
 
     try {
-        console.log('[Mark-to-Market] Starting daily snapshot...');
+        console.log('[Mark-to-Market] Starting daily account snapshot...');
+        await initializeAccountTables();
 
-        // Get all users with virtual accounts
-        const usersRes = await pool.query(
-            `SELECT DISTINCT user_id, strategy FROM virtual_accounts WHERE initial_principal IS NOT NULL`
-        );
+        // Get all accounts
+        const accountsRes = await pool.query(`SELECT * FROM accounts ORDER BY id ASC`);
+        const accounts: Account[] = accountsRes.rows.map((r: any) => ({
+            id: r.id,
+            user_id: r.user_id,
+            name: r.name,
+            strategy: r.strategy,
+            risk_level: r.risk_level,
+            initial_principal: Number(r.initial_principal),
+            cash_balance: Number(r.cash_balance),
+            created_at: r.created_at,
+            updated_at: r.updated_at,
+        }));
 
-        console.log(`[Mark-to-Market] Found ${usersRes.rows.length} user-strategy pairs to snapshot`);
-
+        console.log(`[Mark-to-Market] Found ${accounts.length} accounts to snapshot`);
         const today = new Date().toISOString().split('T')[0];
 
-        for (const row of usersRes.rows) {
-            const { user_id, strategy } = row;
-
+        for (const account of accounts) {
             try {
-                // Fetch current state
-                const [balanceRes, positionsRes, principalRes] = await Promise.all([
-                    pool.query(
-                        `SELECT cash_balance FROM virtual_accounts WHERE user_id = $1 AND strategy = $2`,
-                        [user_id, strategy]
-                    ),
-                    pool.query(
-                        `SELECT symbol, quantity, avg_price FROM shadow_positions WHERE user_id = $1 AND strategy = $2`,
-                        [user_id, strategy]
-                    ),
-                    pool.query(
-                        `SELECT initial_principal FROM virtual_accounts WHERE user_id = $1 AND strategy = $2`,
-                        [user_id, strategy]
-                    ),
-                ]);
+                const positions = await getAccountPositions(account.id);
 
-                const cashBalance = parseFloat(balanceRes.rows[0]?.cash_balance || '0');
-                const principal = principalRes.rows[0]?.initial_principal
-                    ? parseFloat(principalRes.rows[0].initial_principal)
-                    : null;
-
-                // Compute positions value (need live prices)
+                // Compute positions value with live prices
                 let positionsValue = 0;
-                const symbols = positionsRes.rows.map(r => r.symbol);
-
+                const symbols = positions.map((p) => p.symbol);
                 if (symbols.length > 0) {
                     const prices = await fetchMarketPrices(symbols);
-                    for (const pos of positionsRes.rows) {
-                        const price = prices[pos.symbol] || parseFloat(pos.avg_price);
-                        positionsValue += parseFloat(pos.quantity) * price;
+                    for (const pos of positions) {
+                        positionsValue += pos.quantity * (prices[pos.symbol] || pos.avg_price);
                     }
                 }
 
-                // Save snapshot
-                await saveVirtualPnlSnapshot(
-                    user_id,
-                    strategy,
+                await saveAccountPnlSnapshot(
+                    account.id,
                     today,
-                    cashBalance,
+                    account.cash_balance,
                     positionsValue,
-                    principal
+                    account.initial_principal
                 );
 
                 result.snapshotsCreated++;
-                result.usersProcessed++;
-
+                result.accountsProcessed++;
             } catch (err) {
-                const msg = `User ${user_id} strategy ${strategy}: ${err instanceof Error ? err.message : String(err)}`;
+                const msg = `Account ${account.id} (${account.name}): ${err instanceof Error ? err.message : String(err)}`;
                 console.error(`[Mark-to-Market] ${msg}`);
                 result.errors.push(msg);
             }
         }
 
-        console.log(`[Mark-to-Market] Completed: ${result.snapshotsCreated} snapshots created, ${result.errors.length} errors`);
+        console.log(`[Mark-to-Market] Completed: ${result.snapshotsCreated} snapshots, ${result.errors.length} errors`);
 
-        return NextResponse.json({
-            success: true,
-            ...result,
-        });
-
+        return NextResponse.json({ success: true, ...result });
     } catch (err) {
         console.error('[Mark-to-Market] Fatal error:', err);
         return NextResponse.json(
-            {
-                success: false,
-                error: err instanceof Error ? err.message : String(err),
-                ...result,
-            },
+            { success: false, error: err instanceof Error ? err.message : String(err), ...result },
             { status: 500 }
         );
     }
@@ -129,10 +110,7 @@ async function fetchMarketPrices(symbols: string[]): Promise<Record<string, numb
     if (symbols.length === 0) return {};
     try {
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.trademind.bot';
-        const res = await fetch(
-            `${baseUrl}/api/quotes?symbols=${symbols.join(',')}`,
-            { cache: 'no-store' }
-        );
+        const res = await fetch(`${baseUrl}/api/quotes?symbols=${symbols.join(',')}`, { cache: 'no-store' });
         if (res.ok) return await res.json();
     } catch (err) {
         console.warn('[Mark-to-Market] Failed to fetch market prices:', err);

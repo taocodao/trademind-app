@@ -4,6 +4,7 @@ import { PrivyProvider } from "@/components/providers/PrivyProvider";
 import { SignalProvider } from "@/components/providers/SignalProvider";
 import { SettingsProvider } from "@/components/providers/SettingsProvider";
 import { StrategyProvider } from "@/components/providers/StrategyContext";
+import { AccountProvider } from "@/components/providers/AccountContext";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { SupportChatWidget } from "@/components/ui/SupportChatWidget";
 import { MarketingProviders } from "@/components/marketing/MarketingProviders";
@@ -46,11 +47,13 @@ export default function RootLayout({
                         <SettingsProvider>
                             <SignalProvider>
                                 <StrategyProvider>
-                                    <div className="pb-16 md:pb-0">
-                                        {children}
-                                    </div>
-                                    <BottomNav />
-                                    <SupportChatWidget />
+                                    <AccountProvider>
+                                        <div className="pb-16 md:pb-0">
+                                            {children}
+                                        </div>
+                                        <BottomNav />
+                                        <SupportChatWidget />
+                                    </AccountProvider>
                                 </StrategyProvider>
                             </SignalProvider>
                         </SettingsProvider>

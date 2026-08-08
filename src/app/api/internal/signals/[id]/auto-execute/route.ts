@@ -8,6 +8,13 @@ import { generateUserOrders, type GenericSignal } from '@/lib/per-user-order-gen
 import { scanOptionsExits, closeShadowOptionsPositions, saveShadowOptionsPositions } from '@/lib/options-exit-scanner';
 import { sendSignalEmail } from '@/lib/signal-email';
 
+// ============================================================================
+// DISABLED: Auto-execution to brokerage accounts is no longer supported.
+// Signals are now fanned out via /api/signals/notify → signal-fanout.ts,
+// which pre-executes virtually and emails users for manual entry.
+// This code is preserved for reference but is not active.
+// ============================================================================
+
 export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
@@ -19,6 +26,14 @@ export async function POST(
     if (authHeader !== `Bearer ${process.env.INTERNAL_API_SECRET || 'dev_secret_key'}`) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // DISABLED: Return immediately — auto-execution is no longer supported
+    return NextResponse.json({
+        success: false,
+        error: 'Auto-execution is disabled',
+        message: 'This endpoint has been disabled. Signals are now delivered via email for manual entry.',
+        disabled: true,
+    }, { status: 410 }); // 410 Gone
 
     try {
         const body = await request.json();

@@ -1,15 +1,19 @@
 /**
  * Approve Signal API Route
- * Approves a signal and executes the trade DIRECTLY from Vercel
- * 
- * This eliminates the need for EC2 and credential synchronization.
+ * ========================
+ * Marks a signal as "approved" by the user, confirming they have manually
+ * entered the orders into their own brokerage account.
+ *
+ * This does NOT execute any trades — it only records the user's confirmation
+ * and mirrors the orders to their virtual account for P&L tracking.
+ *
+ * Users receive signal emails with order instructions, enter the trades
+ * manually in their brokerage, then come back here to confirm.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getTastytradeTokens, storeTastytradeTokens } from '@/lib/redis';
-import { createSession, getAccountBalance } from '@/lib/tastytrade-api';
-import { executeSignal } from '@/lib/strategy-executor';
-import { createPosition, createUserExecution, getUserSettings } from '@/lib/db';
+import { getTastytradeTokens } from '@/lib/redis';
+import { createUserExecution, getUserSettings } from '@/lib/db';
 import { executeVirtualOrders } from '@/lib/virtual-executor';
 import { getPrivyUserId } from '@/lib/auth-helpers';
 import pool, { getDefaultVirtualBalance } from '@/lib/db';
@@ -28,359 +32,67 @@ export async function POST(
             return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
         }
 
-        // Get user's Tastytrade credentials from Redis
+        console.log(`✅ User ${userId} confirming manual entry for signal ${id}`);
+
+        // Get signal data from request body
+        const signalData = body.signal || body.signalDetails || body;
+        const strategy = signalData.strategy || 'TQQQ_TURBOCORE';
+
+        // ========================================================================
+        // DISABLED: Live brokerage execution is no longer supported.
+        // All signals are now virtual-only. Users receive order instructions via
+        // email and manually enter trades in their own brokerage account.
+        // This route now only confirms the user's manual entry and mirrors the
+        // orders to their virtual account for P&L tracking.
+        // ========================================================================
+
+        // Get user's Tastytrade credentials from Redis (for reference only — not used for execution)
         const tokens = await getTastytradeTokens(userId);
         const hasTastytrade = tokens?.refreshToken;
 
-        // If no Tastytrade connection — execute virtually using the shared helper (no HTTP round-trip)
-        if (!hasTastytrade) {
-            const signalData = body.signal || body.signalDetails || body;
-            const strategy = signalData.strategy || 'TQQQ_TURBOCORE';
-            const orders = await buildVirtualOrdersFromSignal(signalData, strategy, userId);
-
-            try {
-                const execResult = await executeVirtualOrders(userId, id, strategy, orders);
-                if (execResult.alreadyExecuted) {
-                    return NextResponse.json({ status: 'already_executed', error: 'Already executed' }, { status: 409 });
-                }
-                return NextResponse.json({
-                    status: 'success',
-                    virtual: true,
-                    message: 'Trade executed virtually. Connect Tastytrade for live trading.',
-                    balance: execResult.balance
-                });
-            } catch (execErr) {
-                console.error('Virtual execution failed:', execErr);
-                return NextResponse.json({ status: 'failed', error: 'Virtual execution failed' }, { status: 500 });
-            }
+        if (hasTastytrade) {
+            console.log(`ℹ️ User ${userId} has Tastytrade connected (reference only — not used for execution)`);
         }
 
-        // Get OAuth credentials from environment (single source of truth!)
-        const clientId = process.env.TASTYTRADE_CLIENT_ID;
-        const clientSecret = process.env.TASTYTRADE_CLIENT_SECRET;
-        if (!clientId || !clientSecret) {
-            console.error('TASTYTRADE_CLIENT_ID or TASTYTRADE_CLIENT_SECRET not configured');
-            return NextResponse.json(
-                { error: 'Server configuration error. Please contact support.' },
-                { status: 500 }
-            );
-        }
+        // Build virtual orders from signal (for virtual account mirroring)
+        const orders = await buildVirtualOrdersFromSignal(signalData, strategy, userId);
 
-        console.log(`📈 Approving signal ${id} for user ${userId}`);
-
-        // Check if access token is still valid (not expired)
-        const tokenStillValid = tokens.expiresAt && tokens.expiresAt > Date.now();
-        let accessToken = tokens.accessToken;
-
-        if (tokenStillValid && accessToken) {
-            // Token still valid - use it directly without refresh
-            console.log('✅ Using existing valid access token');
-        } else {
-            // Token expired - try to refresh
-            console.log('⚠️ Access token expired, attempting refresh...');
-
-            try {
-                const session = await createSession(clientId, clientSecret, tokens.refreshToken);
-                console.log('✅ Token refreshed successfully');
-                accessToken = session.accessToken;
-
-                // Update stored tokens with new refresh token if provided
-                await storeTastytradeTokens(userId, {
-                    ...tokens,
-                    refreshToken: session.refreshToken || tokens.refreshToken,
-                    accessToken: session.accessToken,
-                    expiresAt: session.expiresAt,
-                });
-            } catch (refreshError) {
-                // Refresh failed - this is expected due to Tastytrade API limitation
-                // User needs to reconnect
-                console.error('❌ Token refresh failed (likely Tastytrade API limitation):', refreshError);
-
-                return NextResponse.json({
-                    status: 'failed',
-                    signal: { id, ...body },
-                    error: 'Session expired. Please reconnect your Tastytrade account.',
-                    code: 'RECONNECT_REQUIRED',
-                    message: 'Your Tastytrade session has expired. Please click "Disconnect" then "Connect" to re-authenticate.',
-                }, { status: 401 });
-            }
-        }
-
-        // Get account number
-        const accountNumber = tokens.accountNumber || body.accountNumber;
-        if (!accountNumber) {
-            return NextResponse.json({
-                status: 'failed',
-                signal: { id, ...(body.signal || body.signalDetails || body) },
-                error: 'No account number found',
-                message: 'Please reconnect your Tastytrade account.',
-            }, { status: 400 });
-        }
-
-        // Execute the trade based on signal type
-        // page.tsx sends either { signal } or { signalDetails }
-        const signalData = body.signal || body.signalDetails || body;
-
-        // 🛡️ SAFETY CHECK: Verify Buying Power
+        // Execute virtually (idempotent — returns gracefully if already executed)
         try {
-            const balanceData = await getAccountBalance(accessToken, accountNumber);
-            const buyingPower = balanceData.buyingPower;
-
-            const isRebalance = signalData.action === 'REBALANCE' || signalData.type === 'REBALANCE' || String(signalData.strategy || '').includes('TURBOCORE');
-
-            if (!isRebalance) {
-                const estimatedCost = signalData.cost ||
-                    (signalData.capital_required) ||
-                    ((signalData.strike || 0) * 100 * (signalData.contracts || 1));
-
-                if (buyingPower < estimatedCost) {
-                    console.error(`❌ Insufficient Buying Power: $${buyingPower} < $${estimatedCost}`);
-                    return NextResponse.json({
-                        status: 'failed',
-                        signal: { id, ...signalData },
-                        error: 'Insufficient buying power',
-                        message: `Account has $${buyingPower.toFixed(2)} BP, but trade requires ~$${estimatedCost.toFixed(2)}`
-                    }, { status: 400 });
-                }
-                console.log(`✅ Buying Power OK: $${buyingPower} available > $${estimatedCost} required`);
-            } else {
-                console.log(`✅ Buying Power Check Bypassed: Rebalance trade (sells fund buys)`);
-            }
-        } catch (bpError) {
-            console.warn('⚠️ Could not verify buying power (proceeding with caution):', bpError);
-        }
-
-        // Helper: Get next Friday from a given date
-        const getNextFriday = (from: Date): string => {
-            const date = new Date(from);
-            const dayOfWeek = date.getDay();
-            const daysUntilFriday = (5 - dayOfWeek + 7) % 7 || 7; // If today is Friday, get next Friday
-            date.setDate(date.getDate() + daysUntilFriday);
-            return date.toISOString().split('T')[0]; // YYYY-MM-DD
-        };
-
-        // Get default expiry dates if not provided
-        const today = new Date();
-        const defaultFrontExpiry = getNextFriday(today);
-        const frontDate = new Date(defaultFrontExpiry);
-        frontDate.setDate(frontDate.getDate() + 7);
-        const defaultBackExpiry = frontDate.toISOString().split('T')[0];
-
-        try {
-            // Check if strategy should be handled by EC2 backend
-            const strategy = String(signalData.strategy || '').toUpperCase();
-            const isServerManaged = ['TURBOBOUNCE', 'ZEBRA'].includes(strategy);
-
-            let result;
-
-            if (isServerManaged) {
-                console.log(`📡 Proxying ${strategy} approval to EC2 backend...`);
-                const ec2Url = process.env.TASTYTRADE_API_URL || 'http://34.235.119.67:8002';
-                
-                // Pre-calculate exact order sizes using virtual balance so live matches UI preview exactly
-                const preCalculatedOrders = await buildVirtualOrdersFromSignal(signalData, strategy, userId);
-
-                const proxyResp = await fetch(`${ec2Url}/api/signals/${id}/approve`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        refreshToken: tokens.refreshToken,
-                        accountNumber: tokens.accountNumber,
-                        userId: userId,
-                        execute: true,
-                        signal: signalData, // Pass the full signal data
-                        preCalculatedOrders: preCalculatedOrders // Pass exact orders so EC2 doesn't recalculate using TT Net Liq
-                    })
-                });
-
-                if (!proxyResp.ok) {
-                    const errorText = await proxyResp.text();
-                    let parsedError = errorText;
-                    try {
-                        const errJson = JSON.parse(errorText);
-                        parsedError = errJson.error || errJson.message || errorText;
-                    } catch (e) { /* ignore */ }
-                    throw new Error(`EC2 Proxy failed: ${parsedError}`);
-                }
-
-                result = await proxyResp.json();
-                console.log(`✅ EC2 Proxy successful: Order ID ${result.orderId || result.order_id}`);
-
-                // Mirror to virtual account (non-blocking) using already-computed preCalculatedOrders
-                try {
-                    const protocol = request.headers.get('x-forwarded-proto') || 'http';
-                    const host = request.headers.get('host');
-                    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
-                    await fetch(`${baseUrl}/api/virtual-accounts/execute`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', Cookie: request.headers.get('cookie') || '' },
-                        body: JSON.stringify({ signalId: id, strategy: String(signalData.strategy || strategy), orders: preCalculatedOrders })
-                    });
-                } catch (mirrorErr) {
-                    console.warn('EC2 virtual mirror failed (non-critical):', mirrorErr);
-                }
-
-                return NextResponse.json(result);
-
-            } else {
-                // ── 🛡️ LIVE EXECUTION DEDUP GUARD ─────────────────────────────────────────
-                // Atomically claim this signal execution slot BEFORE any TT order is submitted.
-                // ON CONFLICT DO NOTHING returns 0 rows if another request already claimed it,
-                // which means a parallel request or a double-click got here first — bail out.
-                try {
-                    const claimRes = await pool.query(
-                        `INSERT INTO user_signal_executions (user_id, signal_id, status, source, executed_at, created_at)
-                         VALUES ($1, $2, 'pending', $3, NOW(), NOW())
-                         ON CONFLICT (user_id, signal_id) DO NOTHING
-                         RETURNING id`,
-                        [userId, id, body.source || 'manual']
-                    );
-                    if (claimRes.rowCount === 0) {
-                        console.warn(`[Dedup] Signal ${id} already claimed for user ${userId} — aborting duplicate execution`);
-                        return NextResponse.json({ status: 'already_executed', error: 'Already executed' }, { status: 409 });
-                    }
-                    console.log(`[Dedup] Execution slot claimed for signal ${id}`);
-                } catch (claimErr) {
-                    // If the dedup check itself fails (e.g. table doesn't exist), log and continue.
-                    // Better to risk a duplicate than to block legitimate trades.
-                    console.warn('[Dedup] Could not claim execution slot (proceeding):', claimErr);
-                }
-
-                // For TurboCore strategies, pre-calculate virtual orders so live TT trade
-                // sizes match the UI Preview (which uses virtual $25k balance, not TT Net Liq)
-                const isTurboCore = ['TQQQ_TURBOCORE', 'TQQQ_TURBOCORE_PRO', 'REBALANCE'].includes(strategy);
-                let signalToExecute = signalData;
-
-                if (isTurboCore) {
-                    const virtualOrders = await buildVirtualOrdersFromSignal(signalData, strategy, userId);
-                    console.log(`[TurboCore] Using ${virtualOrders.length} pre-calculated virtual orders for live TT execution`);
-                    // Inject the pre-calculated orders into the signal so calculateTurboCoreOrders can use them
-                    signalToExecute = { ...signalData, _preCalculatedOrders: virtualOrders };
-
-                    // Execute trade on Tastytrade first, then mirror to virtual (awaited to prevent loss on serverless teardown)
-                    result = await executeSignal(
-                        accessToken,
-                        accountNumber,
-                        signalToExecute,
-                        {
-                            front: defaultFrontExpiry,
-                            back: defaultFrontExpiry,
-                        }
-                    );
-
-                    // Mirror to virtual — await to guarantee it runs before function exits
-                    try {
-                        await executeVirtualOrders(userId, id, strategy, virtualOrders);
-                    } catch (e) { console.warn('Virtual mirror (post-TT) failed:', e); }
-
-                    // Skip the second executeSignal call below
-                    const orderId = result.orderId || (result as any).order_id || 'unknown';
-                    console.log(`✅ Trade processed: Order ID ${orderId}`);
-                    try {
-                        const userSettings = await getUserSettings(userId);
-                        await createPosition({
-                            id: orderId, userId, signalId: id,
-                            symbol: (signalData.legs?.map((l: any) => l.symbol).join(',')) || signalData.symbol || 'REBALANCE',
-                            strategy: signalData.strategy || 'theta',
-                            strike: signalData.strike || 0,
-                            expiration: signalData.frontExpiry || signalData.expiry || defaultFrontExpiry,
-                            backExpiry: signalData.backExpiry || defaultBackExpiry,
-                            contracts: signalData.contracts || 1,
-                            entryPrice: signalData.entry_price || signalData.price || signalData.cost || 0,
-                            capitalRequired: signalData.cost || (signalData.strike || 0) * 100 * (signalData.contracts || 1),
-                            riskLevel: (await getUserSettings(userId))?.risk_level || 'moderate',
-                            direction: signalData.direction,
-                        });
-                        // Update the pre-claimed 'pending' execution row to 'executed'
-                        await pool.query(
-                            `UPDATE user_signal_executions SET status = 'executed', order_id = $1 WHERE user_id = $2 AND signal_id = $3`,
-                            [orderId, userId, id]
-                        );
-                    } catch (dbError) { console.error('Failed to save position:', dbError); }
-
-                    return NextResponse.json({
-                        status: 'success',
-                        signal: { id, ...signalData, status: 'executed' },
-                        orderId,
-                        positionId: orderId,
-                        message: `Trade processed successfully! Order ID: ${orderId}`,
-                    });
-                }
-
-                // Non-TurboCore: execute trade using modular strategy executor (locally on Vercel)
-                result = await executeSignal(
-                    accessToken,
-                    accountNumber,
-                    signalToExecute,
-                    {
-                        front: defaultFrontExpiry,
-                        back: defaultFrontExpiry,
-                    }
-                );
+            const execResult = await executeVirtualOrders(userId, id, strategy, orders);
+            if (execResult.alreadyExecuted) {
+                return NextResponse.json({
+                    status: 'already_executed',
+                    error: 'Already confirmed',
+                    message: 'You have already confirmed this signal.'
+                }, { status: 409 });
             }
 
-            const orderId = result.orderId || (result as any).order_id || 'unknown';
-            console.log(`✅ Trade processed: Order ID ${orderId}`);
+            // Record the user's manual-entry confirmation
+            await createUserExecution(userId, id, 'executed', undefined, body.source || 'manual');
 
-            // ✅ Create position in database for persistence
-            try {
-                const userSettings = await getUserSettings(userId);
-                const riskLevel = userSettings?.risk_level || 'moderate';
-
-                await createPosition({
-                    id: orderId,
-                    userId: userId,
-                    signalId: id,
-                    // Phase 3 Fix: Store accurate symbols instead of UNKNOWN for TurboCore signals
-                    symbol: (signalData.legs?.map((l: any) => l.symbol).join(',')) || signalData.symbol || 'REBALANCE',
-                    strategy: signalData.strategy || 'theta',
-                    strike: signalData.strike || 0,
-                    expiration: signalData.frontExpiry || signalData.expiry || defaultFrontExpiry,
-                    backExpiry: signalData.backExpiry || defaultBackExpiry,
-                    contracts: signalData.contracts || 1,
-                    entryPrice: signalData.entry_price || signalData.price || signalData.cost || 0,
-                    capitalRequired: signalData.cost || (signalData.strike || 0) * 100 * (signalData.contracts || 1),
-                    riskLevel: riskLevel,
-                    direction: signalData.direction,
-                });
-
-                // Track user execution
-                await createUserExecution(userId, id, 'executed', orderId, body.source || 'manual');
-
-                console.log(`✅ Position saved to database: ${orderId}`);
-            } catch (dbError) {
-                console.error('⚠️ Failed to save position to database:', dbError);
-            }
-
-            // After successful real trade execution — virtual mirror ALREADY scheduled above for TurboCore.
-            // For other strategies (theta, diagonal, etc.) mirror now.
+            console.log(`✅ Signal ${id} confirmed and mirrored to virtual account for user ${userId}`);
 
             return NextResponse.json({
                 status: 'success',
-                signal: { id, ...signalData, status: 'executed' },
-                orderId: orderId,
-                positionId: orderId,
-                message: `Trade processed successfully! Order ID: ${orderId}`,
+                virtual: true,
+                message: 'Signal confirmed. Orders mirrored to your virtual account for P&L tracking.',
+                balance: execResult.balance,
+                orders: orders.map(o => ({
+                    symbol: o.symbol,
+                    action: o.action,
+                    quantity: o.quantity,
+                    price: o.price,
+                })),
             });
 
-        } catch (error) {
-            console.error('Trade execution failed:', error);
-            const errMsg = error instanceof Error ? error.message : 'Trade execution failed';
-
-            // ⚠️ Mark signal as 'failed' in DB so it won't loop on next refresh
-            try {
-                await createUserExecution(userId, id, 'failed', undefined, body.source || 'manual');
-                console.log(`📝 Signal ${id} marked as 'failed' in DB to prevent zombie loops.`);
-            } catch (dbErr) {
-                console.error('⚠️ Failed to write failure status to DB:', dbErr);
-            }
-
+        } catch (execErr) {
+            console.error('Virtual execution failed:', execErr);
             return NextResponse.json({
                 status: 'failed',
-                signal: { id, ...signalData },
-                error: errMsg,
-                message: `Trade failed: ${errMsg}`,
-            }, { status: 400 });
+                error: 'Virtual execution failed',
+                message: 'Failed to mirror orders to virtual account. Please try again.'
+            }, { status: 500 });
         }
 
     } catch (error) {
@@ -448,7 +160,7 @@ async function buildVirtualOrdersFromSignal(signal: any, strategy: string, userI
 
     // 2. Fetch virtual balance and shadow positions DIRECTLY from DB
     //    (avoids cookie-forwarding failures on Vercel serverless)
-    let cashBalance = getDefaultVirtualBalance(strategy); // ✅ fixed: was hardcoded 25000
+    let cashBalance = getDefaultVirtualBalance(strategy);
     const posMap = new Map<string, { qty: number; avgPrice: number }>();
     try {
         const [balRes, posRes] = await Promise.all([

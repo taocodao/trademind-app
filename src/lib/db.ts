@@ -329,6 +329,131 @@ export async function logVirtualTransaction(
     );
 }
 
+// ============================================================
+// PER-STRATEGY RISK SETTINGS & VIRTUAL P&L
+// ============================================================
+
+export interface UserStrategySettings {
+    id: number;
+    user_id: string;
+    strategy: string;
+    risk_level: 'conservative' | 'moderate' | 'aggressive';
+    created_at: Date;
+    updated_at: Date;
+}
+
+export async function getUserStrategySettings(
+    userId: string,
+    strategy: string
+): Promise<UserStrategySettings | null> {
+    const result = await query(
+        `SELECT * FROM user_strategy_settings WHERE user_id = $1 AND strategy = $2`,
+        [userId, strategy]
+    );
+    return result.rows[0] || null;
+}
+
+export async function setUserStrategyRiskLevel(
+    userId: string,
+    strategy: string,
+    riskLevel: 'conservative' | 'moderate' | 'aggressive'
+): Promise<void> {
+    await query(
+        `INSERT INTO user_strategy_settings (user_id, strategy, risk_level, updated_at)
+         VALUES ($1, $2, $3, NOW())
+         ON CONFLICT (user_id, strategy)
+         DO UPDATE SET risk_level = $3, updated_at = NOW()`,
+        [userId, strategy, riskLevel]
+    );
+}
+
+export async function setVirtualAccountPrincipal(
+    userId: string,
+    strategy: string,
+    principal: number
+): Promise<void> {
+    await query(
+        `INSERT INTO virtual_accounts (user_id, strategy, cash_balance, initial_principal)
+         VALUES ($1, $2, $3, $3)
+         ON CONFLICT (user_id, strategy)
+         DO UPDATE SET initial_principal = $3, updated_at = NOW()`,
+        [userId, strategy, principal]
+    );
+}
+
+export async function getVirtualAccountPrincipal(
+    userId: string,
+    strategy: string
+): Promise<number | null> {
+    const result = await query(
+        `SELECT initial_principal FROM virtual_accounts WHERE user_id = $1 AND strategy = $2`,
+        [userId, strategy]
+    );
+    const val = result.rows[0]?.initial_principal;
+    return val != null ? parseFloat(val) : null;
+}
+
+export interface VirtualPnlSnapshot {
+    id: number;
+    user_id: string;
+    strategy: string;
+    snapshot_date: Date;
+    cash_balance: number;
+    positions_value: number;
+    nlv: number;
+    initial_principal: number | null;
+    cumulative_pnl: number | null;
+    cumulative_pnl_pct: number | null;
+    created_at: Date;
+}
+
+export async function saveVirtualPnlSnapshot(
+    userId: string,
+    strategy: string,
+    snapshotDate: string, // YYYY-MM-DD
+    cashBalance: number,
+    positionsValue: number,
+    initialPrincipal: number | null
+): Promise<void> {
+    const nlv = cashBalance + positionsValue;
+    const cumulativePnl = initialPrincipal != null ? nlv - initialPrincipal : null;
+    const cumulativePnlPct = initialPrincipal != null && initialPrincipal > 0
+        ? (nlv - initialPrincipal) / initialPrincipal
+        : null;
+
+    await query(
+        `INSERT INTO virtual_pnl_history (
+            user_id, strategy, snapshot_date, cash_balance, positions_value, nlv,
+            initial_principal, cumulative_pnl, cumulative_pnl_pct, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+        ON CONFLICT (user_id, strategy, snapshot_date)
+        DO UPDATE SET
+            cash_balance = $4,
+            positions_value = $5,
+            nlv = $6,
+            initial_principal = $7,
+            cumulative_pnl = $8,
+            cumulative_pnl_pct = $9`,
+        [userId, strategy, snapshotDate, cashBalance, positionsValue, nlv,
+         initialPrincipal, cumulativePnl, cumulativePnlPct]
+    );
+}
+
+export async function getVirtualPnlHistory(
+    userId: string,
+    strategy: string,
+    limitDays: number = 90
+): Promise<VirtualPnlSnapshot[]> {
+    const result = await query(
+        `SELECT * FROM virtual_pnl_history
+         WHERE user_id = $1 AND strategy = $2
+         ORDER BY snapshot_date DESC
+         LIMIT $3`,
+        [userId, strategy, limitDays]
+    );
+    return result.rows;
+}
+
 export async function updateVirtualBalance(
     userId: string,
     strategy: string,
@@ -830,6 +955,46 @@ export async function initializeUserTables(): Promise<void> {
                 UNIQUE(account_id, trade_date)
             )
         `);
+
+        // ── Virtual Accounts: initial_principal column ─────────────────────
+        await query(`ALTER TABLE virtual_accounts ADD COLUMN IF NOT EXISTS initial_principal DECIMAL(15, 2) DEFAULT NULL`);
+
+        // ── Per-Strategy Risk Settings ──────────────────────────────────────
+        await query(`
+            CREATE TABLE IF NOT EXISTS user_strategy_settings (
+                id SERIAL PRIMARY KEY,
+                user_id VARCHAR(128) NOT NULL,
+                strategy VARCHAR(64) NOT NULL,
+                risk_level VARCHAR(20) NOT NULL DEFAULT 'moderate',
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                updated_at TIMESTAMPTZ DEFAULT NOW(),
+                UNIQUE(user_id, strategy),
+                CONSTRAINT valid_risk_level CHECK (risk_level IN ('conservative', 'moderate', 'aggressive'))
+            )
+        `);
+        await query(`CREATE INDEX IF NOT EXISTS idx_user_strategy_settings_user ON user_strategy_settings(user_id)`);
+        await query(`CREATE INDEX IF NOT EXISTS idx_user_strategy_settings_strategy ON user_strategy_settings(strategy)`);
+
+        // ── Virtual P&L History ─────────────────────────────────────────────
+        await query(`
+            CREATE TABLE IF NOT EXISTS virtual_pnl_history (
+                id SERIAL PRIMARY KEY,
+                user_id VARCHAR(128) NOT NULL,
+                strategy VARCHAR(64) NOT NULL,
+                snapshot_date DATE NOT NULL,
+                cash_balance DECIMAL(15, 2) NOT NULL,
+                positions_value DECIMAL(15, 2) NOT NULL DEFAULT 0,
+                nlv DECIMAL(15, 2) NOT NULL,
+                initial_principal DECIMAL(15, 2),
+                cumulative_pnl DECIMAL(15, 2),
+                cumulative_pnl_pct DECIMAL(10, 6),
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                UNIQUE(user_id, strategy, snapshot_date)
+            )
+        `);
+        await query(`CREATE INDEX IF NOT EXISTS idx_virtual_pnl_history_user ON virtual_pnl_history(user_id)`);
+        await query(`CREATE INDEX IF NOT EXISTS idx_virtual_pnl_history_strategy ON virtual_pnl_history(strategy)`);
+        await query(`CREATE INDEX IF NOT EXISTS idx_virtual_pnl_history_date ON virtual_pnl_history(snapshot_date)`);
 
         // ── Seed demo virtual accounts (idempotent) ─────────────────────────
         // demo_turbocore_core → $5K Core strategy

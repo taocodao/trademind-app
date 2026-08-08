@@ -4,6 +4,7 @@
     { "path": "/api/cron/weekly-debrief",       "schedule": "0 22 * * 0"   },
     { "path": "/api/cron/reconcile-credits",    "schedule": "0 9 1 * *"    },
     { "path": "/api/cron/trial-warning",        "schedule": "0 14 * * *"   },
-    { "path": "/api/cron/winback",              "schedule": "0 14 * * *"   }
+    { "path": "/api/cron/winback",              "schedule": "0 14 * * *"   },
+    { "path": "/api/cron/mark-to-market",       "schedule": "0 21 * * 1-5" }
   ]
 }

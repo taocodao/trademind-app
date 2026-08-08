@@ -1,7 +1,7 @@
 "use client";
 
 import { usePrivy } from "@privy-io/react-auth";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { ArrowLeft, RefreshCw, Wallet, WifiOff, LayoutList, Activity as ActivityIcon } from "lucide-react";
 import Link from "next/link";
@@ -32,9 +32,12 @@ export default function AccountDetailPage() {
     const { ready, authenticated } = usePrivy();
     const router = useRouter();
     const params = useParams();
+    const searchParams = useSearchParams();
     const accountId = Number(params?.id);
 
-    const [tab, setTab] = useState<'positions' | 'activity'>('positions');
+    // Deep-linkable tab: /account/[id]?tab=activity opens the Activity tab
+    const initialTab = searchParams?.get('tab') === 'activity' ? 'activity' : 'positions';
+    const [tab, setTab] = useState<'positions' | 'activity'>(initialTab);
     const [account, setAccount] = useState<AccountData | null>(null);
     const [positions, setPositions] = useState<Position[]>([]);
     const [cash, setCash] = useState(0);

@@ -6,26 +6,33 @@ import { Home, Bot, Activity, Bell, Settings, LogOut, Gift } from 'lucide-react'
 import { usePrivy } from '@privy-io/react-auth';
 import { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useAccountContext } from '@/components/providers/AccountContext';
 
 export function BottomNav() {
     const pathname = usePathname();
     const { authenticated, ready, logout } = usePrivy();
     const [mounted, setMounted] = useState(false);
     const { t } = useTranslation();
+    const { activeAccountId } = useAccountContext();
 
     useEffect(() => {
         setMounted(true);
     }, []);
 
     // useMemo MUST be called before any early returns (Rules of Hooks)
+    // Positions & Activity route through the ACTIVE ACCOUNT. Without an account,
+    // both fall back to /accounts so the user can create/select one first.
+    const positionsHref = activeAccountId ? `/account/${activeAccountId}` : '/accounts';
+    const activityHref = activeAccountId ? `/account/${activeAccountId}?tab=activity` : '/accounts';
+
     const navItems = useMemo(() => [
         { name: t('dashboard.nav.home', 'Home'),    href: '/dashboard', icon: Home },
         { name: t('dashboard.nav.ai', 'AI'),        href: '/ai',        icon: Bot },
-        { name: t('dashboard.nav.positions'),       href: '/positions', icon: Activity },
-        { name: t('dashboard.nav.activity'),        href: '/activity',  icon: Bell },
+        { name: t('dashboard.nav.positions'),       href: positionsHref, icon: Activity, match: '/account' },
+        { name: t('dashboard.nav.activity'),        href: activityHref,  icon: Bell, match: '/account' },
         { name: t('dashboard.nav.refer', 'Refer'),  href: '/refer',     icon: Gift, highlight: true },
         { name: t('dashboard.nav.settings'),        href: '/settings',  icon: Settings },
-    ], [t]);
+    ], [t, positionsHref, activityHref]);
 
     if (!mounted || !ready || !authenticated) return null;
     if (pathname.startsWith('/review')) return null;
@@ -38,7 +45,25 @@ export function BottomNav() {
         <nav className="fixed bottom-0 left-0 right-0 z-50 bg-tm-surface/90 backdrop-blur-md border-t border-tm-border pb-safe">
             <div className="flex items-center justify-around px-1 py-2">
                 {navItems.map((item) => {
-                    const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+                    const itemPath = item.href.split('?')[0];
+                    let isActive: boolean;
+                    if (item.href === '/dashboard') {
+                        isActive = pathname === '/dashboard';
+                    } else if ((item as any).match === '/account') {
+                        // Account-routed items: highlight only when on an /account page
+                        // AND (for Activity) the activity tab is requested. Positions is
+                        // the default tab, so it highlights unless ?tab=activity.
+                        const onAccountPage = pathname.startsWith('/account');
+                        const wantsActivity = item.href.includes('tab=activity');
+                        if (typeof window !== 'undefined') {
+                            const tabParam = new URLSearchParams(window.location.search).get('tab');
+                            isActive = onAccountPage && (wantsActivity ? tabParam === 'activity' : tabParam !== 'activity');
+                        } else {
+                            isActive = onAccountPage && !wantsActivity;
+                        }
+                    } else {
+                        isActive = pathname === itemPath || pathname.startsWith(itemPath);
+                    }
                     const Icon = item.icon;
                     const isHighlight = (item as any).highlight;
                     return (

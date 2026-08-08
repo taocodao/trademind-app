@@ -79,22 +79,6 @@ export function MyStrategies() {
                     );
                 })}
 
-                {/* Coming Soon Strategy Placeholders */}
-                <button
-                    disabled
-                    className="w-full flex items-center justify-between p-3 rounded-xl border border-white/5 bg-tm-surface/30 text-tm-muted opacity-60 cursor-not-allowed"
-                >
-                    <div className="flex items-center gap-3">
-                        <Lock className="w-5 h-5 shrink-0" />
-                        <div className="text-left">
-                            <p className="font-semibold text-sm">TurboBounce</p>
-                            <p className="text-xs">Mean-reversion multi-ticker strategy</p>
-                        </div>
-                    </div>
-                    <div className="shrink-0 text-xs font-semibold px-2 py-1 rounded bg-black/20">
-                        Coming Soon
-                    </div>
-                </button>
             </div>
         </section>
     );

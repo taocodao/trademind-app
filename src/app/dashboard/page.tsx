@@ -74,7 +74,6 @@ import { getStrategy } from '@/lib/strategies';
 
 import { TastytradeLink } from '@/components/TastytradeLink';
 
-import { TQQQStatusBanner } from '@/components/dashboard/TQQQStatusBanner';
 
 import { TurboCoreSignalCard, type TurboCoreSignal } from '@/components/signals/TurboCoreSignalCard';
 

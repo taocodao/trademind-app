@@ -1,42 +1,40 @@
-import { Brain, Zap, Activity, Layers } from 'lucide-react';
+import { Zap, Layers } from 'lucide-react';
 
 export interface StrategyConfig {
-    key: string;                      // DB strategy key, e.g. 'TQQQ_TURBOCORE'
-    label: string;                    // Display name, e.g. 'TurboCore'
+    key: string;                      // DB strategy key, e.g. 'TQQQ_TURBOCORE_PRO'
+    label: string;                    // Display name, e.g. 'TurboCore Pro'
     shortLabel: string;               // Compact label for tabs
     description: string;
-    icon: typeof Brain;               // Lucide icon component
+    icon: typeof Zap;                 // Lucide icon component
     color: string;                    // Tailwind accent color class
     managedSymbols: string[];         // Symbols this strategy trades
-    signalCardType: 'turbocore' | 'turbobounce' | 'theta' | 'calendar' | 'generic' | 'qqq_leaps';
+    signalCardType: 'turbocore' | 'qqq_leaps';
 }
 
+/**
+ * Canonical strategy lineup.
+ *
+ * TradeMind runs exactly two strategies — see CANONICAL_STRATEGIES.md in
+ * taocodao/tastywork-trading. All legacy strategies (TQQQ, TurboBounce,
+ * Zebra, Theta, Calendar, Diagonal, DVO, IV-Switching composite) are retired
+ * from the product surface.
+ */
 export const STRATEGIES: StrategyConfig[] = [
     {
-        key: 'TQQQ_TURBOCORE',
-        label: 'TurboCore',
-        shortLabel: 'Core',
-        description: 'ML-powered TQQQ allocation strategy',
-        icon: Brain,
-        color: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
-        managedSymbols: ['QQQ', 'QLD', 'TQQQ', 'SGOV'],
-        signalCardType: 'turbocore',
-    },
-    {
         key: 'TQQQ_TURBOCORE_PRO',
-        label: 'Turbo Pro',
+        label: 'TurboCore Pro',
         shortLabel: 'Pro',
-        description: 'IV-Switching composite: CSP, ZEBRA, Bear Call Spreads, Crash Hedge',
+        description: 'ETF-only regime allocator (QQQ/QLD/TQQQ/SGOV) — v3.3 drawdown-controlled, hourly rebalancing',
         icon: Zap,
         color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
-        managedSymbols: ['QQQ', 'QQQM', 'TQQQ', 'SQQQ'],
-        signalCardType: 'turbocore',  // routes internally to IVSwitchingSignalCard
+        managedSymbols: ['QQQ', 'QLD', 'TQQQ', 'SGOV'],
+        signalCardType: 'turbocore',
     },
     {
         key: 'QQQ_LEAPS',
         label: 'QQQ LEAPS',
         shortLabel: 'LEAPS',
-        description: 'ML-powered QQQ LEAPS call strategy — ENTER / EXIT / HOLD signals',
+        description: 'Deep-ITM QQQ LEAPS calls after gated pullbacks + PMCC overlay — ENTER / EXIT / HOLD signals',
         icon: Layers,
         color: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
         managedSymbols: ['QQQ'],
@@ -44,9 +42,18 @@ export const STRATEGIES: StrategyConfig[] = [
     },
 ];
 
+/**
+ * Map legacy DB strategy keys onto the canonical lineup so historical
+ * signals still render under the right tab/card.
+ */
+const LEGACY_KEY_MAP: Record<string, string> = {
+    'TQQQ_TURBOCORE': 'TQQQ_TURBOCORE_PRO',  // old TQQQ ML allocator → TurboCore Pro tab
+};
 
 export function getStrategy(key: string): StrategyConfig | undefined {
-    return STRATEGIES.find(s => s.key.toUpperCase() === key.toUpperCase());
+    const upper = key.toUpperCase();
+    const canonical = LEGACY_KEY_MAP[upper] ?? upper;
+    return STRATEGIES.find(s => s.key.toUpperCase() === canonical);
 }
 
 // User Subscription Tiers
@@ -55,15 +62,15 @@ export type SubscriptionTier = 'TURBOCORE' | 'TURBOCORE_PRO' | 'QQQ_LEAPS' | 'BO
 export function getStrategiesForSubscription(tier: SubscriptionTier): string[] {
     switch (tier) {
         case 'TURBOCORE':
-            return ['TQQQ_TURBOCORE'];
+            // Legacy tier maps to the canonical ETF allocator
+            return ['TQQQ_TURBOCORE_PRO'];
         case 'TURBOCORE_PRO':
-            // Pro tab shows IV-Switching signals (TQQQ_TURBOCORE_PRO)
             return ['TQQQ_TURBOCORE_PRO'];
         case 'QQQ_LEAPS':
             return ['QQQ_LEAPS'];
         case 'BOTH':
-            // All Access bundle gets all three strategies
-            return ['TQQQ_TURBOCORE', 'TQQQ_TURBOCORE_PRO', 'QQQ_LEAPS'];
+            // All Access bundle gets both canonical strategies
+            return ['TQQQ_TURBOCORE_PRO', 'QQQ_LEAPS'];
         default:
             return [];
     }

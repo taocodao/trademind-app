@@ -17,11 +17,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useSignalContext } from "@/components/providers/SignalProvider";
-import { ThetaSignalCard, isThetaSignal } from "@/components/signals/ThetaSignalCard";
-import { CalendarSignalCard, isCalendarSignal } from "@/components/signals/CalendarSignalCard";
-import { ZebraSignalCard, isZebraSignal } from "@/components/zebra/ZebraSignalCard";
-import { DVOSignalCard, isDVOSignal } from "@/components/dvo/DVOSignalCard";
-import { TurboBounceSignalCard, isTurboBounceSignal } from "@/components/signals/TurboBounceSignalCard";
 import { TurboCoreSignalCard } from "@/components/signals/TurboCoreSignalCard";
 import { QQQLEAPSSignalCard, isQQQLEAPSSignal } from "@/components/signals/QQQLEAPSSignalCard";
 import { useStrategyContext } from "@/components/providers/StrategyContext";
@@ -262,47 +257,7 @@ export default function SignalsPage() {
             {/* Signals List */}
             <div className="px-6 space-y-4">
                 {signals.map((signal) => (
-                    isZebraSignal(signal) ? (
-                        <ZebraSignalCard
-                            key={signal.id}
-                            signal={signal as any}
-                            onApprove={() => handleApproveClick(signal)}
-                            onSkip={() => handleSkip(signal.id)}
-                            isApproving={approving === signal.id}
-                        />
-                    ) : isDVOSignal(signal) ? (
-                        <DVOSignalCard
-                            key={signal.id}
-                            signal={signal as any}
-                            onApprove={() => handleApproveClick(signal)}
-                            onSkip={() => handleSkip(signal.id)}
-                            isApproving={approving === signal.id}
-                        />
-                    ) : isThetaSignal(signal) ? (
-                        <ThetaSignalCard
-                            key={signal.id}
-                            signal={signal as any}
-                            onApprove={() => handleApproveClick(signal)}
-                            onSkip={() => handleSkip(signal.id)}
-                            isApproving={approving === signal.id}
-                        />
-                    ) : isCalendarSignal(signal) ? (
-                        <CalendarSignalCard
-                            key={signal.id}
-                            signal={signal as any}
-                            onApprove={() => handleApproveClick(signal)}
-                            onSkip={() => handleSkip(signal.id)}
-                            isApproving={approving === signal.id}
-                        />
-                    ) : isTurboBounceSignal(signal) ? (
-                        <TurboBounceSignalCard
-                            key={signal.id}
-                            signal={signal as any}
-                            onApprove={() => handleApproveClick(signal)}
-                            onSkip={() => handleSkip(signal.id)}
-                            isApproving={approving === signal.id}
-                        />
-                    ) : isQQQLEAPSSignal(signal) ? (
+                    isQQQLEAPSSignal(signal) ? (
                         <QQQLEAPSSignalCard
                             key={signal.id}
                             signal={signal as any}

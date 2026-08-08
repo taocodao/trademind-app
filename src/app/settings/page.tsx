@@ -8,7 +8,6 @@ import Link from 'next/link';
 import { TastytradeCredentials } from '@/components/settings/TastytradeCredentials';
 import { InvestmentPrincipal } from '@/components/dashboard/InvestmentPrincipal';
 import { ShadowLedgerPanel } from '@/components/dashboard/ShadowLedgerPanel';
-import { TQQQAutoApproveSettings } from '@/components/settings/TQQQAutoApproveSettings';
 import { SubscriptionManager } from '@/components/settings/SubscriptionManager';
 import { MyStrategies } from '@/components/settings/MyStrategies';
 import { SignalEmailAlertsSettings } from '@/components/settings/SignalEmailAlertsSettings';
@@ -64,7 +63,6 @@ export default function SettingsPage() {
                 <MyStrategies />
                 
                 {/* Strategy-Specific Settings (Auto-Approve & Risk) */}
-                <TQQQAutoApproveSettings />
 
                 {/* Email Alerts Setup */}
                 <SignalEmailAlertsSettings />

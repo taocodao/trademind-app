@@ -7,6 +7,7 @@ import { ArrowLeft, RefreshCw, Wallet, WifiOff, LayoutList, Activity as Activity
 import Link from "next/link";
 import { getStrategy } from "@/lib/strategies";
 import { ActivityTab } from "@/components/accounts/ActivityTab";
+import { AccountSwitcher } from "@/components/accounts/AccountSwitcher";
 
 interface Position {
     id: number;
@@ -115,6 +116,7 @@ export default function AccountDetailPage() {
                         {cfg?.label || account?.strategy} · {account?.risk_level}
                     </p>
                 </div>
+                <AccountSwitcher navigateOnSelect tab={tab} />
                 <button onClick={fetchPositions} className="w-10 h-10 rounded-full bg-tm-surface flex items-center justify-center text-tm-muted hover:text-white transition">
                     <RefreshCw className="w-4 h-4" />
                 </button>

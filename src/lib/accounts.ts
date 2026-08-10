@@ -557,6 +557,16 @@ export async function getAccountPnlHistory(accountId: number, days = 90): Promis
     return res.rows;
 }
 
+/** Most recent recorded NLV for an account (for phase drawdown detection). */
+export async function getLatestAccountNlv(accountId: number): Promise<number | null> {
+    await initializeAccountTables();
+    const res = await query(
+        `SELECT nlv FROM account_pnl_history WHERE account_id = $1 ORDER BY snapshot_date DESC LIMIT 1`,
+        [accountId]
+    );
+    return res.rows[0]?.nlv != null ? Number(res.rows[0].nlv) : null;
+}
+
 // ─── Idempotency ─────────────────────────────────────────────────────────────
 
 export async function hasAccountExecutedSignal(accountId: number, signalId: string): Promise<boolean> {

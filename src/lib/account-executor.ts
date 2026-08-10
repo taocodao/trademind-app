@@ -14,6 +14,7 @@ import {
     recordAccountSignal,
     hasAccountExecutedSignal,
 } from '@/lib/accounts';
+import { evaluateAccountPhase, type PhaseEvalResult } from '@/lib/account-phase';
 import type { GenericSignal, SignalLeg, DeltaOrder, UserOrders } from '@/lib/per-user-order-generator';
 
 // ─── Order Generation ────────────────────────────────────────────────────────
@@ -22,7 +23,11 @@ import type { GenericSignal, SignalLeg, DeltaOrder, UserOrders } from '@/lib/per
  * Generate delta orders for a specific account from a (tier-selected) signal.
  * NLV = cash + Σ(position × live price). Sell orders first to free cash.
  */
-export async function generateAccountOrders(signal: GenericSignal, accountId: number): Promise<UserOrders> {
+export async function generateAccountOrders(
+    signal: GenericSignal,
+    accountId: number,
+    priorNlv: number | null = null
+): Promise<UserOrders> {
     const account = await getAccount(accountId);
     if (!account) throw new Error(`Account ${accountId} not found`);
 
@@ -36,12 +41,20 @@ export async function generateAccountOrders(signal: GenericSignal, accountId: nu
     const symbols = equityLegs.map((l) => l.symbol);
     const prices = await fetchMarketPrices(symbols);
 
-    // NLV
+    // NLV (cash + positions at live prices)
     let nlv = account.cash_balance;
     for (const [sym, pos] of Object.entries(posMap)) {
         const px = prices[sym] || pos.avgPrice || 0;
         nlv += pos.qty * px;
     }
+
+    // ── Phase evaluation (NLV-driven capital scaling) ──
+    // The phase caps how much of NLV any single position may target. Tier gates
+    // entry strictness; phase caps sizing. This is what makes the signal
+    // customized by account + strategy + current position + available cash.
+    const phaseEval: PhaseEvalResult = await evaluateAccountPhase(accountId, nlv, priorNlv);
+    const phase = phaseEval.phase;
+    const phaseCap = phase.maxPositionPct;
 
     const rawOrders: DeltaOrder[] = [];
     for (const leg of equityLegs) {
@@ -50,7 +63,10 @@ export async function generateAccountOrders(signal: GenericSignal, accountId: nu
             console.warn(`[AccountOrderGen] No price for ${leg.symbol} — skipping`);
             continue;
         }
-        const targetQty = Math.floor((nlv * leg.target_pct) / livePrice);
+        // Phase cap: a single position may not exceed phaseCap of NLV, even if
+        // the tier's target_pct is higher.
+        const effectivePct = Math.min(leg.target_pct, phaseCap);
+        const targetQty = Math.floor((nlv * effectivePct) / livePrice);
         const currentQty = posMap[leg.symbol]?.qty ?? 0;
         const delta = targetQty - currentQty;
         if (Math.abs(delta) < 1) continue;
@@ -75,6 +91,18 @@ export async function generateAccountOrders(signal: GenericSignal, accountId: nu
         virtualNlv: nlv,
         cashBalance: account.cash_balance,
         skipOptions: false,
+        // Phase context for the fan-out email / UI (extra fields are additive).
+        phase: phase.name,
+        phaseCap,
+        phaseTransitioned: phaseEval.transitioned,
+        phaseFrom: phaseEval.fromPhase,
+        phaseReason: phaseEval.reason,
+    } as UserOrders & {
+        phase: string;
+        phaseCap: number;
+        phaseTransitioned: boolean;
+        phaseFrom: string | null;
+        phaseReason: string | null;
     };
 }
 

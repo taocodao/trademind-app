@@ -19,6 +19,7 @@ import {
     getAccount,
     saveAccountPnlSnapshot,
     getAccountPositions,
+    getLatestAccountNlv,
     initializeAccountTables,
     type Account,
 } from '@/lib/accounts';
@@ -105,12 +106,20 @@ export async function fanoutSignal(signalId: string, signalData: SignalData): Pr
 // ─── Per-Account Processing ──────────────────────────────────────────────────
 
 async function processAccountSignal(account: Account, signalId: string, signalData: SignalData): Promise<boolean> {
-    // 1. Select the tier for this account's risk level
+    // 1. Select the tier for this account's risk level (entry strictness)
     const tieredSignal = selectTier(signalData, account.risk_level);
     tieredSignal.id = signalId;
 
-    // 2. Generate delta orders sized to the account
-    const orders = await generateAccountOrders(tieredSignal, account.id);
+    // 2. Generate delta orders sized to the account's NLV, capped by its phase.
+    //    Pass the prior recorded NLV so the phase engine can detect emergency
+    //    drawdowns. The signal is thus customized by account + strategy +
+    //    current position + available cash + capital-scaling phase.
+    const priorNlv = await getLatestAccountNlv(account.id);
+    const orders = await generateAccountOrders(tieredSignal, account.id, priorNlv);
+    const phaseMeta = orders as unknown as {
+        phase?: string; phaseCap?: number; phaseTransitioned?: boolean;
+        phaseFrom?: string | null; phaseReason?: string | null;
+    };
 
     // 3. Pre-execute into the account ledger (idempotent per account+signal)
     if (orders.equityOrders.length > 0) {
@@ -129,14 +138,19 @@ async function processAccountSignal(account: Account, signalId: string, signalDa
         await saveAccountPnlSnapshot(account.id, today, fresh.cash_balance, positionsValue, fresh.initial_principal);
     }
 
-    // 5. Email the account owner
+    // 5. Email the account owner (signal + any phase transition)
     const email = await getUserEmail(account.user_id);
     if (email) {
+        const phaseLabel = phaseMeta.phase ? ` · ${phaseMeta.phase} phase` : '';
+        let rationale = `${signalData.rationale || ''} [${account.name} · ${account.risk_level}${phaseLabel}]`;
+        if (phaseMeta.phaseTransitioned && phaseMeta.phaseFrom) {
+            rationale += ` — Phase ${phaseMeta.phaseFrom} → ${phaseMeta.phase} (${phaseMeta.phaseReason || 'transition'}); position sizing cap now ${(100 * (phaseMeta.phaseCap ?? 0)).toFixed(0)}% of NLV`;
+        }
         await sendSignalEmail(email, {
             strategy: account.strategy,
             regime: signalData.regime,
             confidence: signalData.confidence,
-            rationale: `${signalData.rationale || ''} [${account.name} · ${account.risk_level}]`,
+            rationale,
             equityOrders: orders.equityOrders,
             optionsCloses: [],
             optionsEntries: orders.optionsOrders,

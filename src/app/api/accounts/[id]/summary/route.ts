@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAccount, getAccountPositions } from '@/lib/accounts';
+import { phaseForNlv, getAccountPhase, getPhaseSpec } from '@/lib/account-phase';
 import { getUserId } from '@/lib/auth';
 
 // GET /api/accounts/[id]/summary — cash + NLV + P&L for account cards
@@ -31,6 +32,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const cumulativePnl = nlv - account.initial_principal;
     const cumulativePnlPct = account.initial_principal > 0 ? (cumulativePnl / account.initial_principal) * 100 : 0;
 
+    // Phase: prefer the persisted phase (set by the fan-out engine); fall back
+    // to the NLV-appropriate phase for display before the first evaluation.
+    const persistedPhase = await getAccountPhase(accountId);
+    const phase = persistedPhase || phaseForNlv(nlv).name;
+    const phaseCap = getPhaseSpec(phase).maxPositionPct;
+
     return NextResponse.json({
         account,
         cash: account.cash_balance,
@@ -40,5 +47,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         cumulativePnl,
         cumulativePnlPct,
         positionCount: positions.length,
+        phase,
+        phaseCap,
     });
 }

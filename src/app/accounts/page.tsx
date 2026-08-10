@@ -20,6 +20,8 @@ interface AccountSummary {
     cumulativePnl: number;
     cumulativePnlPct: number;
     positionCount: number;
+    phase?: string;
+    phaseCap?: number;
 }
 
 export default function AccountsPage() {
@@ -58,6 +60,7 @@ export default function AccountsPage() {
                             nlv: d.nlv, cash: d.cash, positionsValue: d.positionsValue,
                             initialPrincipal: d.initialPrincipal, cumulativePnl: d.cumulativePnl,
                             cumulativePnlPct: d.cumulativePnlPct, positionCount: d.positionCount,
+                            phase: d.phase, phaseCap: d.phaseCap,
                         };
                     }
                 } catch { /* ignore */ }
@@ -182,6 +185,15 @@ export default function AccountsPage() {
                                             <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-white/5 text-tm-muted border border-white/10 capitalize">
                                                 {a.risk_level}
                                             </span>
+                                            {s?.phase && (
+                                                <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold border ${
+                                                    s.phase === 'TARGET' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' :
+                                                    s.phase === 'GROWTH' ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' :
+                                                    'bg-purple-500/15 text-purple-400 border-purple-500/30'
+                                                }`}>
+                                                    {s.phase}
+                                                </span>
+                                            )}
                                         </div>
                                         <p className="text-xs text-tm-muted">
                                             {s ? `${s.positionCount} position${s.positionCount !== 1 ? 's' : ''} · Principal $${s.initialPrincipal.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : 'Loading...'}

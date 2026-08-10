@@ -25,7 +25,7 @@ import {
 } from '@/lib/accounts';
 import { generateAccountOrders, executeAccountOrders } from '@/lib/account-executor';
 import type { GenericSignal, SignalLeg } from '@/lib/per-user-order-generator';
-import { sendSignalEmail } from '@/lib/signal-email';
+import { sendSignalEmail, sendPhaseTransitionEmail } from '@/lib/signal-email';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -141,11 +141,23 @@ async function processAccountSignal(account: Account, signalId: string, signalDa
     // 5. Email the account owner (signal + any phase transition)
     const email = await getUserEmail(account.user_id);
     if (email) {
-        const phaseLabel = phaseMeta.phase ? ` · ${phaseMeta.phase} phase` : '';
-        let rationale = `${signalData.rationale || ''} [${account.name} · ${account.risk_level}${phaseLabel}]`;
-        if (phaseMeta.phaseTransitioned && phaseMeta.phaseFrom) {
-            rationale += ` — Phase ${phaseMeta.phaseFrom} → ${phaseMeta.phase} (${phaseMeta.phaseReason || 'transition'}); position sizing cap now ${(100 * (phaseMeta.phaseCap ?? 0)).toFixed(0)}% of NLV`;
+        // Standalone phase-transition alert (only on a real promotion/demotion,
+        // not the initial assignment).
+        if (phaseMeta.phaseTransitioned && phaseMeta.phaseFrom && phaseMeta.phase) {
+            await sendPhaseTransitionEmail(email, {
+                accountName: account.name,
+                strategy: account.strategy,
+                riskLevel: account.risk_level,
+                fromPhase: phaseMeta.phaseFrom,
+                toPhase: phaseMeta.phase,
+                reason: phaseMeta.phaseReason || 'TRANSITION',
+                nlv: orders.virtualNlv,
+                phaseCap: phaseMeta.phaseCap ?? 0,
+            });
         }
+
+        const phaseLabel = phaseMeta.phase ? ` · ${phaseMeta.phase} phase` : '';
+        const rationale = `${signalData.rationale || ''} [${account.name} · ${account.risk_level}${phaseLabel}]`;
         await sendSignalEmail(email, {
             strategy: account.strategy,
             regime: signalData.regime,

@@ -69,6 +69,84 @@ export async function sendSignalEmail(toEmail: string, data: SignalEmailData): P
     }
 }
 
+// ─── Phase Transition Alert ─────────────────────────────────────────────────
+
+export interface PhaseTransitionEmailData {
+    accountName: string;
+    strategy: string;
+    riskLevel: string;
+    fromPhase: string;
+    toPhase: string;
+    reason: string;
+    nlv: number;
+    phaseCap: number; // new per-position sizing cap (fraction of NLV)
+}
+
+/**
+ * Send a standalone phase-transition alert email. Non-blocking.
+ * Fired when an account's capital-scaling phase changes (promotion, demotion,
+ * or emergency demotion), so the user knows their sizing cap has changed.
+ */
+export async function sendPhaseTransitionEmail(toEmail: string, data: PhaseTransitionEmailData): Promise<void> {
+    if (!RESEND_API_KEY) {
+        console.warn('[Email] RESEND_API_KEY not configured — skipping phase email');
+        return;
+    }
+
+    const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const isPromotion = data.reason === 'PROMOTION';
+    const subject = `[TradeMind] ${data.accountName} — Phase ${data.fromPhase} → ${data.toPhase} (${dateStr})`;
+    const capPct = (data.phaseCap * 100).toFixed(0);
+
+    const text = [
+        `TradeMind — Account Phase Transition`,
+        '='.repeat(48),
+        `Account:    ${data.accountName} (${data.strategy} · ${data.riskLevel})`,
+        `Phase:      ${data.fromPhase} → ${data.toPhase}`,
+        `Reason:     ${data.reason}`,
+        `Total Value: $${data.nlv.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+        '',
+        `Your position sizing cap is now ${capPct}% of account value per position.`,
+        isPromotion
+            ? 'The account has grown into a new capital-scaling phase.'
+            : 'The account moved to a more conservative phase to protect capital.',
+        '',
+        'View your account: https://www.trademind.bot/accounts',
+    ].join('\n');
+
+    const accent = isPromotion ? '#059669' : '#d97706';
+    const html = `
+    <div style="font-family:ui-sans-serif,system-ui,sans-serif;max-width:560px;margin:0 auto;color:#111827">
+        <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#374151;margin:0 0 4px">TradeMind</p>
+        <h2 style="margin:0 0 16px;font-size:20px">Account Phase Transition</h2>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-left:4px solid ${accent};border-radius:6px;padding:16px 18px;margin:0 0 20px">
+            <p style="margin:0 0 6px;font-size:14px"><strong>${escHtml(data.accountName)}</strong> <span style="color:#6b7280">(${escHtml(data.strategy)} · ${escHtml(data.riskLevel)})</span></p>
+            <p style="margin:0 0 6px;font-size:16px;font-weight:700">${escHtml(data.fromPhase)} &rarr; ${escHtml(data.toPhase)}</p>
+            <p style="margin:0;font-size:13px;color:#374151">${escHtml(data.reason)} · Total value $${data.nlv.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+        </div>
+        <p style="font-size:14px;color:#111827;margin:0 0 8px">Your position sizing cap is now <strong>${capPct}% of account value</strong> per position.</p>
+        <p style="font-size:13px;color:#6b7280;margin:0 0 20px">${isPromotion
+            ? 'The account has grown into a new capital-scaling phase.'
+            : 'The account moved to a more conservative phase to protect capital.'}</p>
+        <a href="https://www.trademind.bot/accounts" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;font-size:13px;font-weight:600;padding:10px 18px;border-radius:6px">View Account</a>
+    </div>`;
+
+    try {
+        const res = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ from: FROM_EMAIL, to: toEmail, subject, text, html }),
+        });
+        if (!res.ok) {
+            console.error(`[Email] Phase email failed (${res.status}):`, await res.text());
+        } else {
+            console.log(`[Email] Phase transition email sent to ${toEmail}`);
+        }
+    } catch (err) {
+        console.error('[Email] Failed to send phase transition email:', err);
+    }
+}
+
 // ─── Subject Line ─────────────────────────────────────────────────────────────
 
 function buildSubject(data: SignalEmailData): string {

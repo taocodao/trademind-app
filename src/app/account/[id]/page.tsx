@@ -44,6 +44,8 @@ export default function AccountDetailPage() {
     const [cash, setCash] = useState(0);
     const [positionsValue, setPositionsValue] = useState(0);
     const [nlv, setNlv] = useState(0);
+    const [phase, setPhase] = useState<string | null>(null);
+    const [phaseCap, setPhaseCap] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
     const [notFound, setNotFound] = useState(false);
 
@@ -62,6 +64,8 @@ export default function AccountDetailPage() {
                 setCash(d.cash);
                 setPositionsValue(d.positionsValue);
                 setNlv(d.nlv);
+                setPhase(d.phase ?? null);
+                setPhaseCap(d.phaseCap ?? null);
             }
         } catch (e) {
             console.error('[account] fetch failed', e);
@@ -106,14 +110,26 @@ export default function AccountDetailPage() {
                     <ArrowLeft className="w-5 h-5" />
                 </Link>
                 <div className="flex-1">
-                    <h1 className="text-xl font-bold flex items-center gap-2">
+                    <h1 className="text-xl font-bold flex items-center gap-2 flex-wrap">
                         {account?.name || 'Account'}
                         <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
                             <WifiOff className="w-2.5 h-2.5" /> VIRTUAL
                         </span>
+                        {phase && (
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                                phase === 'TARGET' ? 'bg-emerald-500/20 text-emerald-400' :
+                                phase === 'GROWTH' ? 'bg-amber-500/20 text-amber-400' :
+                                'bg-purple-500/20 text-purple-400'
+                            }`}>
+                                {phase} PHASE
+                            </span>
+                        )}
                     </h1>
                     <p className="text-sm text-tm-muted capitalize">
                         {cfg?.label || account?.strategy} · {account?.risk_level}
+                        {phaseCap != null && (
+                            <span className="text-tm-muted/70"> · sizing cap {(phaseCap * 100).toFixed(0)}% NLV</span>
+                        )}
                     </p>
                 </div>
                 <AccountSwitcher navigateOnSelect tab={tab} />

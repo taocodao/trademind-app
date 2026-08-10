@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAccount, getAccountPositions } from '@/lib/accounts';
+import { phaseForNlv, getAccountPhase, getPhaseSpec } from '@/lib/account-phase';
 import { getUserId } from '@/lib/auth';
 
 // GET /api/accounts/[id]/positions — positions with live market value
@@ -38,6 +39,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const positionsValue = enriched.reduce((s, p) => s + p.marketValue, 0);
     const nlv = account.cash_balance + positionsValue;
 
+    const persistedPhase = await getAccountPhase(accountId);
+    const phase = persistedPhase || phaseForNlv(nlv).name;
+    const phaseCap = getPhaseSpec(phase).maxPositionPct;
+
     return NextResponse.json({
         account,
         positions: enriched,
@@ -45,5 +50,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         positionsValue,
         nlv,
         initialPrincipal: account.initial_principal,
+        phase,
+        phaseCap,
     });
 }

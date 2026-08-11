@@ -65,7 +65,6 @@ export default function PositionsPage() {
     const [realizedPnl, setRealizedPnl] = useState<number | null>(null);
 
     const INITIAL_BY_STRATEGY: Record<string, number> = {
-        TQQQ_TURBOCORE: 5000,
         TQQQ_TURBOCORE_PRO: 25000,
         QQQ_LEAPS: 25000,
     };

@@ -36,7 +36,7 @@ export async function POST(
 
         // Get signal data from request body
         const signalData = body.signal || body.signalDetails || body;
-        const strategy = signalData.strategy || 'TQQQ_TURBOCORE';
+        const strategy = signalData.strategy || 'TQQQ_TURBOCORE_PRO';
 
         // ========================================================================
         // DISABLED: Live brokerage execution is no longer supported.

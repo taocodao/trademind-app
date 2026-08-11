@@ -469,9 +469,7 @@ const STRATEGY_EXECUTORS: Record<string, StrategyExecutor> = {
     'turbobounce': executeServerManagedStrategy,
     'TurboBounce': executeServerManagedStrategy,
 
-    // TurboCore natively executed on Vercel
-    'tqqq_turbocore': executeTurboCoreStrategy,
-    'TQQQ_TURBOCORE': executeTurboCoreStrategy,
+    // TurboCore Pro natively executed on Vercel (base TurboCore removed)
     'tqqq_turbocore_pro': executeTurboCoreStrategy,
     'TQQQ_TURBOCORE_PRO': executeTurboCoreStrategy,
     'rebalance': executeTurboCoreStrategy,

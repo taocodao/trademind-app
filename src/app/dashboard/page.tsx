@@ -399,8 +399,8 @@ function DashboardContent() {
         const stratKey = (s.strategy || '').toUpperCase();
         const activeUp = activeStrategy.toUpperCase();
         const isMatch = stratKey === activeUp ||
-            // Temporary fallback for older 'rebalance' types that implicitly meant TQQQ_TURBOCORE
-            ((s as any).type === 'REBALANCE' && activeStrategy === 'TQQQ_TURBOCORE' && s.strategy === undefined);
+            // Temporary fallback for older 'rebalance' types that implicitly meant TQQQ_TURBOCORE_PRO
+            ((s as any).type === 'REBALANCE' && activeStrategy === 'TQQQ_TURBOCORE_PRO' && s.strategy === undefined);
 
         if (!isMatch) return false;
 

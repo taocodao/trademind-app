@@ -280,7 +280,6 @@ export async function GET(req: NextRequest) {
                 hasCompletedOnboarding: row.has_completed_onboarding ?? false,
                 globalAutoApprove:      row.global_auto_approve !== false,
                 strategyAutoApprove: {
-                    TQQQ_TURBOCORE:     row.turbocore_auto_approve ?? false,
                     TQQQ_TURBOCORE_PRO: row.turbocore_pro_auto_approve ?? false,
                     QQQ_LEAPS:          row.leaps_auto_approve ?? false,
                 },
@@ -310,7 +309,6 @@ export async function GET(req: NextRequest) {
                 hasCompletedOnboarding: row.has_completed_onboarding ?? false,
                 globalAutoApprove:      row.global_auto_approve !== false,
                 strategyAutoApprove: {
-                    TQQQ_TURBOCORE:     row.turbocore_auto_approve ?? false,
                     TQQQ_TURBOCORE_PRO: row.turbocore_pro_auto_approve ?? false,
                     QQQ_LEAPS:          row.leaps_auto_approve ?? false,
                 },
@@ -340,7 +338,6 @@ export async function GET(req: NextRequest) {
                 hasCompletedOnboarding: row.has_completed_onboarding ?? false,
                 globalAutoApprove: row.global_auto_approve !== false,
                 strategyAutoApprove: {
-                    TQQQ_TURBOCORE:     row.turbocore_auto_approve ?? false,
                     TQQQ_TURBOCORE_PRO: row.turbocore_pro_auto_approve ?? false,
                     QQQ_LEAPS:          row.leaps_auto_approve ?? false,
                 },
@@ -399,7 +396,6 @@ export async function GET(req: NextRequest) {
             hasCompletedOnboarding: row.has_completed_onboarding ?? false,
             globalAutoApprove: row.global_auto_approve !== false,
             strategyAutoApprove: {
-                TQQQ_TURBOCORE:     row.turbocore_auto_approve ?? false,
                 TQQQ_TURBOCORE_PRO: row.turbocore_pro_auto_approve ?? false,
                 QQQ_LEAPS:          row.leaps_auto_approve ?? false,
             },

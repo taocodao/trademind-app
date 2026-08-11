@@ -7,7 +7,7 @@ import { NextRequest } from 'next/server';
  * Admin route: Reset a user's virtual account shadow positions and cash balance.
  * Used to clean up corrupted state from pre-fix additive upserts.
  * 
- * GET /api/admin/reset-virtual?strategy=TQQQ_TURBOCORE
+ * GET /api/admin/reset-virtual?strategy=TQQQ_TURBOCORE_PRO
  */
 export async function GET(request: Request) {
     const userId = await getPrivyUserId(request as NextRequest);
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const strategy = searchParams.get('strategy') || 'TQQQ_TURBOCORE';
+    const strategy = searchParams.get('strategy') || 'TQQQ_TURBOCORE_PRO';
 
     try {
         // 1. Delete all shadow positions for this user + strategy

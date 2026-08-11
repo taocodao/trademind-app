@@ -44,27 +44,6 @@ const TURBOCORE_PRO_SIGNAL = {
     rationale: "IV is compressing in a sideways regime — holding QQQ/QLD core, extending via LEAPS for leveraged upside. SGOV provides a liquidity buffer during consolidation.",
 };
 
-const TURBOCORE_SIGNAL = {
-    strategy: "TQQQ_TURBOCORE",
-    regime: "BULL",
-    confidence: 0.712,
-    action: "REBALANCE",
-    capital_required: 5000,
-    virtualBalance: 26840.12,
-    created_at: "Apr 11, 7:53 PM",
-    legs: [
-        { symbol: "TQQQ", target_pct: 0.35, amount: 9394, color: "text-purple-400" },
-        { symbol: "QQQ",  target_pct: 0.50, amount: 13420, color: "text-blue-400" },
-        { symbol: "SGOV", target_pct: 0.15, amount: 4026, color: "text-emerald-400" },
-    ],
-    orders: [
-        { action: "BUY",  symbol: "TQQQ", type: "Market", amount: 9394, qty: "89 sh", detail: null },
-        { action: "BUY",  symbol: "QQQ",  type: "Market", amount: 13420, qty: "22 sh", detail: null },
-        { action: "SELL", symbol: "SGOV", type: "Market", amount: 974,  qty: "10 sh", detail: null },
-    ],
-    rationale: "Strong bull momentum confirmed. ML model confidence 71.2%. Increasing TQQQ allocation to capture leveraged upside while maintaining QQQ core exposure.",
-};
-
 const DEMO_POSITIONS = [
     { symbol: "QQQ",  qty: 23, avgPrice: 468.20, currentPrice: 479.84, color: "text-blue-400" },
     { symbol: "TQQQ", qty: 12, avgPrice: 58.40,  currentPrice: 61.22,  color: "text-purple-400" },
@@ -74,10 +53,6 @@ const DEMO_POSITIONS = [
 const DEMO_ACTIVITY = [
     { id: 1, source: "trademind", symbol: "REBALANCE", strategy: "tqqq_turbocore_pro", status: "executed", created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), executed_at: new Date(Date.now() - 2 * 60 * 60 * 1000 + 90000).toISOString() },
     { id: 2, source: "virtual",   symbol: "QQQ",       strategy: "tqqq_turbocore_pro", type: "buy",     amount: 1222, quantity: 2,  price: 479.84, created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString() },
-    { id: 3, source: "trademind", symbol: "SIGNAL",    strategy: "tqqq_turbocore",     status: "skipped", created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() },
-    { id: 4, source: "virtual",   symbol: null,        strategy: "tqqq_turbocore",     type: "deposit", amount: 5000, quantity: null, price: null, created_at: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString() },
-    { id: 5, source: "trademind", symbol: "REBALANCE", strategy: "tqqq_turbocore",     status: "executed", created_at: new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString(), executed_at: new Date(Date.now() - 72 * 60 * 60 * 1000 + 60000).toISOString() },
-    { id: 6, source: "virtual",   symbol: "TQQQ",      strategy: "tqqq_turbocore",     type: "buy",     amount: 9394, quantity: 89, price: 58.40, created_at: new Date(Date.now() - 73 * 60 * 60 * 1000).toISOString() },
 ];
 
 const TICKER_DATA = [
@@ -331,8 +306,7 @@ function SignalCard({ signal, onApprove, onSkip }: { signal: typeof TURBOCORE_PR
 
 function DashboardTab({ onToast, onTabChange }: { onToast: (m: string) => void; onTabChange: (tab: string) => void }) {
     const { t } = useTranslation();
-    const [activeStrat, setActiveStrat] = useState<"core" | "pro">("pro");
-    const signal = activeStrat === "pro" ? TURBOCORE_PRO_SIGNAL : TURBOCORE_SIGNAL;
+    const signal = TURBOCORE_PRO_SIGNAL;
 
     return (
         <div className="space-y-4">
@@ -368,27 +342,11 @@ function DashboardTab({ onToast, onTabChange }: { onToast: (m: string) => void; 
                 </div>
             </div>
 
-            {/* Core / Pro tabs */}
-            <div className="flex gap-2">
-                <button
-                    onClick={() => setActiveStrat("core")}
-                    className={`px-5 py-2 rounded-full text-sm font-bold border transition-all ${activeStrat === "core" ? "border-purple-500 text-white bg-purple-500/20" : "border-white/10 text-[#94a3b8]"}`}
-                >
-                    ⊙ Core
-                </button>
-                <button
-                    onClick={() => setActiveStrat("pro")}
-                    className={`px-5 py-2 rounded-full text-sm font-bold border transition-all ${activeStrat === "pro" ? "border-purple-500 text-white bg-purple-500/20" : "border-white/10 text-[#94a3b8]"}`}
-                >
-                    ⚡ Pro
-                </button>
-            </div>
-
-            {/* Signal card */}
+            {/* Signal card (Turbo Pro) */}
             <div>
                 <div className="flex items-center justify-between mb-3">
                     <h2 className="text-sm font-bold text-[#94a3b8] uppercase tracking-wider">
-                        {activeStrat === "pro" ? t("Demo.dashboard.signalsTitlePro") : t("Demo.dashboard.signalsTitle")}
+                        {t("Demo.dashboard.signalsTitlePro")}
                     </h2>
                     <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded font-bold">
                         1 Active Target Change
@@ -520,8 +478,7 @@ function AITab({ onToast }: { onToast: (m: string) => void }) {
 
 function SignalsTab({ onToast }: { onToast: (m: string) => void }) {
     const { t } = useTranslation();
-    const [activeStrat, setActiveStrat] = useState<"core" | "pro">("pro");
-    const signal = activeStrat === "pro" ? TURBOCORE_PRO_SIGNAL : TURBOCORE_SIGNAL;
+    const signal = TURBOCORE_PRO_SIGNAL;
 
     return (
         <div className="space-y-4">
@@ -548,18 +505,6 @@ function SignalsTab({ onToast }: { onToast: (m: string) => void }) {
                     <Wifi className="w-3.5 h-3.5 text-emerald-400" />
                     <span className="text-xs font-bold text-emerald-400">{t("Demo.signals.connected")}</span>
                 </div>
-            </div>
-
-            <div className="flex gap-2">
-                {["core", "pro"].map(s => (
-                    <button
-                        key={s}
-                        onClick={() => setActiveStrat(s as "core" | "pro")}
-                        className={`px-5 py-2 rounded-full text-sm font-bold border transition-all ${activeStrat === s ? "border-purple-500 text-white bg-purple-500/20" : "border-white/10 text-[#94a3b8]"}`}
-                    >
-                        {s === "core" ? "⊙ Core" : "⚡ Pro"}
-                    </button>
-                ))}
             </div>
 
             <SignalCard

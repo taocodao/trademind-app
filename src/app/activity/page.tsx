@@ -194,9 +194,9 @@ export default function ActivityPage() {
     const filtered = items.filter(item => {
         const sym = item.symbol?.toLowerCase() || '';
         const rawStrat = item.strategy?.toLowerCase() || '';
-        // Same fallback for old REBALANCE type implicitly being TQQQ_TURBOCORE
+        // Same fallback for old REBALANCE type implicitly being TQQQ_TURBOCORE_PRO
         const isLegacyRebalance = (item.source === 'trademind' && (item as TradeMindItem).status === 'REBALANCE' && rawStrat === '');
-        const stratKey = rawStrat || (isLegacyRebalance ? 'tqqq_turbocore' : '');
+        const stratKey = rawStrat || (isLegacyRebalance ? 'tqqq_turbocore_pro' : '');
 
         const status = item.source === 'trademind' ? ((item as TradeMindItem).status || '').toLowerCase() : 'executed';
         const q = filter.toLowerCase();

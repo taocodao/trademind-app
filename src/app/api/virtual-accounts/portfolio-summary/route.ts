@@ -2,26 +2,24 @@ import { NextResponse } from 'next/server';
 
 /**
  * PUBLIC endpoint — returns 5-day delayed virtual portfolio summary
- * for all 3 strategies (TurboCore, TurboCore Pro, QQQ LEAPS).
+ * for the 2 strategies (TurboCore Pro, QQQ LEAPS).
  * No authentication required.
  *
  * If the DB table doesn't exist yet (first run), returns hardcoded placeholder data.
  */
 
 const DISPLAY_NAMES: Record<string, string> = {
-    TQQQ_TURBOCORE: 'TurboCore',
     TURBOCORE_PRO:  'TurboCore Pro',
     QQQ_LEAPS:      'QQQ LEAPS',
 };
 
 const INITIAL_PRINCIPALS: Record<string, number> = {
-    TQQQ_TURBOCORE: 5_000,
     TURBOCORE_PRO:  25_000,
     QQQ_LEAPS:      25_000,
 };
 
 // Strategy sort order for display
-const STRATEGY_ORDER = ['TQQQ_TURBOCORE', 'TURBOCORE_PRO', 'QQQ_LEAPS'];
+const STRATEGY_ORDER = ['TURBOCORE_PRO', 'QQQ_LEAPS'];
 
 // Cache in-memory for 5 minutes to avoid hammering DB on every scroll
 let _cache: { data: unknown; ts: number } | null = null;

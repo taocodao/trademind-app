@@ -17,8 +17,8 @@ const StrategyContext = createContext<StrategyContextType | undefined>(undefined
 
 export function StrategyProvider({ children }: { children: ReactNode }) {
     const { allSignals } = useSignalContext();
-    const [activeStrategy, _setActiveStrategy] = useState<string>('TQQQ_TURBOCORE');
-    const [enabledStrategies, setEnabledStrategies] = useState<StrategyConfig[]>([STRATEGIES[0]]); // Default to TurboCore
+    const [activeStrategy, _setActiveStrategy] = useState<string>('TQQQ_TURBOCORE_PRO');
+    const [enabledStrategies, setEnabledStrategies] = useState<StrategyConfig[]>([STRATEGIES[0]]); // Default to Turbo Pro
     const [userStrategies, _setUserStrategies] = useState<string[]>([]);
     const [hasLoadedPrefs, setHasLoadedPrefs] = useState(false);
     const { getAccessToken, authenticated } = usePrivy();

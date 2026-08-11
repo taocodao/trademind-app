@@ -997,12 +997,10 @@ export async function initializeUserTables(): Promise<void> {
         await query(`CREATE INDEX IF NOT EXISTS idx_virtual_pnl_history_date ON virtual_pnl_history(snapshot_date)`);
 
         // ── Seed demo virtual accounts (idempotent) ─────────────────────────
-        // demo_turbocore_core → $5K Core strategy
-        // demo_turbocore_pro  → $25K Pro strategy
+        // demo_turbocore_pro → $25K Pro strategy (base TurboCore removed)
         await query(`
             INSERT INTO virtual_accounts (user_id, strategy, cash_balance)
             VALUES
-                ('demo_turbocore_core', 'TQQQ_TURBOCORE',     5000.00),
                 ('demo_turbocore_pro',  'TQQQ_TURBOCORE_PRO', 25000.00)
             ON CONFLICT (user_id, strategy) DO NOTHING
         `);

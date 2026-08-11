@@ -38,7 +38,7 @@ export async function POST(
     try {
         const body = await request.json();
         const signal: GenericSignal = body.signal;
-        const strategy = (signal.strategy || 'TQQQ_TURBOCORE').toUpperCase();
+        const strategy = (signal.strategy || 'TQQQ_TURBOCORE_PRO').toUpperCase();
 
         console.log(`🤖 [GHOST EXECUTOR] Processing signal ${id} (${strategy})...`);
 

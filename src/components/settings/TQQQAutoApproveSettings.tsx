@@ -329,21 +329,11 @@ export function TQQQAutoApproveSettings() {
         return <LEAPSSettings hasTastyLinked={hasTastyLinked} />;
     }
 
-    if (activeStrategy === 'TQQQ_TURBOCORE_PRO') {
-        return (
-            <EquityOrProSettings
-                strategyKey="TQQQ_TURBOCORE_PRO"
-                profiles={PRO_RISK_PROFILES}
-                hasTastyLinked={hasTastyLinked}
-            />
-        );
-    }
-
-    // Default: TurboCore
+    // Default: Turbo Pro (base TurboCore strategy removed)
     return (
         <EquityOrProSettings
-            strategyKey="TQQQ_TURBOCORE"
-            profiles={TURBOCORE_RISK_PROFILES}
+            strategyKey="TQQQ_TURBOCORE_PRO"
+            profiles={PRO_RISK_PROFILES}
             hasTastyLinked={hasTastyLinked}
         />
     );

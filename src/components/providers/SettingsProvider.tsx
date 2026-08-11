@@ -250,7 +250,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             const token = await getAccessToken();
             // Map strategy key -> DB column name
             const colMap: Record<string, string> = {
-                TQQQ_TURBOCORE:     'turbocore_auto_approve',
                 TQQQ_TURBOCORE_PRO: 'turbocore_pro_auto_approve',
                 QQQ_LEAPS:          'leaps_auto_approve',
             };

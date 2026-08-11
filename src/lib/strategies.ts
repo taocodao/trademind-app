@@ -1,8 +1,8 @@
 import { Brain, Zap, Activity, Layers } from 'lucide-react';
 
 export interface StrategyConfig {
-    key: string;                      // DB strategy key, e.g. 'TQQQ_TURBOCORE'
-    label: string;                    // Display name, e.g. 'TurboCore'
+    key: string;                      // DB strategy key, e.g. 'TQQQ_TURBOCORE_PRO'
+    label: string;                    // Display name, e.g. 'Turbo Pro'
     shortLabel: string;               // Compact label for tabs
     description: string;
     icon: typeof Brain;               // Lucide icon component
@@ -12,16 +12,6 @@ export interface StrategyConfig {
 }
 
 export const STRATEGIES: StrategyConfig[] = [
-    {
-        key: 'TQQQ_TURBOCORE',
-        label: 'TurboCore',
-        shortLabel: 'Core',
-        description: 'ML-powered TQQQ allocation strategy',
-        icon: Brain,
-        color: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
-        managedSymbols: ['QQQ', 'QLD', 'TQQQ', 'SGOV'],
-        signalCardType: 'turbocore',
-    },
     {
         key: 'TQQQ_TURBOCORE_PRO',
         label: 'Turbo Pro',
@@ -55,15 +45,16 @@ export type SubscriptionTier = 'TURBOCORE' | 'TURBOCORE_PRO' | 'QQQ_LEAPS' | 'BO
 export function getStrategiesForSubscription(tier: SubscriptionTier): string[] {
     switch (tier) {
         case 'TURBOCORE':
-            return ['TQQQ_TURBOCORE'];
+            // Legacy base-TurboCore tier now maps to Turbo Pro (base strategy removed)
+            return ['TQQQ_TURBOCORE_PRO'];
         case 'TURBOCORE_PRO':
             // Pro tab shows IV-Switching signals (TQQQ_TURBOCORE_PRO)
             return ['TQQQ_TURBOCORE_PRO'];
         case 'QQQ_LEAPS':
             return ['QQQ_LEAPS'];
         case 'BOTH':
-            // All Access bundle gets all three strategies
-            return ['TQQQ_TURBOCORE', 'TQQQ_TURBOCORE_PRO', 'QQQ_LEAPS'];
+            // All Access bundle gets both remaining strategies
+            return ['TQQQ_TURBOCORE_PRO', 'QQQ_LEAPS'];
         default:
             return [];
     }

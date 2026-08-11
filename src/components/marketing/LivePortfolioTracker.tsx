@@ -109,11 +109,6 @@ function CountUp({ value, decimals = 1, prefix = '', suffix = '' }: {
 
 // ── Strategy badge colors ────────────────────────────────────────────────────
 const STRATEGY_STYLES: Record<string, { badge: string; glow: string; border: string }> = {
-    TQQQ_TURBOCORE: {
-        badge:  'bg-blue-500/15 text-blue-300 border-blue-500/30',
-        glow:   'hover:shadow-[0_0_30px_rgba(59,130,246,0.15)]',
-        border: 'border-blue-500/20 hover:border-blue-500/40',
-    },
     TURBOCORE_PRO: {
         badge:  'bg-purple-500/15 text-purple-300 border-purple-500/30',
         glow:   'hover:shadow-[0_0_30px_rgba(168,85,247,0.2)]',

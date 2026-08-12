@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createAccount, listAccounts, type RiskLevel } from '@/lib/accounts';
 import { getStrategy } from '@/lib/strategies';
+import { getBroker, BROKERS } from '@/lib/brokers';
 
 async function getUserId(): Promise<string | null> {
     const cookieStore = await cookies();
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     try {
         const body = await req.json();
-        const { name, strategy, riskLevel, initialPrincipal } = body;
+        const { name, strategy, riskLevel, initialPrincipal, broker: brokerKey } = body;
 
         if (!name || typeof name !== 'string' || name.trim().length === 0) {
             return NextResponse.json({ error: 'Account name is required' }, { status: 400 });
@@ -48,8 +49,9 @@ export async function POST(req: NextRequest) {
         if (!isFinite(principal) || principal < 0) {
             return NextResponse.json({ error: 'Initial principal must be a non-negative number' }, { status: 400 });
         }
+        const broker = brokerKey && getBroker(brokerKey) ? getBroker(brokerKey)!.key : BROKERS[0].key;
 
-        const account = await createAccount(userId, name, strategy, risk, principal);
+        const account = await createAccount(userId, name, strategy, risk, principal, broker);
         return NextResponse.json({ account }, { status: 201 });
     } catch (err) {
         console.error('[accounts] create failed:', err);

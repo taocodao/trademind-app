@@ -14,6 +14,12 @@ import type { CloseLeg } from '@/lib/options-exit-scanner';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const FROM_EMAIL = 'TradeMind Signals <signals@trademind.bot>';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.trademind.bot';
+
+// Public URL of the annotated broker-ticket guide for an equity order (embedded in the email).
+function brokerGuideUrl(o: DeltaOrder): string {
+    return `${BASE_URL}/api/broker-guide?broker=fidelity&symbol=${encodeURIComponent(o.symbol)}&action=${o.action}&quantity=${o.quantity}`;
+}
 
 export interface SignalEmailData {
     strategy: string;
@@ -271,6 +277,16 @@ function buildHtmlBody(data: SignalEmailData): string {
                                 padding:10px 14px;margin:4px 0;border-radius:4px;font-family:monospace;
                                 font-size:13px;color:#111827">
                         ${escHtml(o.instruction)}
+                    </div>
+                    <div style="margin:2px 0 10px">
+                        <p style="margin:0 0 6px;font-size:11px;color:#374151;font-family:monospace">
+                            Enter at Fidelity — follow the numbered fields:
+                        </p>
+                        <img src="${brokerGuideUrl(o)}" alt="Fidelity order entry guide for ${escHtml(o.symbol)}"
+                             style="width:100%;max-width:560px;border:1px solid #e5e7eb;border-radius:6px;display:block" />
+                        <p style="margin:4px 0 0;font-size:10px;color:#9ca3af;font-family:monospace">
+                            Review on Fidelity and press Preview order yourself. TradeMind never submits orders to your brokerage.
+                        </p>
                     </div>`).join('')
                 : `<div style="background:#f9fafb;border:1px solid #e5e7eb;padding:10px 14px;
                               border-radius:4px;font-size:13px;color:#6b7280;">

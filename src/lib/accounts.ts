@@ -35,6 +35,7 @@ export interface Account {
     risk_level: RiskLevel;
     initial_principal: number;
     cash_balance: number;
+    broker: string;
     created_at: string;
     updated_at: string;
 }
@@ -84,6 +85,7 @@ export function initializeAccountTables(): Promise<void> {
                     risk_level VARCHAR(20) NOT NULL DEFAULT 'moderate',
                     initial_principal DECIMAL(15, 2) NOT NULL DEFAULT 0,
                     cash_balance DECIMAL(15, 2) NOT NULL DEFAULT 0,
+                    broker VARCHAR(64) NOT NULL DEFAULT 'fidelity',
                     created_at TIMESTAMPTZ DEFAULT NOW(),
                     updated_at TIMESTAMPTZ DEFAULT NOW(),
                     CONSTRAINT valid_account_risk_level CHECK (risk_level IN ('conservative', 'moderate', 'aggressive'))
@@ -173,14 +175,15 @@ export async function createAccount(
     name: string,
     strategy: string,
     riskLevel: RiskLevel,
-    initialPrincipal: number
+    initialPrincipal: number,
+    broker: string = 'fidelity'
 ): Promise<Account> {
     await initializeAccountTables();
     const res = await query(
-        `INSERT INTO accounts (user_id, name, strategy, risk_level, initial_principal, cash_balance)
-         VALUES ($1, $2, $3, $4, $5, $5)
+        `INSERT INTO accounts (user_id, name, strategy, risk_level, initial_principal, cash_balance, broker)
+         VALUES ($1, $2, $3, $4, $5, $5, $6)
          RETURNING *`,
-        [userId, name.trim(), strategy.toUpperCase(), riskLevel, initialPrincipal]
+        [userId, name.trim(), strategy.toUpperCase(), riskLevel, initialPrincipal, broker.toLowerCase()]
     );
     const acct = rowToAccount(res.rows[0]);
 
@@ -241,6 +244,15 @@ export async function updateAccountRiskLevel(accountId: number, userId: string, 
     const res = await query(
         `UPDATE accounts SET risk_level = $3, updated_at = NOW() WHERE id = $1 AND user_id = $2 RETURNING *`,
         [accountId, userId, riskLevel]
+    );
+    return res.rows.length ? rowToAccount(res.rows[0]) : null;
+}
+
+export async function updateAccountBroker(accountId: number, userId: string, broker: string): Promise<Account | null> {
+    await initializeAccountTables();
+    const res = await query(
+        `UPDATE accounts SET broker = $3, updated_at = NOW() WHERE id = $1 AND user_id = $2 RETURNING *`,
+        [accountId, userId, broker.toLowerCase()]
     );
     return res.rows.length ? rowToAccount(res.rows[0]) : null;
 }
@@ -598,6 +610,7 @@ function rowToAccount(r: any): Account {
         risk_level: r.risk_level,
         initial_principal: Number(r.initial_principal),
         cash_balance: Number(r.cash_balance),
+        broker: r.broker || 'fidelity',
         created_at: r.created_at,
         updated_at: r.updated_at,
     };

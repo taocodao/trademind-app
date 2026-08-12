@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { PlusCircle, Pencil, Trash2, RefreshCw, ArrowUpRight, ArrowDownRight, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
+import { PlusCircle, Pencil, Trash2, RefreshCw, ArrowUpRight, ArrowDownRight, ArrowDownToLine, ArrowUpFromLine, ExternalLink } from "lucide-react";
+import { BrokerEntryModal } from "./BrokerEntryModal";
+import type { BrokerOrder } from "@/lib/brokers";
 
 type ActivityType = 'buy' | 'sell' | 'deposit' | 'withdraw';
 
@@ -33,6 +35,7 @@ export function ActivityTab({ accountId, onChanged }: { accountId: number; onCha
 
     // add/edit modal
     const [modal, setModal] = useState<null | { mode: 'add' } | { mode: 'edit'; activity: Activity }>(null);
+    const [brokerOrder, setBrokerOrder] = useState<BrokerOrder | null>(null);
     const [type, setType] = useState<ActivityType>('buy');
     const [symbol, setSymbol] = useState('');
     const [quantity, setQuantity] = useState('');
@@ -188,6 +191,15 @@ export function ActivityTab({ accountId, onChanged }: { accountId: number; onCha
                                         <p className="text-[10px] text-tm-muted">{new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
                                     </div>
                                     <div className="flex items-center gap-1">
+                                        {isTradeRow && a.symbol && a.quantity != null && (
+                                            <button
+                                                onClick={() => setBrokerOrder({ symbol: a.symbol!, action: a.type as 'buy' | 'sell', quantity: a.quantity!, price: a.price })}
+                                                className="p-1.5 rounded hover:bg-white/10 text-tm-muted hover:text-tm-purple transition"
+                                                title="Enter at Broker"
+                                            >
+                                                <ExternalLink className="w-3.5 h-3.5" />
+                                            </button>
+                                        )}
                                         <button onClick={() => openEdit(a)} className="p-1.5 rounded hover:bg-white/10 text-tm-muted hover:text-tm-purple transition" title="Edit">
                                             <Pencil className="w-3.5 h-3.5" />
                                         </button>
@@ -278,6 +290,11 @@ export function ActivityTab({ accountId, onChanged }: { accountId: number; onCha
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Enter-at-Broker guided modal */}
+            {brokerOrder && (
+                <BrokerEntryModal order={brokerOrder} onClose={() => setBrokerOrder(null)} />
             )}
         </div>
     );

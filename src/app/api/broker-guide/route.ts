@@ -19,7 +19,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.trademind.bot'
 // Cropped ticket template dimensions.
 const STOCKS = { w: 1270, h: 564, img: 'fidelity-stocks.jpg' };
 const OPTIONS = { w: 1243, h: 502, img: 'fidelity-options.jpg' };
-const ETRADE_OPTIONS = { w: 575, h: 560, img: 'etrade-options.jpg' };
+const ETRADE_OPTIONS = { w: 1175, h: 765, img: 'etrade-options.jpg' };
 const GUTTER = 400; // left gutter for value cards
 
 // Field pointer positions as fractions of the TICKET (not the full canvas).
@@ -42,17 +42,19 @@ const OPTIONS_FIELDS: Record<string, [number, number]> = {
     orderType: [0.076, 0.631],
     tif:       [0.216, 0.631],
 };
-// E*TRADE options order-entry ticket (575x560 crop).
+// E*TRADE options order-entry ticket (1195x785 crop). Compact left-column form:
+// Account (top), Symbol, then a row of Action/Quantity/Expiration/Strike/Type,
+// then Price type, then Duration. Fractions of the ticket.
 const ETRADE_FIELDS: Record<string, [number, number]> = {
-    account:    [0.209, 0.059],
-    symbol:     [0.209, 0.227],
-    action:     [0.090, 0.345],
-    quantity:   [0.153, 0.345],
-    expiration: [0.240, 0.345],
-    strike:     [0.330, 0.345],
-    type:       [0.443, 0.345],
-    priceType:  [0.139, 0.446],
-    duration:   [0.153, 0.566],
+    account:    [0.106, 0.316],   // Account dropdown (top)
+    symbol:     [0.111, 0.444],   // Symbol input (QQQ)
+    action:     [0.060, 0.732],   // Action dropdown
+    quantity:   [0.119, 0.732],   // Quantity input
+    expiration: [0.200, 0.732],   // Expiration dropdown
+    strike:     [0.268, 0.732],   // Strike dropdown
+    callput:    [0.345, 0.732],   // Type (Call/Put) dropdown
+    priceType:  [0.085, 0.863],   // Price type dropdown
+    duration:   [0.085, 0.956],   // Duration dropdown
 };
 
 const ACCENT = '#10a34a';
@@ -104,7 +106,7 @@ export async function GET(req: NextRequest) {
             ['4', 'Quantity', `${quantity} contract${quantity !== 1 ? 's' : ''}`, ETRADE_FIELDS.quantity],
             ['5', 'Expiration', fmtExpiry(expiry), ETRADE_FIELDS.expiration],
             ['6', 'Strike', `$${strike}`, ETRADE_FIELDS.strike],
-            ['7', 'Type', right === 'put' ? 'Put' : 'Call', ETRADE_FIELDS.type],
+            ['7', 'Type', right === 'put' ? 'Put' : 'Call', ETRADE_FIELDS.callput],
             ['8', 'Price type', 'Market', ETRADE_FIELDS.priceType],
             ['9', 'Duration', 'Good for day', ETRADE_FIELDS.duration],
         ];
@@ -150,7 +152,7 @@ export async function GET(req: NextRequest) {
     const top = Math.round((H - (n * cardH + (n - 1) * gap)) / 2);
     const cardX = Math.round(GUTTER * 0.07);
     const cardW = Math.round(GUTTER * 0.86);
-    const badgeR = Math.round(H * (isOption ? (broker === 'etrade' ? 0.026 : 0.032) : 0.040));
+    const badgeR = Math.round(H * (isOption ? (broker === 'etrade' ? 0.020 : 0.032) : 0.040));
 
     let overlay = '';
     values.forEach(([num, label, value, [fx, fy]], i) => {

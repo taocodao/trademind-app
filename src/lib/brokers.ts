@@ -149,24 +149,24 @@ const ETRADE: BrokerSpec = {
             const fields: TicketField[] = [
                 { label: 'Account', value: 'Your account', hint: 'Select your brokerage account' },
                 { label: 'Symbol', value: o.symbol.toUpperCase() },
-                { label: 'Action', value: action },
+                { label: 'Order type', value: action },
+                { label: 'Term', value: 'Good For Day' },
                 { label: 'Quantity', value: String(o.quantity), hint: 'Contracts' },
-                { label: 'Expiration', value: fmtExpiry(opt.expiry) },
+                { label: 'Call/Put', value: opt.right === 'call' ? 'Call' : 'Put' },
                 { label: 'Strike', value: String(opt.strike) },
-                { label: 'Type', value: opt.right === 'call' ? 'Call' : 'Put' },
+                { label: 'Expiration', value: fmtExpiry(opt.expiry) },
                 { label: 'Price type', value: 'Market', hint: 'Mirrors the signal fill' },
-                { label: 'Duration', value: 'Good for day' },
             ];
-            if (o.price != null) fields.push({ label: 'Reference price', value: `$${o.price.toFixed(2)}`, hint: 'Signal fill (info only)' });
+            if (o.price != null) fields.push({ label: 'Est. Value', value: `$${(o.price * o.quantity * 100).toFixed(2)}`, hint: 'Verify after you Preview' });
             return fields;
         }
         return [
             { label: 'Account', value: 'Your account' },
             { label: 'Symbol', value: o.symbol.toUpperCase() },
-            { label: 'Action', value: o.action === 'buy' ? 'Buy' : 'Sell' },
+            { label: 'Order type', value: o.action === 'buy' ? 'Buy' : 'Sell' },
+            { label: 'Term', value: 'Good For Day' },
             { label: 'Quantity', value: String(o.quantity), hint: 'Shares' },
             { label: 'Price type', value: 'Market', hint: 'Mirrors the signal fill' },
-            { label: 'Duration', value: 'Good for day' },
         ];
     },
     autofill: (o) => {

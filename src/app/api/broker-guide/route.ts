@@ -16,9 +16,10 @@ export const dynamic = 'force-dynamic';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.trademind.bot';
 
-// Cropped Fidelity ticket template dimensions.
+// Cropped ticket template dimensions.
 const STOCKS = { w: 1270, h: 564, img: 'fidelity-stocks.jpg' };
 const OPTIONS = { w: 1243, h: 502, img: 'fidelity-options.jpg' };
+const ETRADE_OPTIONS = { w: 575, h: 560, img: 'etrade-options.jpg' };
 const GUTTER = 400; // left gutter for value cards
 
 // Field pointer positions as fractions of the TICKET (not the full canvas).
@@ -40,6 +41,18 @@ const OPTIONS_FIELDS: Record<string, [number, number]> = {
     callput:   [0.422, 0.496],
     orderType: [0.076, 0.631],
     tif:       [0.216, 0.631],
+};
+// E*TRADE options order-entry ticket (575x560 crop).
+const ETRADE_FIELDS: Record<string, [number, number]> = {
+    account:    [0.209, 0.059],
+    symbol:     [0.209, 0.227],
+    action:     [0.090, 0.345],
+    quantity:   [0.153, 0.345],
+    expiration: [0.240, 0.345],
+    strike:     [0.330, 0.345],
+    type:       [0.443, 0.345],
+    priceType:  [0.139, 0.446],
+    duration:   [0.153, 0.566],
 };
 
 const ACCENT = '#10a34a';
@@ -65,7 +78,9 @@ export async function GET(req: NextRequest) {
     const isOption = !!(expiry && strike);
 
     if (!symbol) return NextResponse.json({ error: 'symbol is required' }, { status: 400 });
-    if (broker !== 'fidelity') return NextResponse.json({ error: `Unsupported broker: ${broker}` }, { status: 400 });
+    if (broker !== 'fidelity' && broker !== 'etrade') {
+        return NextResponse.json({ error: `Unsupported broker: ${broker}` }, { status: 400 });
+    }
 
     const fmtExpiry = (iso: string) => {
         const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
@@ -75,7 +90,25 @@ export async function GET(req: NextRequest) {
     let ticket = STOCKS;
     let values: Array<[string, string, string, [number, number]]>;
 
-    if (isOption) {
+    if (broker === 'etrade') {
+        if (!isOption) return NextResponse.json({ error: 'E*TRADE guide currently supports options orders only' }, { status: 400 });
+        ticket = ETRADE_OPTIONS;
+        const isBuy = actionRaw !== 'sell';
+        const action = openClose === 'close'
+            ? (isBuy ? 'Buy Close' : 'Sell Close')
+            : (isBuy ? 'Buy Open' : 'Sell Open');
+        values = [
+            ['1', 'Account', 'Your account', ETRADE_FIELDS.account],
+            ['2', 'Symbol', symbol, ETRADE_FIELDS.symbol],
+            ['3', 'Action', action, ETRADE_FIELDS.action],
+            ['4', 'Quantity', `${quantity} contract${quantity !== 1 ? 's' : ''}`, ETRADE_FIELDS.quantity],
+            ['5', 'Expiration', fmtExpiry(expiry), ETRADE_FIELDS.expiration],
+            ['6', 'Strike', `$${strike}`, ETRADE_FIELDS.strike],
+            ['7', 'Type', right === 'put' ? 'Put' : 'Call', ETRADE_FIELDS.type],
+            ['8', 'Price type', 'Market', ETRADE_FIELDS.priceType],
+            ['9', 'Duration', 'Good for day', ETRADE_FIELDS.duration],
+        ];
+    } else if (isOption) {
         ticket = OPTIONS;
         const isBuy = actionRaw !== 'sell';
         const action = openClose === 'close'
@@ -117,7 +150,7 @@ export async function GET(req: NextRequest) {
     const top = Math.round((H - (n * cardH + (n - 1) * gap)) / 2);
     const cardX = Math.round(GUTTER * 0.07);
     const cardW = Math.round(GUTTER * 0.86);
-    const badgeR = Math.round(H * (isOption ? 0.032 : 0.040));
+    const badgeR = Math.round(H * (isOption ? (broker === 'etrade' ? 0.026 : 0.032) : 0.040));
 
     let overlay = '';
     values.forEach(([num, label, value, [fx, fy]], i) => {

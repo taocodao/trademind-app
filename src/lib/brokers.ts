@@ -129,9 +129,72 @@ ${optLines}
     },
 };
 
+// ─── E*TRADE ─────────────────────────────────────────────────────────────────
+// Ticket: us.etrade.com/etx/pxy/order-entry (Options order entry).
+// Fields: Account, Symbol, Action (Buy Open/Sell Open), Quantity, Expiration,
+// Strike, Type (Call/Put), Price type, Duration. Market / Good for day.
+
+const ETRADE: BrokerSpec = {
+    key: 'etrade',
+    name: 'E*TRADE',
+    tradeUrl: 'https://us.etrade.com/etx/pxy/order-entry',
+    tradeType: 'Options',
+    buildFields: (o) => {
+        if (o.option) {
+            const opt = o.option;
+            const action =
+                opt.openClose === 'open'
+                    ? (o.action === 'buy' ? 'Buy Open' : 'Sell Open')
+                    : (o.action === 'buy' ? 'Buy Close' : 'Sell Close');
+            const fields: TicketField[] = [
+                { label: 'Account', value: 'Your account', hint: 'Select your brokerage account' },
+                { label: 'Symbol', value: o.symbol.toUpperCase() },
+                { label: 'Action', value: action },
+                { label: 'Quantity', value: String(o.quantity), hint: 'Contracts' },
+                { label: 'Expiration', value: fmtExpiry(opt.expiry) },
+                { label: 'Strike', value: String(opt.strike) },
+                { label: 'Type', value: opt.right === 'call' ? 'Call' : 'Put' },
+                { label: 'Price type', value: 'Market', hint: 'Mirrors the signal fill' },
+                { label: 'Duration', value: 'Good for day' },
+            ];
+            if (o.price != null) fields.push({ label: 'Reference price', value: `$${o.price.toFixed(2)}`, hint: 'Signal fill (info only)' });
+            return fields;
+        }
+        return [
+            { label: 'Account', value: 'Your account' },
+            { label: 'Symbol', value: o.symbol.toUpperCase() },
+            { label: 'Action', value: o.action === 'buy' ? 'Buy' : 'Sell' },
+            { label: 'Quantity', value: String(o.quantity), hint: 'Shares' },
+            { label: 'Price type', value: 'Market', hint: 'Mirrors the signal fill' },
+            { label: 'Duration', value: 'Good for day' },
+        ];
+    },
+    autofill: (o) => {
+        const sym = o.symbol.toUpperCase();
+        const qty = String(o.quantity);
+        const opt = o.option;
+        const action = opt
+            ? (opt.openClose === 'open' ? (o.action === 'buy' ? 'Buy Open' : 'Sell Open') : (o.action === 'buy' ? 'Buy Close' : 'Sell Close'))
+            : (o.action === 'buy' ? 'Buy' : 'Sell');
+        const optLines = opt
+            ? `  pick('action','${action}');pick('expir','${fmtExpiry(opt.expiry)}');pick('strike','${opt.strike}');pick('type','${opt.right === 'call' ? 'Call' : 'Put'}');pick('price','Market');pick('duration','Good for day');`
+            : `  pick('action','${action}');pick('price','Market');pick('duration','Good for day');`;
+        return `javascript:(function(){
+  function setVal(el,v){if(!el)return;el.focus();el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));el.blur();}
+  var sym=document.querySelector('input[placeholder*="ymbol" i],input[aria-label*="ymbol" i],input[id*="symbol" i],input[name*="symbol" i]');
+  setVal(sym,'${sym}');
+  function pick(name,val){var els=document.querySelectorAll('select,[role="combobox"]');for(var i=0;i<els.length;i++){var e=els[i];var lab=(e.getAttribute('aria-label')||e.name||e.id||'').toLowerCase();if(lab.indexOf(name)>-1){try{e.value=val;e.dispatchEvent(new Event('change',{bubbles:true}));}catch(_){}}}}
+${optLines}
+  var q=document.querySelector('input[aria-label*="uantity" i],input[id*="quantity" i],input[name*="quantity" i]');
+  setVal(q,'${qty}');
+  alert('TradeMind: attempted to prefill ${sym} ${action} ${qty} (Market/Good for day). Please REVIEW, then Preview order.');
+})();`;
+    },
+};
+
 // ─── Registry ────────────────────────────────────────────────────────────────
 
-export const BROKERS: BrokerSpec[] = [FIDELITY];
+export const BROKERS: BrokerSpec[] = [FIDELITY, ETRADE];
 
 export function getBroker(key: string): BrokerSpec | undefined {
     return BROKERS.find((b) => b.key.toLowerCase() === key.toLowerCase());

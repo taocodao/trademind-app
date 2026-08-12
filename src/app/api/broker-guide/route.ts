@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
             ? (isBuy ? 'Buy To Close' : 'Sell To Close')
             : (isBuy ? 'Buy To Open' : 'Sell To Open');
         values = [
-            ['1', 'Underlying', symbol, [0.085, 0.096]],
+            ['1', 'Underlying', symbol, [0.052, 0.193]],
             ['2', 'Action', action, OPTIONS_FIELDS.action],
             ['3', 'Quantity', `${quantity} contract${quantity !== 1 ? 's' : ''}`, OPTIONS_FIELDS.quantity],
             ['4', 'Expiration', fmtExpiry(expiry), OPTIONS_FIELDS.expiration],

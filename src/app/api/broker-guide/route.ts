@@ -30,6 +30,9 @@ const STOCKS_FIELDS: Record<string, [number, number]> = {
     tif:       [0.098, 0.560],
 };
 const OPTIONS_FIELDS: Record<string, [number, number]> = {
+    trade:     [0.060, 0.082],   // "Trade" dropdown (Options)
+    account:   [0.192, 0.082],   // "Account" dropdown
+    underlying:[0.052, 0.193],   // "Symbol" input
     action:    [0.060, 0.496],
     quantity:  [0.145, 0.496],
     expiration:[0.235, 0.496],
@@ -79,14 +82,16 @@ export async function GET(req: NextRequest) {
             ? (isBuy ? 'Buy To Close' : 'Sell To Close')
             : (isBuy ? 'Buy To Open' : 'Sell To Open');
         values = [
-            ['1', 'Underlying', symbol, [0.052, 0.193]],
-            ['2', 'Action', action, OPTIONS_FIELDS.action],
-            ['3', 'Quantity', `${quantity} contract${quantity !== 1 ? 's' : ''}`, OPTIONS_FIELDS.quantity],
-            ['4', 'Expiration', fmtExpiry(expiry), OPTIONS_FIELDS.expiration],
-            ['5', 'Strike', `$${strike}`, OPTIONS_FIELDS.strike],
-            ['6', 'Call/Put', right === 'put' ? 'Put' : 'Call', OPTIONS_FIELDS.callput],
-            ['7', 'Order type', 'Market', OPTIONS_FIELDS.orderType],
-            ['8', 'Time in force', 'Day', OPTIONS_FIELDS.tif],
+            ['1', 'Trade', 'Options', OPTIONS_FIELDS.trade],
+            ['2', 'Account', 'Your account', OPTIONS_FIELDS.account],
+            ['3', 'Underlying', symbol, OPTIONS_FIELDS.underlying],
+            ['4', 'Action', action, OPTIONS_FIELDS.action],
+            ['5', 'Quantity', `${quantity} contract${quantity !== 1 ? 's' : ''}`, OPTIONS_FIELDS.quantity],
+            ['6', 'Expiration', fmtExpiry(expiry), OPTIONS_FIELDS.expiration],
+            ['7', 'Strike', `$${strike}`, OPTIONS_FIELDS.strike],
+            ['8', 'Call/Put', right === 'put' ? 'Put' : 'Call', OPTIONS_FIELDS.callput],
+            ['9', 'Order type', 'Market', OPTIONS_FIELDS.orderType],
+            ['10', 'Time in force', 'Day', OPTIONS_FIELDS.tif],
         ];
     } else {
         const action = actionRaw === 'sell' ? 'Sell' : 'Buy';

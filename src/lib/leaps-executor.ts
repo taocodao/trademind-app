@@ -102,9 +102,11 @@ async function buyLeapsToOpen(
     const candidate = await getLeapsCandidate(accessToken, underlying, underlyingPrice);
     if (!candidate) return { action: 'error', message: 'No LEAPS candidate found' };
 
-    // Use ask for limit price (we are buying)
-    const limitPrice = candidate.ask;
-    // Calculate contracts: floor(targetValue / (ask * 100))
+    // Execute at the MID price (bid/ask midpoint) — the position is valued and
+    // the fill recorded at mid, not the ask. Fall back to ask if no bid.
+    const bid = (candidate as any).bid ?? candidate.ask;
+    const limitPrice = (candidate.ask + bid) / 2;
+    // Calculate contracts: floor(targetValue / (mid * 100))
     const contracts = Math.floor(targetDollarValue / (limitPrice * 100));
 
     if (contracts < 1) {

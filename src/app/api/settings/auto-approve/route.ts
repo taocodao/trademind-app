@@ -182,7 +182,7 @@ export async function PUT(request: NextRequest) {
         }
 
         // Sync to Python backend (fire-and-forget, best-effort)
-        const PYTHON_API = process.env.TASTYTRADE_API_URL || process.env.EC2_API_URL || 'http://34.235.119.67:8002';
+        const PYTHON_API = process.env.TASTYTRADE_API_URL || process.env.EC2_API_URL || 'http://34.203.194.137:8002';
         try {
             await fetch(`${PYTHON_API}/api/settings/auto-approve`, {
                 method: 'PUT',

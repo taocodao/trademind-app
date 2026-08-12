@@ -204,7 +204,7 @@ export async function getEquityQuote(
             console.log(`📡 Falling back to EC2 IB Gateway for ${symbol} quote...`);
             try {
                 // Get the EC2 URL from env, default to the known elastic IP
-                const ec2Url = process.env.TASTYTRADE_API_URL || 'http://34.235.119.67:8002';
+                const ec2Url = process.env.TASTYTRADE_API_URL || 'http://34.203.194.137:8002';
 
                 const ec2Response = await fetch(`${ec2Url}/api/quote/equity?symbol=${symbol}`, { cache: 'no-store' });
                 if (ec2Response.ok) {

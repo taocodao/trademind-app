@@ -68,7 +68,7 @@ export async function GET() {
 
         // Fallback to EC2 IF direct DB fails (shouldn't happen if credentials are correct)
         try {
-            const PYTHON_API = process.env.EC2_API_URL || process.env.TASTYTRADE_API_URL || 'http://34.235.119.67:8002';
+            const PYTHON_API = process.env.EC2_API_URL || process.env.TASTYTRADE_API_URL || 'http://34.203.194.137:8002';
             console.log('[Signals API] Falling back to EC2:', PYTHON_API);
 
             const controller = new AbortController();

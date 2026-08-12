@@ -18,6 +18,7 @@ import {
 
 import { useTranslation } from "react-i18next";
 import { IVSwitchingSignalCard } from "./IVSwitchingSignalCard";
+import { BrokerGuideModal } from "./BrokerGuideModal";
 
 export interface TurboCoreSignal {
   id: number;
@@ -584,6 +585,13 @@ function ManualOrderPanel({
 }) {
   const { t } = useTranslation();
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [guide, setGuide] = useState<{ symbol: string; action: "buy" | "sell"; quantity: number } | null>(null);
+
+  // Parse the whole-share count out of e.g. "25 sh" for the guide.
+  const shareCount = (o: (typeof orders)[0]): number => {
+    const m = /(\d+)/.exec(o.approxShares);
+    return m ? Math.max(1, parseInt(m[1], 10)) : 1;
+  };
 
   const copyRow = (o: (typeof orders)[0], i: number) => {
     const text = o.isOption
@@ -646,6 +654,15 @@ function ManualOrderPanel({
                 </div>
               </div>
 
+              {!o.isOption && (
+                <button
+                  onClick={() => setGuide({ symbol: o.symbol, action: o.action.toLowerCase().includes("sell") ? "sell" : "buy", quantity: shareCount(o) })}
+                  className="h-7 px-2 flex items-center justify-center rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold transition-colors"
+                  title="Show annotated Fidelity ticket guide"
+                >
+                  Guide
+                </button>
+              )}
               <button
                 onClick={() => copyRow(o, i)}
                 className="w-7 h-7 flex items-center justify-center rounded bg-white/5 hover:bg-white/10 transition-colors"
@@ -671,6 +688,15 @@ function ManualOrderPanel({
       <div className="text-[10px] text-yellow-400/90 text-center pt-1">
         ⚡ {t('dashboard.signals.connect_tastytrade', 'Connect Tastytrade for live pricing & one-click execution')}
       </div>
+
+      {guide && (
+        <BrokerGuideModal
+          symbol={guide.symbol}
+          action={guide.action}
+          quantity={guide.quantity}
+          onClose={() => setGuide(null)}
+        />
+      )}
     </div>
   );
 }

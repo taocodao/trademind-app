@@ -56,6 +56,7 @@ export async function POST(req: Request) {
             risk_level: r.risk_level,
             initial_principal: Number(r.initial_principal),
             cash_balance: Number(r.cash_balance),
+            broker: r.broker || 'fidelity',
             created_at: r.created_at,
             updated_at: r.updated_at,
         }));

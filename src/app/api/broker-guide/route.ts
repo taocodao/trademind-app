@@ -16,20 +16,27 @@ export const dynamic = 'force-dynamic';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.trademind.bot';
 
-// Cropped Fidelity Stocks/ETFs ticket template dimensions (1270x564).
-const TICKET_W = 1270;
-const TICKET_H = 564;
+// Cropped Fidelity ticket template dimensions.
+const STOCKS = { w: 1270, h: 564, img: 'fidelity-stocks.jpg' };
+const OPTIONS = { w: 1243, h: 502, img: 'fidelity-options.jpg' };
 const GUTTER = 400; // left gutter for value cards
-const W = TICKET_W + GUTTER;
-const H = TICKET_H;
 
 // Field pointer positions as fractions of the TICKET (not the full canvas).
-const FIELDS: Record<string, [number, number]> = {
+const STOCKS_FIELDS: Record<string, [number, number]> = {
     symbol:    [0.155, 0.310],
     action:    [0.133, 0.470],
     quantity:  [0.265, 0.470],
     orderType: [0.485, 0.470],
     tif:       [0.098, 0.560],
+};
+const OPTIONS_FIELDS: Record<string, [number, number]> = {
+    action:    [0.060, 0.496],
+    quantity:  [0.145, 0.496],
+    expiration:[0.235, 0.496],
+    strike:    [0.335, 0.496],
+    callput:   [0.422, 0.496],
+    orderType: [0.076, 0.631],
+    tif:       [0.216, 0.631],
 };
 
 const ACCENT = '#10a34a';
@@ -44,30 +51,68 @@ export async function GET(req: NextRequest) {
     const sp = req.nextUrl.searchParams;
     const broker = (sp.get('broker') || 'fidelity').toLowerCase();
     const symbol = (sp.get('symbol') || '').toUpperCase();
-    const action = (sp.get('action') || 'buy').toLowerCase() === 'sell' ? 'sell' : 'buy';
+    const actionRaw = (sp.get('action') || 'buy').toLowerCase();
     const quantity = Math.max(1, Math.floor(Number(sp.get('quantity')) || 1));
+
+    // Option contract params (present => render the Options ticket)
+    const expiry = sp.get('expiry') || '';        // YYYY-MM-DD
+    const strike = sp.get('strike') || '';        // e.g. '470'
+    const right = (sp.get('right') || 'call').toLowerCase();   // call|put
+    const openClose = (sp.get('openclose') || 'open').toLowerCase(); // open|close
+    const isOption = !!(expiry && strike);
 
     if (!symbol) return NextResponse.json({ error: 'symbol is required' }, { status: 400 });
     if (broker !== 'fidelity') return NextResponse.json({ error: `Unsupported broker: ${broker}` }, { status: 400 });
 
-    const values: Array<[string, string, string, [number, number]]> = [
-        ['1', 'Symbol', symbol, FIELDS.symbol],
-        ['2', 'Action', action === 'buy' ? 'Buy' : 'Sell', FIELDS.action],
-        ['3', 'Quantity', String(quantity), FIELDS.quantity],
-        ['4', 'Order type', 'Market', FIELDS.orderType],
-        ['5', 'Time in force', 'Day', FIELDS.tif],
-    ];
+    const fmtExpiry = (iso: string) => {
+        const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+        return m ? `${m[2]}/${m[3]}/${m[1]}` : iso;
+    };
 
-    const imgHref = `${BASE_URL}/broker-guides/fidelity-stocks.jpg`;
+    let ticket = STOCKS;
+    let values: Array<[string, string, string, [number, number]]>;
 
-    // Value-card stack geometry
+    if (isOption) {
+        ticket = OPTIONS;
+        const isBuy = actionRaw !== 'sell';
+        const action = openClose === 'close'
+            ? (isBuy ? 'Buy To Close' : 'Sell To Close')
+            : (isBuy ? 'Buy To Open' : 'Sell To Open');
+        values = [
+            ['1', 'Underlying', symbol, [0.085, 0.096]],
+            ['2', 'Action', action, OPTIONS_FIELDS.action],
+            ['3', 'Quantity', `${quantity} contract${quantity !== 1 ? 's' : ''}`, OPTIONS_FIELDS.quantity],
+            ['4', 'Expiration', fmtExpiry(expiry), OPTIONS_FIELDS.expiration],
+            ['5', 'Strike', `$${strike}`, OPTIONS_FIELDS.strike],
+            ['6', 'Call/Put', right === 'put' ? 'Put' : 'Call', OPTIONS_FIELDS.callput],
+            ['7', 'Order type', 'Market', OPTIONS_FIELDS.orderType],
+            ['8', 'Time in force', 'Day', OPTIONS_FIELDS.tif],
+        ];
+    } else {
+        const action = actionRaw === 'sell' ? 'Sell' : 'Buy';
+        values = [
+            ['1', 'Symbol', symbol, STOCKS_FIELDS.symbol],
+            ['2', 'Action', action, STOCKS_FIELDS.action],
+            ['3', 'Quantity', String(quantity), STOCKS_FIELDS.quantity],
+            ['4', 'Order type', 'Market', STOCKS_FIELDS.orderType],
+            ['5', 'Time in force', 'Day', STOCKS_FIELDS.tif],
+        ];
+    }
+
+    const TICKET_W = ticket.w;
+    const TICKET_H = ticket.h;
+    const W = TICKET_W + GUTTER;
+    const H = TICKET_H;
+    const imgHref = `${BASE_URL}/broker-guides/${ticket.img}`;
+
+    // Value-card stack geometry (adaptive so 8 option fields fit the shorter ticket)
     const n = values.length;
-    const cardH = Math.round(H * 0.16);
-    const gap = Math.round(H * 0.04);
+    const gap = Math.max(6, Math.round(H * 0.02));
+    const cardH = Math.min(Math.round(H * 0.16), Math.round((H - (n - 1) * gap - 20) / n));
     const top = Math.round((H - (n * cardH + (n - 1) * gap)) / 2);
     const cardX = Math.round(GUTTER * 0.07);
     const cardW = Math.round(GUTTER * 0.86);
-    const badgeR = Math.round(H * 0.040);
+    const badgeR = Math.round(H * (isOption ? 0.032 : 0.040));
 
     let overlay = '';
     values.forEach(([num, label, value, [fx, fy]], i) => {

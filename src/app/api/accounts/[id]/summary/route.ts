@@ -27,7 +27,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         }
     }
 
-    const positionsValue = positions.reduce((s, p) => s + p.quantity * (prices[p.symbol] || p.avg_price), 0);
+    // Options settle per contract (100 shares); equity is 1×.
+    const positionsValue = positions.reduce((s, p) => {
+        const mult = p.instrument_type === 'option' ? 100 : 1;
+        return s + p.quantity * (prices[p.symbol] || p.avg_price) * mult;
+    }, 0);
     const nlv = account.cash_balance + positionsValue;
     const cumulativePnl = nlv - account.initial_principal;
     const cumulativePnlPct = account.initial_principal > 0 ? (cumulativePnl / account.initial_principal) * 100 : 0;

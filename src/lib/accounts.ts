@@ -159,6 +159,11 @@ export function initializeAccountTables(): Promise<void> {
                 )
             `);
             await query(`CREATE INDEX IF NOT EXISTS idx_account_signals_account ON account_signals(account_id)`);
+
+            // ── Lightweight migrations for pre-existing tables ──────────────
+            // CREATE TABLE IF NOT EXISTS does not add columns to a table that
+            // already exists, so add any columns introduced after first deploy.
+            await query(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS broker VARCHAR(64) NOT NULL DEFAULT 'fidelity'`);
         })().catch((err) => {
             // Reset so a transient failure doesn't permanently disable init.
             _initPromise = null;

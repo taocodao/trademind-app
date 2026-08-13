@@ -30,8 +30,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
     const enriched = positions.map((p) => {
         const live = prices[p.symbol] || p.avg_price;
-        const marketValue = p.quantity * live;
-        const unrealizedPnl = (live - p.avg_price) * p.quantity;
+        // Options settle per contract (100 shares); equity is 1×.
+        const mult = p.instrument_type === 'option' ? 100 : 1;
+        const marketValue = p.quantity * live * mult;
+        const unrealizedPnl = (live - p.avg_price) * p.quantity * mult;
         const unrealizedPnlPct = p.avg_price > 0 ? ((live - p.avg_price) / p.avg_price) * 100 : 0;
         return { ...p, currentPrice: live, marketValue, unrealizedPnl, unrealizedPnlPct };
     });

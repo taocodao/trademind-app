@@ -133,7 +133,8 @@ async function processAccountSignal(account: Account, signalId: string, signalDa
     // 4. Snapshot NLV vs principal
     const fresh = await getAccount(account.id);
     if (fresh) {
-        const positions = await getAccountPositions(account.id);
+        // positionsValue = NLV - cash. generateAccountOrders already values
+        // options at the 100x contract multiplier, so this is correct as-is.
         const positionsValue = orders.virtualNlv - fresh.cash_balance;
         const today = new Date().toISOString().split('T')[0];
         await saveAccountPnlSnapshot(account.id, today, fresh.cash_balance, positionsValue, fresh.initial_principal);

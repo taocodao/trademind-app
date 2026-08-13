@@ -324,17 +324,22 @@ export async function applyActivity(
         signal_id?: string | null;
         source?: ActivitySource;
         note?: string | null;
+        /** 'equity' (default) or 'option'. Options carry a 100× contract multiplier. */
+        instrument_type?: string | null;
     }
 ): Promise<void> {
     const qty = a.quantity != null ? Math.abs(Number(a.quantity)) : null;
     const price = a.price != null ? Number(a.price) : null;
+    const instrumentType = a.instrument_type === 'option' ? 'option' : 'equity';
+    // Options are quoted per share but settle per contract (100 shares).
+    const multiplier = instrumentType === 'option' ? 100 : 1;
 
     // The ledger `amount` is unambiguous per type:
-    //   buy/sell        → notional = qty × price
+    //   buy/sell        → notional = qty × price × multiplier
     //   deposit/withdraw → the cash amount itself (carried in `quantity` by convention)
     const isTrade = a.type === 'buy' || a.type === 'sell';
     const amount = isTrade
-        ? (qty != null && price != null ? qty * price : 0)
+        ? (qty != null && price != null ? qty * price * multiplier : 0)
         : qty != null
           ? qty
           : 0;
@@ -362,7 +367,7 @@ export async function applyActivity(
                     avg_price = ((account_positions.quantity * account_positions.avg_price) + ($3 * $4)) / (account_positions.quantity + $3),
                     signal_id = $6,
                     updated_at = NOW()`,
-                [accountId, a.symbol, qty, price ?? 0, 'equity', a.signal_id ?? null]
+                [accountId, a.symbol, qty, price ?? 0, instrumentType, a.signal_id ?? null]
             );
         } else {
             await client.query(

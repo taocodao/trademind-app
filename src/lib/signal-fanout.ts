@@ -121,9 +121,10 @@ async function processAccountSignal(account: Account, signalId: string, signalDa
         phaseFrom?: string | null; phaseReason?: string | null;
     };
 
-    // 3. Pre-execute into the account ledger (idempotent per account+signal)
-    if (orders.equityOrders.length > 0) {
-        const exec = await executeAccountOrders(account.id, signalId, orders.equityOrders);
+    // 3. Pre-execute into the account ledger (idempotent per account+signal).
+    //    Executes both equity and option legs (options as virtual positions).
+    if (orders.equityOrders.length > 0 || orders.optionsOrders.length > 0) {
+        const exec = await executeAccountOrders(account.id, signalId, orders.equityOrders, orders.optionsOrders);
         if (!exec.success && !exec.alreadyExecuted) {
             throw new Error('Virtual execution failed');
         }

@@ -15,7 +15,8 @@ import {
     hasAccountExecutedSignal,
 } from '@/lib/accounts';
 import { evaluateAccountPhase, type PhaseEvalResult } from '@/lib/account-phase';
-import type { GenericSignal, SignalLeg, DeltaOrder, UserOrders } from '@/lib/per-user-order-generator';
+import type { GenericSignal, SignalLeg, DeltaOrder, OptionsOrder, UserOrders } from '@/lib/per-user-order-generator';
+import type { Account } from '@/lib/accounts';
 
 // ─── Order Generation ────────────────────────────────────────────────────────
 
@@ -32,8 +33,8 @@ export async function generateAccountOrders(
     if (!account) throw new Error(`Account ${accountId} not found`);
 
     const positions = await getAccountPositions(accountId);
-    const posMap: Record<string, { qty: number; avgPrice: number }> = {};
-    for (const p of positions) posMap[p.symbol] = { qty: p.quantity, avgPrice: p.avg_price };
+    const posMap: Record<string, { qty: number; avgPrice: number; instrumentType: string }> = {};
+    for (const p of positions) posMap[p.symbol] = { qty: p.quantity, avgPrice: p.avg_price, instrumentType: p.instrument_type };
 
     const equityLegs: SignalLeg[] = (signal.legs || []).filter(
         (l) => l.leg_type === 'equity' || (!l.leg_type && typeof l.target_pct === 'number' && l.target_pct > 0 && l.target_pct <= 1)
@@ -41,11 +42,12 @@ export async function generateAccountOrders(
     const symbols = equityLegs.map((l) => l.symbol);
     const prices = await fetchMarketPrices(symbols);
 
-    // NLV (cash + positions at live prices)
+    // NLV (cash + positions at live prices). Options carry a 100× contract multiplier.
     let nlv = account.cash_balance;
     for (const [sym, pos] of Object.entries(posMap)) {
         const px = prices[sym] || pos.avgPrice || 0;
-        nlv += pos.qty * px;
+        const mult = pos.instrumentType === 'option' ? 100 : 1;
+        nlv += pos.qty * px * mult;
     }
 
     // ── Phase evaluation (NLV-driven capital scaling) ──
@@ -83,14 +85,31 @@ export async function generateAccountOrders(
 
     const equityOrders = rawOrders.sort((a, b) => (a.action === 'sell' && b.action !== 'sell' ? -1 : 1));
 
-    // Options pass-through: the named-account model currently executes equity
-    // legs; options intent is surfaced in the email but not auto-executed.
+    // ── Options legs (e.g. QQQ_LEAPS) ──
+    // The named-account model now executes option legs into the virtual ledger,
+    // priced at live mid via the IB-primary /api/quote/option endpoint. Sized to
+    // the account's NLV and capped by its phase. Idempotent per (account, signal).
+    let optionsOrders: OptionsOrder[] = [];
+    let skipOptions = false;
+    let skipReason: string | undefined;
+    try {
+        const opt = await generateAccountOptionOrders(signal, account, nlv, phaseCap, posMap);
+        optionsOrders = opt.orders;
+        skipOptions = opt.skip;
+        skipReason = opt.reason;
+    } catch (err) {
+        skipOptions = true;
+        skipReason = `Options order build failed: ${err instanceof Error ? err.message : String(err)}`;
+        console.error(`[AccountOrderGen] ${skipReason}`);
+    }
+
     return {
         equityOrders,
-        optionsOrders: [],
+        optionsOrders,
         virtualNlv: nlv,
         cashBalance: account.cash_balance,
-        skipOptions: false,
+        skipOptions,
+        skipReason,
         // Phase context for the fan-out email / UI (extra fields are additive).
         phase: phase.name,
         phaseCap,
@@ -116,11 +135,14 @@ export interface AccountExecuteResult {
 
 /**
  * Execute delta orders into an account's ledger. Idempotent per (account, signal).
+ * Accepts equity orders (DeltaOrder) and option orders (OptionsOrder); options are
+ * written with instrument_type='option' so the 100× contract multiplier applies.
  */
 export async function executeAccountOrders(
     accountId: number,
     signalId: string,
-    orders: DeltaOrder[]
+    orders: DeltaOrder[],
+    optionOrders: OptionsOrder[] = []
 ): Promise<AccountExecuteResult> {
     if (await hasAccountExecutedSignal(accountId, signalId)) {
         return { success: false, alreadyExecuted: true };
@@ -143,6 +165,25 @@ export async function executeAccountOrders(
                 price: order.price,
                 signal_id: signalId,
                 source: 'signal',
+                instrument_type: 'equity',
+            });
+        }
+
+        // Option legs → virtual positions. Buy→'buy' (debit), Sell→'sell' (credit).
+        // The 100× multiplier is applied inside applyActivity for instrument_type='option'.
+        for (const oo of optionOrders) {
+            const qty = Math.abs(Math.round(oo.quantity));
+            if (qty === 0) continue;
+            const isBuy = oo.action.toLowerCase().startsWith('buy');
+            await applyActivity(client, accountId, {
+                type: isBuy ? 'buy' : 'sell',
+                symbol: oo.symbol,
+                quantity: qty,
+                price: oo.limitPrice,
+                signal_id: signalId,
+                source: 'signal',
+                instrument_type: oo.instrumentType === 'Equity Option' ? 'option' : 'equity',
+                note: oo.instruction,
             });
         }
 
@@ -180,4 +221,108 @@ async function fetchMarketPrices(symbols: string[]): Promise<Record<string, numb
         console.warn('[AccountOrderGen] Failed to fetch market prices:', err);
     }
     return {};
+}
+
+// ─── Options (QQQ_LEAPS) ─────────────────────────────────────────────────────
+
+interface OptionQuote {
+    mid: number;
+    bid: number;
+    ask: number;
+    delta: number | null;
+    basis: string;
+    conId?: number;
+}
+
+/** Fetch a live option quote (mid price) from the IB-primary 8002 proxy. */
+async function fetchOptionQuote(symbol: string, expiry: string, strike: number, right: 'C' | 'P'): Promise<OptionQuote | null> {
+    try {
+        const base = process.env.EC2_API_URL || process.env.TASTYTRADE_API_URL || 'http://34.203.194.137:8002';
+        const ymd = expiry.replace(/-/g, '');
+        const res = await fetch(
+            `${base}/api/quote/option?symbol=${encodeURIComponent(symbol)}&expiry=${ymd}&strike=${strike}&right=${right}`,
+            { cache: 'no-store' }
+        );
+        if (!res.ok) return null;
+        const q = await res.json();
+        if (typeof q.mid !== 'number' || q.mid <= 0) return null;
+        return { mid: q.mid, bid: q.bid, ask: q.ask, delta: q.delta ?? null, basis: q.basis || 'live', conId: q.conId };
+    } catch (err) {
+        console.warn('[AccountOrderGen] option quote failed:', err);
+        return null;
+    }
+}
+
+/** Build an OCC-style virtual position symbol: QQQ_20280121C00616 */
+function optionSymbol(underlying: string, expiry: string, right: 'C' | 'P', strike: number): string {
+    const ymd = expiry.replace(/-/g, '');
+    const strikeInt = Math.round(strike);
+    return `${underlying}_${ymd}${right}${String(strikeInt).padStart(5, '0')}`;
+}
+
+/**
+ * Generate account-specific option orders from a QQQ_LEAPS-style signal.
+ * Sizes the LEAPS entry to the account's NLV capped by its phase, and skips if
+ * the account already holds an open LEAPS call (entry guard). Returns orders +
+ * skip metadata for the fan-out email.
+ */
+async function generateAccountOptionOrders(
+    signal: GenericSignal,
+    account: Account,
+    nlv: number,
+    phaseCap: number,
+    posMap: Record<string, { qty: number; avgPrice: number; instrumentType: string }>
+): Promise<{ orders: OptionsOrder[]; skip: boolean; reason?: string }> {
+    const empty = { orders: [] as OptionsOrder[], skip: false };
+
+    // Only ENTER actions with a valid option contract produce an opening order.
+    const action = (signal.type || (signal as any).action || '').toUpperCase();
+    if (action !== 'ENTER') {
+        return { orders: [], skip: true, reason: `No entry (action=${action || 'none'})` };
+    }
+
+    const strike = Number((signal as any).strike);
+    const expiry = String((signal as any).expiry || '');
+    const underlying = String((signal as any).symbol || 'QQQ');
+    if (!strike || !expiry) {
+        return { orders: [], skip: true, reason: 'Signal missing strike/expiry' };
+    }
+
+    // Entry guard: skip if the account already holds an open LEAPS call on this underlying.
+    const hasOpenLeaps = Object.entries(posMap).some(
+        ([sym, p]) => p.instrumentType === 'option' && p.qty > 0 && sym.startsWith(`${underlying}_`) && sym.includes('C')
+    );
+    if (hasOpenLeaps) {
+        return { orders: [], skip: true, reason: `Already holding an open ${underlying} LEAPS call — no new entry` };
+    }
+
+    // Live price for the contract (mid via IB-primary proxy).
+    const quote = await fetchOptionQuote(underlying, expiry, strike, 'C');
+    const price = quote?.mid ?? Number((signal as any).entry_px) ?? 0;
+    if (!price || price <= 0) {
+        return { orders: [], skip: true, reason: 'No live option price available' };
+    }
+
+    // Size to NLV capped by phase; LEAPS debit must fit within phaseCap of NLV.
+    const budget = nlv * Math.min(phaseCap, 0.95);
+    const contracts = Math.floor(budget / (price * 100));
+    if (contracts < 1) {
+        return { orders: [], skip: true, reason: `Contract cost ($${(price * 100).toFixed(0)}) exceeds phase budget ($${budget.toFixed(0)})` };
+    }
+
+    const sym = optionSymbol(underlying, expiry, 'C', strike);
+    const debit = contracts * price * 100;
+    const dstr = expiry;
+    return {
+        orders: [{
+            action: 'Buy to Open',
+            symbol: sym,
+            quantity: contracts,
+            limitPrice: price,
+            instrumentType: 'Equity Option',
+            priceEffect: 'Debit',
+            instruction: `Buy to Open ${contracts} ${underlying} $${strike} Call exp ${dstr} at ~$${price.toFixed(2)} (mid, ${quote?.basis || 'signal'}) — debit ~$${debit.toFixed(0)}`,
+        }],
+        skip: false,
+    };
 }

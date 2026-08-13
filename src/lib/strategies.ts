@@ -16,10 +16,10 @@ export const STRATEGIES: StrategyConfig[] = [
         key: 'TQQQ_TURBOCORE_PRO',
         label: 'Turbo Pro',
         shortLabel: 'Pro',
-        description: 'IV-Switching composite: CSP, ZEBRA, Bear Call Spreads, Crash Hedge',
+        description: 'ETF-only regime allocator: rotates QQQ / QLD / TQQQ / SGOV by trend, momentum, regime, and ML confidence, with stress guards for drawdown control',
         icon: Zap,
         color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
-        managedSymbols: ['QQQ', 'QQQM', 'TQQQ', 'SQQQ'],
+        managedSymbols: ['QQQ', 'QLD', 'TQQQ', 'SGOV'],
         signalCardType: 'turbocore',  // routes internally to IVSwitchingSignalCard
     },
     {

@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getPendingSignals, getUserExecutionForSignal } from '@/lib/db';
+import { STRATEGIES } from '@/lib/strategies';
+
+// Only the two active strategies surface in the Signals tab. Legacy strategies
+// (theta, TQQQ_TURBOCORE, calendar-spread, turbobounce, etc.) still have pending
+// rows in the DB but are no longer offered, so they are filtered out here.
+const ACTIVE_STRATEGY_KEYS = new Set(STRATEGIES.map((s) => s.key.toUpperCase()));
 
 export const maxDuration = 35;
 
@@ -9,7 +15,10 @@ export async function GET() {
         console.log('[Signals API] Fetching directly from RDS...');
         const start = Date.now();
 
-        const signals = await getPendingSignals();
+        const allSignals = await getPendingSignals();
+        const signals = (allSignals || []).filter((s) =>
+            ACTIVE_STRATEGY_KEYS.has(String(s.strategy || '').toUpperCase())
+        );
 
         // Decode Privy token to get user ID
         const cookieStore = await cookies();

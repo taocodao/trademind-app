@@ -5,9 +5,18 @@ import Stripe from 'stripe';
 
 export const dynamic = 'force-dynamic';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2025-01-27.acacia' as any,
-});
+// Lazy-init Stripe so module evaluation doesn't require STRIPE_SECRET_KEY at
+// build time (Next.js collects page data for this route during `next build`,
+// where the secret is not injected). Instantiated on first request instead.
+let _stripe: Stripe | null = null;
+function getStripe(): Stripe {
+    if (!_stripe) {
+        _stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+            apiVersion: '2025-01-27.acacia' as any,
+        });
+    }
+    return _stripe;
+}
 
 export async function POST(req: NextRequest) {
     try {
@@ -28,7 +37,7 @@ export async function POST(req: NextRequest) {
         // If paid, cancel Stripe subscription item
         if (!feature.is_free_entitlement && feature.stripe_subscription_item_id) {
             try {
-                await stripe.subscriptionItems.del(feature.stripe_subscription_item_id);
+                await getStripe().subscriptionItems.del(feature.stripe_subscription_item_id);
             } catch (err: any) {
                 console.error('Stripe item deletion failed:', err.message);
             }

@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import { useAccountContext } from "@/components/providers/AccountContext";
 import { STRATEGIES, getStrategy } from "@/lib/strategies";
+import { BROKERS, getBroker } from "@/lib/brokers";
 
 type RiskLevel = 'conservative' | 'moderate' | 'aggressive';
 
@@ -39,6 +40,7 @@ export default function AccountsPage() {
     const [name, setName] = useState('');
     const [strategy, setStrategy] = useState(STRATEGIES[0].key);
     const [riskLevel, setRiskLevel] = useState<RiskLevel>('moderate');
+    const [broker, setBroker] = useState(BROKERS[0].key);
     const [principal, setPrincipal] = useState('');
     const [createError, setCreateError] = useState<string | null>(null);
 
@@ -81,14 +83,14 @@ export default function AccountsPage() {
             const res = await fetch('/api/accounts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: name.trim(), strategy, riskLevel, initialPrincipal: p }),
+                body: JSON.stringify({ name: name.trim(), strategy, riskLevel, initialPrincipal: p, broker }),
             });
             if (!res.ok) {
                 const d = await res.json();
                 throw new Error(d.error || 'Failed to create account');
             }
             setShowCreate(false);
-            setName(''); setPrincipal(''); setRiskLevel('moderate');
+            setName(''); setPrincipal(''); setRiskLevel('moderate'); setBroker(BROKERS[0].key);
             await refreshAccounts();
         } catch (e: any) {
             setCreateError(e.message);
@@ -185,6 +187,11 @@ export default function AccountsPage() {
                                             <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-white/5 text-tm-muted border border-white/10 capitalize">
                                                 {a.risk_level}
                                             </span>
+                                            {a.broker && (
+                                                <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                                                    {getBroker(a.broker)?.name || a.broker}
+                                                </span>
+                                            )}
                                             {s?.phase && (
                                                 <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold border ${
                                                     s.phase === 'TARGET' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' :
@@ -273,6 +280,19 @@ export default function AccountsPage() {
                                     className={`py-2 rounded-lg text-xs font-bold border capitalize transition ${riskLevel === r ? 'bg-tm-purple/20 border-tm-purple text-white' : 'bg-white/5 border-white/10 text-tm-muted hover:text-white'}`}
                                 >
                                     {r}
+                                </button>
+                            ))}
+                        </div>
+
+                        <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">Brokerage</label>
+                        <div className="grid grid-cols-2 gap-2 mb-4">
+                            {BROKERS.map((b) => (
+                                <button
+                                    key={b.key}
+                                    onClick={() => setBroker(b.key)}
+                                    className={`py-2 rounded-lg text-xs font-bold border transition ${broker === b.key ? 'bg-tm-purple/20 border-tm-purple text-white' : 'bg-white/5 border-white/10 text-tm-muted hover:text-white'}`}
+                                >
+                                    {b.name}
                                 </button>
                             ))}
                         </div>

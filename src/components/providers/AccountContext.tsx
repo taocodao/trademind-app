@@ -9,6 +9,7 @@ export interface Account {
     name: string;
     strategy: string;
     risk_level: 'conservative' | 'moderate' | 'aggressive';
+    broker: string;
     initial_principal: number;
     cash_balance: number;
     created_at: string;

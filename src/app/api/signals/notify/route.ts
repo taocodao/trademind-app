@@ -30,21 +30,31 @@ export async function POST(req: Request) {
                     const signal = signalRes.rows[0];
                     const signalData = typeof signal.data === 'string' ? JSON.parse(signal.data) : signal.data;
 
-                    // Run fan-out asynchronously (don't block the response)
-                    fanoutSignal(signalId.toString(), {
-                        strategy: signal.strategy,
-                        ...signalData,
-                    }).then(result => {
-                        console.log(`[Notify] Fan-out complete for signal ${signalId}:`, result);
-                    }).catch(err => {
+                    // Await the fan-out so it completes before the response returns.
+                    // On Vercel serverless, an un-awaited promise is killed when the
+                    // function freezes after the response — which silently dropped
+                    // every account execution. maxDuration=60 gives it room to finish.
+                    try {
+                        const fanoutResult = await fanoutSignal(signalId.toString(), {
+                            strategy: signal.strategy,
+                            ...signalData,
+                        });
+                        console.log(`[Notify] Fan-out complete for signal ${signalId}:`, fanoutResult);
+                        return NextResponse.json({
+                            success: true,
+                            message: `Notification sent and fan-out completed for ${strategy}`,
+                            signalId,
+                            fanout: fanoutResult,
+                        });
+                    } catch (err) {
                         console.error(`[Notify] Fan-out failed for signal ${signalId}:`, err);
-                    });
-
-                    return NextResponse.json({
-                        success: true,
-                        message: `Notification sent and fan-out started for ${strategy}`,
-                        signalId,
-                    });
+                        return NextResponse.json({
+                            success: false,
+                            message: `Fan-out failed for ${strategy}`,
+                            signalId,
+                            error: err instanceof Error ? err.message : String(err),
+                        }, { status: 500 });
+                    }
                 } else {
                     console.warn(`[Notify] Signal ${signalId} not found in database`);
                 }

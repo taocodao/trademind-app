@@ -1,9 +1,5 @@
-import Stripe from 'stripe';
 import pool from '@/lib/db';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2025-01-27.acacia' as any,
-});
+import { getStripe } from '@/lib/stripe-server';
 
 // Daily rate per price ID (in USD)
 function getDailyRate(priceId: string): number {
@@ -51,7 +47,7 @@ export async function extendReferrerSubscription(
         const priceId = row.stripe_price_id;
 
         // 2. Fetch live subscription from Stripe
-        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
         if (!['active', 'trialing'].includes(subscription.status)) {
             console.log(`⏭️  extendReferrerSubscription: subscription ${subscriptionId} is ${subscription.status}, skipping.`);
             return null;
@@ -68,7 +64,7 @@ export async function extendReferrerSubscription(
         const newTrialEnd = new Date(newTrialEndTimestamp * 1000);
 
         // 5. Update Stripe subscription — push renewal date forward
-        await stripe.subscriptions.update(subscriptionId, {
+        await getStripe().subscriptions.update(subscriptionId, {
             trial_end: newTrialEndTimestamp,
             proration_behavior: 'none',
         } as any);

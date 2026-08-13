@@ -2,12 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import Stripe from "stripe";
 import pool from "@/lib/db";
+import { getStripe } from '@/lib/stripe-server';
 
 export const dynamic = 'force-dynamic';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2025-01-27.acacia" as any,
-});
 
 /** Extract user ID from either the Privy session cookie (server-side) or a Bearer JWT (client-side fallback). */
 async function getUserId(req: NextRequest): Promise<string | null> {
@@ -61,7 +58,7 @@ export async function POST(req: NextRequest) {
 
         if (!customerId) {
             // Create Stripe customer and store DID in metadata (per guide Section Privy ↔ Stripe)
-            const customer = await stripe.customers.create({
+            const customer = await getStripe().customers.create({
                 metadata: { privy_did: userId },
             });
             customerId = customer.id;
@@ -163,7 +160,7 @@ export async function POST(req: NextRequest) {
             sessionPayload.client_reference_id = referralCode;
         }
 
-        const session = await stripe.checkout.sessions.create(sessionPayload);
+        const session = await getStripe().checkout.sessions.create(sessionPayload);
         return NextResponse.json({ url: session.url });
 
     } catch (error: any) {

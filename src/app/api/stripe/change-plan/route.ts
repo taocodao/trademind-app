@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import Stripe from "stripe";
 import pool from "@/lib/db";
+import { getStripe } from '@/lib/stripe-server';
 
 export const dynamic = 'force-dynamic';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2025-01-27.acacia" as any,
-});
 
 export async function POST(req: NextRequest) {
     try {
@@ -33,14 +29,14 @@ export async function POST(req: NextRequest) {
         }
 
         // Retrieve current subscription to get the ITEM ID (critical — must replace item, not add)
-        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
         const itemId = subscription.items.data[0].id;
 
         // Use always_invoice for upgrades (immediate charge + access)
         // Use create_prorations for downgrades (credit applied at next renewal)
         const proration_behavior = isUpgrade ? "always_invoice" : "create_prorations";
 
-        const updated = await stripe.subscriptions.update(subscriptionId, {
+        const updated = await getStripe().subscriptions.update(subscriptionId, {
             items: [{ id: itemId, price: newPriceId }],
             proration_behavior,
             payment_behavior: "pending_if_incomplete", // Don't change tier if payment fails

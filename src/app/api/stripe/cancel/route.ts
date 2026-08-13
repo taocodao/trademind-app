@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
 import { cookies } from 'next/headers';
 import pool from '@/lib/db';
+import { getStripe } from '@/lib/stripe-server';
 
 export const dynamic = 'force-dynamic';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2025-01-27.acacia' as any,
-});
 
 async function getUserId(req: NextRequest): Promise<string | null> {
     // 1. Cookie-based (primary — works for browser requests)
@@ -54,10 +50,10 @@ export async function POST(req: NextRequest) {
         let subscription: any;
         if (status === 'trialing') {
             // Immediate cancel for trial users — no charge ever made
-            subscription = await stripe.subscriptions.cancel(subscriptionId);
+            subscription = await getStripe().subscriptions.cancel(subscriptionId);
         } else {
             // Graceful cancel: revoke at end of billing period
-            subscription = await stripe.subscriptions.update(subscriptionId, {
+            subscription = await getStripe().subscriptions.update(subscriptionId, {
                 cancel_at_period_end: true,
             });
         }
@@ -95,7 +91,7 @@ export async function PUT(req: NextRequest) {
         const subscriptionId = result.rows[0]?.stripe_subscription_id;
         if (!subscriptionId) return NextResponse.json({ error: 'No subscription found' }, { status: 404 });
 
-        const subscription = await stripe.subscriptions.update(subscriptionId, {
+        const subscription = await getStripe().subscriptions.update(subscriptionId, {
             cancel_at_period_end: false,
         }) as any;
 

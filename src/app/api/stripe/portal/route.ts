@@ -2,12 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import Stripe from 'stripe';
 import pool from '@/lib/db';
+import { getStripe } from '@/lib/stripe-server';
 
 export const dynamic = 'force-dynamic';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2025-01-27.acacia' as any,
-});
 
 export async function POST(req: NextRequest) {
     try {
@@ -51,7 +48,7 @@ export async function POST(req: NextRequest) {
         type PortalLocale = Stripe.BillingPortal.SessionCreateParams.Locale;
         const stripeLocale: PortalLocale = (ALLOWED_LOCALES.includes(locale as any) ? locale : 'en') as PortalLocale;
 
-        const session = await stripe.billingPortal.sessions.create({
+        const session = await getStripe().billingPortal.sessions.create({
             customer: customerId,
             return_url: `${origin}/settings`,
             locale: stripeLocale,

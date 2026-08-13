@@ -6,13 +6,10 @@ import { resolvePromoCode } from "@/lib/promo-codes";
 import { PRICING } from "@/lib/pricing-config";
 import { sendWhopDM } from "@/lib/whop";
 import { promoteToWhopCommunity, revokeWhopCommunity } from "@/lib/whop-community";
+import { getStripe } from '@/lib/stripe-server';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs'; // Required for raw body access in App Router
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2025-01-27.acacia" as any,
-});
 
 // ── Config ─────────────────────────────────────────────────────────────────
 // REFERRAL_FEE: total bilateral credit per referral (default $100)
@@ -37,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     let event: Stripe.Event;
     try {
-        event = stripe.webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET!);
+        event = getStripe().webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET!);
     } catch (err: any) {
         console.error(`Webhook signature verification failed: ${err.message}`);
         return new Response(`Webhook Error: ${err.message}`, { status: 400 });
@@ -70,7 +67,7 @@ async function processWebhookEvent(event: Stripe.Event) {
 
             if (!userId || !subscriptionId) break;
 
-            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+            const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
             const priceId = subscription.items.data[0].price.id;
             const tier = determineTierFromPrice(priceId);
             const billingInterval = subscription.items.data[0].price.recurring?.interval ?? "month";
@@ -86,7 +83,7 @@ async function processWebhookEvent(event: Stripe.Event) {
             if (existingSubscriptionId && existingSubscriptionId !== subscriptionId) {
                 console.log(`⚠️ User ${userId} completed new checkout session but already has subscription ${existingSubscriptionId}. Canceling orphaned subscription.`);
                 try {
-                    await stripe.subscriptions.cancel(existingSubscriptionId);
+                    await getStripe().subscriptions.cancel(existingSubscriptionId);
                 } catch (cancelErr: any) {
                     if (cancelErr.code !== 'resource_missing') {
                         console.error(`Failed to cancel orphaned subscription ${existingSubscriptionId}:`, cancelErr);
@@ -369,7 +366,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     // prevents double-credit even if Stripe delivers this event twice.
     if (billingReason === 'subscription_cycle' && subscriptionId) {
         try {
-            const sub = await stripe.subscriptions.retrieve(subscriptionId) as any;
+            const sub = await getStripe().subscriptions.retrieve(subscriptionId) as any;
             const startDate: number = sub.start_date;
             const periodStart: number = (invoice as any).period_start;
 
@@ -445,7 +442,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     const isFirstPayment = billingReason === "subscription_create";
     const isRenewal = billingReason === "subscription_cycle";
 
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
     const isAnnual = subscription.items.data[0].price.recurring?.interval === "year";
 
     // ── Fraud Prevention ──────────────────────────────────────────────────
@@ -516,7 +513,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
 // ── Card Fingerprint: Trial Abuse Prevention ───────────────────────────────
 async function recordCardFingerprint(userId: string, stripeCustomerId: string) {
     try {
-        const paymentMethods = await stripe.paymentMethods.list({
+        const paymentMethods = await getStripe().paymentMethods.list({
             customer: stripeCustomerId,
             type: "card",
         });

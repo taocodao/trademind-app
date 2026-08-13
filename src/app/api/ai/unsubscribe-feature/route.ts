@@ -1,22 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/ai';
 import { query } from '@/lib/db';
-import Stripe from 'stripe';
+import { getStripe } from '@/lib/stripe-server';
 
 export const dynamic = 'force-dynamic';
-
-// Lazy-init Stripe so module evaluation doesn't require STRIPE_SECRET_KEY at
-// build time (Next.js collects page data for this route during `next build`,
-// where the secret is not injected). Instantiated on first request instead.
-let _stripe: Stripe | null = null;
-function getStripe(): Stripe {
-    if (!_stripe) {
-        _stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-            apiVersion: '2025-01-27.acacia' as any,
-        });
-    }
-    return _stripe;
-}
 
 export async function POST(req: NextRequest) {
     try {

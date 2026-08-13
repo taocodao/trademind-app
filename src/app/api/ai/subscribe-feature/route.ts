@@ -2,12 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/ai';
 import { query } from '@/lib/db';
 import Stripe from 'stripe';
+import { getStripe } from '@/lib/stripe-server';
 
 export const dynamic = 'force-dynamic';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2025-01-27.acacia' as any,
-});
 
 const FREE_FEATURE_LIMITS: Record<string, number> = {
     'observer': 0,
@@ -118,7 +115,7 @@ export async function POST(req: NextRequest) {
         // Verify subscription still exists in Stripe before adding items
         let subscription;
         try {
-            subscription = await stripe.subscriptions.retrieve(subscriptionId);
+            subscription = await getStripe().subscriptions.retrieve(subscriptionId);
         } catch (stripeErr: any) {
             if (stripeErr.code === 'resource_missing') {
                 // Stale subscription ID — clear it from DB so user can re-subscribe cleanly
@@ -142,7 +139,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Add a new item to the existing subscription
-        const subItem = await stripe.subscriptionItems.create({
+        const subItem = await getStripe().subscriptionItems.create({
             subscription: subscriptionId,
             price: addonPriceId,
             quantity: 1,

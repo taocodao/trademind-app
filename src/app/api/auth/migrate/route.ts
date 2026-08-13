@@ -26,12 +26,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { validateMigrationToken, consumeMigrationToken } from '@/lib/migration';
 import { query } from '@/lib/db';
+import { getStripe } from '@/lib/stripe-server';
 
 export const dynamic = 'force-dynamic';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2025-01-27.acacia' as any,
-});
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
     const token   = req.nextUrl.searchParams.get('token');
@@ -85,11 +82,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         let customerId: string | undefined = user.stripe_customer_id ?? undefined;
 
         if (!customerId) {
-            const existing = await stripe.customers.list({ email: payload.email, limit: 1 });
+            const existing = await getStripe().customers.list({ email: payload.email, limit: 1 });
             if (existing.data.length > 0) {
                 customerId = existing.data[0].id;
             } else {
-                const newCustomer = await stripe.customers.create({
+                const newCustomer = await getStripe().customers.create({
                     email:    payload.email,
                     metadata: {
                         whop_user_id:     payload.whop_user_id,
@@ -145,7 +142,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
             delete (sessionParams as any).allow_promotion_codes;
         }
 
-        const session = await stripe.checkout.sessions.create(sessionParams);
+        const session = await getStripe().checkout.sessions.create(sessionParams);
 
         console.log(`[Migration] ✅ Stripe Checkout Session created for ${payload.email}`);
         return NextResponse.redirect(session.url!);

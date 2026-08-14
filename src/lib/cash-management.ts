@@ -56,7 +56,10 @@ export const CASH_MGMT: CashMgmtConfig = {
     volAdjMax: 0.05,
     ddAddByPhase: { SEED: 0.0, GROWTH: 0.10, TARGET: 0.15 },
     reserveCap: 0.60,
-    deltaCeilingByPhase: { SEED: null, GROWTH: 1.75, TARGET: 1.50 },
+    // Tuned by backtest ceiling sweep (2019-2026): 2.00x captures the full
+    // drawdown benefit of the tightest cap (-24.5%) with the best Sharpe (1.67).
+    // Tighter (1.5x) adds no drawdown reduction; looser (2.5x) adds drawdown.
+    deltaCeilingByPhase: { SEED: null, GROWTH: 2.0, TARGET: 2.0 },
     vixCalm: 15,
     vixStress: 30,
 };

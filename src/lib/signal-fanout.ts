@@ -220,7 +220,9 @@ function selectTier(signalData: SignalData, riskLevel: 'conservative' | 'moderat
 
 async function getUserEmail(userId: string): Promise<string | null> {
     try {
-        const res = await pool.query(`SELECT email FROM users WHERE id = $1`, [userId]);
+        // users.id is a uuid, but account user_ids are Privy DIDs ("did:privy:...").
+        // Cast the column to text so the comparison never trips a uuid parse error.
+        const res = await pool.query(`SELECT email FROM users WHERE id::text = $1`, [userId]);
         return res.rows[0]?.email || null;
     } catch (err) {
         console.warn(`[Fanout] Failed to fetch email for user ${userId}:`, err);

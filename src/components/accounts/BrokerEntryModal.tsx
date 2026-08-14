@@ -7,8 +7,28 @@ import { BROKERS, isOptionOrder, type BrokerOrder } from "@/lib/brokers";
 interface Props {
     order: BrokerOrder;
     accountName?: string;
+    /** The account's brokerage (e.g. 'etrade' | 'fidelity'). Preselects the ticket. */
+    accountBroker?: string;
     onClose: () => void;
 }
+
+// Parse a compact option symbol like "QQQ_20271217C00770" → contract details.
+function parseOptionSymbol(sym: string): { underlying: string; expiry: string; strike: number; right: 'call' | 'put' } | null {
+    const m = /^([A-Z.]+)_(\d{4})(\d{2})(\d{2})([CP])(\d+(?:\.\d+)?)$/i.exec(sym);
+    if (!m) return null;
+    return {
+        underlying: m[1].toUpperCase(),
+        expiry: `${m[2]}-${m[3]}-${m[4]}`,
+        strike: parseFloat(m[6]),
+        right: m[5].toUpperCase() === 'C' ? 'call' : 'put',
+    };
+}
+
+// Per-broker ticket theming so the replica matches the firm's actual GUI.
+const BROKER_THEME: Record<string, { brand: string; brandClass: string; previewClass: string }> = {
+    fidelity: { brand: 'Fidelity', brandClass: 'text-[#5a8a29] italic', previewClass: 'bg-[#4c7a1f]' },
+    etrade:   { brand: 'E*TRADE',  brandClass: 'text-[#6b2d8b] not-italic', previewClass: 'bg-[#6b2d8b]' },
+};
 
 function CopyBtn({ text, tag, copied, onCopy }: { text: string; tag: string; copied: string | null; onCopy: (t: string, g: string) => void }) {
     return (
@@ -46,12 +66,30 @@ function FieldBox({ label, value, copied, onCopy, hint, wide }: {
  * Broker-agnostic via the BROKERS registry; Fidelity's Stocks/ETFs ticket is
  * modeled first (digital.fidelity.com/ftgw/digital/trade-equity).
  */
-export function BrokerEntryModal({ order, accountName, onClose }: Props) {
-    const [brokerKey, setBrokerKey] = useState(BROKERS[0].key);
+export function BrokerEntryModal({ order, accountName, accountBroker, onClose }: Props) {
+    // Enrich the order with parsed option details when the symbol encodes a
+    // contract (e.g. QQQ_20271217C00770) but no option spec was supplied.
+    const parsed = !order.option ? parseOptionSymbol(order.symbol) : null;
+    const enriched: BrokerOrder = parsed
+        ? {
+            ...order,
+            symbol: parsed.underlying,
+            option: {
+                expiry: parsed.expiry,
+                strike: parsed.strike,
+                right: parsed.right,
+                openClose: order.action === 'buy' ? 'open' : 'close',
+            },
+        }
+        : order;
+
+    const initialBroker = (accountBroker && BROKERS.find((b) => b.key === accountBroker)) ? accountBroker : BROKERS[0].key;
+    const [brokerKey, setBrokerKey] = useState(initialBroker);
     const [copied, setCopied] = useState<string | null>(null);
     const broker = BROKERS.find((b) => b.key === brokerKey) ?? BROKERS[0];
-    const fields = broker.buildFields(order);
-    const script = broker.autofill(order);
+    const theme = BROKER_THEME[broker.key] ?? BROKER_THEME.fidelity;
+    const fields = broker.buildFields(enriched);
+    const script = broker.autofill(enriched);
 
     const copy = async (text: string, tag: string) => {
         try {
@@ -61,16 +99,16 @@ export function BrokerEntryModal({ order, accountName, onClose }: Props) {
         } catch { /* clipboard unavailable */ }
     };
 
-    const isBuy = order.action === "buy";
-    const isOption = isOptionOrder(order);
+    const isBuy = enriched.action === "buy";
+    const isOption = isOptionOrder(enriched);
     // Map registry fields by label so we can lay them out like the real ticket.
     const f = (label: string) => fields.find((x) => x.label.toLowerCase() === label.toLowerCase());
     const sym = f("Symbol"), act = f("Action"), qty = f("Quantity"), otype = f("Order type"), tif = f("Time in force");
     const exp = f("Expiration"), strike = f("Strike"), cp = f("Call/Put"), ref = f("Reference price");
-    const opt = order.option;
+    const opt = enriched.option;
     const summary = isOption && opt
-        ? `${act?.value ?? (isBuy ? "Buy" : "Sell")} ${order.quantity} ${order.symbol.toUpperCase()} ${exp?.value ?? ""} $${opt.strike} ${opt.right === "call" ? "C" : "P"}`
-        : `${isBuy ? "Buy" : "Sell"} ${order.quantity} ${order.symbol.toUpperCase()}`;
+        ? `${act?.value ?? (isBuy ? "Buy" : "Sell")} ${enriched.quantity} ${enriched.symbol.toUpperCase()} ${exp?.value ?? ""} $${opt.strike} ${opt.right === "call" ? "C" : "P"}`
+        : `${isBuy ? "Buy" : "Sell"} ${enriched.quantity} ${enriched.symbol.toUpperCase()}`;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4" onClick={onClose}>
@@ -78,10 +116,10 @@ export function BrokerEntryModal({ order, accountName, onClose }: Props) {
                 className="bg-[#f3f1ec] border border-black/10 rounded-lg w-full max-w-md max-h-[92vh] overflow-y-auto shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* ── Ticket header (Fidelity green) ── */}
+                {/* ── Ticket header (broker-branded) ── */}
                 <div className="flex items-center justify-between px-5 py-3 border-b border-black/10 bg-white sticky top-0 z-10">
                     <div className="flex items-center gap-2">
-                        <span className="text-[#5a8a29] font-extrabold italic text-lg leading-none">Fidelity</span>
+                        <span className={`${theme.brandClass} font-extrabold text-lg leading-none`}>{theme.brand}</span>
                         <span className="text-[11px] text-neutral-500 font-medium">Trade · {isOption ? "Options" : broker.tradeType}</span>
                     </div>
                     <button onClick={onClose} className="p-1.5 rounded hover:bg-black/5 text-neutral-500 hover:text-neutral-800 transition">
@@ -110,7 +148,7 @@ export function BrokerEntryModal({ order, accountName, onClose }: Props) {
                         ))}
                     </div>
 
-                    {/* ── Fidelity ticket replica ── */}
+                    {/* ── Broker ticket replica ── */}
                     <div className="bg-white border border-black/10 rounded-lg p-4 space-y-3">
                         {/* Account row (informational) */}
                         <div className="flex items-center justify-between text-[11px] text-neutral-500">
@@ -214,8 +252,8 @@ export function BrokerEntryModal({ order, accountName, onClose }: Props) {
 
                         {/* Preview button */}
                         <div className="pt-2">
-                            <div className="w-full text-center bg-[#4c7a1f] text-white text-sm font-bold rounded-full py-2.5 select-none">Preview order</div>
-                            <p className="text-[10px] text-neutral-400 text-center mt-1.5">Review on Fidelity, then press Preview order yourself.</p>
+                            <div className={`w-full text-center ${theme.previewClass} text-white text-sm font-bold rounded-full py-2.5 select-none`}>Preview order</div>
+                            <p className="text-[10px] text-neutral-400 text-center mt-1.5">Review on {theme.brand}, then press Preview order yourself.</p>
                         </div>
                     </div>
 
@@ -227,7 +265,7 @@ export function BrokerEntryModal({ order, accountName, onClose }: Props) {
                             rel="noopener noreferrer"
                             className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-neutral-900 text-white text-sm font-bold hover:bg-neutral-800 transition"
                         >
-                            <ExternalLink className="w-4 h-4" /> Open Fidelity ticket
+                            <ExternalLink className="w-4 h-4" /> Open {theme.brand} ticket
                         </a>
 
                         {/* autofill script */}
@@ -236,7 +274,7 @@ export function BrokerEntryModal({ order, accountName, onClose }: Props) {
                                 <Bookmark className="w-3 h-3" /> Autofill script (optional)
                             </p>
                             <p className="text-[10px] text-neutral-500 mb-2 leading-relaxed">
-                                On the Fidelity page, paste this into the browser console (or save as a bookmark) to prefill the form. It never submits.
+                                On the {theme.brand} page, paste this into the browser console (or save as a bookmark) to prefill the form. It never submits.
                             </p>
                             <div className="relative">
                                 <pre className="bg-black/50 border border-white/10 rounded p-2 text-[9px] font-mono text-neutral-500 overflow-x-auto whitespace-pre-wrap break-all max-h-20">{script}</pre>

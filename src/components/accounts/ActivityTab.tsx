@@ -28,7 +28,7 @@ const TYPE_META: Record<ActivityType, { label: string; color: string; Icon: any 
     withdraw: { label: 'Withdraw', color: 'text-orange-400 bg-orange-500/10 border-orange-500/20', Icon: ArrowUpFromLine },
 };
 
-export function ActivityTab({ accountId, onChanged }: { accountId: number; onChanged?: () => void }) {
+export function ActivityTab({ accountId, broker, onChanged }: { accountId: number; broker?: string; onChanged?: () => void }) {
     const [activities, setActivities] = useState<Activity[]>([]);
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
@@ -294,7 +294,7 @@ export function ActivityTab({ accountId, onChanged }: { accountId: number; onCha
 
             {/* Enter-at-Broker guided modal */}
             {brokerOrder && (
-                <BrokerEntryModal order={brokerOrder} onClose={() => setBrokerOrder(null)} />
+                <BrokerEntryModal order={brokerOrder} accountBroker={broker} onClose={() => setBrokerOrder(null)} />
             )}
         </div>
     );

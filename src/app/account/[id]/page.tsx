@@ -25,6 +25,7 @@ interface AccountData {
     name: string;
     strategy: string;
     risk_level: string;
+    broker?: string;
     initial_principal: number;
     cash_balance: number;
 }
@@ -191,7 +192,7 @@ export default function AccountDetailPage() {
                 {tab === 'positions' ? (
                     <PositionsTable positions={positions} loading={loading} strategy={account?.strategy || ''} />
                 ) : (
-                    <ActivityTab accountId={accountId} onChanged={fetchPositions} />
+                    <ActivityTab accountId={accountId} broker={account?.broker} onChanged={fetchPositions} />
                 )}
             </div>
         </main>

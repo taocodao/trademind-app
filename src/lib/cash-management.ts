@@ -56,9 +56,10 @@ export const CASH_MGMT: CashMgmtConfig = {
     volAdjMax: 0.05,
     ddAddByPhase: { SEED: 0.0, GROWTH: 0.10, TARGET: 0.15 },
     reserveCap: 0.60,
-    // Tuned by backtest ceiling sweep (2019-2026): 2.00x captures the full
-    // drawdown benefit of the tightest cap (-24.5%) with the best Sharpe (1.67).
-    // Tighter (1.5x) adds no drawdown reduction; looser (2.5x) adds drawdown.
+    // Tuned by backtest ceiling sweep on the FIXED engine (2019-2026, reserve
+    // floor ON): 2.00x gives the full drawdown cut (-46.5% -> -34.5%) at best
+    // Sharpe (0.89) with ~0 CAGR cost vs uncapped. Tighter (1.5x) adds no DD
+    // reduction; looser (2.5x) gives back drawdown. Mirrors backtest CASH_MGMT.
     deltaCeilingByPhase: { SEED: null, GROWTH: 2.0, TARGET: 2.0 },
     vixCalm: 15,
     vixStress: 30,

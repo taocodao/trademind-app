@@ -17,8 +17,8 @@ const FROM_EMAIL = 'TradeMind Signals <signals@trademind.bot>';
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.trademind.bot';
 
 // Public URL of the annotated broker-ticket guide for an equity order (embedded in the email).
-function brokerGuideUrl(o: DeltaOrder): string {
-    return `${BASE_URL}/api/broker-guide?broker=fidelity&symbol=${encodeURIComponent(o.symbol)}&action=${o.action}&quantity=${o.quantity}`;
+function brokerGuideUrl(o: DeltaOrder, broker: string): string {
+    return `${BASE_URL}/api/broker-guide?broker=${encodeURIComponent(broker)}&symbol=${encodeURIComponent(o.symbol)}&action=${o.action}&quantity=${o.quantity}`;
 }
 
 export interface SignalEmailData {
@@ -32,6 +32,12 @@ export interface SignalEmailData {
     skipOptions: boolean;
     skipReason?: string;
     live: boolean;
+    /** Account name, for personalisation. */
+    accountName?: string;
+    /** The account's brokerage (e.g. 'etrade' | 'fidelity'); drives the order-entry guide. */
+    broker?: string;
+    /** ISO timestamp when the signal was generated. */
+    signalTimestamp?: string;
 }
 
 /**
@@ -249,9 +255,69 @@ function buildHtmlBody(data: SignalEmailData): string {
     const strategyLabel =
         stratUp.includes('LEAPS') ? 'QQQ LEAPS'  :
         stratUp.includes('PRO')   ? 'Turbo Pro'   : 'TurboCore';
+    const brokerKey = (data.broker || 'fidelity').toLowerCase();
+    const brokerName = brokerKey === 'etrade' ? 'E*TRADE' : 'Fidelity';
     const dateStr = new Date().toLocaleDateString('en-US', {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     });
+    // Signal generation timestamp (when the strategy fired), distinct from send time.
+    const signalTs = data.signalTimestamp ? new Date(data.signalTimestamp) : null;
+    const signalTsStr = signalTs && !isNaN(signalTs.getTime())
+        ? signalTs.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })
+        : null;
+
+    // ── LEAPS contract infographic ─────────────────────────────────────────
+    // Parse the first option entry (e.g. QQQ_20271217C00770) into a visual
+    // contract card: underlying, strike, expiry, DTE, contracts, est. debit.
+    const firstOpt = data.optionsEntries[0];
+    let leapsCardHtml = '';
+    if (firstOpt) {
+        const m = /^([A-Z.]+)_(\d{4})(\d{2})(\d{2})([CP])(\d+(?:\.\d+)?)$/.exec(firstOpt.symbol || '');
+        if (m) {
+            const underlying = m[1];
+            const expIso = `${m[2]}-${m[3]}-${m[4]}`;
+            const expDate = new Date(`${expIso}T00:00:00Z`);
+            const expStr = expDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+            const dte = Math.max(0, Math.round((expDate.getTime() - Date.now()) / 86400000));
+            const strikeNum = parseFloat(m[6]);
+            const right = m[5] === 'C' ? 'CALL' : 'PUT';
+            const qty = firstOpt.quantity;
+            const px = firstOpt.limitPrice ?? 0;
+            const debit = qty * px * 100;
+            leapsCardHtml = `
+        <div style="margin:0 0 24px 0">
+            <p style="margin:0 0 10px;color:#374151;font-size:11px;font-weight:700;
+                      text-transform:uppercase;letter-spacing:0.07em">LEAPS Contract</p>
+            <div style="background:#0f172a;border-radius:10px;padding:18px 20px;color:#e2e8f0">
+                <table width="100%" cellpadding="0" cellspacing="0"><tr>
+                    <td>
+                        <div style="font-size:11px;color:#94a3b8;letter-spacing:0.05em">${escHtml(underlying)} LEAPS</div>
+                        <div style="font-size:26px;font-weight:800;color:#ffffff;line-height:1.1">$${strikeNum.toFixed(0)} <span style="font-size:15px;font-weight:700;color:#60a5fa">${right}</span></div>
+                    </td>
+                    <td align="right">
+                        <div style="font-size:11px;color:#94a3b8">Expires</div>
+                        <div style="font-size:15px;font-weight:700;color:#ffffff">${escHtml(expStr)}</div>
+                        <div style="font-size:11px;color:#64748b">${dte}d DTE</div>
+                    </td>
+                </tr></table>
+                <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:14px;border-top:1px solid #1e293b;padding-top:12px"><tr>
+                    <td align="center">
+                        <div style="font-size:16px;font-weight:800;color:#ffffff">${qty}</div>
+                        <div style="font-size:10px;color:#94a3b8">contract${qty !== 1 ? 's' : ''}</div>
+                    </td>
+                    <td align="center">
+                        <div style="font-size:16px;font-weight:800;color:#ffffff">$${px.toFixed(2)}</div>
+                        <div style="font-size:10px;color:#94a3b8">per share</div>
+                    </td>
+                    <td align="center">
+                        <div style="font-size:16px;font-weight:800;color:#34d399">$${debit.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                        <div style="font-size:10px;color:#94a3b8">est. debit</div>
+                    </td>
+                </tr></table>
+            </div>
+        </div>`;
+        }
+    }
 
     // Closing positions section
     const closeLegsHtml = data.optionsCloses.length > 0 ? `
@@ -280,12 +346,12 @@ function buildHtmlBody(data: SignalEmailData): string {
                     </div>
                     <div style="margin:2px 0 10px">
                         <p style="margin:0 0 6px;font-size:11px;color:#374151;font-family:monospace">
-                            Enter at Fidelity — follow the numbered fields:
+                            Enter at ${escHtml(brokerName)} — follow the numbered fields:
                         </p>
-                        <img src="${brokerGuideUrl(o)}" alt="Fidelity order entry guide for ${escHtml(o.symbol)}"
+                        <img src="${brokerGuideUrl(o, brokerKey)}" alt="${escHtml(brokerName)} order entry guide for ${escHtml(o.symbol)}"
                              style="width:100%;max-width:560px;border:1px solid #e5e7eb;border-radius:6px;display:block" />
                         <p style="margin:4px 0 0;font-size:10px;color:#9ca3af;font-family:monospace">
-                            Review on Fidelity and press Preview order yourself. TradeMind never submits orders to your brokerage.
+                            Review on ${escHtml(brokerName)} and press Preview order yourself. TradeMind never submits orders to your brokerage.
                         </p>
                     </div>`).join('')
                 : `<div style="background:#f9fafb;border:1px solid #e5e7eb;padding:10px 14px;
@@ -364,7 +430,9 @@ function buildHtmlBody(data: SignalEmailData): string {
     <tr>
       <td style="padding:12px 32px;background:#f9fafb;border-bottom:1px solid #e5e7eb">
         <span style="color:#6b7280;font-size:12px">${escHtml(dateStr)}</span>
+        ${signalTsStr ? `<span style="margin-left:12px;color:#6b7280;font-size:12px">Signal generated: ${escHtml(signalTsStr)}</span>` : ''}
         ${data.confidence ? `<span style="margin-left:12px;color:#374151;font-size:12px;font-weight:600">Confidence: ${(data.confidence * 100).toFixed(0)}%</span>` : ''}
+        ${data.accountName ? `<span style="margin-left:12px;color:#6b7280;font-size:12px">${escHtml(data.accountName)}</span>` : ''}
       </td>
     </tr>
 
@@ -373,6 +441,7 @@ function buildHtmlBody(data: SignalEmailData): string {
         ${data.rationale ? `<p style="border-left:3px solid #e5e7eb;padding:8px 14px;font-size:13px;
                   color:#6b7280;margin:0 0 24px;line-height:1.7;font-style:italic">${escHtml(data.rationale)}</p>` : ''}
         ${closeLegsHtml}
+        ${leapsCardHtml}
         ${equityHtml}
         ${optionsHtml}
         ${statusHtml}

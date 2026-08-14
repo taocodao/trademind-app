@@ -281,8 +281,16 @@ async function generateAccountOptionOrders(
         return { orders: [], skip: true, reason: `No entry (action=${action || 'none'})` };
     }
 
-    const strike = Number((signal as any).strike);
-    const expiry = String((signal as any).expiry || '');
+    // Select the LEAPS contract for this account's risk level. The signal carries
+    // a per-tier contract (conservative/moderate/aggressive) computed by the
+    // backend (delta & DTE scaled by risk); fall back to the top-level
+    // (moderate) contract for older signals without a tiers block.
+    const riskLevel = String((account as any).risk_level || 'moderate').toLowerCase();
+    const tiers = (signal as any).tiers || {};
+    const tier = tiers[riskLevel] || null;
+
+    const strike = Number(tier?.strike ?? (signal as any).strike);
+    const expiry = String(tier?.expiry ?? (signal as any).expiry ?? '');
     const underlying = String((signal as any).symbol || 'QQQ');
     if (!strike || !expiry) {
         return { orders: [], skip: true, reason: 'Signal missing strike/expiry' };

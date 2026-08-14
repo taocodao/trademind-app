@@ -171,6 +171,9 @@ async function processAccountSignal(account: Account, signalId: string, signalDa
             skipOptions: orders.skipOptions,
             skipReason: orders.skipReason,
             live: false,
+            accountName: account.name,
+            broker: (account as any).broker,
+            signalTimestamp: (signalData as any).timestamp || (signalData as any).created_at,
         });
         return true;
     }

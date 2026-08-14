@@ -15,6 +15,7 @@ import {
     hasAccountExecutedSignal,
 } from '@/lib/accounts';
 import { evaluateAccountPhase, type PhaseEvalResult } from '@/lib/account-phase';
+import { computeReserve, deltaCeiling, currentDeltaExposure, CASH_MGMT } from '@/lib/cash-management';
 import type { GenericSignal, SignalLeg, DeltaOrder, OptionsOrder, UserOrders } from '@/lib/per-user-order-generator';
 import type { Account } from '@/lib/accounts';
 
@@ -93,7 +94,7 @@ export async function generateAccountOrders(
     let skipOptions = false;
     let skipReason: string | undefined;
     try {
-        const opt = await generateAccountOptionOrders(signal, account, nlv, phaseCap, posMap);
+        const opt = await generateAccountOptionOrders(signal, account, nlv, phaseCap, posMap, phase.name);
         optionsOrders = opt.orders;
         skipOptions = opt.skip;
         skipReason = opt.reason;
@@ -271,7 +272,8 @@ async function generateAccountOptionOrders(
     account: Account,
     nlv: number,
     phaseCap: number,
-    posMap: Record<string, { qty: number; avgPrice: number; instrumentType: string }>
+    posMap: Record<string, { qty: number; avgPrice: number; instrumentType: string }>,
+    phaseName: 'SEED' | 'GROWTH' | 'TARGET' = 'SEED'
 ): Promise<{ orders: OptionsOrder[]; skip: boolean; reason?: string }> {
     const empty = { orders: [] as OptionsOrder[], skip: false };
 
@@ -311,9 +313,41 @@ async function generateAccountOptionOrders(
         return { orders: [], skip: true, reason: 'No live option price available' };
     }
 
-    // Size to NLV capped by phase; LEAPS debit must fit within phaseCap of NLV.
-    const budget = nlv * Math.min(phaseCap, 0.95);
-    const contracts = Math.floor(budget / (price * 100));
+    // ── Cash-management policy (mirrors backtest_engine.py CASH_MGMT) ──
+    // 1. RESERVE FLOOR: post-trade cash must stay above the vol-scaled reserve
+    //    (LEAPS roll + PMCC defense + drawdown-add buffers). Budget is the
+    //    smaller of the premium phase cap and the reserve-constrained cash.
+    // 2. GROSS DELTA CEILING: aggregate delta-adjusted notional exposure stays
+    //    under the phase ceiling (GROWTH 1.75x / TARGET 1.50x NAV). One core
+    //    contract is always allowed; the ceiling binds on ADDITIONAL contracts.
+    const vix = typeof (signal as any).vix === 'number' ? (signal as any).vix : null;
+    const reserve = computeReserve(nlv, phaseName, vix);
+
+    const premiumBudget = nlv * Math.min(phaseCap, 0.95);
+    const reserveBudget = account.cash_balance - reserve.reservePct * nlv;
+    const budget = Math.min(premiumBudget, reserveBudget);
+    if (budget < price * 100) {
+        return {
+            orders: [], skip: true,
+            reason: `Reserve floor: deployable budget $${Math.max(0, budget).toFixed(0)} < contract cost $${(price * 100).toFixed(0)} (reserve ${(reserve.reservePct * 100).toFixed(0)}% of NLV, VIX adj ${reserve.vixAdj.toFixed(2)})`,
+        };
+    }
+    let contracts = Math.floor(budget / (price * 100));
+
+    // Gross delta ceiling (per-contract exposure = delta × 100 × spot).
+    const spotPrices = await fetchMarketPrices([underlying]);
+    const spot = spotPrices[underlying] || 0;
+    const newDelta = Number(tier?.delta ?? (signal as any).delta ?? quote?.delta ?? 0.85);
+    if (spot > 0 && CASH_MGMT.deltaCeilingByPhase[phaseName] !== null) {
+        const curExposure = currentDeltaExposure(posMap, underlying, spot, () => null);
+        const dc = deltaCeiling(nlv, phaseName, curExposure);
+        const perContractExposure = newDelta * 100 * spot;
+        const maxByDelta = Math.max(1, Math.floor(dc.headroom / perContractExposure));
+        if (contracts > maxByDelta) {
+            contracts = maxByDelta;
+        }
+    }
+
     if (contracts < 1) {
         return { orders: [], skip: true, reason: `Contract cost ($${(price * 100).toFixed(0)}) exceeds phase budget ($${budget.toFixed(0)})` };
     }

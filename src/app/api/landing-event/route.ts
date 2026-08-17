@@ -1,20 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Redis } from "@upstash/redis";
+import { query } from "@/lib/db";
 
 // Experiment instrumentation for the narrated scrollytelling landing page.
 // Events: story_start, chapter_view, chapter_complete, variant_assigned, cta_click, transcript_open
 // POST { event, chapter?, variant?, ts? }
-// Stored in Upstash Redis as a capped list (last 10k events) + counters per key.
-
-const LIST_KEY = "landing:events";
-const MAX_EVENTS = 10_000;
-
-interface LandingEvent {
-    event: string;
-    chapter?: string;
-    variant?: string;
-    ts?: number;
-}
+// Stored in the shared AWS RDS PostgreSQL instance (same DB as the EC2 backend
+// and the rest of this app) so all landing analytics live with everything else.
 
 const ALLOWED = new Set([
     "story_start",
@@ -24,6 +15,35 @@ const ALLOWED = new Set([
     "transcript_open",
     "variant_assigned",
 ]);
+
+const VARIANTS = new Set(["narrated", "silent"]);
+
+let tableReady = false;
+async function ensureTable() {
+    if (tableReady) return;
+    await query(`
+        CREATE TABLE IF NOT EXISTS landing_events (
+            id          BIGSERIAL PRIMARY KEY,
+            event       TEXT        NOT NULL,
+            chapter     TEXT,
+            variant     TEXT,
+            client_ts   BIGINT,
+            created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+    `);
+    await query(`
+        CREATE INDEX IF NOT EXISTS landing_events_event_idx
+        ON landing_events (event, created_at)
+    `);
+    tableReady = true;
+}
+
+interface LandingEvent {
+    event: string;
+    chapter?: string;
+    variant?: string;
+    ts?: number;
+}
 
 export async function POST(req: NextRequest) {
     let body: LandingEvent;
@@ -36,32 +56,42 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: false }, { status: 400 });
     }
 
-    // Accept either naming convention: Vercel KV integration (KV_REST_API_*)
-    // or Upstash for Redis integration (UPSTASH_REDIS_REST_*).
-    const url = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
-    if (!url || !token) {
-        // Instrumentation must never break the page — accept and drop.
+    // Fail-silent by design: instrumentation must never break the page.
+    if (!process.env.DATABASE_URL) {
         return NextResponse.json({ ok: true, stored: false });
     }
 
+    const chapter = typeof body.chapter === "string" && /^ch[1-7]$/.test(body.chapter) ? body.chapter : null;
+    const variant = typeof body.variant === "string" && VARIANTS.has(body.variant) ? body.variant : null;
+    const clientTs = typeof body.ts === "number" && body.ts > 0 && body.ts < 4e12 ? Math.round(body.ts) : null;
+
     try {
-        const redis = new Redis({ url, token });
-        const record = JSON.stringify({
-            event: body.event,
-            chapter: body.chapter ?? null,
-            variant: body.variant ?? null,
-            ts: body.ts ?? Date.now(),
-        });
-        const counterKey = `landing:count:${body.event}${body.chapter ? ":" + body.chapter : ""}`;
-        await redis
-            .multi()
-            .lpush(LIST_KEY, record)
-            .ltrim(LIST_KEY, 0, MAX_EVENTS - 1)
-            .incr(counterKey)
-            .exec();
+        await ensureTable();
+        await query(
+            "INSERT INTO landing_events (event, chapter, variant, client_ts) VALUES ($1, $2, $3, $4)",
+            [body.event, chapter, variant, clientTs]
+        );
         return NextResponse.json({ ok: true, stored: true });
     } catch {
         return NextResponse.json({ ok: true, stored: false });
+    }
+}
+
+// GET /api/landing-event — quick funnel summary (chapter completion by variant).
+export async function GET() {
+    if (!process.env.DATABASE_URL) {
+        return NextResponse.json({ ok: false, error: "no database configured" }, { status: 503 });
+    }
+    try {
+        await ensureTable();
+        const res = await query(`
+            SELECT variant, event, chapter, COUNT(*)::int AS n
+            FROM landing_events
+            GROUP BY variant, event, chapter
+            ORDER BY variant, event, chapter
+        `);
+        return NextResponse.json({ ok: true, rows: res.rows });
+    } catch (e) {
+        return NextResponse.json({ ok: false, error: String(e) }, { status: 500 });
     }
 }

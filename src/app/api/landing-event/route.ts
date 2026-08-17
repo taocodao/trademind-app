@@ -36,8 +36,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: false }, { status: 400 });
     }
 
-    const url = process.env.UPSTASH_REDIS_REST_URL;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+    // Accept either naming convention: Vercel KV integration (KV_REST_API_*)
+    // or Upstash for Redis integration (UPSTASH_REDIS_REST_*).
+    const url = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
     if (!url || !token) {
         // Instrumentation must never break the page — accept and drop.
         return NextResponse.json({ ok: true, stored: false });

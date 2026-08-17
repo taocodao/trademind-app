@@ -176,14 +176,14 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
                     <div className="tm-eyebrow">TradeMind · QQQ LEAPS Strategy</div>
                     <h1 className="tm-h1">A track record,<br /><em>read aloud.</em></h1>
                     <p className="tm-sub">
-                        Fifteen months of decisions — every entry, every loss, every price from the real
-                        exchange tape. No cherry-picking. No hype.
+                        Five and a half years of decisions — a bull market, a bear year in cash, a
+                        correction, and every price along the way. No cherry-picking. No hype.
                     </p>
                     <button className="tm-play" onClick={begin}>▶ Begin the story</button>
                     <div className="tm-hint">
                         {variant === 'narrated'
-                            ? `${SLIDE_IDS.length} slides · audio-synced · ~5½ minutes · full transcript on the last slide`
-                            : `${SLIDE_IDS.length} slides · a 5-minute read · full methodology inside`}
+                            ? `${SLIDE_IDS.length} slides · audio-synced · ~7 minutes · full transcript on the last slide`
+                            : `${SLIDE_IDS.length} slides · a 7-minute read · full methodology inside`}
                     </div>
                 </div>
             );
@@ -191,7 +191,7 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
                 <div className="tm-ch-inner">
                     <div className="tm-kicker">Chapter 1 · A real trade</div>
                     <div className="tm-ch-title">September 2, 2025</div>
-                    <div className="tm-fig amb">$133.50<small>mid-price fill · real exchange quote $131.00 / $136.00</small></div>
+                    <div className="tm-fig amb">$133.50<small>mid-price fill · real exchange quote $131.00 / $136.00 · first entry of the final, tape-verified cycle</small></div>
                     <div className="tm-ticket">
                         <div className="tm-trow"><span className="k">Contract</span><span className="v">QQQ 2026-09-18 $465 Call</span></div>
                         <div className="tm-trow"><span className="k">Positioning</span><span className="v">Deep in the money · ~1 year to expiry</span></div>
@@ -217,17 +217,17 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
                     <div className="tm-kicker">Chapter 3 · The overlay</div>
                     <div className="tm-ch-title">Winning often ≠ winning</div>
                     <div className="tm-figrow">
-                        <div className="tm-fig">149<small>covered-call trades</small></div>
-                        <div className="tm-fig pos">74%<small>win rate</small></div>
-                        <div className="tm-fig neg">−$6,874<small>net result of the overlay</small></div>
+                        <div className="tm-fig">392<small>covered-call trades · 5.6 years</small></div>
+                        <div className="tm-fig pos">85%<small>win rate</small></div>
+                        <div className="tm-fig pos">+$32,945<small>net result of the overlay</small></div>
                     </div>
-                    <p className="tm-caption">Small wins, larger losses, in a rally that kept blowing through the strikes we sold. <b>Every one of those losses is in the ledger slide.</b></p>
+                    <p className="tm-caption">The data also taught us when <b>not</b> to sell: strong trend + thin premium = no sale — a rule tested in public, adopted after 21 out-of-sample trials. And still: on the real tape, the final 15 months' overlay lost $1,776 net. <b>Every loss is in the ledger.</b></p>
                 </div>
             );
             case 'map': return (
                 <div className="tm-ch-inner wide">
                     <div className="tm-kicker">Chapter 4 · The map</div>
-                    <div className="tm-ch-title">Fifteen months, every decision</div>
+                    <div className="tm-ch-title">Five and a half years, every decision</div>
                     <DecisionMap
                         audioRef={playerRef}
                         active={slideId === 'map' && playing}
@@ -241,26 +241,26 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
             case 'ch4': return (
                 <div className="tm-ch-inner">
                     <div className="tm-kicker">Chapter 5 · The drawdown</div>
-                    <div className="tm-ch-title">March 2026, lived day by day</div>
+                    <div className="tm-ch-title">Autumn 2023, lived day by day</div>
                     <div className="tm-figrow">
-                        <div className="tm-fig">$30,000<small>January value</small></div>
-                        <div className="tm-fig neg">$25,259<small>March 30 — six weeks later</small></div>
-                        <div className="tm-fig neg">−30.4%<small>maximum drawdown</small></div>
+                        <div className="tm-fig">$62,103<small>September 5, 2023 — the peak</small></div>
+                        <div className="tm-fig neg">$51,067<small>October 26 — seven weeks later</small></div>
+                        <div className="tm-fig neg">−17.8%<small>maximum drawdown · model-priced years</small></div>
                     </div>
                     <div className="tm-curve">
-                        <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Strategy equity curve, June 2025 to August 2026">
+                        <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Strategy equity curve, January 2021 to August 2026">
                             <rect x={cx(peakI)} y={P - 10} width={cx(troughI) - cx(peakI)} height={H - 2 * P + 20} rx={6} fill="rgba(224,92,92,.10)" />
                             <line x1={cx(troughI)} y1={cy(vals[troughI])} x2={cx(troughI)} y2={P - 10}
                                 stroke="#e05c5c" strokeWidth={1} strokeDasharray="4 4" />
                             <path d={curvePath} fill="none" stroke="#e0a458" strokeWidth={2.2}
                                 className={curveDrawn ? 'tm-curve-path drawn' : 'tm-curve-path'} />
                             <circle cx={cx(NAV.length - 1)} cy={cy(vals[vals.length - 1])} r={4} fill="#3fb97c" />
-                            <text x={cx(troughI)} y={cy(vals[troughI]) + 22} fill="#e05c5c" fontSize={11.5} textAnchor="middle" fontFamily="Inter">−30.4%</text>
-                            <text x={P} y={P - 14} fill="#5c6577" fontSize={11} fontFamily="Inter">Jun 2025</text>
-                            <text x={W - P} y={P - 14} fill="#5c6577" fontSize={11} textAnchor="end" fontFamily="Inter">Aug 2026 · $50,078</text>
+                            <text x={cx(troughI)} y={cy(vals[troughI]) + 22} fill="#e05c5c" fontSize={11.5} textAnchor="middle" fontFamily="Inter">−17.8%</text>
+                            <text x={P} y={P - 14} fill="#5c6577" fontSize={11} fontFamily="Inter">Jan 2021</text>
+                            <text x={W - P} y={P - 14} fill="#5c6577" fontSize={11} textAnchor="end" fontFamily="Inter">Aug 2026 · $169,249</text>
                         </svg>
                     </div>
-                    <p className="tm-caption">The system followed its rules. QQQ came back. <b>The next drawdown could be deeper — the recovery is never owed to you.</b></p>
+                    <p className="tm-caption">The model that prices the early years smooths the storms — on the real tape, March 2026 measured <b>−30.4%</b>. Both numbers stay on this page, because both are true. <b>The next drawdown could be deeper — the recovery is never owed to you.</b></p>
                 </div>
             );
             case 'ch5': return (
@@ -268,14 +268,14 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
                     <div className="tm-kicker">Chapter 6 · The honest comparison</div>
                     <div className="tm-ch-title">Us vs. simply buying QQQ</div>
                     <div className="tm-figrow">
-                        <div className="tm-fig pos">+66.9%<small>strategy · 15 months</small></div>
-                        <div className="tm-fig">+39.7%<small>QQQ buy &amp; hold</small></div>
+                        <div className="tm-fig pos">+464.2%<small>strategy · 5.6 years</small></div>
+                        <div className="tm-fig">+136.4%<small>QQQ buy &amp; hold</small></div>
                     </div>
                     <div className="tm-figrow">
-                        <div className="tm-fig neg">1.29<small>our Sharpe ratio</small></div>
-                        <div className="tm-fig pos">1.60<small>QQQ Sharpe ratio</small></div>
+                        <div className="tm-fig pos">−17.8%<small>our worst hole</small></div>
+                        <div className="tm-fig neg">−35.6%<small>QQQ's worst hole</small></div>
                     </div>
-                    <p className="tm-caption">More return. Less smoothness. Real risk of loss. <b>That trade-off is not for everyone — and it is the whole story.</b></p>
+                    <p className="tm-caption">Sharpe ratio: 1.48 vs 0.80. We won on every measure over this window — <b>and that is exactly why you should be skeptical. Five years is one set of weather; the next bear will not look like the last one.</b></p>
                 </div>
             );
             case 'ch6': return (
@@ -287,6 +287,7 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
                         <div className="tm-lrow"><span className="k">Since</span><span className="tm-mono">August 1, 2026</span></div>
                         <div className="tm-lrow"><span className="k">Current position</span><span className="tm-mono">100% cash</span></div>
                         <div className="tm-lrow"><span className="k">Qualifying dips so far</span><span className="tm-mono">0</span></div>
+                        <div className="tm-lrow"><span className="k">Overlay gate</span><span className="tm-mono">Trend × premium rule — live since Aug 17, 2026</span></div>
                         <div className="tm-lrow"><span className="k">Decisions logged</span><span className="tm-mono">Every trading day, in public</span></div>
                     </div>
                     <p className="tm-caption">Patience is the strategy. When it acts, you see it the same time we do. <b>Live results may be better or worse than anything simulated.</b></p>
@@ -296,6 +297,7 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
                 <div className="tm-ch-inner wide tm-scroll">
                     <div className="tm-kicker">Chapter 8 · Judge for yourself</div>
                     <div className="tm-ch-title">All {LEDGER.length} fills. Nothing hidden.</div>
+                    <p className="tm-caption" style={{ marginTop: -20 }}>Every fill in this ledger is <b>model-priced</b> (Black-Scholes on VIX-implied volatility, $1/contract; modeled strikes shown rounded to the nearest dollar, fixed-tenor expiries shown by month). The final 15 months were independently re-run on the real OPRA tape — see the appendix.</p>
                     <div className="tm-tablewrap">
                         <table>
                             <thead>
@@ -327,24 +329,24 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
                     <div className="tm-ch-title">How we backtest — and how the strategy earns changes</div>
                     <div className="tm-mgrid">
                         <div className="tm-mcard">
-                            <div className="t">Real tape, not theory</div>
-                            <p>Every decision uses actual exchange quotes — the OPRA NBBO feed, via Databento.
-                            Fills are simulated at the mid-price of the actual listed contract at each decision
-                            moment, with $0.65/contract commissions. No idealized pricing. 303 of 305 fills are
-                            priced directly from the tape; 2 used a model fallback and are marked in the ledger.</p>
+                            <div className="t">Two pricing layers, both disclosed</div>
+                            <p>2021 – May 2025: model-priced fills — Black-Scholes on VIX-implied volatility,
+                            $1/contract commissions, modeled strikes (shown rounded) and fixed-tenor expiries.
+                            June 2025 – Aug 2026: independently re-run on the real OPRA NBBO tape via Databento —
+                            mid-price fills on actual listed contracts, real listed expirations, $0.65/contract.</p>
                         </div>
                         <div className="tm-mcard">
-                            <div className="t">Rules fixed before the run</div>
-                            <p>The entry gates, overlay rules, and risk limits are defined first — then the
-                            simulation runs through 15 months with no hindsight adjustments inside the run.
-                            A result is only believable if the rules never peeked at the future.</p>
+                            <div className="t">The fidelity cross-check</div>
+                            <p>The same final 15 months, both engines. Model-priced: +61.1%, worst dip −11.7%.
+                            Real tape: +83.9%, worst dip −30.4%. The model understates the storms —
+                            which is why every drawdown number on this page says which engine measured it.</p>
                         </div>
                         <div className="tm-mcard">
                             <div className="t">Ideas earn their place</div>
                             <p>Improvements are tested as walk-forward experiments — trained on past data, judged
-                            on data the idea has never seen, and adopted only if they clear a strict performance
-                            bar out-of-sample. Ideas that fail get rejected in public, not quietly tuned until
-                            they pass.</p>
+                            on 21 out-of-sample paths, and adopted only if they clear a strict bar. The overlay's
+                            trend × premium gate cleared it (18 of 21) and went live August 17, 2026.
+                            Ideas that fail get rejected in public.</p>
                         </div>
                     </div>
                     <div className="tm-mtitle">The same tape, different windows</div>
@@ -371,18 +373,18 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
                                 ))}
                                 <tr className="tm-winfull">
                                     <td><b>Full record</b></td>
-                                    <td className="muted tm-mono">Jun 2025 → Aug 2026</td>
+                                    <td className="muted tm-mono">Jan 2021 → Aug 2026</td>
                                     <td className="muted">{FULL_WINDOW.regime}</td>
                                     <td className="num tm-mono tm-pos"><b>+{FULL_WINDOW.strat}%</b></td>
                                     <td className="num tm-mono">+{FULL_WINDOW.qqq}%</td>
                                     <td className="num tm-mono tm-neg">{FULL_WINDOW.mdd}%</td>
-                                    <td className="num tm-mono muted">305</td>
+                                    <td className="num tm-mono muted">806</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
-                    <p className="tm-caption">Same simulation, same tape — just sliced. <b>The recovery window
-                    (+78%) and the correction window (−18%) are the same system in different weather.</b></p>
+                    <p className="tm-caption">Same simulation, same rules — just sliced. <b>The two-year grind is the
+                    window where buy-and-hold beat us (+41.7% vs +38.7%). It stays in the table.</b></p>
                 </div>
             );
             case 'close': return (
@@ -390,13 +392,17 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
                     <div className="tm-kicker">The fine print, in the open</div>
                     <div className="tm-ch-title">Methodology &amp; disclosures</div>
                     <div className="tm-disc tm-disc-slide">
-                        <b>Methodology.</b> Simulation June 2025 – August 14, 2026 on real OPRA NBBO quotes (Databento),
-                        mid-price fills on the actual listed contract at each decision bar, $0.65/contract commissions,
-                        real listed expirations. 303 of 305 fills priced from the tape; 2 fills used Black-Scholes
-                        fallback and are marked in the ledger. Live layer: IBKR paper account, decisions logged daily
-                        since August 1, 2026.<br /><br />
-                        <b>Simulated performance — as close to live as a backtest gets. Past performance — simulated or
-                        live — does not guarantee future results.</b> Options involve substantial risk and are not suitable
+                        <b>Methodology.</b> Simulation January 4, 2021 – August 14, 2026. 2021 – May 2025 fills are
+                        model-priced: Black-Scholes on VIX-implied volatility, $1/contract commissions, modeled strikes
+                        (shown rounded to the nearest dollar) and fixed-tenor expiries — not listed contracts.
+                        June 2025 – August 14, 2026 was independently re-run on real OPRA NBBO quotes (Databento):
+                        mid-price fills on the actual listed contract at each decision bar, real listed expirations,
+                        $0.65/contract — that 15-month segment returned +83.9% with a −30.4% maximum drawdown
+                        (model engine for the same window: +61.1%, −11.7%). Live layer: IBKR paper account, decisions
+                        logged daily since August 1, 2026.<br /><br />
+                        <b>Simulated performance. The final fifteen months are as close to live as a backtest gets —
+                        real quotes, mid-price fills. Past performance — simulated or live — does not guarantee future
+                        results.</b> Options involve substantial risk and are not suitable
                         for every investor; you can lose your entire investment. TradeMind never connects to or submits
                         orders to your brokerage — signals only help you enter the order yourself. This page is educational
                         material, not investment advice or a solicitation.

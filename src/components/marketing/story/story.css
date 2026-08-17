@@ -213,8 +213,8 @@
 
 .tm-deck-stage { position: relative; flex: 1; min-height: 0; overflow: hidden; }
 .tm-slide {
-    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    padding: 24px 28px; opacity: 0; visibility: hidden; transform: translateY(14px);
+    position: absolute; inset: 0; display: flex; align-items: flex-start; justify-content: center;
+    padding: 44px 28px 24px; opacity: 0; visibility: hidden; transform: translateY(14px);
     transition: opacity .45s ease, transform .45s ease, visibility 0s linear .45s;
     overflow: hidden;
 }
@@ -272,7 +272,7 @@
 @media (max-width: 720px) {
     .tm-deck-top { padding: 10px 16px; }
     .tm-deck-meta { display: none; }
-    .tm-slide { padding: 16px 14px; }
+    .tm-slide { padding: 22px 14px 14px; }
     .tm-strip { height: 92px; padding: 10px 16px; font-size: 14.5px; }
     .tm-deck-bar-row { padding: 8px 14px; gap: 7px; flex-wrap: wrap; }
     .tm-dots { order: 5; width: 100%; justify-content: center; margin: 6px 0 0; }

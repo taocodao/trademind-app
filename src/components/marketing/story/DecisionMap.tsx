@@ -53,7 +53,7 @@ export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpe
     const navPath = useMemo(() => pathOf(navIdx), []);
     const spotPath = useMemo(() => pathOf(spotIdx), []);
 
-    // month gridlines
+    // month gridlines; label years only (5.6 years of months would crowd)
     const months: { i: number; label: string }[] = [];
     let lastM = '';
     NAV.forEach((d, i) => {
@@ -128,13 +128,13 @@ export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpe
     return (
         <div className="tm-map">
             <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} role="img"
-                aria-label="QQQ price versus strategy portfolio value, indexed to 100, June 2025 to August 2026, with eight annotated decision points">
+                aria-label="QQQ price versus strategy portfolio value, indexed to 100, January 2021 to August 2026, with eight annotated decision points">
                 {/* gridlines */}
                 {months.map((m, k) => (
                     <g key={k}>
-                        <line x1={X(m.i)} y1={PT} x2={X(m.i)} y2={H - PB} stroke="#1c1c2b" strokeWidth={1} />
-                        {k % 2 === 0 && <text x={X(m.i)} y={H - PB + 18} fill="#5c6577" fontSize={10.5}
-                            textAnchor="middle" fontFamily="Inter">{m.label.slice(2).replace('-', '/')}</text>}
+                        <line x1={X(m.i)} y1={PT} x2={X(m.i)} y2={H - PB} stroke={m.label.endsWith('-01') ? '#2a2a3d' : '#1c1c2b'} strokeWidth={1} />
+                        {m.label.endsWith('-01') && <text x={X(m.i)} y={H - PB + 18} fill="#5c6577" fontSize={10.5}
+                            textAnchor="middle" fontFamily="Inter">{m.label.slice(0, 4)}</text>}
                     </g>
                 ))}
                 <line x1={PL} y1={Y(100)} x2={W - PR} y2={Y(100)} stroke="#2a2a3d" strokeWidth={1} strokeDasharray="3 5" />
@@ -159,9 +159,9 @@ export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpe
                 <g style={{ opacity: revealed >= MAP_BEATS.length || reducedMotion ? 1 : 0, transition: 'opacity .6s ease' }}>
                     <circle cx={X(NAV.length - 1)} cy={Y(navIdx[navIdx.length - 1])} r={4} fill="#e0a458" />
                     <text x={X(NAV.length - 1)} y={Y(navIdx[navIdx.length - 1]) - 12} fill="#e0a458"
-                        fontSize={12} fontWeight={600} textAnchor="end" fontFamily="Inter">166.9</text>
+                        fontSize={12} fontWeight={600} textAnchor="end" fontFamily="Inter">{navIdx[navIdx.length - 1].toFixed(0)}</text>
                     <text x={X(NAV.length - 1)} y={Y(spotIdx[spotIdx.length - 1]) + 20} fill="#9aa3b5"
-                        fontSize={12} textAnchor="end" fontFamily="Inter">139.7</text>
+                        fontSize={12} textAnchor="end" fontFamily="Inter">{spotIdx[spotIdx.length - 1].toFixed(0)}</text>
                 </g>
 
                 {/* beat markers (stage 2) */}
@@ -207,7 +207,7 @@ export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpe
             <div className="tm-map-legend">
                 <span><i style={{ background: '#6b7280' }} />QQQ price</span>
                 <span><i style={{ background: '#e0a458' }} />TradeMind portfolio</span>
-                <span className="idx">both indexed to 100 · Jun 2025</span>
+                <span className="idx">both indexed to 100 · Jan 2021</span>
                 <button className="tm-replay" onClick={replay} aria-label="Replay the animation">↺ Replay</button>
             </div>
 

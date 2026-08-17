@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { CHAPTERS, NAV, LEDGER } from './storyData';
+import { CHAPTERS, NAV, LEDGER, WINDOWS, FULL_WINDOW } from './storyData';
+import { DecisionMap } from './DecisionMap';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    StoryLanding — "A track record, read aloud."
@@ -37,6 +38,7 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
     const [muted, setMuted] = useState(false);
     const [playing, setPlaying] = useState(false);
     const [chapterLabel, setChapterLabel] = useState('');
+    const [currentCh, setCurrentCh] = useState<string | null>(null);
     const [visible, setVisible] = useState<Set<string>>(new Set());
     const [variant] = useState<Variant>(() => {
         if (typeof window === 'undefined') return 'narrated';
@@ -70,6 +72,7 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
         el.play().catch(() => {});
         setPlaying(true);
         setChapterLabel(ch.kicker);
+        setCurrentCh(id);
     }, [narrationOn]);
 
     const pause = useCallback(() => {
@@ -214,8 +217,8 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
                 <button className="tm-play" onClick={begin}>▶ Begin the story</button>
                 <div className="tm-hint">
                     {variant === 'narrated'
-                        ? 'Press play once — the story scrolls itself · 3½ minutes · full transcript available'
-                        : 'A 3½-minute read · full methodology below'}
+                        ? 'Press play once — the story scrolls itself · 4½ minutes · full transcript available'
+                        : 'A 4½-minute read · full methodology below'}
                 </div>
             </section>
 
@@ -268,11 +271,28 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
                 </div>
             </section>
 
-            {/* ── CH 4: the drawdown ── */}
+            {/* ── CH 4: the map — QQQ vs portfolio, every decision annotated ── */}
+            <section id="tm-map" data-chapter="map" ref={setRef('map')}
+                className={`tm-chapter ${visible.has('map') ? 'vis' : ''}`}>
+                <div className="tm-ch-inner wide">
+                    <div className="tm-kicker">Chapter 4 · The map</div>
+                    <div className="tm-ch-title">Fifteen months, every decision</div>
+                    <DecisionMap
+                        audioRef={playerRef}
+                        active={currentCh === 'map' && playing}
+                        onBeatView={(label) => track('map_beat_view', label, variant)}
+                        onBeatOpen={(label) => track('map_beat_open', label, variant)}
+                    />
+                    <p className="tm-caption">Tap any marker for the actual fill. <b>The losses are annotated too — they are part of the record.</b></p>
+                    {storyText('map')}
+                </div>
+            </section>
+
+            {/* ── CH 5: the drawdown ── */}
             <section id="tm-ch4" data-chapter="ch4" ref={setRef('ch4')}
                 className={`tm-chapter tm-dark ${visible.has('ch4') ? 'vis' : ''}`}>
                 <div className="tm-ch-inner">
-                    <div className="tm-kicker">Chapter 4 · The drawdown</div>
+                    <div className="tm-kicker">Chapter 5 · The drawdown</div>
                     <div className="tm-ch-title">March 2026, lived day by day</div>
                     <div className="tm-figrow">
                         <div className="tm-fig">$30,000<small>January value</small></div>
@@ -302,7 +322,7 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
             <section id="tm-ch5" data-chapter="ch5" ref={setRef('ch5')}
                 className={`tm-chapter ${visible.has('ch5') ? 'vis' : ''}`}>
                 <div className="tm-ch-inner">
-                    <div className="tm-kicker">Chapter 5 · The honest comparison</div>
+                    <div className="tm-kicker">Chapter 6 · The honest comparison</div>
                     <div className="tm-ch-title">Us vs. simply buying QQQ</div>
                     <div className="tm-figrow">
                         <div className="tm-fig pos">+66.9%<small>strategy · 15 months</small></div>
@@ -321,7 +341,7 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
             <section id="tm-ch6" data-chapter="ch6" ref={setRef('ch6')}
                 className={`tm-chapter ${visible.has('ch6') ? 'vis' : ''}`}>
                 <div className="tm-ch-inner">
-                    <div className="tm-kicker">Chapter 6 · Live, right now</div>
+                    <div className="tm-kicker">Chapter 7 · Live, right now</div>
                     <div className="tm-ch-title">The record being written</div>
                     <div className="tm-livecard">
                         <div className="tm-lrow"><span className="k">Status</span><span className="tm-pulse">Live paper trading · IBKR</span></div>
@@ -339,7 +359,7 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
             <section id="tm-ch7" data-chapter="ch7" ref={setRef('ch7')}
                 className={`tm-chapter tm-ledger ${visible.has('ch7') ? 'vis' : ''}`}>
                 <div className="tm-ch-inner wide">
-                    <div className="tm-kicker">Chapter 7 · Judge for yourself</div>
+                    <div className="tm-kicker">Chapter 8 · Judge for yourself</div>
                     <div className="tm-ch-title">All {LEDGER.length} fills. Nothing hidden.</div>
                     <div className="tm-tablewrap">
                         <table>
@@ -371,6 +391,74 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
                             {ctaLabel} →
                         </button>
                     )}
+                </div>
+            </section>
+
+            {/* ── methodology appendix (opt-in, not narrated) ── */}
+            <section className="tm-chapter tm-method">
+                <div className="tm-ch-inner wide">
+                    <div className="tm-kicker">Appendix · How the record is made</div>
+                    <div className="tm-ch-title">How we backtest — and how the strategy earns changes</div>
+
+                    <div className="tm-mgrid">
+                        <div className="tm-mcard">
+                            <div className="t">Real tape, not theory</div>
+                            <p>Every decision uses actual exchange quotes — the OPRA NBBO feed, via Databento.
+                            Fills are simulated at the mid-price of the actual listed contract at each decision
+                            moment, with $0.65/contract commissions. No idealized pricing. 303 of 305 fills are
+                            priced directly from the tape; 2 used a model fallback and are marked in the ledger.</p>
+                        </div>
+                        <div className="tm-mcard">
+                            <div className="t">Rules fixed before the run</div>
+                            <p>The entry gates, overlay rules, and risk limits are defined first — then the
+                            simulation runs through 15 months with no hindsight adjustments inside the run.
+                            A result is only believable if the rules never peeked at the future.</p>
+                        </div>
+                        <div className="tm-mcard">
+                            <div className="t">Ideas earn their place</div>
+                            <p>Improvements are tested as walk-forward experiments — trained on past data, judged
+                            on data the idea has never seen, and adopted only if they clear a strict performance
+                            bar out-of-sample. Ideas that fail get rejected in public, not quietly tuned until
+                            they pass.</p>
+                        </div>
+                    </div>
+
+                    <div className="tm-mtitle">The same tape, different windows</div>
+                    <p className="tm-msub">No strategy wins every month. Here is the full record broken into its
+                    regimes — including the windows where buy-and-hold was the better seat.</p>
+                    <div className="tm-tablewrap">
+                        <table className="tm-wintable">
+                            <thead>
+                                <tr><th>Window</th><th>Dates</th><th>What it was</th>
+                                    <th className="num">Strategy</th><th className="num">QQQ</th>
+                                    <th className="num">Worst dip</th><th className="num">Fills</th></tr>
+                            </thead>
+                            <tbody>
+                                {WINDOWS.map((w, i) => (
+                                    <tr key={i}>
+                                        <td>{w.label}</td>
+                                        <td className="muted tm-mono">{w.from.slice(5)} → {w.to.slice(5)}</td>
+                                        <td className="muted">{w.regime}</td>
+                                        <td className={`num tm-mono ${w.strat > 0 ? 'tm-pos' : w.strat < 0 ? 'tm-neg' : 'muted'}`}>{w.strat > 0 ? '+' : ''}{w.strat}%</td>
+                                        <td className={`num tm-mono ${w.qqq > 0 ? 'tm-pos' : w.qqq < 0 ? 'tm-neg' : 'muted'}`}>{w.qqq > 0 ? '+' : ''}{w.qqq}%</td>
+                                        <td className={`num tm-mono ${w.mdd < -5 ? 'tm-neg' : 'muted'}`}>{w.mdd}%</td>
+                                        <td className="num tm-mono muted">{w.fills}</td>
+                                    </tr>
+                                ))}
+                                <tr className="tm-winfull">
+                                    <td><b>Full record</b></td>
+                                    <td className="muted tm-mono">Jun 2025 → Aug 2026</td>
+                                    <td className="muted">{FULL_WINDOW.regime}</td>
+                                    <td className="num tm-mono tm-pos"><b>+{FULL_WINDOW.strat}%</b></td>
+                                    <td className="num tm-mono">+{FULL_WINDOW.qqq}%</td>
+                                    <td className="num tm-mono tm-neg">{FULL_WINDOW.mdd}%</td>
+                                    <td className="num tm-mono muted">305</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p className="tm-caption">Same simulation, same tape — just sliced. <b>The recovery window
+                    (+78%) and the correction window (−18%) are the same system in different weather.</b></p>
                 </div>
             </section>
 

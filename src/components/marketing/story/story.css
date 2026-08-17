@@ -144,3 +144,54 @@
     color: var(--s-ink2); font-size: 16px; line-height: 1.85;
     border-left: 3px solid var(--s-violet); padding-left: 22px;
 }
+
+/* ── Decision map (Chapter 4) ── */
+.tm-map { margin: 36px auto 0; max-width: 860px; }
+.tm-map svg { width: 100%; height: auto; display: block; }
+.tm-map-line { stroke-dasharray: 4000; stroke-dashoffset: 4000; }
+.tm-map-line.drawn { transition: stroke-dashoffset 2.6s ease-out; stroke-dashoffset: 0; }
+.tm-map-pulse { animation: tm-mappl 1.6s ease-out infinite; }
+@keyframes tm-mappl { 0% { r: 8; opacity: .9; } 100% { r: 18; opacity: 0; } }
+.tm-map-caption { margin-top: 14px; min-height: 24px; font-size: 15px; font-weight: 600; color: var(--s-ink); letter-spacing: .01em; }
+.tm-map-tip {
+    margin: 10px auto 0; max-width: 460px; background: var(--s-panel);
+    border: 1px solid var(--s-line); border-left: 3px solid var(--s-violet);
+    border-radius: 10px; padding: 12px 18px; text-align: left;
+}
+.tm-map-tip.unfav { border-left-color: var(--s-red); }
+.tm-map-tip .t { font-weight: 600; font-size: 14px; }
+.tm-map-tip .d { color: var(--s-ink2); font-size: 13px; margin-top: 4px; }
+.tm-map-legend {
+    display: flex; align-items: center; justify-content: center; gap: 18px;
+    margin-top: 16px; font-size: 12px; color: var(--s-ink2); flex-wrap: wrap;
+}
+.tm-map-legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.tm-map-legend .idx { color: var(--s-ink3); }
+.tm-replay {
+    background: var(--s-panel); border: 1px solid var(--s-line); color: var(--s-ink2);
+    font-size: 12px; padding: 5px 12px; border-radius: 99px; cursor: pointer; font-family: inherit;
+}
+.tm-replay:hover { border-color: var(--s-violet); color: var(--s-ink); }
+.tm-map-timeline { display: none; }
+@media (max-width: 720px) {
+    .tm-map-timeline { display: block; margin-top: 22px; text-align: left; max-width: 420px; margin-left: auto; margin-right: auto; }
+    .tm-tl-item { display: flex; gap: 12px; padding: 9px 0; cursor: pointer; opacity: .35; transition: opacity .3s; }
+    .tm-tl-item.on { opacity: 1; }
+    .tm-tl-item .dot { width: 9px; height: 9px; border-radius: 99px; background: var(--s-ink3); margin-top: 6px; flex-shrink: 0; }
+    .tm-tl-item.fav .dot { background: var(--s-green); }
+    .tm-tl-item.unfav .dot { background: var(--s-red); }
+    .tm-tl-item .l { font-size: 14px; font-weight: 600; }
+    .tm-tl-item .d { font-size: 12.5px; color: var(--s-ink2); margin-top: 3px; }
+}
+
+/* ── Methodology appendix ── */
+.tm-method { border-top: 1px solid var(--s-line); }
+.tm-mgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin: 34px 0 10px; text-align: left; }
+@media (max-width: 720px) { .tm-mgrid { grid-template-columns: 1fr; } }
+.tm-mcard { background: var(--s-panel); border: 1px solid var(--s-line); border-radius: 14px; padding: 22px 22px 18px; }
+.tm-mcard .t { font-weight: 700; font-size: 15.5px; margin-bottom: 8px; }
+.tm-mcard p { color: var(--s-ink2); font-size: 13.5px; line-height: 1.65; margin: 0; }
+.tm-mtitle { font-size: 20px; font-weight: 700; margin: 40px 0 6px; }
+.tm-msub { color: var(--s-ink2); font-size: 14px; margin: 0 0 18px; }
+.tm-wintable td:first-child { font-weight: 600; }
+.tm-winfull { border-top: 2px solid var(--s-line); background: rgba(139,92,246,.05); }

@@ -141,7 +141,7 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
         const strip = stripRef.current;
         if (!strip || wordIdx < 0) return;
         const wordEl = strip.children[wordIdx] as HTMLElement | undefined;
-        if (wordEl) strip.scrollTop = wordEl.offsetTop - strip.clientHeight * 0.35;
+        if (wordEl) strip.scrollTop = wordEl.offsetTop - strip.clientHeight * 0.42;
     }, [wordIdx]);
 
     /* ── keyboard ── */

@@ -22,13 +22,14 @@ import { NAV, MAP_BEATS, type MapBeat } from './storyData';
 interface DecisionMapProps {
     audioRef: React.RefObject<HTMLAudioElement | null>;
     active: boolean;           // this chapter's audio is the one playing
+    forceDraw?: boolean;       // deck mode: draw when the slide is shown (no IntersectionObserver)
     onBeatView?: (label: string) => void;
     onBeatOpen?: (label: string) => void;
 }
 
 const W = 900, H = 380, PL = 46, PR = 20, PT = 30, PB = 42;
 
-export function DecisionMap({ audioRef, active, onBeatView, onBeatOpen }: DecisionMapProps) {
+export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpen }: DecisionMapProps) {
     const [drawn, setDrawn] = useState(false);        // stage 1 complete
     const [revealed, setRevealed] = useState(0);      // beats revealed so far (stage 2)
     const [currentBeat, setCurrentBeat] = useState(-1);
@@ -64,6 +65,11 @@ export function DecisionMap({ audioRef, active, onBeatView, onBeatOpen }: Decisi
     const svgRef = useRef<SVGSVGElement | null>(null);
     useEffect(() => {
         if (reducedMotion) { setDrawn(true); setRevealed(MAP_BEATS.length); revealedRef.current = MAP_BEATS.length; return; }
+        if (forceDraw !== undefined) {
+            // deck mode: the parent tells us when the slide is visible
+            if (forceDraw && !drawn) setDrawn(true);
+            return;
+        }
         const el = svgRef.current;
         if (!el || drawn) return;
         const io = new IntersectionObserver(es => {
@@ -71,7 +77,7 @@ export function DecisionMap({ audioRef, active, onBeatView, onBeatOpen }: Decisi
         }, { threshold: 0.35 });
         io.observe(el);
         return () => io.disconnect();
-    }, [drawn, reducedMotion]);
+    }, [drawn, reducedMotion, forceDraw]);
 
     /* beat reveal: synced to narration when active, staggered otherwise */
     useEffect(() => {

@@ -51,8 +51,9 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
     const playerRef = useRef<HTMLAudioElement | null>(null);
     const currentChRef = useRef<string | null>(null);
     const dwellRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const chapterEndRef = useRef<Record<string, number>>({});
     const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
+    const startedRef = useRef(false);
+    const mutedRef = useRef(false);
 
     const narrationOn = variant === 'narrated' && !muted;
 
@@ -76,13 +77,26 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
         setPlaying(false);
     }, []);
 
-    // track chapter completion
+    // track chapter completion + auto-advance to the next chapter
     useEffect(() => {
         const el = playerRef.current;
         if (!el) return;
         const onEnd = () => {
-            if (currentChRef.current) track('chapter_complete', currentChRef.current, variant);
+            const id = currentChRef.current;
+            if (id) track('chapter_complete', id, variant);
             setPlaying(false);
+            // Guided-tour: when a chapter's narration ends, scroll to the next
+            // chapter — the IntersectionObserver starts its audio after the dwell.
+            if (!id || !startedRef.current || mutedRef.current) return;
+            const idx = CHAPTERS.findIndex(c => c.id === id);
+            if (idx < 0 || idx >= CHAPTERS.length - 1) return;
+            // Don't fight the user: only advance if the ending chapter is still on screen.
+            const cur = sectionRefs.current.get(id);
+            if (cur) {
+                const r = cur.getBoundingClientRect();
+                if (!(r.top < window.innerHeight * 0.75 && r.bottom > window.innerHeight * 0.25)) return;
+            }
+            sectionRefs.current.get(CHAPTERS[idx + 1].id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         };
         el.addEventListener('ended', onEnd);
         return () => el.removeEventListener('ended', onEnd);
@@ -115,6 +129,7 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
 
     const begin = () => {
         setStarted(true);
+        startedRef.current = true;
         track('story_start', undefined, variant);
         document.getElementById('tm-ch1')?.scrollIntoView({ behavior: 'smooth' });
     };
@@ -168,7 +183,7 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
                         </button>
                         <button
                             className={`tm-cbtn ${muted ? 'on' : ''}`}
-                            onClick={() => setMuted(m => !m)}
+                            onClick={() => setMuted(m => { mutedRef.current = !m; return !m; })}
                             aria-label="Mute narration"
                         >
                             {muted ? 'Muted' : 'Sound on'}
@@ -199,7 +214,7 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
                 <button className="tm-play" onClick={begin}>▶ Begin the story</button>
                 <div className="tm-hint">
                     {variant === 'narrated'
-                        ? '3½ minutes of narration · sound starts only when you ask · full transcript available'
+                        ? 'Press play once — the story scrolls itself · 3½ minutes · full transcript available'
                         : 'A 3½-minute read · full methodology below'}
                 </div>
             </section>
@@ -213,9 +228,8 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
                     <div className="tm-fig amb">$133.50<small>mid-price fill · real exchange quote $131.00 / $136.00</small></div>
                     <div className="tm-ticket">
                         <div className="tm-trow"><span className="k">Contract</span><span className="v">QQQ 2026-09-18 $465 Call</span></div>
-                        <div className="tm-trow"><span className="k">Delta</span><span className="v">0.847 · deep in the money</span></div>
-                        <div className="tm-trow"><span className="k">Implied vol</span><span className="v">26.3%</span></div>
-                        <div className="tm-trow"><span className="k">Entry gates</span><span className="v hl">RSI 33.2 · gap 0.85% · regime bull · ML 0.89</span></div>
+                        <div className="tm-trow"><span className="k">Positioning</span><span className="v">Deep in the money · ~1 year to expiry</span></div>
+                        <div className="tm-trow"><span className="k">Entry checklist</span><span className="v hl">5 gates — momentum · trend · volatility · regime · ML — all green</span></div>
                         <div className="tm-trow"><span className="k">Fill source</span><span className="v hl">OPRA tape, mid-price, commission included</span></div>
                     </div>
                     {storyText('ch1')}
@@ -330,7 +344,7 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
                     <div className="tm-tablewrap">
                         <table>
                             <thead>
-                                <tr><th>Date</th><th>Leg</th><th>Action</th><th>Contract</th><th className="num">Qty</th><th className="num">Price</th><th className="num">P&amp;L</th><th>Rule triggered</th></tr>
+                                <tr><th>Date</th><th>Leg</th><th>Action</th><th>Contract</th><th className="num">Qty</th><th className="num">Price</th><th className="num">P&amp;L</th><th>Outcome</th></tr>
                             </thead>
                             <tbody>
                                 {LEDGER.map((r, i) => (

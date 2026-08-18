@@ -446,13 +446,8 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
 
     return (
         <div className="tm-story tm-deck">
-            {/* ── top bar: CTA + rolling one-line transcript ── */}
+            {/* ── top bar: rolling one-line transcript ── */}
             <div className="tm-deck-top">
-                {onCta && (
-                    <button className="tm-deck-cta" onClick={() => { track('cta_click', undefined, variant); onCta(); }}>
-                        Get started
-                    </button>
-                )}
                 <div className={`tm-ticker ${variant === 'silent' ? 'static' : ''}`} ref={tickerRef}
                     aria-live={variant === 'narrated' ? 'off' : 'polite'}
                     aria-label="Narration transcript">

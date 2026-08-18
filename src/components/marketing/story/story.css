@@ -202,13 +202,6 @@
     display: flex; align-items: center; gap: 18px;
     padding: 12px 28px; border-bottom: 1px solid var(--s-line); flex-shrink: 0;
 }
-.tm-deck-cta {
-    background: var(--s-violet); color: #fff; border: none; font-family: inherit;
-    font-size: 13px; font-weight: 600; padding: 8px 18px; border-radius: 99px; cursor: pointer;
-    flex-shrink: 0;
-}
-.tm-deck-cta:hover { filter: brightness(1.1); }
-
 /* rolling one-line karaoke ticker */
 .tm-ticker {
     flex: 1; min-width: 0; overflow: hidden; white-space: nowrap;
@@ -273,8 +266,7 @@
 .tm-slide .tm-details { text-align: left; }
 
 @media (max-width: 720px) {
-    .tm-deck-top { padding: 9px 12px; gap: 10px; }
-    .tm-deck-cta { padding: 7px 13px; font-size: 12px; }
+    .tm-deck-top { padding: 9px 12px; }
     .tm-ticker { font-size: 12.5px; }
     .tm-slide { padding: 22px 14px 14px; }
     .tm-deck-bar-row { padding: 8px 14px; gap: 7px; flex-wrap: wrap; }

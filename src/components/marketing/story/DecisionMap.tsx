@@ -46,8 +46,8 @@ export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpe
     }, []);
     const W = narrow ? 480 : 900, H = narrow ? 540 : 380;
     const PL = narrow ? 36 : 46, PR = narrow ? 16 : 20, PT = narrow ? 26 : 30, PB = narrow ? 44 : 42;
-    const axisFont = narrow ? 16 : 10.5;
-    const endFont = narrow ? 17 : 12;
+    const axisFont = narrow ? 16 : 12.5;
+    const endFont = narrow ? 17 : 13.5;
     const hitR = narrow ? 24 : 14;
     const dotR = (isCur: boolean, isUnfav: boolean) =>
         narrow ? (isCur ? 9 : isUnfav ? 8 : 6.5) : (isCur ? 6.5 : isUnfav ? 5.5 : 4.5);
@@ -160,13 +160,13 @@ export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpe
                 {/* gridlines */}
                 {months.map((m, k) => (
                     <g key={k}>
-                        <line x1={X(m.i)} y1={PT} x2={X(m.i)} y2={H - PB} stroke={m.label.endsWith('-01') ? '#2a2a3d' : '#1c1c2b'} strokeWidth={1} />
-                        {m.label.endsWith('-01') && <text x={X(m.i)} y={H - PB + (narrow ? 24 : 18)} fill="#5c6577" fontSize={axisFont}
+                        <line x1={X(m.i)} y1={PT} x2={X(m.i)} y2={H - PB} stroke={m.label.endsWith('-01') ? '#3a3a52' : '#262638'} strokeWidth={1} />
+                        {m.label.endsWith('-01') && <text x={X(m.i)} y={H - PB + (narrow ? 24 : 18)} fill="#8B95A9" fontSize={axisFont}
                             textAnchor="middle" fontFamily="Inter">{m.label.slice(0, 4)}</text>}
                     </g>
                 ))}
-                <line x1={PL} y1={Y(100)} x2={W - PR} y2={Y(100)} stroke="#2a2a3d" strokeWidth={1} strokeDasharray="3 5" />
-                <text x={PL - (narrow ? 6 : 8)} y={Y(100) + (narrow ? 6 : 4)} fill="#5c6577" fontSize={axisFont} textAnchor="end" fontFamily="Inter">100</text>
+                <line x1={PL} y1={Y(100)} x2={W - PR} y2={Y(100)} stroke="#3a3a52" strokeWidth={1} strokeDasharray="3 5" />
+                <text x={PL - (narrow ? 6 : 8)} y={Y(100) + (narrow ? 6 : 4)} fill="#8B95A9" fontSize={axisFont} textAnchor="end" fontFamily="Inter">100</text>
 
                 {/* zones (part of stage 1) */}
                 {BEATS.filter(b => b.kind === 'zone').map((b, k) => (
@@ -187,9 +187,9 @@ export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpe
                 <g style={{ opacity: revealed >= BEATS.length || reducedMotion ? 1 : 0, transition: 'opacity .6s ease' }}>
                     <circle cx={X(NAV.length - 1)} cy={Y(navIdx[navIdx.length - 1])} r={4} fill="#e0a458" />
                     <text x={X(NAV.length - 1)} y={Y(navIdx[navIdx.length - 1]) - (narrow ? 16 : 12)} fill="#e0a458"
-                        fontSize={endFont} fontWeight={600} textAnchor="end" fontFamily="Inter">{navIdx[navIdx.length - 1].toFixed(0)}</text>
-                    <text x={X(NAV.length - 1)} y={Y(spotIdx[spotIdx.length - 1]) + (narrow ? 26 : 20)} fill="#9aa3b5"
-                        fontSize={endFont} textAnchor="end" fontFamily="Inter">{spotIdx[spotIdx.length - 1].toFixed(0)}</text>
+                        fontSize={endFont} fontWeight={700} textAnchor="end" fontFamily="Inter">{navIdx[navIdx.length - 1].toFixed(0)}</text>
+                    <text x={X(NAV.length - 1)} y={Y(spotIdx[spotIdx.length - 1]) + (narrow ? 26 : 20)} fill="#BCC6D8"
+                        fontSize={endFont} fontWeight={600} textAnchor="end" fontFamily="Inter">{spotIdx[spotIdx.length - 1].toFixed(0)}</text>
                 </g>
 
                 {/* beat markers (stage 2) */}

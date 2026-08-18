@@ -293,9 +293,9 @@ export function StoryLanding({ onCta, ctaLabel }: StoryLandingProps) {
         return () => mq.removeEventListener('change', fn);
     }, []);
 
-    const W = narrow ? 440 : 760, H = narrow ? 470 : 300, P = narrow ? 30 : 34;
-    const axisFont = narrow ? 15 : 11;
-    const troughFont = narrow ? 16 : 11.5;
+    const W = narrow ? 440 : 800, H = narrow ? 470 : 300, P = narrow ? 30 : 34;
+    const axisFont = narrow ? 15 : 13;
+    const troughFont = narrow ? 16 : 14;
     const vals = NAV.map(d => d.nav);
     const min = Math.min(...vals) * 0.985, max = Math.max(...vals) * 1.015;
     const cx = (i: number) => P + i * (W - 2 * P) / (NAV.length - 1);
@@ -411,9 +411,9 @@ export function StoryLanding({ onCta, ctaLabel }: StoryLandingProps) {
                             <path d={curvePath} fill="none" stroke="#e0a458" strokeWidth={narrow ? 3 : 2.2}
                                 className={curveDrawn ? 'tm-curve-path drawn' : 'tm-curve-path'} />
                             <circle cx={cx(NAV.length - 1)} cy={cy(vals[vals.length - 1])} r={narrow ? 6 : 4} fill="#3fb97c" />
-                            <text x={cx(troughI)} y={cy(vals[troughI]) + (narrow ? 30 : 22)} fill="#e05c5c" fontSize={troughFont} textAnchor="middle" fontFamily="Inter">−17.8%</text>
-                            <text x={P} y={P - (narrow ? 12 : 14)} fill="#5c6577" fontSize={axisFont} fontFamily="Inter">{ui.ch4from}</text>
-                            <text x={W - P} y={P - (narrow ? 12 : 14)} fill="#5c6577" fontSize={axisFont} textAnchor="end" fontFamily="Inter">{ui.ch4to}</text>
+                            <text x={cx(troughI)} y={cy(vals[troughI]) + (narrow ? 30 : 22)} fill="#e05c5c" fontSize={troughFont} fontWeight={600} textAnchor="middle" fontFamily="Inter">−17.8%</text>
+                            <text x={P} y={P - (narrow ? 12 : 14)} fill="#8B95A9" fontSize={axisFont} fontFamily="Inter">{ui.ch4from}</text>
+                            <text x={W - P} y={P - (narrow ? 12 : 14)} fill="#8B95A9" fontSize={axisFont} textAnchor="end" fontFamily="Inter">{ui.ch4to}</text>
                         </svg>
                     </div>
                     <p className="tm-caption">{ui.ch4cap1}<b>−30.4%</b>{ui.ch4cap2}<b>{ui.ch4cap3}</b></p>
@@ -534,7 +534,7 @@ export function StoryLanding({ onCta, ctaLabel }: StoryLandingProps) {
                 </div>
             );
             case 'close': return (
-                <div className="tm-ch-inner tm-scroll">
+                <div className="tm-ch-inner wide tm-scroll">
                     <div className="tm-kicker">{ui.closeKicker}</div>
                     <div className="tm-ch-title">{ui.closeTitle}</div>
                     <div className="tm-disc tm-disc-slide">

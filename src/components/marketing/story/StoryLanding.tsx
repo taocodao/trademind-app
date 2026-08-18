@@ -231,7 +231,7 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
                 </div>
             );
             case 'map': return (
-                <div className="tm-ch-inner wide">
+                <div className="tm-ch-inner wide tm-map-slide">
                     <div className="tm-kicker">Chapter 4 · The map</div>
                     <div className="tm-ch-title">Five and a half years, every decision</div>
                     <DecisionMap

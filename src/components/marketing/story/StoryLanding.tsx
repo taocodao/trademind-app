@@ -56,7 +56,8 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
     });
 
     const playerRef = useRef<HTMLAudioElement | null>(null);
-    const stripRef = useRef<HTMLDivElement | null>(null);
+    const tickerRef = useRef<HTMLDivElement | null>(null);
+    const tickerTrackRef = useRef<HTMLDivElement | null>(null);
     const slideIdxRef = useRef(0);
     const startedRef = useRef(false);
     const mutedRef = useRef(false);
@@ -136,13 +137,18 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
         return () => { el.removeEventListener('timeupdate', onTime); el.removeEventListener('ended', onEnd); };
     }, [variant, goTo]);
 
-    /* ── karaoke auto-scroll: keep the active word on the middle line ── */
+    /* ── karaoke ticker: roll the single line so the active word stays visible ── */
     useEffect(() => {
-        const strip = stripRef.current;
-        if (!strip || wordIdx < 0) return;
-        const wordEl = strip.children[wordIdx] as HTMLElement | undefined;
-        if (wordEl) strip.scrollTop = wordEl.offsetTop - strip.clientHeight * 0.42;
-    }, [wordIdx]);
+        const box = tickerRef.current;
+        const track = tickerTrackRef.current;
+        if (!box || !track) return;
+        if (wordIdx < 0) { track.style.transform = 'translateX(0px)'; return; }
+        const wordEl = track.children[wordIdx] as HTMLElement | undefined;
+        if (!wordEl) return;
+        const max = Math.max(0, track.scrollWidth - box.clientWidth);
+        const x = Math.min(Math.max(wordEl.offsetLeft - box.clientWidth * 0.28, 0), max);
+        track.style.transform = `translateX(${-x}px)`;
+    }, [wordIdx, slideId]);
 
     /* ── keyboard ── */
     useEffect(() => {
@@ -430,7 +436,7 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
         }
     };
 
-    /* ── karaoke transcript strip ── */
+    /* ── karaoke ticker words ── */
     const stripWords = slideChapter ? (WORDS[slideId] || []) : [];
     const stripFallback = !slideChapter
         ? (slideId === 'hero' ? 'Press play to begin the story.'
@@ -440,17 +446,28 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
 
     return (
         <div className="tm-story tm-deck">
-            {/* ── top bar ── */}
+            {/* ── top bar: CTA + rolling one-line transcript ── */}
             <div className="tm-deck-top">
-                <div className="tm-deck-brand">TradeMind · <b>A track record, read aloud</b></div>
-                <div className="tm-deck-meta">
-                    {SLIDE_IDS.length} slides · {variant === 'narrated' ? 'audio-synced' : 'text version'}
-                </div>
                 {onCta && (
                     <button className="tm-deck-cta" onClick={() => { track('cta_click', undefined, variant); onCta(); }}>
                         Get started
                     </button>
                 )}
+                <div className={`tm-ticker ${variant === 'silent' ? 'static' : ''}`} ref={tickerRef}
+                    aria-live={variant === 'narrated' ? 'off' : 'polite'}
+                    aria-label="Narration transcript">
+                    <div className="tm-ticker-track" ref={tickerTrackRef}>
+                        {slideChapter
+                            ? stripWords.map((w, k) => (
+                                <span key={k} className={
+                                    variant === 'silent' ? ''
+                                    : k === wordIdx ? 'cur'
+                                    : k < wordIdx ? 'said' : ''
+                                }>{w.w} </span>
+                            ))
+                            : <span className="tm-ticker-note">{stripFallback}</span>}
+                    </div>
+                </div>
             </div>
 
             {/* ── slide stage ── */}
@@ -460,21 +477,6 @@ export function StoryLanding({ onCta, ctaLabel = 'Start your account' }: StoryLa
                         {slideContent(id)}
                     </div>
                 ))}
-            </div>
-
-            {/* ── transcript strip (karaoke) ── */}
-            <div className={`tm-strip ${variant === 'silent' ? 'static' : ''}`} ref={stripRef}
-                aria-live={variant === 'narrated' ? 'off' : 'polite'}
-                aria-label="Narration transcript">
-                {slideChapter
-                    ? stripWords.map((w, k) => (
-                        <span key={k} className={
-                            variant === 'silent' ? ''
-                            : k === wordIdx ? 'cur'
-                            : k < wordIdx ? 'said' : ''
-                        }>{w.w} </span>
-                    ))
-                    : <span className="tm-strip-note">{stripFallback}</span>}
             </div>
 
             {/* ── control bar ── */}

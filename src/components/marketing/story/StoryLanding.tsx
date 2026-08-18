@@ -44,15 +44,19 @@ function track(event: string, chapter?: string, variant?: Variant) {
 /* English slide copy (default language) — es/zh live in storyI18n.ts */
 const EN = {
     hero: {
-        eyebrow: 'TradeMind · QQQ LEAPS Strategy', h1a: 'A track record,', h1b: 'read aloud.',
-        sub: 'Five and a half years of decisions — a bull market, a bear year in cash, a correction, and every price along the way. No cherry-picking. No hype.',
+        eyebrow: 'TradeMind · QQQ LEAPS Strategy', h1a: 'QQQ’s upside.', h1b: 'A fraction of its worst falls.',
+        sub: '5.6 years, fully disclosed: 36.3% average annual growth vs. QQQ’s 16.6% — worst drop 17.8% instead of 35.6%. Every trade shown. Every loss included. No cherry-picking.',
         play: '▶ Begin the story',
-        hintNarrated: '11 slides · audio-synced · ~7 minutes · full transcript on the last slide',
-        hintSilent: '11 slides · a 7-minute read · full methodology inside',
+        hintNarrated: 'A track record, read aloud — 12 slides · audio-synced · ~8 minutes · full transcript on the last slide',
+        hintSilent: 'A track record, in print — 12 slides · an 8-minute read · full methodology inside',
         note: 'Press play to begin the story.',
     },
     ui: {
         ch1title: 'September 2, 2025', ch2title: 'One contract, a hundred shares',
+        comptitle: 'What patience looked like', compFrom: '$10,000 in January 2021', compAria: 'Growth of ten thousand dollars, strategy versus QQQ buy and hold, January 2021 to August 2026',
+        compCap: 'Both engines blended; the final fifteen months are tape-verified. ',
+        compCapB: 'Drawdowns are the tuition of compounding — the smaller the hole, the faster you’re back at your peak.',
+        compZone: 'QQQ underwater · ~25 months', compHole: '−17.8% · back at peak in 10 weeks',
         ch3title: 'Winning often ≠ winning', maptitle: 'Five and a half years, every decision',
         ch4title: 'Autumn 2023, lived day by day', ch5title: 'Us vs. simply buying QQQ',
         ch6title: 'The record being written',
@@ -103,7 +107,7 @@ const EN = {
         disc1: 'Methodology.',
         disc1p: ' Simulation January 4, 2021 – August 14, 2026. 2021 – May 2025 fills are model-priced: Black-Scholes on VIX-implied volatility, $1/contract commissions, modeled strikes (shown rounded to the nearest dollar) and fixed-tenor expiries — not listed contracts. June 2025 – August 14, 2026 was independently re-run on real OPRA NBBO quotes (Databento): mid-price fills on the actual listed contract at each decision bar, real listed expirations, $0.65/contract — that 15-month segment returned +83.9% with a −30.4% maximum drawdown (model engine for the same window: +61.1%, −11.7%). Live layer: IBKR paper account, decisions logged daily since August 1, 2026.',
         disc2: 'Simulated performance. The final fifteen months are as close to live as a backtest gets — real quotes, mid-price fills. Past performance — simulated or live — does not guarantee future results.',
-        disc2p: ' Options involve substantial risk and are not suitable for every investor; you can lose your entire investment. TradeMind never connects to or submits orders to your brokerage — signals only help you enter the order yourself. This page is educational material, not investment advice or a solicitation.',
+        disc2p: ' Options involve substantial risk and are not suitable for every investor; you can lose your entire investment. Simulated results have inherent limitations: no actual money was at risk, some results benefit from hindsight, and simulations can over- or under-compensate for liquidity and market impact. TradeMind never connects to or submits orders to your brokerage — signals only help you enter the order yourself. This page is educational material, not investment advice or a solicitation.',
         transcriptSummary: 'Full narration transcript',
         cta: 'Start your account',
         winFull: 'Full record', winFullDates: 'Jan 2021 → Aug 2026',
@@ -281,7 +285,7 @@ export function StoryLanding({ onCta, ctaLabel }: StoryLandingProps) {
 
     /* ── equity-curve state (drawdown slide) ── */
     const [curveDrawn, setCurveDrawn] = useState(false);
-    useEffect(() => { if (slideId === 'ch4') setCurveDrawn(true); }, [slideId]);
+    useEffect(() => { if (slideId === 'ch4' || slideId === 'compound') setCurveDrawn(true); }, [slideId]);
 
     /* portrait chart geometry on phones so axis labels stay readable */
     const [narrow, setNarrow] = useState(false);
@@ -296,6 +300,20 @@ export function StoryLanding({ onCta, ctaLabel }: StoryLandingProps) {
     const W = narrow ? 440 : 800, H = narrow ? 470 : 300, P = narrow ? 30 : 34;
     const axisFont = narrow ? 15 : 13;
     const troughFont = narrow ? 16 : 14;
+
+    /* compounding chart: growth of $10k, strategy vs QQQ buy & hold */
+    const cW = narrow ? 440 : 860, cH = narrow ? 470 : 330;
+    const cPL = narrow ? 46 : 54, cPR = narrow ? 14 : 18, cPT = 30, cPB = narrow ? 42 : 38;
+    const cAxis = narrow ? 15 : 13;
+    const cStrat = NAV.map(d => d.nav / 3);
+    const cQqq = NAV.map(d => 10000 * d.spot / NAV[0].spot);
+    const cMin = 5000, cMax = 60000;
+    const cX = (i: number) => cPL + i * (cW - cPL - cPR) / (NAV.length - 1);
+    const cY = (v: number) => cH - cPB - (v - cMin) / (cMax - cMin) * (cH - cPT - cPB);
+    const idxAt = (iso: string) => { const k = NAV.findIndex(p => p.d >= iso); return k < 0 ? NAV.length - 1 : k; };
+    const cPath = (arr: number[]) => arr.map((v, i) => `${i ? 'L' : 'M'}${cX(i).toFixed(1)} ${cY(v).toFixed(1)}`).join(' ');
+    const cYears: { i: number; y: string }[] = [{ i: 0, y: NAV[0].d.slice(0, 4) }];
+    NAV.forEach((p, i) => { if (i > 0 && p.d.slice(0, 4) !== NAV[i - 1].d.slice(0, 4)) cYears.push({ i, y: p.d.slice(0, 4) }); });
     const vals = NAV.map(d => d.nav);
     const min = Math.min(...vals) * 0.985, max = Math.max(...vals) * 1.015;
     const cx = (i: number) => P + i * (W - 2 * P) / (NAV.length - 1);
@@ -349,6 +367,42 @@ export function StoryLanding({ onCta, ctaLabel }: StoryLandingProps) {
                         <div className="tm-trow"><span className="k">{ui.entryChecklist}</span><span className="v hl">{ui.ch1check}</span></div>
                         <div className="tm-trow"><span className="k">{ui.fillSource}</span><span className="v hl">{ui.ch1src}</span></div>
                     </div>
+                </div>
+            );
+            case 'compound': return (
+                <div className="tm-ch-inner wide tm-comp-slide">
+                    <div className="tm-kicker">{slideKicker('compound')}</div>
+                    <div className="tm-ch-title">{ui.comptitle}</div>
+                    <div className="tm-curve tm-comp-chart">
+                        <svg viewBox={`0 0 ${cW} ${cH}`} role="img" aria-label={ui.compAria}>
+                            {[10000, 20000, 30000, 40000, 50000].map(g => (
+                                <g key={g}>
+                                    <line x1={cPL} y1={cY(g)} x2={cW - cPR} y2={cY(g)} stroke="#262638" strokeWidth={1} />
+                                    <text x={cPL - 8} y={cY(g) + 4} fill="#8B95A9" fontSize={cAxis} textAnchor="end" fontFamily="Inter">${g / 1000}k</text>
+                                </g>
+                            ))}
+                            {cYears.map(t => (
+                                <text key={t.y} x={cX(t.i)} y={cH - cPB + (narrow ? 24 : 20)} fill="#8B95A9" fontSize={cAxis} textAnchor="middle" fontFamily="Inter">{t.y}</text>
+                            ))}
+                            {/* QQQ's 2022 bear: ~25 months underwater */}
+                            <rect x={cX(idxAt('2021-11-19'))} y={cPT} width={cX(idxAt('2023-12-15')) - cX(idxAt('2021-11-19'))} height={cH - cPT - cPB} fill="rgba(239,68,68,.06)" />
+                            <text x={(cX(idxAt('2021-11-19')) + cX(idxAt('2023-12-15'))) / 2} y={cPT + (narrow ? 18 : 14)} fill="#E8A0A0" fontSize={cAxis} textAnchor="middle" fontFamily="Inter">{ui.compZone}</text>
+                            <path d={cPath(cQqq)} fill="none" stroke="#9aa3b5" strokeWidth={narrow ? 2.2 : 1.8} opacity={0.9} pathLength={1}
+                                style={{ strokeDasharray: 1, strokeDashoffset: curveDrawn ? 0 : 1, transition: 'stroke-dashoffset 3.2s ease-out' }} />
+                            <path d={cPath(cStrat)} fill="none" stroke="#e0a458" strokeWidth={narrow ? 3 : 2.4} pathLength={1}
+                                style={{ strokeDasharray: 1, strokeDashoffset: curveDrawn ? 0 : 1, transition: 'stroke-dashoffset 3.2s ease-out' }} />
+                            {/* strategy's worst hole: -17.8%, recovered in 10 weeks */}
+                            <circle cx={cX(idxAt('2023-10-26'))} cy={cY(cStrat[idxAt('2023-10-26')])} r={narrow ? 5 : 4} fill="#ef4444" />
+                            <text x={cX(idxAt('2023-10-26'))} y={cY(cStrat[idxAt('2023-10-26')]) + (narrow ? 26 : 22)} fill="#E8A0A0" fontSize={cAxis} textAnchor="middle" fontFamily="Inter">{ui.compHole}</text>
+                            <text x={cW - cPR} y={cY(cStrat[NAV.length - 1]) - (narrow ? 12 : 10)} fill="#e0a458" fontSize={narrow ? 17 : 15} fontWeight={700} textAnchor="end" fontFamily="Inter">$56,416</text>
+                            <text x={cW - cPR} y={cY(cQqq[NAV.length - 1]) + (narrow ? 20 : 18)} fill="#9aa3b5" fontSize={narrow ? 16 : 14} textAnchor="end" fontFamily="Inter">$23,636</text>
+                        </svg>
+                    </div>
+                    <div className="tm-map-legend">
+                        <span><i style={{ background: '#e0a458' }} />{ui.mapLegendS}</span>
+                        <span><i style={{ background: '#9aa3b5' }} />{ui.mapLegendQ}</span>
+                    </div>
+                    <p className="tm-caption">{ui.compCap}<b>{ui.compCapB}</b></p>
                 </div>
             );
             case 'ch2': return (

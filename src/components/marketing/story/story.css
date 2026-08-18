@@ -339,6 +339,26 @@
     .tm-dd-slide .tm-curve { margin-top: 8px; }
 }
 
+/* compounding slide: same flex-fit so the growth chart never clips */
+.tm-comp-slide .tm-ch-title { font-size: clamp(24px, 3.4vw, 42px); }
+.tm-slide .tm-ch-inner.tm-comp-slide { display: flex; flex-direction: column; height: 100%; }
+.tm-comp-slide .tm-kicker, .tm-comp-slide .tm-ch-title, .tm-comp-slide .tm-map-legend,
+.tm-comp-slide > .tm-caption { flex-shrink: 0; }
+.tm-comp-slide .tm-ch-title { margin-bottom: 14px; }
+.tm-comp-slide .tm-curve { flex: 1; min-height: 0; margin: 10px auto 0; width: 100%; display: flex; max-width: 1000px; }
+.tm-comp-slide .tm-curve svg { flex: 1; min-height: 0; width: 100%; height: 100%; }
+.tm-comp-slide .tm-map-legend { margin-top: 8px; }
+.tm-comp-slide > .tm-caption { margin-top: 8px; }
+@media (max-width: 720px) {
+    .tm-comp-slide .tm-ch-title { margin-bottom: 8px; }
+    .tm-comp-slide .tm-curve { margin-top: 6px; }
+    .tm-comp-slide > .tm-caption { font-size: 12.5px; margin-top: 6px; }
+}
+@media (max-height: 780px) {
+    .tm-comp-slide .tm-kicker { margin-bottom: 8px; }
+    .tm-comp-slide .tm-ch-title { font-size: 30px; margin-bottom: 8px; }
+}
+
 /* short viewports: compress the drawdown slide so curve + caption both fit */
 @media (max-height: 780px) {
     .tm-dd-slide .tm-kicker { margin-bottom: 8px; }

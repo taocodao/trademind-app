@@ -25,11 +25,24 @@ interface DecisionMapProps {
     forceDraw?: boolean;       // deck mode: draw when the slide is shown (no IntersectionObserver)
     onBeatView?: (label: string) => void;
     onBeatOpen?: (label: string) => void;
+    /* i18n overrides — default to English MAP_BEATS */
+    beats?: { label: string; tip: string }[];
+    beatTimes?: number[];
+    legendQ?: string; legendS?: string; idxNote?: string;
+    replayLabel?: string; mapAria?: string; replayAria?: string;
 }
 
 const W = 900, H = 380, PL = 46, PR = 20, PT = 30, PB = 42;
 
-export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpen }: DecisionMapProps) {
+export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpen,
+    beats, beatTimes, legendQ, legendS, idxNote, replayLabel, mapAria, replayAria }: DecisionMapProps) {
+    /* merge localized labels/tips/timing onto the base beat geometry */
+    const BEATS: MapBeat[] = MAP_BEATS.map((b, i) => ({
+        ...b,
+        label: beats?.[i]?.label ?? b.label,
+        tip: beats?.[i]?.tip ?? b.tip,
+        t: beatTimes?.[i] ?? b.t,
+    }));
     const [drawn, setDrawn] = useState(false);        // stage 1 complete
     const [revealed, setRevealed] = useState(0);      // beats revealed so far (stage 2)
     const [currentBeat, setCurrentBeat] = useState(-1);
@@ -64,7 +77,7 @@ export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpe
     /* stage 1: line draw when scrolled into view (or instant if reduced motion) */
     const svgRef = useRef<SVGSVGElement | null>(null);
     useEffect(() => {
-        if (reducedMotion) { setDrawn(true); setRevealed(MAP_BEATS.length); revealedRef.current = MAP_BEATS.length; return; }
+        if (reducedMotion) { setDrawn(true); setRevealed(BEATS.length); revealedRef.current = BEATS.length; return; }
         if (forceDraw !== undefined) {
             // deck mode: the parent tells us when the slide is visible
             if (forceDraw && !drawn) setDrawn(true);
@@ -88,14 +101,14 @@ export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpe
             const onTime = () => {
                 const t = el.currentTime;
                 let n = 0;
-                MAP_BEATS.forEach((b, i) => { if (t >= b.t - 0.4) n = i + 1; });
+                BEATS.forEach((b, i) => { if (t >= b.t - 0.4) n = i + 1; });
                 if (n !== revealedRef.current) {
-                    for (let i = revealedRef.current; i < n; i++) onBeatView?.(MAP_BEATS[i].label);
+                    for (let i = revealedRef.current; i < n; i++) onBeatView?.(BEATS[i].label);
                     revealedRef.current = n;
                     setRevealed(n);
                 }
                 let cur = -1;
-                MAP_BEATS.forEach((b, i) => { if (t >= b.t - 0.4) cur = i; });
+                BEATS.forEach((b, i) => { if (t >= b.t - 0.4) cur = i; });
                 setCurrentBeat(cur);
             };
             el.addEventListener('timeupdate', onTime);
@@ -103,9 +116,9 @@ export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpe
         }
 
         // silent / not-playing path: gentle stagger after lines draw
-        if (revealedRef.current < MAP_BEATS.length) {
+        if (revealedRef.current < BEATS.length) {
             const timers: ReturnType<typeof setTimeout>[] = [];
-            MAP_BEATS.forEach((_, i) => {
+            BEATS.forEach((_, i) => {
                 timers.push(setTimeout(() => {
                     revealedRef.current = Math.max(revealedRef.current, i + 1);
                     setRevealed(revealedRef.current);
@@ -122,13 +135,13 @@ export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpe
         requestAnimationFrame(() => requestAnimationFrame(() => setDrawn(true)));
     };
 
-    const tipBeat = openTip >= 0 ? MAP_BEATS[openTip] : hovered >= 0 ? MAP_BEATS[hovered] : null;
+    const tipBeat = openTip >= 0 ? BEATS[openTip] : hovered >= 0 ? BEATS[hovered] : null;
     const tipIdx = openTip >= 0 ? openTip : hovered;
 
     return (
         <div className="tm-map">
             <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} role="img"
-                aria-label="QQQ price versus strategy portfolio value, indexed to 100, January 2021 to August 2026, with eight annotated decision points">
+                aria-label={mapAria ?? 'QQQ price versus strategy portfolio value, indexed to 100, January 2021 to August 2026, with eight annotated decision points'}>
                 {/* gridlines */}
                 {months.map((m, k) => (
                     <g key={k}>
@@ -141,7 +154,7 @@ export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpe
                 <text x={PL - 8} y={Y(100) + 4} fill="#5c6577" fontSize={10.5} textAnchor="end" fontFamily="Inter">100</text>
 
                 {/* zones (part of stage 1) */}
-                {MAP_BEATS.filter(b => b.kind === 'zone').map((b, k) => (
+                {BEATS.filter(b => b.kind === 'zone').map((b, k) => (
                     <g key={k} style={{ opacity: drawn ? 1 : 0, transition: 'opacity .8s ease .4s' }}>
                         <rect x={X(b.i0)} y={PT} width={X(b.i1!) - X(b.i0)} height={H - PT - PB}
                             fill={b.tone === 'unfav' ? 'rgba(239,68,68,.07)' : 'rgba(148,163,184,.06)'} rx={4} />
@@ -156,7 +169,7 @@ export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpe
                     className={`tm-map-line ${drawn ? 'drawn' : ''}`} style={{ transitionDelay: '.5s' }} />
 
                 {/* end labels */}
-                <g style={{ opacity: revealed >= MAP_BEATS.length || reducedMotion ? 1 : 0, transition: 'opacity .6s ease' }}>
+                <g style={{ opacity: revealed >= BEATS.length || reducedMotion ? 1 : 0, transition: 'opacity .6s ease' }}>
                     <circle cx={X(NAV.length - 1)} cy={Y(navIdx[navIdx.length - 1])} r={4} fill="#e0a458" />
                     <text x={X(NAV.length - 1)} y={Y(navIdx[navIdx.length - 1]) - 12} fill="#e0a458"
                         fontSize={12} fontWeight={600} textAnchor="end" fontFamily="Inter">{navIdx[navIdx.length - 1].toFixed(0)}</text>
@@ -165,7 +178,7 @@ export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpe
                 </g>
 
                 {/* beat markers (stage 2) */}
-                {MAP_BEATS.map((b, k) => {
+                {BEATS.map((b, k) => {
                     if (k >= revealed) return null;
                     const isCur = k === currentBeat;
                     const isUnfav = b.tone === 'unfav';
@@ -192,7 +205,7 @@ export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpe
 
             {/* current-beat label (signaling: only the narrated beat) */}
             <div className="tm-map-caption" aria-live="polite">
-                {currentBeat >= 0 && currentBeat < revealed ? MAP_BEATS[currentBeat].label : '\u00A0'}
+                {currentBeat >= 0 && currentBeat < revealed ? BEATS[currentBeat].label : '\u00A0'}
             </div>
 
             {/* tooltip card */}
@@ -205,15 +218,15 @@ export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpe
 
             {/* legend + replay */}
             <div className="tm-map-legend">
-                <span><i style={{ background: '#6b7280' }} />QQQ price</span>
-                <span><i style={{ background: '#e0a458' }} />TradeMind portfolio</span>
-                <span className="idx">both indexed to 100 · Jan 2021</span>
-                <button className="tm-replay" onClick={replay} aria-label="Replay the animation">↺ Replay</button>
+                <span><i style={{ background: '#6b7280' }} />{legendQ ?? 'QQQ price'}</span>
+                <span><i style={{ background: '#e0a458' }} />{legendS ?? 'TradeMind portfolio'}</span>
+                <span className="idx">{idxNote ?? 'both indexed to 100 · Jan 2021'}</span>
+                <button className="tm-replay" onClick={replay} aria-label={replayAria ?? 'Replay the animation'}>{replayLabel ?? '↺ Replay'}</button>
             </div>
 
             {/* mobile: beats as a vertical timeline */}
             <div className="tm-map-timeline">
-                {MAP_BEATS.map((b, k) => (
+                {BEATS.map((b, k) => (
                     <div key={k} className={`tm-tl-item ${k < revealed ? 'on' : ''} ${b.tone}`}
                         onClick={() => { setOpenTip(openTip === k ? -1 : k); onBeatOpen?.(b.label); }}>
                         <div className="dot" />

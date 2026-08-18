@@ -275,6 +275,33 @@
 
 /* deck fit tuning: the map slide flexes so the chart is never clipped */
 .tm-slide .tm-ch-inner.tm-map-slide { display: flex; flex-direction: column; height: 100%; }
+
+/* drawdown slide: same flex-fit so the equity curve never clips on short viewports */
+.tm-slide .tm-ch-inner.tm-dd-slide { display: flex; flex-direction: column; height: 100%; }
+.tm-dd-slide .tm-kicker, .tm-dd-slide .tm-ch-title, .tm-dd-slide .tm-figrow,
+.tm-dd-slide > .tm-caption { flex-shrink: 0; }
+.tm-dd-slide .tm-ch-title { margin-bottom: 14px; }
+.tm-dd-slide .tm-figrow { margin-top: 0; }
+.tm-dd-slide .tm-curve { flex: 1; min-height: 0; margin: 14px auto 0; width: 100%; display: flex; }
+.tm-dd-slide .tm-curve svg { flex: 1; min-height: 0; width: 100%; height: 100%; }
+.tm-dd-slide > .tm-caption { margin-top: 10px; }
+@media (max-width: 720px) {
+    .tm-dd-slide .tm-curve { margin-top: 8px; }
+}
+
+/* short viewports: compress the drawdown slide so curve + caption both fit */
+@media (max-height: 780px) {
+    .tm-dd-slide .tm-kicker { margin-bottom: 8px; }
+    .tm-dd-slide .tm-ch-title { font-size: 28px; margin-bottom: 10px; }
+    .tm-dd-slide .tm-figrow { gap: 20px; margin: 4px 0; }
+    .tm-dd-slide .tm-figrow .tm-fig { font-size: 32px; margin: 4px 0; }
+    .tm-dd-slide .tm-figrow .tm-fig small { font-size: 10.5px; margin-top: 5px; }
+    .tm-dd-slide .tm-curve { margin-top: 8px; }
+    .tm-dd-slide > .tm-caption { font-size: 12.5px; line-height: 1.5; margin-top: 8px; }
+}
+@media (max-height: 780px) and (min-width: 721px) {
+    .tm-dd-slide .tm-figrow .tm-fig { font-size: 38px; }
+}
 .tm-map-slide .tm-kicker, .tm-map-slide .tm-ch-title, .tm-map-slide > .tm-caption,
 .tm-map-slide .tm-map-caption, .tm-map-slide .tm-map-legend { flex-shrink: 0; }
 .tm-map-slide .tm-ch-title { margin-bottom: 16px; }

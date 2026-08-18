@@ -32,10 +32,25 @@ interface DecisionMapProps {
     replayLabel?: string; mapAria?: string; replayAria?: string;
 }
 
-const W = 900, H = 380, PL = 46, PR = 20, PT = 30, PB = 42;
-
 export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpen,
     beats, beatTimes, legendQ, legendS, idxNote, replayLabel, mapAria, replayAria }: DecisionMapProps) {
+    /* portrait geometry on phones so axis labels stay readable (a 900-wide
+       viewBox squeezed into 350px renders 10.5px fonts at ~4px) */
+    const [narrow, setNarrow] = useState(false);
+    useEffect(() => {
+        const mq = window.matchMedia('(max-width: 720px)');
+        const fn = () => setNarrow(mq.matches);
+        fn();
+        mq.addEventListener('change', fn);
+        return () => mq.removeEventListener('change', fn);
+    }, []);
+    const W = narrow ? 480 : 900, H = narrow ? 540 : 380;
+    const PL = narrow ? 36 : 46, PR = narrow ? 16 : 20, PT = narrow ? 26 : 30, PB = narrow ? 44 : 42;
+    const axisFont = narrow ? 16 : 10.5;
+    const endFont = narrow ? 17 : 12;
+    const hitR = narrow ? 24 : 14;
+    const dotR = (isCur: boolean, isUnfav: boolean) =>
+        narrow ? (isCur ? 9 : isUnfav ? 8 : 6.5) : (isCur ? 6.5 : isUnfav ? 5.5 : 4.5);
     /* merge localized labels/tips/timing onto the base beat geometry */
     const BEATS: MapBeat[] = MAP_BEATS.map((b, i) => ({
         ...b,
@@ -63,8 +78,8 @@ export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpe
 
     const pathOf = (series: number[]) =>
         series.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(v).toFixed(1)}`).join(' ');
-    const navPath = useMemo(() => pathOf(navIdx), []);
-    const spotPath = useMemo(() => pathOf(spotIdx), []);
+    const navPath = useMemo(() => pathOf(navIdx), [narrow]);
+    const spotPath = useMemo(() => pathOf(spotIdx), [narrow]);
 
     // month gridlines; label years only (5.6 years of months would crowd)
     const months: { i: number; label: string }[] = [];
@@ -146,12 +161,12 @@ export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpe
                 {months.map((m, k) => (
                     <g key={k}>
                         <line x1={X(m.i)} y1={PT} x2={X(m.i)} y2={H - PB} stroke={m.label.endsWith('-01') ? '#2a2a3d' : '#1c1c2b'} strokeWidth={1} />
-                        {m.label.endsWith('-01') && <text x={X(m.i)} y={H - PB + 18} fill="#5c6577" fontSize={10.5}
+                        {m.label.endsWith('-01') && <text x={X(m.i)} y={H - PB + (narrow ? 24 : 18)} fill="#5c6577" fontSize={axisFont}
                             textAnchor="middle" fontFamily="Inter">{m.label.slice(0, 4)}</text>}
                     </g>
                 ))}
                 <line x1={PL} y1={Y(100)} x2={W - PR} y2={Y(100)} stroke="#2a2a3d" strokeWidth={1} strokeDasharray="3 5" />
-                <text x={PL - 8} y={Y(100) + 4} fill="#5c6577" fontSize={10.5} textAnchor="end" fontFamily="Inter">100</text>
+                <text x={PL - (narrow ? 6 : 8)} y={Y(100) + (narrow ? 6 : 4)} fill="#5c6577" fontSize={axisFont} textAnchor="end" fontFamily="Inter">100</text>
 
                 {/* zones (part of stage 1) */}
                 {BEATS.filter(b => b.kind === 'zone').map((b, k) => (
@@ -171,10 +186,10 @@ export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpe
                 {/* end labels */}
                 <g style={{ opacity: revealed >= BEATS.length || reducedMotion ? 1 : 0, transition: 'opacity .6s ease' }}>
                     <circle cx={X(NAV.length - 1)} cy={Y(navIdx[navIdx.length - 1])} r={4} fill="#e0a458" />
-                    <text x={X(NAV.length - 1)} y={Y(navIdx[navIdx.length - 1]) - 12} fill="#e0a458"
-                        fontSize={12} fontWeight={600} textAnchor="end" fontFamily="Inter">{navIdx[navIdx.length - 1].toFixed(0)}</text>
-                    <text x={X(NAV.length - 1)} y={Y(spotIdx[spotIdx.length - 1]) + 20} fill="#9aa3b5"
-                        fontSize={12} textAnchor="end" fontFamily="Inter">{spotIdx[spotIdx.length - 1].toFixed(0)}</text>
+                    <text x={X(NAV.length - 1)} y={Y(navIdx[navIdx.length - 1]) - (narrow ? 16 : 12)} fill="#e0a458"
+                        fontSize={endFont} fontWeight={600} textAnchor="end" fontFamily="Inter">{navIdx[navIdx.length - 1].toFixed(0)}</text>
+                    <text x={X(NAV.length - 1)} y={Y(spotIdx[spotIdx.length - 1]) + (narrow ? 26 : 20)} fill="#9aa3b5"
+                        fontSize={endFont} textAnchor="end" fontFamily="Inter">{spotIdx[spotIdx.length - 1].toFixed(0)}</text>
                 </g>
 
                 {/* beat markers (stage 2) */}
@@ -192,11 +207,11 @@ export function DecisionMap({ audioRef, active, forceDraw, onBeatView, onBeatOpe
                             onClick={() => { setOpenTip(openTip === k ? -1 : k); onBeatOpen?.(b.label); }}
                             onMouseEnter={() => setHovered(k)}
                             onMouseLeave={() => setHovered(-1)}>
-                            <circle cx={cxp} cy={cyp} r={14} fill="transparent" />
-                            <circle cx={cxp} cy={cyp} r={isCur ? 6.5 : isUnfav ? 5.5 : 4.5}
+                            <circle cx={cxp} cy={cyp} r={hitR} fill="transparent" />
+                            <circle cx={cxp} cy={cyp} r={dotR(isCur, isUnfav)}
                                 fill={color} stroke="#0A0A0F" strokeWidth={2}
                                 style={{ transition: 'all .3s ease', opacity: isCur ? 1 : 0.85 }} />
-                            {isCur && <circle cx={cxp} cy={cyp} r={11} fill="none" stroke={color}
+                            {isCur && <circle cx={cxp} cy={cyp} r={narrow ? 15 : 11} fill="none" stroke={color}
                                 strokeWidth={1.5} className="tm-map-pulse" />}
                         </g>
                     );

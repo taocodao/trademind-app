@@ -205,7 +205,7 @@
 /* rolling one-line karaoke ticker */
 .tm-ticker {
     flex: 1; min-width: 0; overflow: hidden; white-space: nowrap;
-    font-size: 19px; line-height: 1.5; color: var(--s-ink2);
+    font-size: 20px; line-height: 1.5; color: #E9EDF5;
     mask-image: linear-gradient(90deg, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%);
     -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%);
 }
@@ -214,8 +214,9 @@
     transition: transform .35s ease;
 }
 .tm-ticker span { transition: color .18s ease; }
-.tm-ticker span.said { color: var(--s-ink3); }
+.tm-ticker span.said { color: #79839a; }
 .tm-ticker span.cur {
+    color: #B79CFF; font-weight: 600;
     text-decoration: underline; text-decoration-color: var(--s-violet);
     text-decoration-thickness: 2.5px; text-underline-offset: 5px;
 }
@@ -266,11 +267,57 @@
 
 @media (max-width: 720px) {
     .tm-deck-top { padding: 9px 12px; }
-    .tm-ticker { font-size: 15px; }
+    .tm-ticker { font-size: 17px; }
     .tm-slide { padding: 22px 14px 14px; }
     .tm-deck-bar-row { padding: 8px 14px; gap: 7px; flex-wrap: wrap; }
     .tm-dots { order: 5; width: 100%; justify-content: center; margin: 6px 0 0; }
     .tm-counter { margin-left: auto; }
+
+    /* hero */
+    .tm-slide .tm-h1 { font-size: clamp(34px, 9.5vw, 42px); }
+    .tm-slide .tm-sub { font-size: 15px; margin-top: 18px; }
+    .tm-slide .tm-play { margin-top: 28px; font-size: 14.5px; padding: 14px 28px; }
+    .tm-slide .tm-hint { font-size: 12px; margin-top: 14px; }
+    .tm-slide .tm-eyebrow { font-size: 11px; margin-bottom: 18px; }
+
+    /* chapter type */
+    .tm-slide .tm-kicker { font-size: 10.5px; margin-bottom: 10px; }
+    .tm-slide .tm-ch-title { font-size: 26px; margin-bottom: 14px; }
+    .tm-slide .tm-fig { font-size: 42px; margin: 4px 0; }
+    .tm-slide .tm-fig small { font-size: 12.5px; margin-top: 8px; line-height: 1.4; }
+    .tm-slide .tm-figrow { gap: 14px 20px; margin: 8px 0; }
+    .tm-slide .tm-figrow .tm-fig { font-size: 32px; }
+    .tm-slide .tm-figrow .tm-fig small { font-size: 12px; margin-top: 6px; }
+    .tm-slide .tm-caption { font-size: 14px; margin-top: 14px; line-height: 1.5; }
+
+    /* trade ticket + live card */
+    .tm-slide .tm-ticket { margin-top: 14px; padding: 10px 14px; font-size: 13px; }
+    .tm-slide .tm-trow { padding: 5px 0; gap: 12px; }
+    .tm-slide .tm-trow .v { font-size: 11.5px; }
+    .tm-slide .tm-livecard { margin-top: 14px; padding: 10px 16px; }
+    .tm-slide .tm-lrow { font-size: 12.5px; padding: 6px 0; gap: 12px; }
+    .tm-slide .tm-lrow .tm-mono { font-size: 11.5px; text-align: right; }
+
+    /* ledger + windows tables */
+    .tm-slide .tm-tablewrap { margin-top: 16px; max-height: none; }
+    .tm-slide .tm-tablewrap table { font-size: 12px; }
+    .tm-slide .tm-tablewrap thead th { padding: 9px 10px; font-size: 10.5px; }
+    .tm-slide .tm-tablewrap tbody td { padding: 8px 10px; }
+    .tm-slide .tm-reason { font-size: 11px; }
+
+    /* appendix */
+    .tm-slide .tm-mgrid { margin: 18px 0 6px; gap: 12px; }
+    .tm-slide .tm-mcard { padding: 16px 16px 13px; }
+    .tm-slide .tm-mcard .t { font-size: 14.5px; }
+    .tm-slide .tm-mcard p { font-size: 13px; }
+    .tm-slide .tm-mtitle { font-size: 17px; margin: 24px 0 4px; }
+    .tm-slide .tm-msub { font-size: 13px; margin-bottom: 12px; }
+
+    /* close / disclosures */
+    .tm-slide .tm-disc-slide { font-size: 12.5px; line-height: 1.7; }
+    .tm-slide .tm-details details { padding: 16px 18px; }
+    .tm-slide .tm-details summary { font-size: 14px; }
+    .tm-slide .tm-t-ch p { font-size: 13.5px; }
 }
 
 /* deck fit tuning: the map slide flexes so the chart is never clipped */
@@ -314,11 +361,26 @@
 .tm-map-slide > .tm-caption { margin-top: 10px; font-size: 13.5px; }
 @media (max-width: 720px) {
     .tm-deck { top: 56px; }
-    .tm-map-slide .tm-ch-title { margin-bottom: 10px; }
-    .tm-map-timeline { max-height: 22vh; overflow-y: auto; flex-shrink: 0; }
-    .tm-tl-item { padding: 5px 0; }
-    .tm-tl-item .l { font-size: 13px; }
-    .tm-slide .tm-ch-title { margin-bottom: 22px; }
-    .tm-map-slide .tm-ch-title { margin-bottom: 10px; }
+    .tm-map-slide .tm-ch-title { margin-bottom: 8px; }
+    .tm-map-slide .tm-kicker { margin-bottom: 8px; }
+    /* the portrait chart now carries mobile — the duplicate timeline goes away */
+    .tm-map-timeline { display: none; }
+    .tm-slide .tm-ch-title { margin-bottom: 18px; }
+    .tm-map-slide .tm-ch-title { margin-bottom: 8px; }
+    .tm-map-slide .tm-map-caption { font-size: 13.5px; min-height: 20px; margin-top: 6px; }
+    .tm-map-slide .tm-map-legend { font-size: 11.5px; gap: 10px 14px; margin-top: 6px; }
+    .tm-map-slide > .tm-caption { font-size: 12.5px; margin-top: 8px; }
+    .tm-map-slide .tm-map-tip { padding: 10px 14px; }
+    .tm-map-slide .tm-map-tip .t { font-size: 13.5px; }
+    .tm-map-slide .tm-map-tip .d { font-size: 12.5px; }
+}
+
+/* drawdown slide on phones: compact figures so the portrait curve gets room */
+@media (max-width: 720px) {
+    .tm-dd-slide .tm-ch-title { font-size: 24px; margin-bottom: 8px; }
+    .tm-dd-slide .tm-figrow { gap: 14px; margin: 2px 0; }
+    .tm-dd-slide .tm-figrow .tm-fig { font-size: 24px; margin: 2px 0; }
+    .tm-dd-slide .tm-figrow .tm-fig small { font-size: 10px; margin-top: 4px; line-height: 1.35; }
+    .tm-dd-slide > .tm-caption { font-size: 12.5px; margin-top: 8px; }
 }
 

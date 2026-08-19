@@ -234,10 +234,13 @@ function selectTier(signalData: SignalData, riskLevel: 'conservative' | 'moderat
 
 async function getUserEmail(userId: string): Promise<string | null> {
     try {
-        // users.id is a uuid, but account user_ids are Privy DIDs ("did:privy:...").
-        // Cast the column to text so the comparison never trips a uuid parse error.
-        const res = await pool.query(`SELECT email FROM users WHERE id::text = $1`, [userId]);
-        return res.rows[0]?.email || null;
+        // Account user_ids are Privy DIDs ("did:privy:..."). The canonical
+        // email store is user_settings keyed by that DID; the users table is
+        // a legacy artifact (kept as a fallback).
+        const res = await pool.query(`SELECT email FROM user_settings WHERE user_id = $1`, [userId]);
+        if (res.rows[0]?.email) return res.rows[0].email;
+        const legacy = await pool.query(`SELECT email FROM users WHERE id::text = $1`, [userId]);
+        return legacy.rows[0]?.email || null;
     } catch (err) {
         console.warn(`[Fanout] Failed to fetch email for user ${userId}:`, err);
         return null;

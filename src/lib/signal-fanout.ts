@@ -140,9 +140,13 @@ async function processAccountSignal(account: Account, signalId: string, signalDa
         await saveAccountPnlSnapshot(account.id, today, fresh.cash_balance, positionsValue, fresh.initial_principal);
     }
 
-    // 5. Email the account owner (signal + any phase transition)
+    // 5. Email the account owner (signal + any phase transition).
+    //    Skip the email when the signal produced no orders and no phase
+    //    transition for this account (daily HOLD / unchanged rebalance) —
+    //    otherwise every daily signal would spam a "nothing to do" email.
+    const hasOrders = orders.equityOrders.length > 0 || orders.optionsOrders.length > 0;
     const email = await getUserEmail(account.user_id);
-    if (email) {
+    if (email && (hasOrders || phaseMeta.phaseTransitioned)) {
         // Standalone phase-transition alert (only on a real promotion/demotion,
         // not the initial assignment).
         if (phaseMeta.phaseTransitioned && phaseMeta.phaseFrom && phaseMeta.phase) {
@@ -189,9 +193,13 @@ async function processAccountSignal(account: Account, signalId: string, signalDa
 function selectTier(signalData: SignalData, riskLevel: 'conservative' | 'moderate' | 'aggressive'): GenericSignal {
     const tiers = signalData.tiers;
 
+    // IMPORTANT: spread the full signal payload so strategy-specific fields
+    // (type/action, strike, expiry, exit_px, symbol, tiers) survive tier
+    // selection — the options executor needs them to build LEAPS orders.
     if (!tiers || !tiers[riskLevel]) {
         console.log(`[Fanout] No tiers in signal, using flat allocation for ${riskLevel}`);
         return {
+            ...(signalData as any),
             id: '',
             strategy: signalData.strategy,
             regime: signalData.regime,
@@ -203,19 +211,22 @@ function selectTier(signalData: SignalData, riskLevel: 'conservative' | 'moderat
 
     const tierData = tiers[riskLevel];
     const allocation = tierData.target_allocation || {};
-    const legs: SignalLeg[] = Object.entries(allocation)
+    const allocLegs: SignalLeg[] = Object.entries(allocation)
         .filter(([_, pct]) => pct > 0)
         .map(([symbol, target_pct]) => ({ symbol, target_pct, leg_type: 'equity' as const }));
 
     console.log(`[Fanout] Selected ${riskLevel} tier: ${JSON.stringify(allocation)}`);
 
     return {
+        ...(signalData as any),
         id: '',
         strategy: signalData.strategy,
         regime: signalData.regime,
         confidence: signalData.confidence,
         rationale: `${signalData.rationale || ''} [${riskLevel} tier]`,
-        legs,
+        // When the tier carries no target_allocation (e.g. QQQ_LEAPS contract
+        // tiers), keep the signal's original legs untouched.
+        legs: allocLegs.length > 0 ? allocLegs : (signalData.legs || []),
     };
 }
 

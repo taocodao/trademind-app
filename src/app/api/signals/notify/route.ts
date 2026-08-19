@@ -18,8 +18,15 @@ export async function POST(req: Request) {
             );
         }
 
-        // If signal_id provided, fetch the signal and fan out to all users
+        // If signal_id provided, fetch the signal and fan out to all users.
+        // The fan-out mutates virtual accounts and emails users, so it requires
+        // the internal secret. Plain SSE pings (no signal_id) stay open.
         if (signalId) {
+            const secret = process.env.INTERNAL_API_SECRET;
+            const auth = req.headers.get('authorization') || '';
+            if (secret && auth !== `Bearer ${secret}`) {
+                return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+            }
             try {
                 const signalRes = await pool.query(
                     `SELECT id, strategy, data FROM signals WHERE id = $1`,

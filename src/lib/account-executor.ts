@@ -277,8 +277,57 @@ async function generateAccountOptionOrders(
 ): Promise<{ orders: OptionsOrder[]; skip: boolean; reason?: string }> {
     const empty = { orders: [] as OptionsOrder[], skip: false };
 
-    // Only ENTER actions with a valid option contract produce an opening order.
+    // Only ENTER/EXIT actions produce orders.
     const action = (signal.type || (signal as any).action || '').toUpperCase();
+
+    // ── EXIT: close any open long LEAPS calls on the underlying ─────────────
+    // The EXIT signal may not identify the contract (there is no entry target
+    // on exit days), so the account's own open position is the source of truth.
+    // Priced at live mid via the IB-primary proxy, falling back to the
+    // signal's exit_px.
+    if (action === 'EXIT') {
+        const exitUnderlying = String((signal as any).symbol || 'QQQ').toUpperCase();
+        const openCalls = Object.entries(posMap).filter(
+            ([sym, p]) =>
+                p.instrumentType === 'option' &&
+                p.qty > 0 &&
+                new RegExp(`^${exitUnderlying}_\\d{8}C\\d{5}$`).test(sym)
+        );
+        if (openCalls.length === 0) {
+            return { orders: [], skip: true, reason: `No open ${exitUnderlying} LEAPS call to close` };
+        }
+        const fallbackPx = Number((signal as any).exit_px) || 0;
+        const exitOrders: OptionsOrder[] = [];
+        for (const [sym, pos] of openCalls) {
+            const m = sym.match(/_(\d{4})(\d{2})(\d{2})C(\d{5})$/);
+            let price = fallbackPx;
+            let basis = 'signal exit_px';
+            if (m) {
+                const expiry = `${m[1]}-${m[2]}-${m[3]}`;
+                const strike = parseInt(m[4], 10);
+                const quote = await fetchOptionQuote(exitUnderlying, expiry, strike, 'C');
+                if (quote) {
+                    price = quote.mid;
+                    basis = quote.basis;
+                }
+            }
+            if (!price || price <= 0) {
+                return { orders: [], skip: true, reason: `No live quote or signal exit price for ${sym}` };
+            }
+            const qty = Math.round(pos.qty);
+            exitOrders.push({
+                action: 'Sell to Close',
+                symbol: sym,
+                quantity: qty,
+                limitPrice: price,
+                instrumentType: 'Equity Option',
+                priceEffect: 'Credit',
+                instruction: `Sell to Close ${qty} ${sym} at ~$${price.toFixed(2)} (mid, ${basis}) — credit ~$${(qty * price * 100).toFixed(0)}`,
+            });
+        }
+        return { orders: exitOrders, skip: false };
+    }
+
     if (action !== 'ENTER') {
         return { orders: [], skip: true, reason: `No entry (action=${action || 'none'})` };
     }

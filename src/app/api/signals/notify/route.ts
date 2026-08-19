@@ -20,11 +20,26 @@ export async function POST(req: Request) {
 
         // If signal_id provided, fetch the signal and fan out to all users.
         // The fan-out mutates virtual accounts and emails users, so it requires
-        // the internal secret. Plain SSE pings (no signal_id) stay open.
+        // a shared secret. Plain SSE pings (no signal_id) stay open.
+        // Auth accepts either the INTERNAL_API_SECRET env var or the
+        // internal_config.fanout_secret DB value — the DB path lets the EC2
+        // publishers (which already hold DATABASE_URL) authenticate without
+        // a Vercel env change.
         if (signalId) {
-            const secret = process.env.INTERNAL_API_SECRET;
             const auth = req.headers.get('authorization') || '';
-            if (secret && auth !== `Bearer ${secret}`) {
+            const bearer = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+            const envSecret = process.env.INTERNAL_API_SECRET;
+            let dbSecret: string | null = null;
+            try {
+                await pool.query(`CREATE TABLE IF NOT EXISTS internal_config (key TEXT PRIMARY KEY, value TEXT)`);
+                const r = await pool.query(`SELECT value FROM internal_config WHERE key = 'fanout_secret'`);
+                dbSecret = r.rows[0]?.value ?? null;
+            } catch (e) {
+                console.warn('[Notify] internal_config lookup failed:', e);
+            }
+            const configured = [envSecret, dbSecret].filter(Boolean) as string[];
+            // Fail-open only when no secret is configured anywhere (back-compat).
+            if (configured.length > 0 && !configured.includes(bearer)) {
                 return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
             }
             try {

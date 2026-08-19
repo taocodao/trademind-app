@@ -315,8 +315,8 @@ export function TurboCoreSignalCard({
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-lg text-white tracking-tight">
                   {signal.strategy?.toUpperCase() === "TQQQ_TURBOCORE_PRO"
-                    ? "TurboCore Pro"
-                    : "TQQQ TurboCore"}
+                    ? "QQQ Basic"
+                    : "QQQ Basic"}
                 </h3>
 
                 <div

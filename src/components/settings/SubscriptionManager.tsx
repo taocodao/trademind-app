@@ -8,9 +8,9 @@ import { usePrivy } from '@privy-io/react-auth';
 // ── Tier display labels ─────────────────────────────────────────────────────
 const TIER_LABELS: Record<string, string> = {
     observer:            'Observer (Free)',
-    turbocore:           'TurboCore',
-    turbocore_pro:       'TurboCore Pro',
-    turbocore_pro_bundle:'Turbo Core + Pro',
+    turbocore:           'QQQ Basic',
+    turbocore_pro:       'QQQ Basic',
+    turbocore_pro_bundle:'QQQ Basic',
     qqq_leaps:           'QQQ LEAPS',
     full_access:         'Full Access',
     both_bundle:         'Full Access',       // legacy alias
@@ -20,9 +20,9 @@ const TIER_LABELS: Record<string, string> = {
 const POST_TRIAL_PLANS = [
     {
         id:          'turbocore_pro_bundle',
-        name:        'Turbo Core + Pro',
+        name:        'QQQ Basic',
         icon:        Zap,
-        description: 'TurboCore ML Signal (daily 3 PM ET) + IV-Switching Composite Options Strategy',
+        description: 'QQQ Basic ML Signal (daily 3 PM ET) + IV-Switching Composite Options Strategy',
         monthly:     69,
         annual:      Math.round(69 * 12 * 0.70),   // 30% off
         biennial:    Math.round(69 * 24 * 0.60),    // 40% off
@@ -48,7 +48,7 @@ const POST_TRIAL_PLANS = [
         id:          'full_access',
         name:        'Full Access',
         icon:        Layers,
-        description: 'All 3 strategies: TurboCore + Turbo Pro + QQQ LEAPS — everything included',
+        description: 'Both strategies: QQQ Basic + QQQ LEAPS — everything included',
         monthly:     100,
         annual:      Math.round(100 * 12 * 0.70),
         biennial:    Math.round(100 * 24 * 0.60),

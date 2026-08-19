@@ -162,7 +162,7 @@ export function IVSwitchingSignalCard({ signal, onExecute, executingId, accountD
               background: "linear-gradient(90deg, #a855f7, #7c3aed)",
               WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
               fontWeight: 700, fontSize: "18px"
-            }}>TurboCore Pro</span>
+            }}>QQQ Basic</span>
             <span className={meta.color} style={{
               fontSize: "11px", fontWeight: 600, padding: "2px 8px",
               borderRadius: "6px", border: "1px solid", display: "inline-flex", alignItems: "center", gap: "4px"

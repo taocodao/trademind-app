@@ -2,7 +2,7 @@ import { Brain, Zap, Activity, Layers } from 'lucide-react';
 
 export interface StrategyConfig {
     key: string;                      // DB strategy key, e.g. 'TQQQ_TURBOCORE_PRO'
-    label: string;                    // Display name, e.g. 'Turbo Pro'
+    label: string;                    // Display name, e.g. 'QQQ Basic'
     shortLabel: string;               // Compact label for tabs
     description: string;
     icon: typeof Brain;               // Lucide icon component
@@ -14,8 +14,8 @@ export interface StrategyConfig {
 export const STRATEGIES: StrategyConfig[] = [
     {
         key: 'TQQQ_TURBOCORE_PRO',
-        label: 'Turbo Pro',
-        shortLabel: 'Pro',
+        label: 'QQQ Basic',
+        shortLabel: 'Basic',
         description: 'ETF-only regime allocator: rotates QQQ / QLD / TQQQ / SGOV by trend, momentum, regime, and ML confidence, with stress guards for drawdown control',
         icon: Zap,
         color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',

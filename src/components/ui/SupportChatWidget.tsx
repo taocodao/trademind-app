@@ -9,7 +9,7 @@ type Message = { role: 'user' | 'assistant'; content: string };
 
 const STARTER_CHIPS = [
     'How does Auto-Approval work?',
-    'What is TurboCore Pro?',
+    'What is QQQ Basic?',
     'How do I connect Tastytrade?',
     'How does the shadow ledger work?',
 ];

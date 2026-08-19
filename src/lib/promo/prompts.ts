@@ -61,21 +61,21 @@ export const TONE_MODIFIERS: Record<Tone, string> = {
 
 export const THEME_PROMPTS: Record<Theme, string> = {
   'backtest-story':
-    "Write about TurboCore's 7-year backtest: 27.8% CAGR, 86% win rate, max drawdown -5.1%, 2022 stress test (-11% vs TQQQ -83%). Focus on the data story.",
+    "Write about QQQ Basic's 7-year backtest: 27.8% CAGR, 86% win rate, max drawdown -5.1%, 2022 stress test (-11% vs TQQQ -83%). Focus on the data story.",
   'regime-signal':
-    "Write about today's TurboCore regime signal feature: BULL/BEAR/SIDEWAYS daily call at 3 PM ET with exact QQQ/QLD/TQQQ/SGOV allocations.",
+    "Write about today's QQQ Basic regime signal feature: BULL/BEAR/SIDEWAYS daily call at 3 PM ET with exact QQQ/QLD/TQQQ/SGOV allocations.",
   'genz-wealth':
     "Write about compound growth: $5,000 at 19 growing at 27.8% CAGR to $1M by age 36. Compare to S&P 500 at 10%.",
   'stress-test-2022':
-    'Write specifically about the 2022 bear market: TurboCore -11%, QQQ -33%, TQQQ -83%. The regime detection rotated to SGOV T-bills early.',
+    'Write specifically about the 2022 bear market: QQQ Basic -11%, QQQ -33%, TQQQ -83%. The regime detection rotated to SGOV T-bills early.',
   'chatbot-demo':
     'Write about the live chatbot in the Whop community. Commands: !signal, !regime, !backtest, !plan, !help. Bot responds with live DB data instantly.',
   'authentic-review':
     'Write an authentic personal review after using TradeMind for [DAYS] days. Include specific features used, what impressed you, and one data point.',
   'proved-right':
-    "Write about a case where TurboCore's signal correctly predicted the market direction. Mention the regime called, the outcome, and what that means for members.",
+    "Write about a case where QQQ Basic's signal correctly predicted the market direction. Mention the regime called, the outcome, and what that means for members.",
   'proved-wrong':
-    "Write honestly about a day TurboCore's signal was cautious and the market moved against it. Explain the ML model's reasoning for that regime call.",
+    "Write honestly about a day QQQ Basic's signal was cautious and the market moved against it. Explain the ML model's reasoning for that regime call.",
   'beginners-intro':
     "Write for someone who has never heard of algorithmic trading. Explain TradeMind's regime detection in simple terms. Focus on the $15 trial as a low-risk way to try it.",
   'leaps-education':

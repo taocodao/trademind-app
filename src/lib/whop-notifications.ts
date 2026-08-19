@@ -46,7 +46,7 @@ export async function sendSignalPushNotification(signal: {
         targets.map(experience_id =>
             whop.notifications.create({
                 experience_id,
-                title:    `${emoji} TurboCore: ${signal.regime} Signal`,
+                title:    `${emoji} QQQ Basic: ${signal.regime} Signal`,
                 subtitle,
                 content:  'Tap to see today\'s full allocation and execute in 2 minutes.',
                 rest_path: '/signal',
@@ -85,7 +85,7 @@ export async function sendTurboProPushNotification(signal: {
         targets.map(experience_id =>
             whop.notifications.create({
                 experience_id,
-                title:    `⚡ Turbo Pro: ${modeLabel}`,
+                title:    `⚡ QQQ Basic: ${modeLabel}`,
                 subtitle: `${signal.confidence}% confidence${regimeSuffix}`,
                 content:  'IV-Switch signal ready. Tap to see options order details.',
                 rest_path: '/signal',
@@ -160,7 +160,7 @@ export async function sendWeeklyDebriefPushNotification(userId?: string): Promis
         experience_id: experienceId,
         title:    '📈 Your Weekly Debrief is Ready',
         subtitle: 'Personalized performance review',
-        content:  'See how your portfolio tracked TurboCore this week.',
+        content:  'See how your portfolio tracked QQQ Basic this week.',
         rest_path: '/debrief',
     };
 
@@ -186,7 +186,7 @@ export async function sendRegimeChangePushNotification(
             whop.notifications.create({
                 experience_id,
                 title:    `${emoji} Regime Change: ${oldRegime} → ${newRegime}`,
-                subtitle: 'TurboCore has detected a shift',
+                subtitle: 'QQQ Basic has detected a shift',
                 content:  'Market conditions changed. Check today\'s allocation update.',
                 rest_path: '/signal',
             })

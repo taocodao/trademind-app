@@ -168,7 +168,7 @@ function buildSubject(data: SignalEmailData): string {
     const stratUp = data.strategy.toUpperCase();
     const strategyLabel =
         stratUp.includes('LEAPS') ? 'QQQ LEAPS'  :
-        stratUp.includes('PRO')   ? 'Turbo Pro'   : 'TurboCore';
+        stratUp.includes('PRO')   ? 'QQQ Basic'   : 'QQQ Basic';
     const hasActivity = data.equityOrders.length > 0 || data.optionsCloses.length > 0 || data.optionsEntries.length > 0;
 
     if (!hasActivity) {
@@ -186,7 +186,7 @@ function buildTextBody(data: SignalEmailData): string {
     const stratUp = data.strategy.toUpperCase();
     const strategyLabel =
         stratUp.includes('LEAPS') ? 'QQQ LEAPS'  :
-        stratUp.includes('PRO')   ? 'Turbo Pro'   : 'TurboCore';
+        stratUp.includes('PRO')   ? 'QQQ Basic'   : 'QQQ Basic';
 
     lines.push(`TradeMind ${strategyLabel} — Daily Signal`);
     lines.push('='.repeat(48));
@@ -254,7 +254,7 @@ function buildHtmlBody(data: SignalEmailData): string {
     const stratUp = data.strategy.toUpperCase();
     const strategyLabel =
         stratUp.includes('LEAPS') ? 'QQQ LEAPS'  :
-        stratUp.includes('PRO')   ? 'Turbo Pro'   : 'TurboCore';
+        stratUp.includes('PRO')   ? 'QQQ Basic'   : 'QQQ Basic';
     const brokerKey = (data.broker || 'fidelity').toLowerCase();
     const brokerName = brokerKey === 'etrade' ? 'E*TRADE' : 'Fidelity';
     const dateStr = new Date().toLocaleDateString('en-US', {

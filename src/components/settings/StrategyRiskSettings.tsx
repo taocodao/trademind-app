@@ -17,7 +17,7 @@ interface StrategyConfig {
 const STRATEGIES: StrategyConfig[] = [
     {
         strategy: 'TQQQ_TURBOCORE_PRO',
-        label: 'TurboCore Pro',
+        label: 'QQQ Basic',
         description: 'Multi-asset momentum rotation (QQQ/QLD/TQQQ/SGOV)',
         defaultPrincipal: 25000,
     },

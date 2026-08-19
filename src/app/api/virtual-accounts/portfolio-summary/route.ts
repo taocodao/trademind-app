@@ -9,7 +9,7 @@ import { NextResponse } from 'next/server';
  */
 
 const DISPLAY_NAMES: Record<string, string> = {
-    TURBOCORE_PRO:  'TurboCore Pro',
+    TURBOCORE_PRO:  'QQQ Basic',
     QQQ_LEAPS:      'QQQ LEAPS',
 };
 

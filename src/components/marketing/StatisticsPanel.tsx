@@ -80,7 +80,7 @@ export function StatisticsPanel({
                         onClick={() => setStrategyMode('pro')}
                         className={`w-full py-2 rounded-lg text-sm font-bold transition-all ${strategyMode === 'pro' ? 'bg-gradient-to-r from-tm-purple to-tm-blue text-white shadow-md' : 'text-tm-muted hover:text-white hover:bg-white/5'}`}
                     >
-                        TurboCore Pro ML
+                        QQQ Basic ML
                     </button>
                     <span className="absolute -top-2 -right-2 bg-tm-blue text-[9px] uppercase font-bold text-white px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(59,130,246,0.5)]">
                         NEW
@@ -90,7 +90,7 @@ export function StatisticsPanel({
 
             <div className={`glass-card p-6 border-l-4 ${strategyMode === 'pro' ? 'border-tm-blue' : 'border-tm-purple'} bg-tm-card/60 relative z-10 transition-all duration-300`}>
                 <h3 className="text-xl font-bold text-white mb-4">
-                    {strategyMode === 'pro' ? 'TurboCore Pro ML Statistics' : t('stats.title')}
+                    {strategyMode === 'pro' ? 'QQQ Basic ML Statistics' : t('stats.title')}
                 </h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>

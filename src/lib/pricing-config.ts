@@ -24,8 +24,8 @@ export const PRICING = {
     plans: {
         turbocore_pro_bundle: {
             key: 'turbocore_pro_bundle',
-            label: 'Turbo Core + Pro',
-            description: 'TurboCore ML Signal + IV-Switching Composite Options Strategy',
+            label: 'QQQ Basic',
+            description: 'QQQ Basic ML Signal + IV-Switching Composite Options Strategy',
             monthly: 69,
             // Yearly — 30% off
             annual: 579.60,
@@ -36,7 +36,7 @@ export const PRICING = {
             biennialPerMonth: 41.40,
             biennialSavingsPct: 40,
             features: [
-                'TurboCore ML Signal (daily at 3 PM ET)',
+                'QQQ Basic ML Signal (daily at 3 PM ET)',
                 'SMA200 Regime Gate',
                 'IV-Switching Composite (CSP / ZEBRA / CCS)',
                 'Crash Hedge Mode (SQQQ)',
@@ -69,7 +69,7 @@ export const PRICING = {
         full_access: {
             key: 'full_access',
             label: 'Full Access',
-            description: 'All 3 strategies: TurboCore + Pro + QQQ LEAPS',
+            description: 'Both strategies: QQQ Basic + QQQ LEAPS',
             monthly: 100,
             annual: 840,
             annualPerMonth: 70,

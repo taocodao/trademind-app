@@ -10,8 +10,8 @@ const REFERRAL_FEE = 100;
 const REFERRAL_HALF = REFERRAL_FEE / 2;
 
 const PLANS = [
-    { name: 'TurboCore', price: 29 },
-    { name: 'TurboCore Pro', price: 49 },
+    { name: 'QQQ Basic', price: 29 },
+    { name: 'QQQ LEAPS', price: 49 },
     { name: 'Full Bundle', price: 69 },
 ];
 

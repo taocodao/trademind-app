@@ -764,7 +764,7 @@ function DashboardContent() {
 
                 const liveResult = await response.json();
                 const liveOrderId = liveResult.orderId || liveResult.order_id || null;
-                setToast({ msg: 'TurboCore Atomic Rebalance queued successfully', ok: true });
+                setToast({ msg: 'QQQ Basic Rebalance queued successfully', ok: true });
                 // Flip card to Executed immediately — same as auto-approve path
                 updateSignalExecution(String(signal.id), liveOrderId);
                 fetchOrders();
@@ -992,9 +992,9 @@ function DashboardContent() {
                         const tierLabel = ({
                             full_access: 'Full Access',
                             both_bundle: 'Full Access',
-                            turbocore_pro_bundle: 'Turbo Core + Pro',
+                            turbocore_pro_bundle: 'QQQ Basic',
                             qqq_leaps: 'QQQ LEAPS',
-                            turbocore: 'TurboCore',
+                            turbocore: 'QQQ Basic',
                         } as Record<string, string>)[(membership as any).appTrialTier] || 'Full Access';
                         const isWhopTrial = (membership as any).billingSource === 'whop';
                         return (
@@ -1098,7 +1098,7 @@ function DashboardContent() {
                                 </div>
                                 <div>
                                     <p className="text-xs font-bold text-white">
-                                        {{ turbocore: 'TurboCore', turbocore_pro: 'TurboCore Pro', both_bundle: 'Both Bundle' }[membership.tier] || membership.tier}
+                                        {{ turbocore: 'QQQ Basic', turbocore_pro: 'QQQ Basic', both_bundle: 'Full Access' }[membership.tier] || membership.tier}
                                     </p>
                                     <div className="flex items-center gap-1.5">
                                         <span className={`w-1.5 h-1.5 rounded-full ${
@@ -1197,7 +1197,7 @@ function DashboardContent() {
 
                     <div className="flex items-center justify-between mb-3 mt-4">
                         <h2 className="font-semibold text-sm">
-                            {t('dashboard.signals_header', '{{strategy}} Signals', { strategy: activeStrategyConfig?.label || 'TurboCore' })}
+                            {t('dashboard.signals_header', '{{strategy}} Signals', { strategy: activeStrategyConfig?.label || 'QQQ Basic' })}
                         </h2>
                         {coreSignals.length > 0 && (
                             <span className="text-xs bg-tm-purple/20 text-tm-purple px-2 py-0.5 rounded-full">

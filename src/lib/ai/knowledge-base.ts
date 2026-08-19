@@ -14,12 +14,13 @@ Always be concise, helpful, and accurate. If you are unsure about something, say
 
 ## 1. What is TradeMind?
 
-TradeMind is a membership-based trade signal platform that generates algorithmic options trading signals. It focuses on systematic, rules-based strategies rather than speculation. Users can run signals in a paper (virtual) mode or connect a live Tastytrade brokerage account for real execution.
+TradeMind is a membership-based trade signal platform that generates algorithmic trading signals. It focuses on systematic, rules-based strategies rather than speculation. Each user gets a virtual (paper) account per strategy: signals are simulated against that account with live market data, and the user receives email order instructions to enter manually in their own brokerage account.
 
 Key highlights:
 - Automated signal generation powered by quantitative strategies
-- Virtual shadow ledger for paper trading (no real risk)
-- Optional live execution via Tastytrade integration
+- Per-account virtual portfolios that mirror what the user would hold
+- Emailed order instructions — the user reviews, adjusts, and enters each order themselves
+- TradeMind never connects to or submits orders to any brokerage
 - AI Copilot powered by Perplexity for market analysis
 - Mobile-first app design
 
@@ -27,22 +28,22 @@ Key highlights:
 
 ## 2. Trading Strategies
 
-### TurboCore (Core Strategy)
-- **Type**: Equity (stock) signals on TQQQ
-- **Goal**: Capture momentum in a leveraged ETF using a systematic trend-following approach
-- **Signal timing**: Signals are generated at 3:00 PM ET daily
-- **Virtual starting balance**: $5,000
-- **Best for**: Users who want simple, directional equity trades
+### QQQ Basic (ETF Strategy)
+- **Type**: ETF rotation signals — allocates between QQQ, QLD, TQQQ, and SGOV (T-bills)
+- **Goal**: Participate in Nasdaq-100 upside while rotating defensively to control drawdowns
+- **Signal timing**: One rebalance signal per trading day at 3:00 PM ET; most days no change is needed
+- **Virtual starting balance**: $25,000 default (user-adjustable)
+- **Best for**: Any investor — no options approval required, works in IRAs
 
-### TurboCore Pro (Pro Strategy)
-- **Type**: Options signals — primarily calendar spreads and vertical spreads on TQQQ/QQQ
-- **Goal**: Generate income through options premium while managing risk systematically
-- **Signal timing**: Signals are generated at 3:00 PM ET daily
-- **Virtual starting balance**: $25,000
-- **Best for**: Users comfortable with options and looking for more sophisticated risk-managed strategies
+### QQQ LEAPS (Options Strategy)
+- **Type**: Long-dated QQQ call options (LEAPS) with an optional covered-call (PMCC) overlay
+- **Goal**: Rare, gated entries into leveraged long exposure, then harvest option premium while holding
+- **Signal timing**: Evaluated hourly; entries are rare by design (a few per year) — sitting in cash is a normal state
+- **Virtual starting balance**: user-set
+- **Best for**: Users with options approval at their broker who are comfortable with contract-level position sizing
 
-### Both Bundle
-- Gives access to both TurboCore and TurboCore Pro
+### Full Access Bundle
+- Gives access to both QQQ Basic and QQQ LEAPS
 - Users can toggle between strategy tabs throughout the app
 
 ---
@@ -52,9 +53,9 @@ Key highlights:
 | Tier | Access | Price |
 |------|--------|-------|
 | Observer | Free, read-only, no signals | $0 |
-| TurboCore | Core equity signals only | See pricing page |
-| TurboCore Pro | Options signals only | See pricing page |
-| Both Bundle | Core + Pro signals | See pricing page |
+| QQQ Basic | ETF rotation signals | See pricing page |
+| QQQ LEAPS | LEAPS options signals | See pricing page |
+| Full Access | Both strategies | See pricing page |
 
 - Observer users can see the app but cannot execute or receive signals
 - Paid subscribers can use all features including virtual trading and AI Copilot
@@ -74,31 +75,28 @@ TradeMind provides a paper trading system called the **Shadow Ledger**. It simul
 
 ---
 
-## 5. Live Execution (Tastytrade Integration)
+## 5. Manual Execution (No Brokerage Connection)
 
-Users can connect their Tastytrade brokerage account to execute signals with real money.
+TradeMind never connects to or submits orders to any brokerage. The flow is:
 
-How to connect:
-1. Go to **Settings** → **Tastytrade** section
-2. Enter your Tastytrade username and password
-3. Click **Connect** — the app will authenticate and store an encrypted refresh token
-4. Once connected, the app shows your real account balance and positions
-5. When a signal fires, you can approve it and it will place a real order on Tastytrade
+1. A signal is generated once per strategy (e.g., the daily 3 PM ET QQQ Basic rebalance)
+2. The app simulates the signal against the user's virtual account using live market mid-prices, producing exact order instructions sized to that account's positions and cash
+3. The user receives the order instructions by email (and in the app)
+4. The user reviews the orders, adjusts them if they wish, and enters them manually in their own brokerage account (Fidelity, E*TRADE, IBKR, Schwab, etc.)
 
-If not connected, all executions happen virtually on the Shadow Ledger.
+The virtual account is therefore a mirror of what the user's real account would hold if every signal were followed exactly.
 
 ---
 
-## 6. Auto-Approval (Ghost Submissions)
+## 6. Auto-Approval (Virtual Account Automation)
 
-Auto-Approval allows signals to be executed automatically without manual approval.
+Auto-Approval controls how the **virtual account** handles new signals — it never touches a real brokerage account (TradeMind cannot; it has no brokerage connection).
 
-- When enabled, the backend checks your settings and automatically submits trades when a signal fires
-- If Tastytrade is connected: executes as a live order
-- If not connected: executes virtually on the Shadow Ledger
-- Configure in **Settings** → **Auto-Approval** section
-- Default: **OFF** (manual approval required)
-- Risk Level selector (Conservative / Moderate / Aggressive) controls position sizing
+- When enabled, the virtual account automatically mirrors each new signal at live mid-prices and emails the resulting order instructions
+- When disabled, the virtual account still tracks the signal, and the user can review before the instructions are finalized
+- Configure per account in **Settings** → risk profile section
+- Default: **OFF** (review first)
+- Risk Level selector (Conservative / Moderate / Aggressive) controls position sizing in the virtual account
 
 ---
 
@@ -123,9 +121,8 @@ How to set up:
 The Settings page contains:
 - **Subscription Manager**: View your current plan and manage billing
 - **My Strategies**: See which strategies you have active
-- **Auto-Approval & Risk Level**: Configure automatic execution and risk tolerance
+- **Auto-Approval & Risk Level**: Configure virtual-account automation and risk tolerance
 - **Email Alerts**: Manage notification email addresses
-- **Tastytrade**: Connect or disconnect your broker
 - **Support**: Contact support at support@trademind.bot
 
 ---
@@ -135,9 +132,9 @@ The Settings page contains:
 The main Dashboard shows:
 - Your welcome header with username
 - **Setup Guide** button: Re-opens the onboarding wizard at any time
-- Strategy tabs (Core / Pro depending on subscription)
+- Strategy tabs (QQQ Basic / QQQ LEAPS depending on subscription)
 - Active signals with Approve / Execute buttons
-- Account balance summary (real if Tastytrade connected, virtual otherwise)
+- Account balance summary from your virtual mirror accounts
 - Language selector (English / Spanish / Chinese)
 
 ---
@@ -145,8 +142,7 @@ The main Dashboard shows:
 ## 10. Positions Tab
 
 Shows current open positions:
-- **Live positions**: Pulled from Tastytrade if connected
-- **Virtual positions**: From the Shadow Ledger
+- **Virtual positions**: What your mirror account currently holds per strategy (Shadow Ledger)
 - Deposit / Withdraw buttons to manage virtual cash
 - Edit / Delete manual position buttons
 - Options spreads are grouped by signal
@@ -168,7 +164,7 @@ TradeMind includes an AI Copilot powered by Perplexity:
 - **Free Chat**: Included for all paid tiers — general educational market discussion
 - **Premium Features** (add-ons at $5/mo each):
   - **Deep Dive**: Real-time ticker analysis with live news and options risk profiling
-  - **Morning Briefing**: Daily market briefing tailored to TurboCore regime
+  - **Morning Briefing**: Daily market briefing tailored to the current QQQ Basic regime
   - **Strategy Builder**: Build multi-leg options strategies for custom theses
   - **Trade Debrief**: Weekly performance review and insights
   - **Screenshot Analysis**: Upload charts for AI breakdown
@@ -180,8 +176,8 @@ TradeMind includes an AI Copilot powered by Perplexity:
 
 When you first log in, an onboarding modal automatically appears guiding you through:
 1. **Email Alerts** — Set up signal notifications
-2. **Auto-Approval** — Configure automated execution settings
-3. **Broker** — Optionally connect Tastytrade
+2. **Auto-Approval & Risk Level** — Configure how your virtual account mirrors signals
+3. **Starting Capital** — Set the virtual account balance to match what you plan to trade with
 
 You can re-open the Setup Guide at any time from the **Setup Guide** button on the Dashboard.
 
@@ -195,14 +191,14 @@ A: Make sure you are logged in. Settings are saved to the database on every chan
 **Q: I changed a setting in one browser window but it didn't update in another**
 A: The app syncs settings when you switch browser tabs (focus events). Click on the other window to bring it into focus and it should update.
 
-**Q: I'm seeing virtual trades but I have Tastytrade connected**
-A: Check that your Tastytrade connection is still active in Settings → Tastytrade. Tokens can expire. Click Reconnect if needed.
-
 **Q: Why don't I see any signals?**
-A: Signals are generated at 3:00 PM ET on trading days. If market conditions don't meet the strategy criteria, no signal may be generated that day.
+A: QQQ Basic generates one rebalance signal at 3:00 PM ET on trading days (most days it says HOLD — no action needed). QQQ LEAPS entries are rare by design — the strategy can sit in cash for weeks or months waiting for its entry conditions. No signal usually means the strategy is correctly waiting.
 
-**Q: What is the difference between TurboCore and TurboCore Pro?**
-A: TurboCore trades TQQQ equity (shares). TurboCore Pro trades TQQQ/QQQ options (calendar spreads, verticals). Pro requires a higher capital base and options approval from your broker.
+**Q: What is the difference between QQQ Basic and QQQ LEAPS?**
+A: QQQ Basic rotates between ETFs (QQQ/QLD/TQQQ/SGOV) and requires no options approval — it works in any account including IRAs, with one decision per day at most. QQQ LEAPS buys long-dated QQQ call options on rare, gated entry signals and sells covered calls while holding — it requires options approval at your broker and involves contract-level position sizing.
+
+**Q: Does TradeMind place trades for me?**
+A: No. TradeMind never connects to or submits orders to your brokerage. You receive order instructions by email and enter each order yourself in your own brokerage account.
 
 **Q: How do I cancel my subscription?**
 A: Go to Settings → Subscription Manager → Manage Billing. This will redirect to the Stripe billing portal where you can cancel or change your plan.

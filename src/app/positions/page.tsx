@@ -462,7 +462,7 @@ export default function PositionsPage() {
                         <p className="text-xs text-tm-muted text-center mb-6 leading-relaxed">
                             {activeStrategy === 'QQQ_LEAPS'
                                 ? "Enter the capital you're allocating to QQQ LEAPS. This tracks your LEAPS positions by notional cost (entry price × 100 × contracts)."
-                                : t('positions_page.set_capital_desc', "Enter the amount you're starting with. This initializes your virtual portfolio to mirror real position sizing from TurboCore signals.")}
+                                : t('positions_page.set_capital_desc', "Enter the amount you're starting with. This initializes your virtual portfolio to mirror real position sizing from QQQ Basic signals.")}
                         </p>
                         <input
                             type="number"

@@ -2,13 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { SignalEmailAlertsSettings } from '@/components/settings/SignalEmailAlertsSettings';
-import { TQQQAutoApproveSettings } from '@/components/settings/TQQQAutoApproveSettings';
-import { TastytradeCredentials } from '@/components/settings/TastytradeCredentials';
 import { StrategyRiskSettings } from '@/components/settings/StrategyRiskSettings';
 import { X } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 
-type Tab = 'strategies' | 'emails' | 'autoApprove' | 'broker';
+type Tab = 'strategies' | 'emails';
 
 export function OnboardingWelcomeModal() {
     const { getAccessToken } = usePrivy();
@@ -69,7 +67,7 @@ export function OnboardingWelcomeModal() {
                 <div className="p-6 pb-0 border-b border-white/5 bg-gradient-to-r from-tm-purple/10 to-transparent relative shrink-0">
                     <h2 className="text-xl font-bold pr-8">Welcome to TradeMind 👋</h2>
                     <p className="text-sm text-tm-muted mt-2">
-                        Let's quickly configure your automated trading environment so we can hit the ground running.
+                        Set up your virtual mirror account in two quick steps. We simulate every signal against it with live prices and email you the exact orders to enter in your own brokerage — TradeMind never connects to your brokerage.
                     </p>
                     
                     {/* Tabs */}
@@ -78,25 +76,13 @@ export function OnboardingWelcomeModal() {
                             onClick={() => setActiveTab('strategies')}
                             className={`pb-3 transition-colors border-b-2 ${activeTab === 'strategies' ? 'border-tm-purple text-tm-purple' : 'border-transparent text-tm-muted hover:text-white'}`}
                         >
-                            Strategies
+                            1. Strategy
                         </button>
                         <button 
                             onClick={() => setActiveTab('emails')}
                             className={`pb-3 transition-colors border-b-2 ${activeTab === 'emails' ? 'border-tm-purple text-tm-purple' : 'border-transparent text-tm-muted hover:text-white'}`}
                         >
-                            Emails
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('autoApprove')}
-                            className={`pb-3 transition-colors border-b-2 ${activeTab === 'autoApprove' ? 'border-tm-purple text-tm-purple' : 'border-transparent text-tm-muted hover:text-white'}`}
-                        >
-                            Auto-Approve
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('broker')}
-                            className={`pb-3 transition-colors border-b-2 ${activeTab === 'broker' ? 'border-tm-purple text-tm-purple' : 'border-transparent text-tm-muted hover:text-white'}`}
-                        >
-                            Broker
+                            2. Emails
                         </button>
                     </div>
                 </div>
@@ -104,9 +90,9 @@ export function OnboardingWelcomeModal() {
                 <div className="p-6 bg-black/40 overflow-y-auto">
                     {activeTab === 'strategies' && (
                         <div className="animate-in slide-in-from-right-4 duration-300 fade-in">
-                            <h3 className="font-semibold mb-3 text-tm-purple">Strategy Configuration</h3>
+                            <h3 className="font-semibold mb-3 text-tm-purple">Strategy &amp; Capital</h3>
                             <p className="text-sm text-zinc-300 mb-4">
-                                Set your risk level and starting capital for each strategy. Signals will be tailored to your risk preference, and P&L will be tracked against your principal.
+                                Choose your strategy, risk level, and starting capital. Your virtual account mirrors each signal with position sizing based on its own cash and positions — just like a paper trading account.
                             </p>
                             <StrategyRiskSettings />
                         </div>
@@ -116,31 +102,12 @@ export function OnboardingWelcomeModal() {
                         <div className="animate-in slide-in-from-right-4 duration-300 fade-in">
                             <h3 className="font-semibold mb-3 text-tm-purple">Signal Email Alerts</h3>
                             <p className="text-sm text-zinc-300 mb-4">
-                                Add your email addresses and turn on the switch to ensure you never miss a signal notification when you are offline!
+                                Each signal email contains the exact order instructions — ticker, action, contracts, and reference price — so you can enter the trade in your own brokerage account.
                             </p>
                             <SignalEmailAlertsSettings />
                         </div>
                     )}
 
-                    {activeTab === 'autoApprove' && (
-                        <div className="animate-in slide-in-from-right-4 duration-300 fade-in">
-                            <h3 className="font-semibold mb-3 text-tm-purple">Auto-Approval Settings</h3>
-                            <p className="text-sm text-zinc-300 mb-4">
-                                Configure how aggressively the system automatically approves trades matching your strategies. Leave it universally enabled for a hands-off experience!
-                            </p>
-                            <TQQQAutoApproveSettings />
-                        </div>
-                    )}
-
-                    {activeTab === 'broker' && (
-                        <div className="animate-in slide-in-from-right-4 duration-300 fade-in">
-                            <h3 className="font-semibold mb-3 text-tm-purple">Live Execution</h3>
-                            <p className="text-sm text-zinc-300 mb-4">
-                                Connect your Tastytrade account to instantly shift from paper trading to live strategy execution.
-                            </p>
-                            <TastytradeCredentials />
-                        </div>
-                    )}
                 </div>
             </div>
         </div>

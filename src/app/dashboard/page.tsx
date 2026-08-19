@@ -72,7 +72,6 @@ import { OnboardingWelcomeModal } from '@/components/dashboard/OnboardingWelcome
 
 import { getStrategy } from '@/lib/strategies';
 
-import { TastytradeLink } from '@/components/TastytradeLink';
 
 import { TQQQStatusBanner } from '@/components/dashboard/TQQQStatusBanner';
 

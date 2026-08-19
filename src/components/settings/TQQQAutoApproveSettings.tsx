@@ -1,6 +1,6 @@
 'use client';
 
-import { Shield, Scale, Flame, Target, Clock, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Shield, Scale, Flame, Target, Clock, TrendingUp } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useStrategyContext } from '@/components/providers/StrategyContext';
 
@@ -45,7 +45,8 @@ const TURBOCORE_RISK_PROFILES: Record<RiskLevel, {
     },
 };
 
-// ── TurboCore Pro (IV-Switch) Risk Profiles ────────────────────────────────
+// ── QQQ Basic (ML Allocation) Risk Profiles ────────────────────────────────
+// Backtest figures: 2021–2026 walk-forward, per-tier (CAGR / max drawdown).
 const PRO_RISK_PROFILES: Record<RiskLevel, {
     label: string;
     icon: React.ReactNode;
@@ -58,28 +59,28 @@ const PRO_RISK_PROFILES: Record<RiskLevel, {
     LOW: {
         label: 'Conservative',
         icon: <Shield className="w-5 h-5" />,
-        description: 'Multi-Threshold Swing',
+        description: 'Lower leverage, faster defense',
         riskPct: 5,
-        backtestReturn: '+117%',
-        maxDrawdown: '-4.7%',
-        strategy: 'Put Credit & 1x2 Backspread',
+        backtestReturn: '+10.1%/yr',
+        maxDrawdown: '-12.7%',
+        strategy: 'QQQ/QLD tilt + SGOV defense',
     },
     MEDIUM: {
         label: 'Balanced',
         icon: <Scale className="w-5 h-5" />,
-        description: 'Put + Call spreads',
+        description: 'Moderate TQQQ/QLD mix',
         riskPct: 7.5,
-        backtestReturn: '+98%',
-        maxDrawdown: '-10%',
-        strategy: 'Dual-Sided (Scenario B) ★',
+        backtestReturn: '+13.7%/yr',
+        maxDrawdown: '-15.0%',
+        strategy: 'ML Allocation ★',
     },
     HIGH: {
         label: 'Aggressive',
         icon: <Flame className="w-5 h-5" />,
-        description: 'Full dual-sided',
+        description: 'Full TQQQ on strong signals',
         riskPct: 10,
-        backtestReturn: '+135%',
-        maxDrawdown: '-18%',
+        backtestReturn: '+17.8%/yr',
+        maxDrawdown: '-22.3%',
         strategy: 'Max Exposure',
     },
 };
@@ -125,64 +126,8 @@ const RISK_COLORS: Record<RiskLevel | LeapsDelta, { border: string; bg: string; 
     AGGRESSIVE:   { border: 'border-orange-500', bg: 'bg-orange-500/10', text: 'text-orange-400', icon: 'text-orange-400' },
 };
 
-// ── Auto-Approve Toggle ────────────────────────────────────────────────────
-function AutoApproveToggle({
-    strategy,
-    hasTastyLinked,
-}: {
-    strategy: string;
-    hasTastyLinked: boolean;
-}) {
-    const { settings, setStrategyAutoApproval } = useSettings();
-    const enabled = settings.autoApprovalByStrategy?.[strategy] ?? false;
-
-    return (
-        <div className="glass-card p-4">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h3 className="font-semibold text-sm">Auto-Approval</h3>
-                    <p className="text-xs text-tm-muted mt-0.5">
-                        {enabled
-                            ? 'Signals execute automatically on Tastytrade'
-                            : 'Manually approve each signal before execution'}
-                    </p>
-                </div>
-                <button
-                    type="button"
-                    onClick={() => setStrategyAutoApproval(strategy, !enabled)}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                        enabled ? 'bg-tm-purple' : 'bg-tm-surface'
-                    }`}
-                    role="switch"
-                    aria-checked={enabled}
-                >
-                    <span className="sr-only">Toggle auto-approval</span>
-                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                        enabled ? 'translate-x-5' : 'translate-x-0'
-                    }`} />
-                </button>
-            </div>
-
-            {!hasTastyLinked ? (
-                <div className="mt-3 pt-3 border-t border-white/5">
-                    <p className="text-[11px] text-tm-muted flex items-start gap-1">
-                        <AlertTriangle className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                        <span>Link Tastytrade in settings below to enable live auto-execute. Signals will execute virtually on the shadow ledger.</span>
-                    </p>
-                </div>
-            ) : enabled ? (
-                <div className="mt-3 pt-3 border-t border-white/5">
-                    <p className="text-[11px] text-yellow-400/80">
-                        ⚠️ Auto-approval is active. Qualifying signals will be securely submitted to Tastytrade as limit orders at mid-price.
-                    </p>
-                </div>
-            ) : null}
-        </div>
-    );
-}
-
 // ── LEAPS Settings Panel ───────────────────────────────────────────────────
-function LEAPSSettings({ hasTastyLinked }: { hasTastyLinked: boolean }) {
+function LEAPSSettings() {
     const { settings, setRiskLevel } = useSettings();
     // Re-use riskLevel mapped to LEAPS delta profiles
     const levelMap: Record<RiskLevel, LeapsDelta> = {
@@ -245,20 +190,17 @@ function LEAPSSettings({ hasTastyLinked }: { hasTastyLinked: boolean }) {
                 </div>
             </div>
 
-            <AutoApproveToggle strategy="QQQ_LEAPS" hasTastyLinked={hasTastyLinked} />
         </div>
     );
 }
 
-// ── TurboCore / Pro Shared Panel ───────────────────────────────────────────
+// ── QQQ Basic Shared Panel ─────────────────────────────────────────────────
 function EquityOrProSettings({
     strategyKey,
     profiles,
-    hasTastyLinked,
 }: {
     strategyKey: string;
     profiles: typeof TURBOCORE_RISK_PROFILES;
-    hasTastyLinked: boolean;
 }) {
     const { settings, setRiskLevel } = useSettings();
     const currentProfile = profiles[settings.riskLevel];
@@ -314,7 +256,6 @@ function EquityOrProSettings({
                 </div>
             </div>
 
-            <AutoApproveToggle strategy={strategyKey} hasTastyLinked={hasTastyLinked} />
         </div>
     );
 }
@@ -322,19 +263,16 @@ function EquityOrProSettings({
 // ── Main Export ────────────────────────────────────────────────────────────
 export function TQQQAutoApproveSettings() {
     const { activeStrategy } = useStrategyContext();
-    const { settings } = useSettings();
-    const hasTastyLinked = Boolean(settings.tastytrade?.refreshToken);
 
     if (activeStrategy === 'QQQ_LEAPS') {
-        return <LEAPSSettings hasTastyLinked={hasTastyLinked} />;
+        return <LEAPSSettings />;
     }
 
-    // Default: Turbo Pro (base TurboCore strategy removed)
+    // Default: QQQ Basic (base TurboCore strategy removed)
     return (
         <EquityOrProSettings
             strategyKey="TQQQ_TURBOCORE_PRO"
             profiles={PRO_RISK_PROFILES}
-            hasTastyLinked={hasTastyLinked}
         />
     );
 }

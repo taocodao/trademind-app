@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { ArrowLeft, Settings, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
-import { TastytradeCredentials } from '@/components/settings/TastytradeCredentials';
 import { InvestmentPrincipal } from '@/components/dashboard/InvestmentPrincipal';
 import { ShadowLedgerPanel } from '@/components/dashboard/ShadowLedgerPanel';
 import { TQQQAutoApproveSettings } from '@/components/settings/TQQQAutoApproveSettings';
@@ -68,9 +67,6 @@ export default function SettingsPage() {
 
                 {/* Email Alerts Setup */}
                 <SignalEmailAlertsSettings />
-                
-                {/* Tastytrade Credentials */}
-                <TastytradeCredentials />
 
                 {/* Login Method */}
                 <LoginMethodSection />

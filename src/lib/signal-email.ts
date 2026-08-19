@@ -21,6 +21,40 @@ function brokerGuideUrl(o: DeltaOrder, broker: string): string {
     return `${BASE_URL}/api/broker-guide?broker=${encodeURIComponent(broker)}&symbol=${encodeURIComponent(o.symbol)}&action=${o.action}&quantity=${o.quantity}`;
 }
 
+// Public URL of the annotated broker-ticket guide for an options order.
+// Parses the OCC symbol (e.g. QQQ_20271217C00770) into the expiry/strike/right
+// params the broker-guide route expects. Returns null if the symbol doesn't parse.
+function optionsGuideUrl(l: OptionsOrder, broker: string): string | null {
+    const m = /^([A-Z.]+)_(\d{4})(\d{2})(\d{2})([CP])(\d+(?:\.\d+)?)$/.exec(l.symbol || '');
+    if (!m) return null;
+    const underlying = m[1];
+    const expiry = `${m[2]}-${m[3]}-${m[4]}`;
+    const right = m[5] === 'P' ? 'put' : 'call';
+    const strike = m[6];
+    const a = (l.action || '').toLowerCase();
+    const action = a.startsWith('sell') ? 'sell' : 'buy';
+    const openClose = a.includes('close') ? 'close' : 'open';
+    return `${BASE_URL}/api/broker-guide?broker=${encodeURIComponent(broker)}&symbol=${encodeURIComponent(underlying)}&action=${action}&quantity=${l.quantity}&expiry=${expiry}&strike=${encodeURIComponent(strike)}&right=${right}&openclose=${openClose}`;
+}
+
+// Broker order-entry guide block (image + compliance caption) reused by the
+// equity and options sections. Returns '' when no guide applies (e.g. E*TRADE
+// equity orders, for which we have no ticket image yet).
+function brokerGuideBlock(url: string | null, brokerName: string, symbol: string): string {
+    if (!url) return '';
+    return `
+                    <div style="margin:2px 0 10px">
+                        <p style="margin:0 0 6px;font-size:11px;color:#374151;font-family:monospace">
+                            Enter at ${escHtml(brokerName)} — follow the numbered fields:
+                        </p>
+                        <img src="${url}" alt="${escHtml(brokerName)} order entry guide for ${escHtml(symbol)}"
+                             style="width:100%;max-width:560px;border:1px solid #e5e7eb;border-radius:6px;display:block" />
+                        <p style="margin:4px 0 0;font-size:10px;color:#9ca3af;font-family:monospace">
+                            Review on ${escHtml(brokerName)} and press Preview order yourself. TradeMind never submits orders to your brokerage.
+                        </p>
+                    </div>`;
+}
+
 export interface SignalEmailData {
     strategy: string;
     regime?: string;
@@ -370,7 +404,8 @@ function buildHtmlBody(data: SignalEmailData): string {
                             padding:10px 14px;margin:4px 0;border-radius:4px;font-family:monospace;
                             font-size:13px;color:#111827">
                     ${escHtml(l.instruction)}
-                </div>`).join('')}
+                </div>
+                ${brokerGuideBlock(optionsGuideUrl(l, brokerKey), brokerName, l.symbol)}`).join('')}
         </div>` : data.skipOptions && data.skipReason ? `
         <div style="margin:0 0 24px 0">
             <p style="margin:0 0 10px;color:#374151;font-size:11px;font-weight:700;

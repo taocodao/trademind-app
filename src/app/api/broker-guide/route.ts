@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import sharp from 'sharp';
+import { Resvg } from '@resvg/resvg-js';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
  * referenced by absolute URL so it renders both in-app and in emails.
  */
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.trademind.bot';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://trademind.bot';
 
 // Cropped ticket template dimensions.
 const STOCKS = { w: 1270, h: 564, img: 'fidelity-stocks.jpg' };
@@ -177,23 +177,36 @@ export async function GET(req: NextRequest) {
         overlay += `<text x="${cardX + 16}" y="${cardY + Math.round(cardH * 0.74)}" font-family="Arial,Helvetica,sans-serif" font-size="${Math.round(H * 0.046)}" font-weight="700" fill="${DARK}">${esc(value)}</text>`;
     });
 
-    if (format === 'png') {
-        // Rasterize server-side: embed the ticket JPG as base64 (sharp can't
-        // fetch remote images inside an SVG), then composite to PNG.
-        try {
-            // Fetch the ticket JPG over HTTP — on Vercel, public/ assets are
-            // served by the CDN and NOT present in the serverless function's
-            // filesystem, so fs.readFile(process.cwd()/public/...) fails there.
-            const imgRes = await fetch(imgHref, { cache: 'no-store' });
-            if (!imgRes.ok) throw new Error(`ticket image fetch failed: ${imgRes.status}`);
-            const imgBuf = Buffer.from(await imgRes.arrayBuffer());
-            const img64 = `data:image/jpeg;base64,${imgBuf.toString('base64')}`;
-            const svgPng = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <rect width="${W}" height="${H}" fill="#f5f5f5"/>
-  <image x="${GUTTER}" y="0" width="${TICKET_W}" height="${TICKET_H}" href="${img64}"/>
+  <image x="${GUTTER}" y="0" width="${TICKET_W}" height="${TICKET_H}" href="${imgHref}" xlink:href="${imgHref}"/>
   ${overlay}
 </svg>`;
-            const png = await sharp(Buffer.from(svgPng)).png({ quality: 92 }).toBuffer();
+
+    if (format === 'png') {
+        try {
+            // resvg has no network access: inline the ticket JPG as a data URI
+            // and provide fonts as buffers. public/ assets are NOT on disk in
+            // Vercel serverless functions, so fetch everything over HTTP.
+            const [imgRes, sansRes, boldRes] = await Promise.all([
+                fetch(imgHref, { cache: 'no-store' }),
+                fetch(`${BASE_URL}/fonts/DejaVuSans.ttf`, { cache: 'no-store' }),
+                fetch(`${BASE_URL}/fonts/DejaVuSans-Bold.ttf`, { cache: 'no-store' }),
+            ]);
+            if (!imgRes.ok) throw new Error(`ticket image fetch failed: ${imgRes.status}`);
+            if (!sansRes.ok || !boldRes.ok) throw new Error(`font fetch failed: ${sansRes.status}/${boldRes.status}`);
+            const img64 = `data:image/jpeg;base64,${Buffer.from(await imgRes.arrayBuffer()).toString('base64')}`;
+            const svgPng = svg.replaceAll(imgHref, img64);
+            const fontBuffers = [
+                Buffer.from(await sansRes.arrayBuffer()),
+                Buffer.from(await boldRes.arrayBuffer()),
+            ];
+            const resvg = new Resvg(svgPng, {
+                fitTo: { mode: 'width', value: W },
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                font: { fontBuffers, loadSystemFonts: false, defaultFontFamily: 'DejaVu Sans' } as any,
+            });
+            const png = resvg.render().asPng();
             return new NextResponse(new Uint8Array(png), {
                 status: 200,
                 headers: {
@@ -207,12 +220,6 @@ export async function GET(req: NextRequest) {
             // fall through to SVG
         }
     }
-
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-  <rect width="${W}" height="${H}" fill="#f5f5f5"/>
-  <image x="${GUTTER}" y="0" width="${TICKET_W}" height="${TICKET_H}" href="${imgHref}" xlink:href="${imgHref}"/>
-  ${overlay}
-</svg>`;
 
     return new NextResponse(svg, {
         status: 200,

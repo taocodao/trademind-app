@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import sharp from 'sharp';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -180,7 +181,6 @@ export async function GET(req: NextRequest) {
         // Rasterize server-side: embed the ticket JPG as base64 (sharp can't
         // fetch remote images inside an SVG), then composite to PNG.
         try {
-            const sharp = (await import('sharp')).default;
             // Fetch the ticket JPG over HTTP — on Vercel, public/ assets are
             // served by the CDN and NOT present in the serverless function's
             // filesystem, so fs.readFile(process.cwd()/public/...) fails there.

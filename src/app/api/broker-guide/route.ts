@@ -94,6 +94,7 @@ export async function GET(req: NextRequest) {
 
     let ticket = STOCKS;
     let values: Array<[string, string, string, [number, number]]>;
+    let pngError: string | null = null;
 
     if (broker === 'etrade') {
         if (!isOption) return NextResponse.json({ error: 'E*TRADE guide currently supports options orders only' }, { status: 400 });
@@ -202,6 +203,7 @@ export async function GET(req: NextRequest) {
             });
         } catch (err) {
             console.error('[broker-guide] PNG raster failed, falling back to SVG:', err);
+            pngError = String(err instanceof Error ? err.message : err).slice(0, 200);
             // fall through to SVG
         }
     }
@@ -217,6 +219,7 @@ export async function GET(req: NextRequest) {
         headers: {
             'Content-Type': 'image/svg+xml',
             'Cache-Control': 'public, max-age=300, s-maxage=300',
+            ...(pngError ? { 'X-Png-Fallback': pngError } : {}),
         },
     });
 }

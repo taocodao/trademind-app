@@ -7,7 +7,7 @@ import { CheckCircle, Zap, Brain, Layers, Clock, ArrowRight, Star, Gift, Calenda
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Interval = 'monthly' | 'annual' | 'biennial';
+// Annual-only pricing — the only interval sold.
 
 interface TrialInfo {
     trialEndsAt: string | null;
@@ -30,9 +30,16 @@ const PLAN_ACCENT: Record<PlanKey, string> = {
 };
 
 const PLAN_BADGE: Record<PlanKey, string | null> = {
-    turbocore_pro_bundle: 'Most Popular',
-    qqq_leaps:            null,
-    full_access:          'Best Value',
+    turbocore_pro_bundle: null,
+    qqq_leaps:            'Flagship',
+    full_access:          null,
+};
+
+// Annual Stripe price IDs (env-inlined at build time)
+const ANNUAL_PRICE_IDS: Record<PlanKey, string> = {
+    turbocore_pro_bundle: process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_PRO_BUNDLE_ANNUAL_PRICE_ID || '',
+    qqq_leaps:            process.env.NEXT_PUBLIC_STRIPE_QQQ_LEAPS_ANNUAL_PRICE_ID || '',
+    full_access:          process.env.NEXT_PUBLIC_STRIPE_FULL_ACCESS_ANNUAL_PRICE_ID || '',
 };
 
 // ── Countdown Timer ───────────────────────────────────────────────────────────
@@ -78,10 +85,9 @@ function CountdownTimer({ endsAt }: { endsAt: string }) {
 // ── Plan Card ─────────────────────────────────────────────────────────────────
 
 function PlanCard({
-    planKey, interval, trialCreditCents, isHighlighted,
+    planKey, trialCreditCents, isHighlighted,
 }: {
     planKey: PlanKey;
-    interval: Interval;
     trialCreditCents: number;
     isHighlighted: boolean;
 }) {
@@ -89,18 +95,39 @@ function PlanCard({
     const Icon   = PLAN_ICONS[planKey];
     const badge  = PLAN_BADGE[planKey];
     const accent = PLAN_ACCENT[planKey];
+    const [checkoutLoading, setCheckoutLoading] = useState(false);
 
-    const bonusDays = creditsToBonusDays(trialCreditCents, plan.monthly);
+    // Bonus days convert at the EFFECTIVE monthly rate (annual/12)
+    const bonusDays = creditsToBonusDays(trialCreditCents, plan.annualPerMonth);
 
-    const displayPrice = interval === 'annual'   ? `$${plan.annual}/yr`
-                       : interval === 'biennial'  ? `$${plan.biennial}/2yr`
-                       : `$${plan.monthly}/mo`;
+    const displayPrice = `$${plan.annual}/yr`;
+    const subText = `$${plan.annualPerMonth.toFixed(2)}/mo equivalent · 30% off the monthly rate`;
 
-    const subText = interval === 'annual'  ? `$${plan.annualPerMonth.toFixed(2)}/mo · 30% off`
-                  : interval === 'biennial' ? `$${plan.biennialPerMonth.toFixed(2)}/mo · 40% off`
-                  : null;
-
-    const checkoutUrl = `/api/stripe/checkout?plan=${planKey}&interval=${interval}`;
+    // POST creates a Stripe Checkout Session and redirects (GET /api/stripe/checkout
+    // does not exist — the old <a href> link 405'd)
+    const handleCheckout = async () => {
+        const priceId = ANNUAL_PRICE_IDS[planKey];
+        if (!priceId) {
+            alert('This plan is being configured. Please try again shortly.');
+            return;
+        }
+        setCheckoutLoading(true);
+        try {
+            const res = await fetch('/api/stripe/checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ priceId, isAnnual: true }),
+            });
+            const data = await res.json();
+            if (data.url) window.location.href = data.url;
+            else throw new Error(data.error || 'Checkout failed');
+        } catch (err) {
+            console.error('Checkout error:', err);
+            alert('Failed to start checkout. Please try again.');
+        } finally {
+            setCheckoutLoading(false);
+        }
+    };
 
     return (
         <div className={`
@@ -129,7 +156,7 @@ function PlanCard({
                 </div>
                 {subText && <p className="text-green-400 text-xs font-semibold">{subText}</p>}
 
-                {bonusDays > 0 && interval === 'monthly' && (
+                {bonusDays > 0 && (
                     <div className="flex items-center gap-1.5 mt-2">
                         <Gift className="w-3.5 h-3.5 text-green-400" />
                         <span className="text-green-400 text-xs font-semibold">
@@ -148,17 +175,19 @@ function PlanCard({
                 ))}
             </ul>
 
-            <a
-                href={checkoutUrl}
+            <button
+                onClick={handleCheckout}
+                disabled={checkoutLoading}
                 className={`
                     flex items-center justify-center gap-2 rounded-xl py-3 font-bold text-sm transition-all
                     ${isHighlighted
                         ? 'bg-white text-black hover:bg-gray-100'
                         : 'bg-white/10 text-white hover:bg-white/20'}
+                    ${checkoutLoading ? 'opacity-60 cursor-wait' : ''}
                 `}
             >
-                Get Started <ArrowRight className="w-4 h-4" />
-            </a>
+                {checkoutLoading ? 'Starting checkout…' : 'Get Started'} <ArrowRight className="w-4 h-4" />
+            </button>
         </div>
     );
 }
@@ -178,14 +207,9 @@ const COMPARE_FEATURES = [
     { label: 'Founder Office Hours',          turbocore_pro_bundle: false, qqq_leaps: false, full_access: true  },
 ];
 
-function CompareTable({ interval }: { interval: Interval }) {
-    const plans: PlanKey[] = ['turbocore_pro_bundle', 'qqq_leaps', 'full_access'];
-    const priceLabel = (p: PlanKey) => {
-        const plan = PRICING.plans[p];
-        if (interval === 'annual')   return `$${plan.annual}/yr`;
-        if (interval === 'biennial') return `$${plan.biennial}/2yr`;
-        return `$${plan.monthly}/mo`;
-    };
+function CompareTable() {
+    const plans: PlanKey[] = ['turbocore_pro_bundle', 'qqq_leaps'];
+    const priceLabel = (p: PlanKey) => `$${PRICING.plans[p].annual}/yr`;
     return (
         <div className="overflow-x-auto rounded-xl border border-white/10">
             <table className="w-full text-sm">
@@ -227,20 +251,16 @@ const FAQ_ITEMS = [
         a: 'Your $10 or $20 trial fee is refunded as Stripe subscription credit and automatically extends your first billing period by bonus days.',
     },
     {
-        q: 'How does the $100 × 4 month credit installment work?',
-        a: 'When you subscribe monthly, we automatically issue $100 credit each month for the first 4 months, offsetting your bill. Net cost = plan price minus applied credit.',
-    },
-    {
-        q: 'What is the 2-year plan?',
-        a: 'The 2-year plan locks in your price for 24 months at 40% off the monthly rate. Billed as a single payment via Stripe\'s 24-month billing interval.',
+        q: 'How does the referral program work?',
+        a: 'Share your referral link. When a friend subscribes and stays active for 75 days, they get 4 extra months free and you get 8 months free — applied automatically as subscription credits.',
     },
     {
         q: 'Can I cancel anytime?',
-        a: 'Yes. Monthly plans cancel at the end of the billing period. Annual/2-year plans are non-refundable after 14 days.',
+        a: 'Yes. Annual plans are non-refundable after 14 days; your access runs to the end of the paid year.',
     },
     {
-        q: 'Do I need a Tastytrade account?',
-        a: 'No — you can use TradeMind in Track Only mode to monitor signals and P&L without executing real trades.',
+        q: 'Does TradeMind connect to my brokerage?',
+        a: 'No — TradeMind never connects to or submits orders to your brokerage. Signals only help you enter the order yourself, in any account you choose.',
     },
 ];
 
@@ -275,7 +295,6 @@ function UpgradePageInner() {
     const trialDaysParam = parseInt(searchParams.get('days') ?? '30', 10);
     const trialFee       = trialDaysParam === 60 ? 20 : 10;
 
-    const [interval, setInterval]   = useState<Interval>('monthly');
     const [trialInfo, setTrialInfo] = useState<TrialInfo>({ trialEndsAt: null, trialDays: 30, converted: false });
     const [loading, setLoading]     = useState(false);
 
@@ -325,8 +344,8 @@ function UpgradePageInner() {
                     </h1>
 
                     <p className="text-gray-400 text-lg mb-8">
-                        Three strategies. One platform.
-                        Pick the plan that fits — monthly, yearly (30% off), or 2-year (40% off).
+                        Two strategies. One platform.
+                        Annual billing only — one bill a year, 30% off the monthly rate.
                     </p>
 
                     {creditExpiry && (
@@ -341,62 +360,37 @@ function UpgradePageInner() {
                 </div>
             </section>
 
-            {/* ── Billing Toggle ─────────────────────────────────────────────── */}
+            {/* ── Annual-only notice ─────────────────────────────────────────── */}
             <div className="flex justify-center gap-1 mb-10 px-4">
-                <div className="bg-white/5 border border-white/10 rounded-xl p-1 flex">
-                    {(['monthly', 'annual', 'biennial'] as Interval[]).map(i => (
-                        <button
-                            key={i}
-                            onClick={() => setInterval(i)}
-                            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                                interval === i ? 'bg-white text-black' : 'text-gray-400 hover:text-white'
-                            }`}
-                        >
-                            {i === 'monthly' ? 'Monthly'
-                             : i === 'annual' ? (
-                                <span className="flex items-center gap-2">
-                                    Yearly
-                                    <span className="bg-green-400/20 text-green-400 text-xs px-2 py-0.5 rounded-full font-bold">
-                                        −30%
-                                    </span>
-                                </span>
-                             ) : (
-                                <span className="flex items-center gap-2">
-                                    2-Year
-                                    <span className="bg-amber-400/20 text-amber-400 text-xs px-2 py-0.5 rounded-full font-bold">
-                                        −40%
-                                    </span>
-                                </span>
-                             )}
-                        </button>
-                    ))}
+                <div className="bg-white/5 border border-white/10 rounded-xl px-5 py-2.5 flex items-center gap-3">
+                    <span className="text-sm font-semibold text-white">Annual billing only</span>
+                    <span className="bg-green-400/20 text-green-400 text-xs px-2 py-0.5 rounded-full font-bold">30% off the monthly rate</span>
                 </div>
             </div>
 
             {/* ── Plan Cards ─────────────────────────────────────────────────── */}
-            <section className="max-w-5xl mx-auto px-4 mb-16">
-                <div className="grid md:grid-cols-3 gap-6 items-start">
-                    {(['turbocore_pro_bundle', 'qqq_leaps', 'full_access'] as PlanKey[]).map(key => (
+            <section className="max-w-3xl mx-auto px-4 mb-16">
+                <div className="grid md:grid-cols-2 gap-6 items-start">
+                    {(['turbocore_pro_bundle', 'qqq_leaps'] as PlanKey[]).map(key => (
                         <PlanCard
                             key={key}
                             planKey={key}
-                            interval={interval}
                             trialCreditCents={trialCreditCents}
-                            isHighlighted={key === 'full_access'}
+                            isHighlighted={key === 'qqq_leaps'}
                         />
                     ))}
                 </div>
             </section>
 
-            {/* ── Credit Installment Callout ─────────────────────────────────── */}
+            {/* ── Referral Callout ───────────────────────────────────────────── */}
             <section className="max-w-3xl mx-auto px-4 mb-16">
                 <div className="rounded-2xl border border-purple-500/20 bg-gradient-to-r from-purple-900/20 to-indigo-900/20 p-6 text-center">
-                    <Calendar className="w-8 h-8 text-purple-400 mx-auto mb-3" />
-                    <h3 className="text-lg font-bold text-white mb-2">Monthly Credit Installment</h3>
+                    <Gift className="w-8 h-8 text-purple-400 mx-auto mb-3" />
+                    <h3 className="text-lg font-bold text-white mb-2">Refer a friend, both of you get free months</h3>
                     <p className="text-gray-400 text-sm leading-relaxed max-w-xl mx-auto">
-                        Subscribe monthly and receive <span className="text-white font-semibold">$100 credit automatically</span> for
-                        your first 4 months — offsetting your bill each month. Total value: $400 applied directly
-                        to your subscription.
+                        They get <span className="text-white font-semibold">4 extra months</span> free.
+                        You get <span className="text-white font-semibold">8 months</span> free.
+                        Both unlock once their subscription has been active for 75 days.
                     </p>
                 </div>
             </section>
@@ -404,7 +398,7 @@ function UpgradePageInner() {
             {/* ── Comparison Table ───────────────────────────────────────────── */}
             <section className="max-w-4xl mx-auto px-4 mb-16">
                 <h2 className="text-xl font-bold text-center mb-6">Compare Plans</h2>
-                <CompareTable interval={interval} />
+                <CompareTable />
             </section>
 
             {/* ── Social Proof ───────────────────────────────────────────────── */}

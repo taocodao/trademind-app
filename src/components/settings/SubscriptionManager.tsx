@@ -17,50 +17,30 @@ const TIER_LABELS: Record<string, string> = {
 };
 
 // ── Post-trial plan definitions ─────────────────────────────────────────────
+// Annual-only pricing — two plans, one bill a year (30% off the monthly reference rate).
 const POST_TRIAL_PLANS = [
     {
         id:          'turbocore_pro_bundle',
         name:        'QQQ Basic',
         icon:        Zap,
         description: 'QQQ Basic ML Signal (daily 3 PM ET) + IV-Switching Composite Options Strategy',
-        monthly:     69,
-        annual:      Math.round(69 * 12 * 0.70),   // 30% off
-        biennial:    Math.round(69 * 24 * 0.60),    // 40% off
+        monthly:     30,          // reference rate (not sold)
+        annual:      252,         // 30 × 12 × 0.70
         color:       'from-purple-500 to-indigo-500',
-        monthlyPriceId:  process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_PRO_BUNDLE_MONTHLY_PRICE_ID  || '',
-        annualPriceId:   process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_PRO_BUNDLE_ANNUAL_PRICE_ID   || '',
-        biennialPriceId: process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_PRO_BUNDLE_BIENNIAL_PRICE_ID || '',
+        annualPriceId:   process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_PRO_BUNDLE_ANNUAL_PRICE_ID || '',
     },
     {
         id:          'qqq_leaps',
         name:        'QQQ LEAPS',
         icon:        TrendingUp,
         description: 'ML-Powered QQQ Long-Term Options — ENTER / EXIT / HOLD signals',
-        monthly:     59,
-        annual:      Math.round(59 * 12 * 0.70),
-        biennial:    Math.round(59 * 24 * 0.60),
+        monthly:     40,          // reference rate (not sold)
+        annual:      336,         // 40 × 12 × 0.70
         color:       'from-blue-500 to-cyan-500',
-        monthlyPriceId:  process.env.NEXT_PUBLIC_STRIPE_QQQ_LEAPS_MONTHLY_PRICE_ID  || '',
-        annualPriceId:   process.env.NEXT_PUBLIC_STRIPE_QQQ_LEAPS_ANNUAL_PRICE_ID   || '',
-        biennialPriceId: process.env.NEXT_PUBLIC_STRIPE_QQQ_LEAPS_BIENNIAL_PRICE_ID || '',
-    },
-    {
-        id:          'full_access',
-        name:        'Full Access',
-        icon:        Layers,
-        description: 'Both strategies: QQQ Basic + QQQ LEAPS — everything included',
-        monthly:     100,
-        annual:      Math.round(100 * 12 * 0.70),
-        biennial:    Math.round(100 * 24 * 0.60),
-        color:       'from-pink-500 to-rose-500',
         recommended: true,
-        monthlyPriceId:  process.env.NEXT_PUBLIC_STRIPE_FULL_ACCESS_MONTHLY_PRICE_ID  || '',
-        annualPriceId:   process.env.NEXT_PUBLIC_STRIPE_FULL_ACCESS_ANNUAL_PRICE_ID   || '',
-        biennialPriceId: process.env.NEXT_PUBLIC_STRIPE_FULL_ACCESS_BIENNIAL_PRICE_ID || '',
+        annualPriceId:   process.env.NEXT_PUBLIC_STRIPE_QQQ_LEAPS_ANNUAL_PRICE_ID || '',
     },
 ];
-
-type Interval = 'monthly' | 'annual' | 'biennial';
 
 interface MembershipInfo {
     tier:               string;
@@ -93,7 +73,7 @@ export function SubscriptionManager() {
     const searchParams       = useSearchParams();
     const isMockExpired      = searchParams?.get('mockExpired') === 'true';
 
-    const [interval,         setInterval]         = useState<Interval>('annual');
+
     const [membership,       setMembership]        = useState<MembershipInfo>({
         tier: 'observer', status: null, billingInterval: null,
         currentPeriodEnd: null, trialEnd: null, priceId: null,
@@ -148,7 +128,7 @@ export function SubscriptionManager() {
             const res   = await fetch('/api/stripe/checkout', {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-                body:    JSON.stringify({ priceId, isAnnual: interval !== 'monthly' }),
+                body:    JSON.stringify({ priceId, isAnnual: true }),
             });
             const data = await res.json();
             if (data.url) window.location.href = data.url;
@@ -195,16 +175,10 @@ export function SubscriptionManager() {
         finally { setReactivateLoading(false); }
     };
 
-    const getPriceId = (plan: typeof POST_TRIAL_PLANS[0]) =>
-        interval === 'monthly'  ? plan.monthlyPriceId  :
-        interval === 'annual'   ? plan.annualPriceId   :
-                                  plan.biennialPriceId;
+    const getPriceId = (plan: typeof POST_TRIAL_PLANS[0]) => plan.annualPriceId;
 
-    const displayPrice = (plan: typeof POST_TRIAL_PLANS[0]) => {
-        if (interval === 'monthly')  return { mo: plan.monthly,                            total: null };
-        if (interval === 'annual')   return { mo: Math.round(plan.annual  / 12),           total: plan.annual  };
-        return                               { mo: Math.round(plan.biennial / 24),          total: plan.biennial };
-    };
+    const displayPrice = (plan: typeof POST_TRIAL_PLANS[0]) =>
+        ({ mo: Math.round(plan.annual / 12), total: plan.annual });
 
     // ── Render: Active Trial ───────────────────────────────────────────────
     const ActiveTrialBanner = trialActive ? (
@@ -242,23 +216,11 @@ export function SubscriptionManager() {
                 </div>
             </div>
 
-            {/* Billing interval toggle */}
+            {/* Annual-only billing notice */}
             <div className="flex items-center justify-center gap-1 mb-5">
-                {(['monthly','annual','biennial'] as Interval[]).map(iv => (
-                    <button
-                        key={iv}
-                        onClick={() => setInterval(iv)}
-                        className={`px-3 py-1.5 rounded-full text-[11px] font-bold transition-all ${
-                            interval === iv
-                                ? 'bg-tm-purple text-white shadow-md'
-                                : 'bg-white/5 text-tm-muted hover:bg-white/10'
-                        }`}
-                    >
-                        {iv === 'monthly'  ? 'Monthly'        :
-                         iv === 'annual'   ? 'Yearly (30% off)' :
-                                            '2 Years (40% off)'}
-                    </button>
-                ))}
+                <span className="px-3 py-1.5 rounded-full text-[11px] font-bold bg-tm-purple/20 text-tm-purple border border-tm-purple/30">
+                    Annual billing · 30% off the monthly rate
+                </span>
             </div>
 
             {/* Plan cards */}
@@ -293,7 +255,7 @@ export function SubscriptionManager() {
                                 </div>
                                 <div className="text-right shrink-0">
                                     <p className="text-lg font-black text-white">${mo}<span className="text-[11px] text-tm-muted font-normal">/mo</span></p>
-                                    {total && <p className="text-[10px] text-tm-muted">${total} billed {interval === 'annual' ? 'annually' : 'every 2 years'}</p>}
+                                    {total && <p className="text-[10px] text-tm-muted">${total} billed annually</p>}
                                 </div>
                             </div>
                             <button

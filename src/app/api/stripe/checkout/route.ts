@@ -71,16 +71,23 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // ── Monthly price per plan (used for referral bonus day calculation) ──
+        // ── EFFECTIVE monthly rate per price ID (annual-only pricing: annual/12) ─
+        // Used for referral bonus day calculation — must reflect what customers
+        // actually pay per month, not the old reference monthly anchor.
         const MONTHLY_PRICES: Record<string, number> = {
+            // QQQ Basic (turbocore_pro_bundle) $252/yr → $21/mo effective
+            [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_PRO_BUNDLE_ANNUAL_PRICE_ID || '']: 21,
+            [process.env.NEXT_PUBLIC_STRIPE_BUNDLE_ANNUAL_PRICE_ID               || '']: 21,
+            // QQQ LEAPS $336/yr → $28/mo effective
+            [process.env.NEXT_PUBLIC_STRIPE_QQQ_LEAPS_ANNUAL_PRICE_ID            || '']: 28,
+            [process.env.NEXT_PUBLIC_STRIPE_LEAPS_ANNUAL_PRICE_ID                || '']: 28,
+            // Legacy price IDs (grandfathered subscriptions) — historical rates
             [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_MONTHLY_PRICE_ID || '']: 29,
-            [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_ANNUAL_PRICE_ID  || '']: 29, // use monthly rate
+            [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_ANNUAL_PRICE_ID  || '']: 20.75,
             [process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID       || '']: 49,
-            [process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID        || '']: 49,
+            [process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID        || '']: 33.25,
             [process.env.NEXT_PUBLIC_STRIPE_LEAPS_MONTHLY_PRICE_ID     || '']: 49,
-            [process.env.NEXT_PUBLIC_STRIPE_LEAPS_ANNUAL_PRICE_ID      || '']: 49,
             [process.env.NEXT_PUBLIC_STRIPE_BUNDLE_MONTHLY_PRICE_ID    || '']: 69,
-            [process.env.NEXT_PUBLIC_STRIPE_BUNDLE_ANNUAL_PRICE_ID     || '']: 69,
         };
         delete MONTHLY_PRICES[''];
 
@@ -114,6 +121,8 @@ export async function POST(req: NextRequest) {
         // ── Build Checkout Session ───────────────────────────────────────────
         // Klarna supported on annual subscriptions; Afterpay NOT supported (no recurring)
         const annualPriceIds = [
+            process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_PRO_BUNDLE_ANNUAL_PRICE_ID,
+            process.env.NEXT_PUBLIC_STRIPE_QQQ_LEAPS_ANNUAL_PRICE_ID,
             process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_ANNUAL_PRICE_ID,
             process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID,
             process.env.NEXT_PUBLIC_STRIPE_LEAPS_ANNUAL_PRICE_ID,

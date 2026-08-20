@@ -4,20 +4,21 @@
  * Import this anywhere pricing is displayed so a one-line change
  * updates the pricing page, /upgrade page, and checkout simultaneously.
  *
- * Plans (3):
- *   turbocore_pro_bundle — TurboCore + Turbo Pro  $69/mo
- *   qqq_leaps            — QQQ LEAPS               $59/mo
- *   full_access          — All 3 strategies        $100/mo
+ * Plans — ANNUAL-ONLY (since Aug 2026):
+ *   turbocore_pro_bundle — QQQ Basic   $252/yr  (= $30/mo × 12 × 0.70)
+ *   qqq_leaps            — QQQ LEAPS   $336/yr  (= $40/mo × 12 × 0.70)
+ *   full_access          — internal tier (trials, grants) — NOT sold
+ *
+ * `monthly` is the REFERENCE monthly rate (marketing anchor + legacy math).
+ * `annualPerMonth` is the EFFECTIVE monthly rate (annual / 12) — use it for
+ * credit→day conversions so "N months free" matches what customers actually pay.
  *
  * Trials (2, via Whop):
  *   trial_30 — 30-day Full Access  $10 ($100 value)
  *   trial_60 — 60-day Full Access  $20 ($200 value)
  *
- * Yearly:  30% off
- * 2-Year:  40% off (Stripe 24-month interval)
- *
  * Credits are stored as INTEGER dollar-cents in the DB.
- * Bonus days = floor( credit_dollars × 30 / plan_monthly_price )
+ * Bonus days = floor( credit_dollars × 30 / effective_monthly_price )
  */
 
 export const PRICING = {
@@ -26,15 +27,10 @@ export const PRICING = {
             key: 'turbocore_pro_bundle',
             label: 'QQQ Basic',
             description: 'QQQ Basic ML Signal + IV-Switching Composite Options Strategy',
-            monthly: 69,
-            // Yearly — 30% off
-            annual: 579.60,
-            annualPerMonth: 48.30,
+            monthly: 30,            // reference rate — not sold monthly
+            annual: 252,
+            annualPerMonth: 21,
             annualSavingsPct: 30,
-            // 2-Year — 40% off (Stripe interval: month, interval_count: 24)
-            biennial: 993.60,
-            biennialPerMonth: 41.40,
-            biennialSavingsPct: 40,
             features: [
                 'QQQ Basic ML Signal (daily at 3 PM ET)',
                 'SMA200 Regime Gate',
@@ -50,13 +46,10 @@ export const PRICING = {
             key: 'qqq_leaps',
             label: 'QQQ LEAPS',
             description: 'ML-Powered QQQ Long-Term Equity Anticipation Securities',
-            monthly: 59,
-            annual: 495.60,
-            annualPerMonth: 41.30,
+            monthly: 40,            // reference rate — not sold monthly
+            annual: 336,
+            annualPerMonth: 28,
             annualSavingsPct: 30,
-            biennial: 849.60,
-            biennialPerMonth: 35.40,
-            biennialSavingsPct: 40,
             features: [
                 'Daily ML LEAPS Signal (ENTER / EXIT / HOLD)',
                 'QQQ LEAPS Call Selection (0.70+ delta, 12-month)',
@@ -70,13 +63,11 @@ export const PRICING = {
             key: 'full_access',
             label: 'Full Access',
             description: 'Both strategies: QQQ Basic + QQQ LEAPS',
-            monthly: 100,
-            annual: 840,
-            annualPerMonth: 70,
+            internal: true,         // trials/grants only — not offered for sale
+            monthly: 70,            // reference: sum of the two reference rates
+            annual: 588,            // reference: 252 + 336
+            annualPerMonth: 49,
             annualSavingsPct: 30,
-            biennial: 1440,
-            biennialPerMonth: 60,
-            biennialSavingsPct: 40,
             features: [
                 'Everything in Turbo Core + Pro',
                 'QQQ LEAPS Strategy',
@@ -154,25 +145,37 @@ export const PRICING = {
 export type PlanKey = keyof typeof PRICING.plans;
 export type TrialKey = keyof typeof PRICING.trials;
 
-/**
- * Convert a credit balance (stored in cents) to bonus subscription days.
- * Formula: days = floor( dollars × 30 / plan_monthly_price )
- *
- * Trial fee conversion examples:
- *   $10 on Full Access $100/mo  → 3 days
- *   $20 on Full Access $100/mo  → 6 days
- *   $10 on Turbo+Pro  $69/mo   → 4 days
- *   $20 on QQQ LEAPS  $59/mo   → 10 days
- */
-export function creditsToBonusDays(creditCents: number, planMonthlyPrice: number): number {
-    if (creditCents <= 0 || planMonthlyPrice <= 0) return 0;
-    return Math.floor((creditCents / 100) * 30 / planMonthlyPrice);
+/** Plans actually offered for sale (annual-only). full_access is internal. */
+export const PUBLIC_PLAN_KEYS = ['turbocore_pro_bundle', 'qqq_leaps'] as const satisfies readonly PlanKey[];
+
+/** The only billing interval sold */
+export const PUBLIC_INTERVAL = 'annual' as const;  
+
+/** Effective per-month rate customers actually pay (annual / 12) */
+export function effectiveMonthlyRate(planKey: PlanKey): number {
+    return PRICING.plans[planKey].annualPerMonth;
 }
 
-/** Returns Stripe checkout URL for a given plan and interval */
+/**
+ * Convert a credit balance (stored in cents) to bonus subscription days.
+ * Formula: days = floor( dollars × 30 / effective_monthly_price )
+ *
+ * Pass the EFFECTIVE monthly rate (annual / 12 — see effectiveMonthlyRate),
+ * not the reference `monthly` anchor, so bonus days match what the customer
+ * actually pays. Examples at the new annual-only pricing:
+ *   $168 credit (8 mo referral) on QQQ Basic  ($21 eff.) → 240 days ✓
+ *   $224 credit (8 mo referral) on QQQ LEAPS  ($28 eff.) → 240 days ✓
+ *   $84  credit (4 mo referee)  on QQQ Basic  ($21 eff.) → 120 days ✓
+ */
+export function creditsToBonusDays(creditCents: number, effectiveMonthlyPrice: number): number {
+    if (creditCents <= 0 || effectiveMonthlyPrice <= 0) return 0;
+    return Math.floor((creditCents / 100) * 30 / effectiveMonthlyPrice);
+}
+
+/** Returns Stripe checkout URL for a given plan (annual-only) */
 export function stripeCheckoutUrl(
     planKey: PlanKey,
-    interval: 'monthly' | 'annual' | 'biennial',
+    interval: 'monthly' | 'annual' | 'biennial' = PUBLIC_INTERVAL,
     trialCreditCents = 0
 ): string {
     const base = process.env.NEXT_PUBLIC_APP_URL ?? 'https://trademind.bot';

@@ -4,6 +4,11 @@ import { getStripe } from '@/lib/stripe-server';
 // Daily rate per price ID (in USD)
 function getDailyRate(priceId: string): number {
     const rates: Record<string, number> = {
+        // Current annual-only plans
+        [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_PRO_BUNDLE_ANNUAL_PRICE_ID || '']: 252 / 365,
+        [process.env.NEXT_PUBLIC_STRIPE_QQQ_LEAPS_ANNUAL_PRICE_ID            || '']: 336 / 365,
+        [process.env.NEXT_PUBLIC_STRIPE_FULL_ACCESS_ANNUAL_PRICE_ID          || '']: 588 / 365,
+        // Legacy prices — kept so existing subscribers' extensions still compute
         [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_MONTHLY_PRICE_ID || '']:  29 / 30,
         [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_ANNUAL_PRICE_ID  || '']:  249 / 365,
         [process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID       || '']:  49 / 30,

@@ -2,64 +2,49 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Check, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePrivy } from '@privy-io/react-auth';
+import { PRICING } from '@/lib/pricing-config';
 
 export function PricingSection() {
     const { t, i18n } = useTranslation();
     const { login, authenticated, getAccessToken } = usePrivy();
-    const [isAnnual, setIsAnnual] = useState(true);
+    // Annual-only pricing — no interval toggle
     const [loadingTier, setLoadingTier] = useState<string | null>(null);
-    const [selectedTier, setSelectedTier] = useState<string>('both_bundle');
+    const [selectedTier, setSelectedTier] = useState<string>('qqq_leaps');
 
+    // Two plans, annual-only: QQQ Basic $252/yr, QQQ LEAPS $336/yr.
+    // Names/descriptions/features come from PRICING (single source of truth).
     const TIERS = useMemo(() => [
         {
-            id: 'turbocore',
-            name: t('pricing.turbocore.name'),
+            id: 'qqq_basic',
+            name: PRICING.plans.turbocore_pro_bundle.label,
             tagline: t('pricing.turbocore.tagline'),
-            price: isAnnual ? '$20.75' : '$29',
-            period: t('pricing.turbocore.period', '/mo'),
-            billedAction: isAnnual ? t('pricing.turbocore.billed_annually') : t('pricing.turbocore.billed_monthly'),
-            marketingFrame: isAnnual ? t('pricing.turbocore.save_text') : '',
-            description: t('pricing.turbocore.description'),
-            features: t('pricing.turbocore.features', { returnObjects: true }) as string[],
+            price: `$${PRICING.plans.turbocore_pro_bundle.annual}`,
+            period: t('pricing.per_year', '/yr'),
+            billedAction: t('pricing.billed_annually', 'Billed annually'),
+            marketingFrame: `$${PRICING.plans.turbocore_pro_bundle.annualPerMonth}/mo equivalent · 30% off`,
+            description: PRICING.plans.turbocore_pro_bundle.description,
+            features: PRICING.plans.turbocore_pro_bundle.features as unknown as string[],
             button: t('pricing.turbocore.btn'),
             popular: false,
             accentColor: '#4f8ef7',
-            monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_MONTHLY_PRICE_ID || '',
-            annualPriceId: process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_ANNUAL_PRICE_ID || '',
+            annualPriceId: process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_PRO_BUNDLE_ANNUAL_PRICE_ID || '',
         },
         {
-            id: 'turbocore_pro',
-            name: t('pricing.turbocore_pro.name'),
-            tagline: t('pricing.turbocore_pro.tagline'),
-            price: isAnnual ? '$33.25' : '$49',
-            period: t('pricing.turbocore_pro.period', '/mo'),
-            billedAction: isAnnual ? t('pricing.turbocore_pro.billed_annually') : t('pricing.turbocore_pro.billed_monthly'),
-            marketingFrame: isAnnual ? t('pricing.turbocore_pro.save_text') : '',
-            description: t('pricing.turbocore_pro.description'),
-            features: t('pricing.turbocore_pro.features', { returnObjects: true }) as string[],
-            button: t('pricing.turbocore_pro.btn'),
-            popular: false,
-            accentColor: '#4f8ef7',
-            monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID || '',
-            annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID || '',
-        },
-        {
-            id: 'both_bundle',
-            name: t('pricing.both_bundle.name'),
-            tagline: t('pricing.both_bundle.tagline'),
-            price: isAnnual ? '$45.75' : '$69',
-            period: t('pricing.both_bundle.period', '/mo'),
-            billedAction: isAnnual ? t('pricing.both_bundle.billed_annually') : t('pricing.both_bundle.billed_monthly'),
-            marketingFrame: isAnnual ? t('pricing.both_bundle.save_text') : '',
-            description: t('pricing.both_bundle.description'),
-            features: t('pricing.both_bundle.features', { returnObjects: true }) as string[],
-            button: t('pricing.both_bundle.btn'),
+            id: 'qqq_leaps',
+            name: PRICING.plans.qqq_leaps.label,
+            tagline: t('pricing.qqq_leaps.tagline', 'ML-powered long-term options on QQQ'),
+            price: `$${PRICING.plans.qqq_leaps.annual}`,
+            period: t('pricing.per_year', '/yr'),
+            billedAction: t('pricing.billed_annually', 'Billed annually'),
+            marketingFrame: `$${PRICING.plans.qqq_leaps.annualPerMonth}/mo equivalent · 30% off`,
+            description: PRICING.plans.qqq_leaps.description,
+            features: PRICING.plans.qqq_leaps.features as unknown as string[],
+            button: t('pricing.qqq_leaps.btn', 'Get QQQ LEAPS'),
             popular: true,
             accentColor: '#7c3aed',
-            monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_BUNDLE_MONTHLY_PRICE_ID || '',
-            annualPriceId: process.env.NEXT_PUBLIC_STRIPE_BUNDLE_ANNUAL_PRICE_ID || '',
+            annualPriceId: process.env.NEXT_PUBLIC_STRIPE_QQQ_LEAPS_ANNUAL_PRICE_ID || '',
         }
-    ], [t, isAnnual]);
+    ], [t]);
 
     useEffect(() => {
         const storedTierId = typeof window !== 'undefined' ? sessionStorage.getItem('pendingTierUrl') : null;
@@ -75,7 +60,7 @@ export function PricingSection() {
     }, [authenticated, TIERS]);
 
     const handleSubscribe = async (tier: typeof TIERS[0]) => {
-        const priceId = isAnnual ? tier.annualPriceId : tier.monthlyPriceId;
+        const priceId = tier.annualPriceId;   // annual-only
         if (!priceId) {
             alert('This plan is being configured. Please try again shortly.');
             return;
@@ -83,9 +68,9 @@ export function PricingSection() {
 
         if (!authenticated) {
             if (typeof window !== 'undefined') {
-                // Store the actual priceId (not tier.id) so dashboard can call checkout directly
-                sessionStorage.setItem('pendingTierUrl', tier.id);
-                sessionStorage.setItem('pendingTierAnnual', String(isAnnual));
+                // Store the actual priceId so dashboard can call checkout directly
+                sessionStorage.setItem('pendingTierUrl', priceId);
+                sessionStorage.setItem('pendingTierAnnual', 'true');
             }
             login();
             return;
@@ -126,7 +111,7 @@ export function PricingSection() {
                     'Content-Type': 'application/json',
                     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
                 },
-                body: JSON.stringify({ priceId, isAnnual, locale: i18n.language }),
+                body: JSON.stringify({ priceId, isAnnual: true, locale: i18n.language }),
             });
             const data = await res.json();
             if (data.url) {
@@ -163,34 +148,15 @@ export function PricingSection() {
                 <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">{t('pricing.title')}<br />{t('pricing.subtitle')}</h2>
                 <p className="text-tm-muted max-w-2xl mx-auto mb-8">{t('pricing.description')}</p>
                 
-                {/* Billing Toggle */}
-                <div className="inline-flex items-center bg-white/5 p-1 rounded-full border border-white/10 mx-auto relative">
-                    <button
-                        onClick={() => setIsAnnual(false)}
-                        className={`relative z-10 px-6 py-2 rounded-full text-sm font-bold transition-colors ${
-                            !isAnnual ? 'text-white' : 'text-tm-muted hover:text-white/80'
-                        }`}
-                    >
-                        {t('pricing.monthly_tab', 'Monthly')}
-                    </button>
-                    <button
-                        onClick={() => setIsAnnual(true)}
-                        className={`relative z-10 px-6 py-2 rounded-full text-sm font-bold transition-colors flex items-center gap-2 ${
-                            isAnnual ? 'text-white' : 'text-tm-muted hover:text-white/80'
-                        }`}
-                    >
-                        {t('pricing.annual_tab', 'Annually')} <span className="text-[10px] bg-tm-green/20 text-tm-green px-1.5 py-0.5 rounded uppercase tracking-wider">{t('pricing.save_badge', 'SAVE')}</span>
-                    </button>
-                    <div 
-                        className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-tm-purple rounded-full transition-transform duration-300 ease-in-out ${
-                            isAnnual ? 'translate-x-[calc(100%+4px)]' : 'translate-x-0'
-                        }`} 
-                    />
+                {/* Annual-only billing — one price per plan, one bill a year */}
+                <div className="inline-flex items-center gap-2 bg-white/5 px-5 py-2 rounded-full border border-white/10 mx-auto">
+                    <span className="text-sm font-bold text-white">{t('pricing.annual_only', 'Annual billing only')}</span>
+                    <span className="text-[10px] bg-tm-green/20 text-tm-green px-1.5 py-0.5 rounded uppercase tracking-wider">{t('pricing.save_badge', 'SAVE 30%')}</span>
                 </div>
                 <p className="mt-4 text-xs text-tm-purple/80 font-semibold tracking-wider uppercase">{t('pricing.trial_notice', 'All tiers include a 14-Day Free Trial')}</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch max-w-3xl mx-auto">
                 {TIERS.map((tier) => {
                     const isSelected = selectedTier === tier.id;
                     return (

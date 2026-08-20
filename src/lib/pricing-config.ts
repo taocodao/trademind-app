@@ -129,9 +129,25 @@ export const PRICING = {
         expiryDays: 90,
     },
 
-    // ── Referral Credits (existing, unchanged) ───────────────────────────────
+    // ── Referral Credits (legacy flat program — superseded by `referral` below) ─
     credits: {
         referralBothSidesCents: parseInt(process.env.REFERRAL_CREDIT_CENTS ?? '10000', 10),
+    },
+
+    // ── Vested Referral Program ──────────────────────────────────────────────
+    // Referrer earns `referrerMonths` of free service, referee earns
+    // `refereeMonths`, credited ONLY after the referee's subscription stays
+    // active for `vestingDays`. Months convert to credits at vest time from
+    // each recipient's own plan price:  credit = months / 12 × plan.annual.
+    // Anti-gaming: `maxReferrerMonthsPerYear` caps how many referrer months can
+    // vest per trailing 12 months. `compensationTrackThresholdCents` is the
+    // trailing-12-month per-referrer total we flag for review (FTC/1099 hygiene).
+    referral: {
+        referrerMonths:                 parseInt(process.env.REFERRAL_REFERRER_MONTHS  ?? '8',  10),
+        refereeMonths:                  parseInt(process.env.REFERRAL_REFEREE_MONTHS   ?? '4',  10),
+        vestingDays:                    parseInt(process.env.REFERRAL_VESTING_DAYS     ?? '75', 10),
+        maxReferrerMonthsPerYear:       parseInt(process.env.REFERRAL_MAX_MONTHS_YEAR  ?? '12', 10),
+        compensationTrackThresholdCents: parseInt(process.env.REFERRAL_COMP_THRESHOLD_CENTS ?? '100000', 10), // $1,000
     },
 } as const;
 

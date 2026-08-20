@@ -4,8 +4,18 @@
  * Generates unique referral codes, tracks conversion events,
  * and issues credits to both referrer and referred user.
  *
- * Credit amount is env-configurable via REFERRAL_CREDIT_CENTS (default: 10000 = $100).
- * Both sides always receive the same amount (flat — no tiers).
+ * VESTED PROGRAM (current):
+ *   Referrer earns PRICING.referral.referrerMonths of free service (default 8),
+ *   referee earns refereeMonths (default 4) — credited ONLY after the referee's
+ *   subscription stays active for vestingDays (default 75). Months convert to
+ *   credits at vest time from each recipient's own plan annual price:
+ *       credit_cents = round(months / 12 × plan.annual × 100)
+ *   Anti-gaming: referrer months vesting per trailing 12 months are capped at
+ *   maxReferrerMonthsPerYear (default 12). Per-referrer trailing-12-month
+ *   compensation is tracked against compensationTrackThresholdCents ($1,000).
+ *
+ * LEGACY FLAT PROGRAM: REFERRAL_CREDIT_CENTS (default $100/side, instant).
+ *   Pre-existing referral_events rows are grandfathered with status='vested'.
  */
 
 import { query } from '@/lib/db';
@@ -77,18 +87,29 @@ export async function recordReferralConversion(
     billingSource: 'stripe' | 'whop',
     convertedPlan: string
 ): Promise<void> {
-    const creditCents = PRICING.credits.referralBothSidesCents;
+    const cfg = PRICING.referral;
 
-    // Insert event record — UNIQUE(referred_id) prevents double-crediting
+    // Planned credit amounts (for display/audit) — recomputed from live pricing
+    // at vest time, so a price change between conversion and vesting is honored.
+    const plan                = resolvePlanKey(convertedPlan);
+    const referrerCreditCents = monthsToCreditCents(cfg.referrerMonths, plan);
+    const referredCreditCents = monthsToCreditCents(cfg.refereeMonths,  plan);
+
+    // Insert as PENDING — credits are issued by vestDueReferrals() only after
+    // the referee stays active for the vesting window.
+    // UNIQUE(referred_id) prevents double-crediting.
     const inserted = await query(
         `INSERT INTO referral_events
             (referrer_id, referred_id, referral_code, converted_plan, converted_at,
-             referrer_credit, referred_credit, billing_source)
-         VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7)
+             referrer_credit, referred_credit, billing_source,
+             status, vests_at, referrer_months, referred_months)
+         VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7,
+                 'pending', NOW() + ($8 || ' days')::INTERVAL, $9, $10)
          ON CONFLICT (referred_id) DO NOTHING
          RETURNING id`,
         [referrerId, referredId, referralCode, convertedPlan,
-         creditCents, creditCents, billingSource]
+         referrerCreditCents, referredCreditCents, billingSource,
+         cfg.vestingDays, cfg.referrerMonths, cfg.refereeMonths]
     );
 
     if (inserted.rowCount === 0) {
@@ -96,15 +117,141 @@ export async function recordReferralConversion(
         return;
     }
 
-    // Issue credits to both sides
-    await issueCredits(referrerId, creditCents, 'referral');
-    await issueCredits(referredId, creditCents, 'referral_bonus');
-
-    const dollars = (creditCents / 100).toFixed(0);
     console.log(
-        `[Referral] ${referrerId} → ${referredId} (${convertedPlan}): ` +
-        `both receive $${dollars} in credits (~plan-specific days at redemption)`
+        `[Referral] ${referrerId} → ${referredId} (${convertedPlan}): PENDING — ` +
+        `referrer +${cfg.referrerMonths}mo, referee +${cfg.refereeMonths}mo, ` +
+        `vests in ${cfg.vestingDays} days if referee stays active`
     );
+}
+
+// ── Vesting ───────────────────────────────────────────────────────────────────
+
+/** Map a subscription tier / plan string to a PRICING.plans key */
+function resolvePlanKey(tierOrPlan: string | null | undefined): keyof typeof PRICING.plans {
+    if (tierOrPlan && tierOrPlan in PRICING.plans) return tierOrPlan as keyof typeof PRICING.plans;
+    return 'full_access';
+}
+
+/** Convert free-service months to credit cents using the recipient's plan annual price */
+function monthsToCreditCents(months: number, planKey: keyof typeof PRICING.plans): number {
+    if (months <= 0) return 0;
+    return Math.round((months / 12) * PRICING.plans[planKey].annual * 100);
+}
+
+/** Referrer months already vested in the trailing 12 months (annual-cap check) */
+async function referrerMonthsVestedTrailing12(referrerId: string): Promise<number> {
+    const r = await query(
+        `SELECT COALESCE(SUM(referrer_months), 0) AS months
+         FROM referral_events
+         WHERE referrer_id = $1 AND status = 'vested'
+           AND vested_at > NOW() - INTERVAL '12 months'`,
+        [referrerId]
+    );
+    return parseInt(r.rows[0]?.months ?? '0', 10);
+}
+
+/**
+ * Vest all due referral events. Called daily by /api/cron/vest-referrals.
+ *
+ * For each pending event past its vests_at:
+ *   - Referee subscription no longer active → VOID both sides ('referee_churned')
+ *   - Referee active → referee vests in full; referrer vests up to the remaining
+ *     annual cap (excess months are forfeited, void_reason='annual_cap')
+ *
+ * Idempotent: credit source keys embed the event id, and the
+ * user_credits (user_id, source) unique index absorbs any double-run.
+ */
+export async function vestDueReferrals(): Promise<{ vested: number; voided: number; capped: number }> {
+    const due = await query(
+        `SELECT id, referrer_id, referred_id, converted_plan, referrer_months, referred_months
+         FROM referral_events
+         WHERE status = 'pending' AND vests_at <= NOW()
+         ORDER BY vests_at ASC
+         LIMIT 200`
+    );
+
+    let vested = 0, voided = 0, capped = 0;
+
+    for (const ev of due.rows) {
+        // Referee must still be an active subscriber
+        const ref = await query(
+            `SELECT subscription_status, subscription_tier FROM user_settings WHERE user_id = $1`,
+            [ev.referred_id]
+        );
+        const refereeStatus = ref.rows[0]?.subscription_status;
+        const refereeTier   = ref.rows[0]?.subscription_tier ?? ev.converted_plan;
+
+        if (refereeStatus !== 'active') {
+            await query(
+                `UPDATE referral_events SET status = 'voided', void_reason = 'referee_churned' WHERE id = $1`,
+                [ev.id]
+            );
+            voided++;
+            console.log(`[Referral] VOIDED ${ev.id} — referee ${ev.referred_id} no longer active (${refereeStatus})`);
+            continue;
+        }
+
+        // Referee side always vests in full — priced off THEIR plan
+        const refereePlan   = resolvePlanKey(refereeTier);
+        const refereeCents  = monthsToCreditCents(ev.referred_months, refereePlan);
+
+        // Referrer side — priced off the REFERRER's own plan, capped per trailing 12 months
+        const rfer = await query(
+            `SELECT subscription_tier FROM user_settings WHERE user_id = $1`,
+            [ev.referrer_id]
+        );
+        const referrerPlan     = resolvePlanKey(rfer.rows[0]?.subscription_tier);
+        const alreadyVested    = await referrerMonthsVestedTrailing12(ev.referrer_id);
+        const remainingCap     = Math.max(0, PRICING.referral.maxReferrerMonthsPerYear - alreadyVested);
+        const referrerMonthsIn = Math.min(ev.referrer_months, remainingCap);
+        const referrerCents    = monthsToCreditCents(referrerMonthsIn, referrerPlan);
+        const hitCap           = referrerMonthsIn < ev.referrer_months;
+
+        if (referrerCents > 0) await issueCredits(ev.referrer_id, referrerCents, `referral_vest_${ev.id}`);
+        if (refereeCents  > 0) await issueCredits(ev.referred_id, refereeCents,  `referral_bonus_vest_${ev.id}`);
+
+        await query(
+            `UPDATE referral_events
+             SET status = 'vested', vested_at = NOW(),
+                 referrer_months = $2, referrer_credit = $3, referred_credit = $4,
+                 void_reason = $5
+             WHERE id = $1`,
+            [ev.id, referrerMonthsIn, referrerCents, refereeCents, hitCap ? 'annual_cap' : null]
+        );
+
+        vested++;
+        if (hitCap) capped++;
+        console.log(
+            `[Referral] VESTED ${ev.id}: referrer +${referrerMonthsIn}mo ($${(referrerCents/100).toFixed(2)}${hitCap ? ', capped' : ''}), ` +
+            `referee +${ev.referred_months}mo ($${(refereeCents/100).toFixed(2)})`
+        );
+    }
+
+    return { vested, voided, capped };
+}
+
+// ── Compensation tracking (FTC/1099 hygiene) ─────────────────────────────────
+
+/**
+ * Trailing-12-month referral compensation for one referrer, in cents.
+ * Flagged against PRICING.referral.compensationTrackThresholdCents ($1,000)
+ * so we can review heavy earners (disclosure enforcement, tax forms).
+ */
+export async function getReferrerCompensationTrailing12(userId: string): Promise<{
+    totalCents: number;
+    thresholdCents: number;
+    exceedsThreshold: boolean;
+}> {
+    const r = await query(
+        `SELECT COALESCE(SUM(amount), 0) AS total
+         FROM user_credits
+         WHERE user_id = $1 AND source LIKE 'referral%'
+           AND issued_at > NOW() - INTERVAL '12 months'`,
+        [userId]
+    );
+    const totalCents = parseInt(r.rows[0]?.total ?? '0', 10);
+    const thresholdCents = PRICING.referral.compensationTrackThresholdCents;
+    return { totalCents, thresholdCents, exceedsThreshold: totalCents >= thresholdCents };
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
@@ -115,8 +262,13 @@ export async function getReferralStats(userId: string): Promise<{
     shareLink: string;
     totalReferrals: number;
     totalEarnedCents: number;
+    pendingMonths: number;
+    vestedMonths: number;
     recentEvents: any[];
-    creditPerReferralCents: number;
+    referrerMonthsPerReferral: number;
+    refereeMonthsPerReferral: number;
+    vestingDays: number;
+    compensation: { totalCents: number; thresholdCents: number; exceedsThreshold: boolean };
 }> {
     const codeResult = await query(
         `SELECT referral_code FROM user_settings WHERE user_id = $1`, [userId]
@@ -124,24 +276,35 @@ export async function getReferralStats(userId: string): Promise<{
     const code = codeResult.rows[0]?.referral_code ?? '';
 
     const statsResult = await query(
-        `SELECT COUNT(*) AS total, COALESCE(SUM(referrer_credit), 0) AS earned
+        `SELECT COUNT(*) AS total,
+                COALESCE(SUM(referrer_credit) FILTER (WHERE status = 'vested'), 0) AS earned,
+                COALESCE(SUM(referrer_months) FILTER (WHERE status = 'pending'), 0) AS pending_months,
+                COALESCE(SUM(referrer_months) FILTER (WHERE status = 'vested'),  0) AS vested_months
          FROM referral_events WHERE referrer_id = $1`,
         [userId]
     );
 
     const recentResult = await query(
-        `SELECT converted_plan, converted_at, referrer_credit, billing_source
+        `SELECT converted_plan, converted_at, status, vests_at, vested_at,
+                referrer_months, referred_months, referrer_credit, billing_source, void_reason
          FROM referral_events WHERE referrer_id = $1
          ORDER BY converted_at DESC LIMIT 10`,
         [userId]
     );
 
+    const compensation = await getReferrerCompensationTrailing12(userId);
+
     return {
         code,
         shareLink: `https://trademind.bot/?ref=${code}`,
-        totalReferrals:          parseInt(statsResult.rows[0]?.total   ?? '0', 10),
-        totalEarnedCents:        parseInt(statsResult.rows[0]?.earned  ?? '0', 10),
-        recentEvents:            recentResult.rows,
-        creditPerReferralCents:  PRICING.credits.referralBothSidesCents,
+        totalReferrals:           parseInt(statsResult.rows[0]?.total          ?? '0', 10),
+        totalEarnedCents:         parseInt(statsResult.rows[0]?.earned         ?? '0', 10),
+        pendingMonths:            parseInt(statsResult.rows[0]?.pending_months ?? '0', 10),
+        vestedMonths:             parseInt(statsResult.rows[0]?.vested_months  ?? '0', 10),
+        recentEvents:             recentResult.rows,
+        referrerMonthsPerReferral: PRICING.referral.referrerMonths,
+        refereeMonthsPerReferral:  PRICING.referral.refereeMonths,
+        vestingDays:               PRICING.referral.vestingDays,
+        compensation,
     };
 }

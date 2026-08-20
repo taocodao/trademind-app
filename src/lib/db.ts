@@ -1103,6 +1103,16 @@ export async function initializeUserTables(): Promise<void> {
             )
         `);
         await query(`CREATE INDEX IF NOT EXISTS idx_referral_events_referrer ON referral_events(referrer_id)`);
+        // Vested referral program (006_vested_referrals.sql) — idempotent column adds.
+        // Existing rows grandfather as 'vested'; new conversions start as 'pending'.
+        await query(`ALTER TABLE referral_events ADD COLUMN IF NOT EXISTS status          VARCHAR(20) DEFAULT 'vested'`).catch(() => {});
+        await query(`ALTER TABLE referral_events ADD COLUMN IF NOT EXISTS vests_at        TIMESTAMPTZ`).catch(() => {});
+        await query(`ALTER TABLE referral_events ADD COLUMN IF NOT EXISTS vested_at       TIMESTAMPTZ`).catch(() => {});
+        await query(`ALTER TABLE referral_events ADD COLUMN IF NOT EXISTS referrer_months INTEGER DEFAULT 0`).catch(() => {});
+        await query(`ALTER TABLE referral_events ADD COLUMN IF NOT EXISTS referred_months INTEGER DEFAULT 0`).catch(() => {});
+        await query(`ALTER TABLE referral_events ADD COLUMN IF NOT EXISTS void_reason     VARCHAR(50)`).catch(() => {});
+        await query(`CREATE INDEX IF NOT EXISTS idx_referral_events_pending ON referral_events (vests_at) WHERE status = 'pending'`).catch(() => {});
+        await query(`CREATE INDEX IF NOT EXISTS idx_referral_events_referrer_vested ON referral_events (referrer_id, vested_at) WHERE status = 'vested'`).catch(() => {});
 
         // ── Trial Conversions ─────────────────────────────────────────────────
         await query(`

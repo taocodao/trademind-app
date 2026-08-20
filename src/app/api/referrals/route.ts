@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/ai';
 import { query } from '@/lib/db';
 import { assignPromoCode, getTierForCount, TIER_CONFIG } from '@/lib/promo-codes';
+import { getReferralStats } from '@/lib/referrals';
 
 export const dynamic = 'force-dynamic';
 
@@ -97,7 +98,11 @@ export async function GET(req: NextRequest) {
             [user.privyDid]
         ) : { rows: [] };
 
+        // Vested referral program (referrer +8mo / referee +4mo after 75-day vesting)
+        const vestedProgram = await getReferralStats(user.privyDid);
+
         return NextResponse.json({
+            vestedProgram,
             referralCode,                           // Short code e.g. "ERIC54"
             shareLink: `https://trademind.bot/?ref=${referralCode}`,
             stats: {

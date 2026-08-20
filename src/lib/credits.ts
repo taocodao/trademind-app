@@ -24,9 +24,11 @@ function getStripe(): Stripe {
 
 export type CreditSource =
     | 'loyalty'
-    | 'referral'       // referrer side
-    | 'referral_bonus' // referred-user side
-    | 'trial_bonus';   // $15 trial return credit
+    | 'referral'       // referrer side (legacy flat program)
+    | 'referral_bonus' // referred-user side (legacy flat program)
+    | 'trial_bonus'    // $15 trial return credit
+    | `referral_vest_${string}`        // vested referrer payout — one per referral event (idempotent)
+    | `referral_bonus_vest_${string}`; // vested referee payout — one per referral event (idempotent)
 
 // ── Issuance ──────────────────────────────────────────────────────────────────
 

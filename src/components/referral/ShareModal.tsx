@@ -6,6 +6,7 @@ import {
     AlertCircle, Link2, Share2, Rocket, Target, BookOpen, Smile, ExternalLink, Image as ImageIcon, Gift
 } from 'lucide-react';
 import type { SocialPlatform } from '@/lib/composio';
+import { COMPENSATED_DISCLOSURE, withCompensationDisclosure } from '@/lib/compliance';
 import { useTranslation } from 'react-i18next';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -301,9 +302,12 @@ export function ShareModal({
     }, [platform, template, tone, customizeRequest]);
 
     // ── Clipboard helpers ──────────────────────────────────────────────────────
+    // FTC: every share from this modal carries a referral code — it is a
+    // compensated endorsement, so the disclosure is appended at copy/share time
+    // (not in editable state) and cannot be stripped before publishing.
     const copyText = useCallback(async () => {
         if (!editedPost) return;
-        await navigator.clipboard.writeText(editedPost);
+        await navigator.clipboard.writeText(withCompensationDisclosure(editedPost));
         setCopied(true);
         setTimeout(() => setCopied(false), 3000);
     }, [editedPost]);
@@ -317,14 +321,15 @@ export function ShareModal({
     // ── Web Share API ──────────────────────────────────────────────────────────
     const handleShare = useCallback(async () => {
         // Always pre-copy text to clipboard first (fallback if share is dismissed or unsupported)
-        if (editedPost) await navigator.clipboard.writeText(editedPost);
+        const disclosedPost = withCompensationDisclosure(editedPost);
+        if (editedPost) await navigator.clipboard.writeText(disclosedPost);
         setCopied(true);
         setTimeout(() => setCopied(false), 3000);
 
         if (!navigator.share) return; // clipboard-only fallback (Firefox desktop, etc.)
 
         // Android quirk: include url in text field too — Android sometimes ignores the url field
-        const textWithUrl = `${editedPost}\n\n${ogCardUrl}`;
+        const textWithUrl = `${disclosedPost}\n\n${ogCardUrl}`;
         const shareData = {
             title: 'TradeMind AI Trading Signals',
             text: textWithUrl,
@@ -349,12 +354,13 @@ export function ShareModal({
     // Also pre-copies text to clipboard as a backup.
     const handleOpenIntent = useCallback(async () => {
         if (!editedPost) return;
+        const disclosedPost = withCompensationDisclosure(editedPost);
         // Pre-copy text to clipboard (backup if popup is blocked or user wants to paste elsewhere)
-        await navigator.clipboard.writeText(editedPost);
+        await navigator.clipboard.writeText(disclosedPost);
         setCopied(true);
         setTimeout(() => setCopied(false), 3000);
 
-        const intentUrl = buildIntentUrl(platform, editedPost, ogCardUrl);
+        const intentUrl = buildIntentUrl(platform, disclosedPost, ogCardUrl);
         if (!intentUrl) return;
 
         // Open in a named popup — reuses the same window if already open
@@ -370,13 +376,16 @@ export function ShareModal({
     const handleOpenCreator = useCallback(async () => {
         const url = CREATOR_URLS[platform];
         if (!url || !editedPost) return;
-        try { await navigator.clipboard.writeText(editedPost); setCopied(true); setTimeout(() => setCopied(false), 3000); } catch (_) { /* ignore */ }
+        try { await navigator.clipboard.writeText(withCompensationDisclosure(editedPost)); setCopied(true); setTimeout(() => setCopied(false), 3000); } catch (_) { /* ignore */ }
         window.open(url, `Creator_${platform}`, 'noopener,noreferrer,width=1024,height=768');
         setCreatorOpened(true);
     }, [platform, editedPost]);
 
-    // ── Char count (Twitter t.co aware) ───────────────────────────────────────
-    const charCount   = platform === 'twitter' ? twitterCharCount(editedPost) : editedPost.length;
+    // ── Char count (Twitter t.co aware) — counts the auto-appended #ad disclosure ─
+    const disclosedLen = withCompensationDisclosure(editedPost || 'x').length - (editedPost ? 0 : 1);
+    const charCount   = platform === 'twitter'
+        ? twitterCharCount(withCompensationDisclosure(editedPost))
+        : (editedPost ? disclosedLen : 0);
     const isOverLimit = cfg.charLimit ? charCount > cfg.charLimit : false;
 
     // ── Render ─────────────────────────────────────────────────────────────────
@@ -544,6 +553,14 @@ export function ShareModal({
                                     style={{ height: 'auto' }}
                                     rows={10}
                                 />
+
+                                {/* FTC compensated-endorsement notice — disclosure is auto-appended at share time */}
+                                {editedPost && (
+                                    <p className="text-[11px] text-zinc-500 leading-snug">
+                                        Your referral link earns you free months, so this line is added automatically when you copy or share:
+                                        <span className="text-zinc-400 font-medium"> {COMPENSATED_DISCLOSURE}</span>
+                                    </p>
+                                )}
 
                                 {/* Char count + cache badge */}
                                 {editedPost && (

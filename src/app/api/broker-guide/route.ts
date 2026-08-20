@@ -17,31 +17,35 @@ export const dynamic = 'force-dynamic';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://trademind.bot';
 
-// Cropped ticket template dimensions.
-const STOCKS = { w: 1270, h: 564, img: 'fidelity-stocks.jpg' };
-const OPTIONS = { w: 1243, h: 502, img: 'fidelity-options.jpg' };
+// Cropped ticket template dimensions (from live Fidelity screenshots, Aug 2026).
+const STOCKS = { w: 396, h: 612, img: 'fidelity-stocks.jpg' };    // floating trade popup
+const OPTIONS = { w: 1158, h: 554, img: 'fidelity-options.jpg' }; // options ticket
 const ETRADE_OPTIONS = { w: 1175, h: 765, img: 'etrade-options.jpg' };
 const GUTTER = 400; // left gutter for value cards
 
 // Field pointer positions as fractions of the TICKET (not the full canvas).
+// Stocks/ETFs popup (396x612): Symbol on top, then Action+Quantity row,
+// then Order type, then Time in force.
 const STOCKS_FIELDS: Record<string, [number, number]> = {
-    symbol:    [0.155, 0.310],
-    action:    [0.133, 0.470],
-    quantity:  [0.265, 0.470],
-    orderType: [0.485, 0.470],
-    tif:       [0.098, 0.560],
+    symbol:    [0.500, 0.205],
+    action:    [0.140, 0.348],
+    quantity:  [0.430, 0.348],
+    orderType: [0.500, 0.493],
+    tif:       [0.500, 0.638],
 };
+// Options ticket (1158x554): Transaction Type + Account row, Symbol row,
+// then Action/Quantity/Expiration/Strike/Call-Put row, then Order type + TIF.
 const OPTIONS_FIELDS: Record<string, [number, number]> = {
-    trade:     [0.060, 0.082],   // "Trade" dropdown (Options)
-    account:   [0.192, 0.082],   // "Account" dropdown
-    underlying:[0.052, 0.193],   // "Symbol" input
-    action:    [0.060, 0.496],
-    quantity:  [0.145, 0.496],
-    expiration:[0.235, 0.496],
-    strike:    [0.335, 0.496],
-    callput:   [0.422, 0.496],
-    orderType: [0.076, 0.631],
-    tif:       [0.216, 0.631],
+    trade:     [0.052, 0.108],   // "Transaction Type" dropdown (Options)
+    account:   [0.259, 0.108],   // "Account" dropdown
+    underlying:[0.052, 0.271],   // "Symbol" input
+    action:    [0.052, 0.496],
+    quantity:  [0.155, 0.496],
+    expiration:[0.250, 0.496],
+    strike:    [0.354, 0.496],
+    callput:   [0.440, 0.496],
+    orderType: [0.078, 0.632],
+    tif:       [0.216, 0.632],
 };
 // E*TRADE options order-entry ticket (1195x785 crop). Compact left-column form:
 // Account (top), Symbol, then a row of Action/Quantity/Expiration/Strike/Type,

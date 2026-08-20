@@ -37,7 +37,27 @@ export function BrokerGuideModal({ symbol, action, quantity, broker = "fidelity"
                     </button>
                 </div>
 
-                <div className="p-4">
+                <div className="p-4 space-y-4">
+                    {/* Step 1 — click Trade in the top nav (nav strip with the button circled) */}
+                    <div>
+                        <p className="text-xs text-white/90 font-semibold mb-1.5">
+                            <span className="inline-flex items-center justify-center w-4.5 h-4.5 rounded-full bg-emerald-600 text-white text-[10px] font-bold mr-1.5 px-1 py-0.5">1</span>
+                            Click <span className="font-bold">Trade</span> in Fidelity's top navigation
+                        </p>
+                        <img src="/broker-guides/fidelity-nav-trade.png" alt="Fidelity navigation bar with the Trade button highlighted" className="w-full rounded-md border border-white/10" />
+                    </div>
+
+                    {/* Step 2 — pick the ticket type */}
+                    <p className="text-xs text-white/90 font-semibold leading-relaxed">
+                        <span className="inline-flex items-center justify-center rounded-full bg-emerald-600 text-white text-[10px] font-bold mr-1.5 px-1 py-0.5">2</span>
+                        In the popup that appears, open the <span className="font-bold">TRADE</span> dropdown and select <span className="font-bold">Options</span> for a LEAPS contract — leave it on <span className="font-bold">Stocks/ETFs</span> for a share order.
+                    </p>
+
+                    {/* Step 3 — the annotated ticket */}
+                    <p className="text-xs text-white/90 font-semibold mb-1.5">
+                        <span className="inline-flex items-center justify-center rounded-full bg-emerald-600 text-white text-[10px] font-bold mr-1.5 px-1 py-0.5">3</span>
+                        Enter each numbered field, then press <span className="font-bold">Preview order</span> yourself
+                    </p>
                     <img src={src} alt={`Fidelity order entry guide for ${symbol}`} className="w-full rounded-lg border border-white/10" />
                     <a
                         href="https://digital.fidelity.com/ftgw/digital/trade-equity"

@@ -448,7 +448,7 @@ function DashboardContent() {
 
     useEffect(() => {
 
-        if (ready && !authenticated) router.push('/');
+        if (ready && !authenticated) router.push('/signin');
 
     }, [ready, authenticated, router]);
 

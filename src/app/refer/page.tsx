@@ -29,7 +29,7 @@ export default function ReferPage() {
                 .catch(err => setError(err.message))
                 .finally(() => setLoading(false));
         } else if (ready && !authenticated) {
-            router.push('/');
+            router.push('/signin');
         }
     }, [ready, authenticated, router]);
 
@@ -64,7 +64,7 @@ export default function ReferPage() {
     return (
         <main className="min-h-screen bg-tm-bg text-white pb-24 px-4 pt-6 max-w-4xl mx-auto">
             <header className="flex items-center gap-3 mb-8">
-                <button onClick={() => router.push('/')} className="p-2 -ml-2 text-tm-muted hover:text-white transition-colors">
+                <button onClick={() => router.push('/dashboard')} className="p-2 -ml-2 text-tm-muted hover:text-white transition-colors">
                     <ArrowLeft className="w-5 h-5" />
                 </button>
                 <h1 className="text-2xl font-bold">{t('refer_page.title', 'Referral Dashboard')}</h1>

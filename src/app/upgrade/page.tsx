@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { usePrivy } from '@privy-io/react-auth';
 import { PRICING, creditsToBonusDays, type PlanKey } from '@/lib/pricing-config';
 import { CheckCircle, Zap, Brain, Layers, Clock, ArrowRight, Star, Gift, Calendar } from 'lucide-react';
 
@@ -295,6 +296,7 @@ function UpgradePageInner() {
     const trialDaysParam = parseInt(searchParams.get('days') ?? '30', 10);
     const trialFee       = trialDaysParam === 60 ? 20 : 10;
 
+    const { ready, authenticated, login } = usePrivy();
     const [trialInfo, setTrialInfo] = useState<TrialInfo>({ trialEndsAt: null, trialDays: 30, converted: false });
     const [loading, setLoading]     = useState(false);
 
@@ -305,6 +307,33 @@ function UpgradePageInner() {
     const creditExpiry = trialInfo.trialEndsAt
         ? new Date(new Date(trialInfo.trialEndsAt).getTime() + 7 * 86400000).toISOString()
         : null;
+
+    // ── Auth gate ─────────────────────────────────────────────────────────────
+    // Landing-page CTAs send logged-out visitors straight here; checkout needs a
+    // Privy session (POST /api/stripe/checkout returns 401 without one). Privy's
+    // modal doubles as account creation, so one button serves both cases.
+    if (ready && !authenticated) {
+        return (
+            <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6" style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
+                <title>TradeMind — Sign in to continue</title>
+                <div className="w-full max-w-sm text-center">
+                    <h1 className="text-2xl font-bold mb-3">Sign in to choose your plan</h1>
+                    <p className="text-gray-400 text-sm mb-8">
+                        Checkout is tied to your TradeMind account. New here? The same button creates one.
+                    </p>
+                    <button
+                        onClick={login}
+                        className="w-full bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-3.5 px-6 rounded-xl transition-colors"
+                    >
+                        Sign in / Create account
+                    </button>
+                    <a href="/" className="inline-block mt-6 text-gray-500 hover:text-gray-300 text-sm transition-colors">
+                        ← Back to homepage
+                    </a>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-black text-white" style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>

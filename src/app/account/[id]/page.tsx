@@ -51,7 +51,7 @@ export default function AccountDetailPage() {
     const [notFound, setNotFound] = useState(false);
 
     useEffect(() => {
-        if (ready && !authenticated) router.push("/");
+        if (ready && !authenticated) router.push("/signin");
     }, [ready, authenticated, router]);
 
     const fetchPositions = useCallback(async () => {

@@ -100,7 +100,7 @@ export default function ActivityPage() {
     const [accountNumber, setAccountNumber] = useState<string | null>(null);
 
     useEffect(() => {
-        if (ready && !authenticated) router.push("/");
+        if (ready && !authenticated) router.push("/signin");
     }, [ready, authenticated, router]);
 
     // Load account number from Tastytrade account API

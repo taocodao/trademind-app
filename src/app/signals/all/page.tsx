@@ -30,7 +30,7 @@ export default function AllSignalsPage() {
 
     useEffect(() => {
         if (ready && !authenticated) {
-            router.push('/');
+            router.push('/signin');
         }
     }, [ready, authenticated, router]);
 

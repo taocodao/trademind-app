@@ -33,7 +33,7 @@ export default function BadgesPage() {
 
     useEffect(() => {
         if (ready && !authenticated) {
-            router.push("/");
+            router.push("/signin");
         }
     }, [ready, authenticated, router]);
 

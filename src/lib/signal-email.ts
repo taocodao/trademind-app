@@ -14,7 +14,7 @@ import type { CloseLeg } from '@/lib/options-exit-scanner';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const FROM_EMAIL = 'TradeMind Signals <signals@trademind.bot>';
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.trademind.bot';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://trademind.bot';
 
 // Public URL of the annotated broker-ticket guide for an equity order (embedded in the email).
 function brokerGuideUrl(o: DeltaOrder, broker: string): string {
@@ -30,7 +30,7 @@ function optionsGuideUrl(l: OptionsOrder, broker: string): string | null {
     const underlying = m[1];
     const expiry = `${m[2]}-${m[3]}-${m[4]}`;
     const right = m[5] === 'P' ? 'put' : 'call';
-    const strike = m[6];
+    const strike = String(parseFloat(m[6])); // strip OCC leading zeros (00770 -> 770)
     const a = (l.action || '').toLowerCase();
     const action = a.startsWith('sell') ? 'sell' : 'buy';
     const openClose = a.includes('close') ? 'close' : 'open';
@@ -284,7 +284,7 @@ function buildTextBody(data: SignalEmailData): string {
 
 // ─── HTML Body — Clean Black & White ─────────────────────────────────────────
 
-function buildHtmlBody(data: SignalEmailData): string {
+export function buildHtmlBody(data: SignalEmailData): string {
     const stratUp = data.strategy.toUpperCase();
     const strategyLabel =
         stratUp.includes('LEAPS') ? 'QQQ LEAPS'  :
@@ -318,6 +318,9 @@ function buildHtmlBody(data: SignalEmailData): string {
             const qty = firstOpt.quantity;
             const px = firstOpt.limitPrice ?? 0;
             const debit = qty * px * 100;
+            const isCredit = firstOpt.priceEffect === 'Credit';
+            const amtLabel = isCredit ? 'est. credit' : 'est. debit';
+            const amtColor = isCredit ? '#34d399' : '#fbbf24';
             leapsCardHtml = `
         <div style="margin:0 0 24px 0">
             <p style="margin:0 0 10px;color:#374151;font-size:11px;font-weight:700;
@@ -344,8 +347,8 @@ function buildHtmlBody(data: SignalEmailData): string {
                         <div style="font-size:10px;color:#94a3b8">per share</div>
                     </td>
                     <td align="center">
-                        <div style="font-size:16px;font-weight:800;color:#34d399">$${debit.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                        <div style="font-size:10px;color:#94a3b8">est. debit</div>
+                        <div style="font-size:16px;font-weight:800;color:${amtColor}">$${debit.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                        <div style="font-size:10px;color:#94a3b8">${amtLabel}</div>
                     </td>
                 </tr></table>
             </div>

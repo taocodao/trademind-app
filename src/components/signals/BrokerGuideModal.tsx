@@ -16,7 +16,7 @@ interface Props {
  * type. Rendered on demand by /api/broker-guide.
  */
 export function BrokerGuideModal({ symbol, action, quantity, broker = "fidelity", onClose }: Props) {
-    const src = `/api/broker-guide?broker=${encodeURIComponent(broker)}&symbol=${encodeURIComponent(symbol)}&action=${action}&quantity=${quantity}`;
+    const src = `/api/broker-guide?broker=${encodeURIComponent(broker)}&symbol=${encodeURIComponent(symbol)}&action=${action}&quantity=${quantity}&format=svg`;
     const isBuy = action === "buy";
 
     return (

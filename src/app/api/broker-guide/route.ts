@@ -68,6 +68,9 @@ function esc(s: string): string {
 export async function GET(req: NextRequest) {
     const sp = req.nextUrl.searchParams;
     const broker = (sp.get('broker') || 'fidelity').toLowerCase();
+    // Email clients (Gmail, Outlook) don't render SVG <img>. PNG is the default;
+    // pass format=svg for browsers (BrokerGuideModal) where SVG renders fine.
+    const format = (sp.get('format') || 'png').toLowerCase();
     const symbol = (sp.get('symbol') || '').toUpperCase();
     const actionRaw = (sp.get('action') || 'buy').toLowerCase();
     const quantity = Math.max(1, Math.floor(Number(sp.get('quantity')) || 1));
@@ -171,6 +174,35 @@ export async function GET(req: NextRequest) {
         overlay += `<text x="${cardX + 16}" y="${cardY + Math.round(cardH * 0.32)}" font-family="Arial,Helvetica,sans-serif" font-size="${Math.round(H * 0.032)}" fill="${MUTED}">${num}. ${esc(label)}</text>`;
         overlay += `<text x="${cardX + 16}" y="${cardY + Math.round(cardH * 0.74)}" font-family="Arial,Helvetica,sans-serif" font-size="${Math.round(H * 0.046)}" font-weight="700" fill="${DARK}">${esc(value)}</text>`;
     });
+
+    if (format === 'png') {
+        // Rasterize server-side: embed the ticket JPG as base64 (sharp can't
+        // fetch remote images inside an SVG), then composite to PNG.
+        try {
+            const sharp = (await import('sharp')).default;
+            const path = await import('path');
+            const fs = await import('fs/promises');
+            const imgPath = path.join(process.cwd(), 'public', 'broker-guides', ticket.img);
+            const imgBuf = await fs.readFile(imgPath);
+            const img64 = `data:image/jpeg;base64,${imgBuf.toString('base64')}`;
+            const svgPng = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  <rect width="${W}" height="${H}" fill="#f5f5f5"/>
+  <image x="${GUTTER}" y="0" width="${TICKET_W}" height="${TICKET_H}" href="${img64}"/>
+  ${overlay}
+</svg>`;
+            const png = await sharp(Buffer.from(svgPng)).png({ quality: 92 }).toBuffer();
+            return new NextResponse(new Uint8Array(png), {
+                status: 200,
+                headers: {
+                    'Content-Type': 'image/png',
+                    'Cache-Control': 'public, max-age=300, s-maxage=300',
+                },
+            });
+        } catch (err) {
+            console.error('[broker-guide] PNG raster failed, falling back to SVG:', err);
+            // fall through to SVG
+        }
+    }
 
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <rect width="${W}" height="${H}" fill="#f5f5f5"/>

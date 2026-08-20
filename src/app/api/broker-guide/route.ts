@@ -180,10 +180,12 @@ export async function GET(req: NextRequest) {
         // fetch remote images inside an SVG), then composite to PNG.
         try {
             const sharp = (await import('sharp')).default;
-            const path = await import('path');
-            const fs = await import('fs/promises');
-            const imgPath = path.join(process.cwd(), 'public', 'broker-guides', ticket.img);
-            const imgBuf = await fs.readFile(imgPath);
+            // Fetch the ticket JPG over HTTP — on Vercel, public/ assets are
+            // served by the CDN and NOT present in the serverless function's
+            // filesystem, so fs.readFile(process.cwd()/public/...) fails there.
+            const imgRes = await fetch(imgHref, { cache: 'no-store' });
+            if (!imgRes.ok) throw new Error(`ticket image fetch failed: ${imgRes.status}`);
+            const imgBuf = Buffer.from(await imgRes.arrayBuffer());
             const img64 = `data:image/jpeg;base64,${imgBuf.toString('base64')}`;
             const svgPng = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <rect width="${W}" height="${H}" fill="#f5f5f5"/>

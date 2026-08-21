@@ -44,7 +44,7 @@ function track(event: string, chapter?: string, variant?: Variant) {
 /* English slide copy (default language) — es/zh live in storyI18n.ts */
 const EN = {
     hero: {
-        eyebrow: 'TradeMind · QQQ LEAPS Strategy', h1a: 'QQQ’s upside.', h1b: 'A fraction of its worst falls.',
+        eyebrow: 'TradeMind · QQQ LEAPS Strategy', h1a: 'Hear every trade.', h1b: 'Judge for yourself.',
         sub: '5.6 years, fully disclosed: 36.3% average annual growth vs. QQQ’s 16.6% — worst drop 17.8% instead of 35.6%. Every trade shown. Every loss included. No cherry-picking.',
         play: '▶ Begin the story',
         hintNarrated: 'A track record, read aloud — 12 slides · audio-synced · ~8 minutes · full transcript on the last slide',

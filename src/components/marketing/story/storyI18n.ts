@@ -73,7 +73,7 @@ const es: StoryOverlay = {
     },
     hero: {
         eyebrow: 'TradeMind · Estrategia QQQ LEAPS',
-        h1a: 'El potencial de QQQ.', h1b: 'Una fracción de sus peores caídas.',
+        h1a: 'Escucha cada operación.', h1b: 'Juzga por ti mismo.',
         sub: 'Cinco años y medio, totalmente divulgados: 36,3% de crecimiento anual promedio frente al 16,6% de QQQ, con una caída máxima del 17,8% en lugar del 35,6%. Cada operación a la vista. Cada pérdida incluida. Sin cherry-picking.',
         play: '▶ Comenzar la historia',
         hintNarrated: 'Un historial, leído en voz alta — 12 diapositivas · sincronizado con audio · ~8 minutos · transcripción completa en la última diapositiva',
@@ -248,7 +248,7 @@ const zh: StoryOverlay = {
     },
     hero: {
         eyebrow: 'TradeMind · QQQ LEAPS 策略',
-        h1a: 'QQQ 的上涨空间。', h1b: '只承受其最深跌幅的一半。',
+        h1a: '听见每一笔交易。', h1b: '自己做判断。',
         sub: '五年半完整披露:年均增长 36.3%,同期 QQQ 为 16.6%;最大回撤 17.8%,而 QQQ 为 35.6%。每笔交易公开,每笔亏损在列,不挑数据。',
         play: '▶ 开始聆听',
         hintNarrated: '一份交易记录,读给你听——12页 · 语音同步 · 约8分钟 · 完整文字稿在最后一页',

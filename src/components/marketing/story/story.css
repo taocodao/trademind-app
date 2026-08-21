@@ -407,3 +407,67 @@
     .tm-dd-slide > .tm-caption { font-size: 12.5px; margin-top: 8px; }
 }
 
+
+/* ── MillionaireCalc — "Run your own numbers" (ported from static landing) ── */
+.tm-calc { padding: 110px 24px 90px; border-top: 1px solid var(--s-line); background: var(--s-bg); color: var(--s-ink); font-family: 'Inter', system-ui, sans-serif; }
+.tm-calc-inner { max-width: 1020px; margin: 0 auto; text-align: center; }
+.tm-calc-title { font-family: Georgia, 'Times New Roman', serif; font-weight: 300; font-size: clamp(30px, 4.6vw, 52px); letter-spacing: -.01em; margin: 0 0 14px; }
+.tm-calc-sub { color: var(--s-ink2); font-size: 16px; max-width: 40em; margin: 0 auto; }
+
+.tm-ageinput { display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 40px; }
+.tm-ageinput > label { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--s-ink2); font-weight: 600; }
+.tm-agebox { display: flex; align-items: center; gap: 10px; }
+.tm-agebox input { width: 110px; background: var(--s-panel); border: 1px solid var(--s-line); border-radius: 12px; color: var(--s-amber);
+    font-family: Georgia, serif; font-weight: 300; font-size: 44px; text-align: center; padding: 8px 0; outline: none; transition: border-color .2s;
+    -moz-appearance: textfield; appearance: textfield; }
+.tm-agebox input::-webkit-outer-spin-button, .tm-agebox input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.tm-agebox input:focus { border-color: var(--s-amber); }
+.tm-agebox .step { width: 44px; height: 44px; border-radius: 99px; background: var(--s-panel); border: 1px solid var(--s-line); color: var(--s-ink2);
+    font-size: 22px; cursor: pointer; transition: all .2s; line-height: 1; }
+.tm-agebox .step:hover { border-color: var(--s-amber); color: var(--s-amber); }
+.tm-ctxline { margin-top: 6px; font-size: 12px; color: var(--s-ink3); }
+
+.tm-ageresults { margin: 34px auto 0; display: flex; flex-direction: column; gap: 12px; max-width: 640px; }
+.tm-arow { display: flex; justify-content: space-between; align-items: center; gap: 16px; background: var(--s-panel); border: 1px solid var(--s-line);
+    border-radius: 14px; padding: 16px 22px; text-align: left; }
+.tm-arow .aWho { display: flex; align-items: center; gap: 10px; }
+.tm-arow .dot, .tm-mile .dot { width: 9px; height: 9px; border-radius: 99px; flex: none; }
+.tm-arow .aLabel { font-size: 13px; font-weight: 600; color: var(--s-ink); }
+.tm-arow .aSub { font-size: 11.5px; color: var(--s-ink3); margin-top: 2px; }
+.tm-arow .aRes { text-align: right; flex: none; }
+.tm-arow .aAge { font-family: Georgia, serif; font-weight: 300; font-size: 32px; line-height: 1.05; letter-spacing: -.01em; }
+.tm-arow .aWhen { font-size: 11.5px; color: var(--s-ink3); margin-top: 3px; }
+.tm-gapline { margin-top: 20px; font-size: 13px; color: var(--s-ink2); }
+.tm-gapline b { color: var(--s-amber); font-weight: 600; }
+
+.tm-sharebar { margin-top: 34px; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.tm-sharelabel { font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--s-ink3); font-weight: 600; margin-right: 4px; }
+.tm-shbtn { display: inline-flex; align-items: center; gap: 7px; background: var(--s-panel); border: 1px solid var(--s-line); color: var(--s-ink2);
+    font-size: 12.5px; font-weight: 500; padding: 9px 16px; border-radius: 99px; cursor: pointer; text-decoration: none; transition: all .2s; font-family: 'Inter', sans-serif; }
+.tm-shbtn:hover { border-color: var(--s-amber); color: var(--s-ink); }
+.tm-shbtn svg { width: 13px; height: 13px; fill: currentColor; }
+
+.tm-calcdisc { margin-top: 26px; font-size: 12.5px; color: #7f8a9f; line-height: 1.8; border-top: 1px dashed var(--s-line); padding-top: 20px; text-align: left; }
+.tm-calcdisc b { color: var(--s-ink2); }
+
+details.tm-advanced { margin-top: 40px; background: transparent; border: 1px solid var(--s-line); border-radius: 14px; padding: 20px 26px; text-align: left; }
+details.tm-advanced summary { cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--s-ink2); letter-spacing: .02em; }
+details.tm-advanced summary:hover { color: var(--s-ink); }
+.tm-calcgrid { display: grid; grid-template-columns: 290px 1fr; gap: 26px; margin-top: 24px; text-align: left; align-items: start; }
+@media (max-width: 860px) { .tm-calcgrid { grid-template-columns: 1fr; } }
+.tm-calcpanel { background: var(--s-panel); border: 1px solid var(--s-line); border-radius: 14px; padding: 24px 24px 8px; }
+.tm-cfield { margin-bottom: 24px; }
+.tm-cfield label { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; color: var(--s-ink2); letter-spacing: .1em; text-transform: uppercase; font-weight: 600; margin-bottom: 12px; }
+.tm-cfield label output { font-family: 'JetBrains Mono', monospace; color: var(--s-amber); text-transform: none; letter-spacing: 0; font-size: 13.5px; font-weight: 500; }
+.tm-cfield input[type=range] { width: 100%; accent-color: var(--s-amber); height: 22px; cursor: pointer; background: transparent; }
+.tm-scaletoggle { display: flex; gap: 6px; margin: 2px 0 18px; }
+.tm-scaletoggle button { flex: 1; background: var(--s-bg); border: 1px solid var(--s-line); color: var(--s-ink3); font-family: 'Inter', sans-serif; font-size: 11.5px; font-weight: 600; padding: 7px 0; border-radius: 8px; cursor: pointer; transition: all .2s; }
+.tm-scaletoggle button.on { border-color: var(--s-amber); color: var(--s-amber); }
+.tm-calcchart { background: var(--s-bg); border: 1px solid var(--s-line); border-radius: 14px; padding: 20px 18px 12px; }
+.tm-calcchart svg { width: 100%; height: auto; display: block; }
+.tm-miles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+@media (max-width: 640px) { .tm-miles { grid-template-columns: 1fr; } }
+.tm-mile { background: var(--s-panel); border: 1px solid var(--s-line); border-radius: 12px; padding: 14px 16px; }
+.tm-mile .who { display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--s-ink2); font-weight: 600; }
+.tm-mile .age { font-family: Georgia, serif; font-weight: 300; font-size: 30px; margin-top: 8px; letter-spacing: -.01em; }
+.tm-mile .sub2 { font-size: 12px; color: var(--s-ink3); margin-top: 4px; line-height: 1.5; }

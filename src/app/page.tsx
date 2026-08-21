@@ -6,6 +6,7 @@ import { ReferralPromoSection } from '@/components/marketing/ReferralPromoSectio
 import { TrustBadges } from '@/components/marketing/TrustBadges';
 import { LegalFooter } from '@/components/marketing/LegalFooter';
 import { StoryLanding } from '@/components/marketing/story/StoryLanding';
+import { MillionaireCalc } from '@/components/marketing/MillionaireCalc';
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import { ArrowRight } from 'lucide-react';
@@ -92,6 +93,9 @@ export default function SinglePageMarketing() {
                 }}
                 ctaLabel={t('hero.cta', 'Start your account')}
             />
+
+            {/* Run-your-own-numbers tool + share bar (from the static landing) */}
+            <MillionaireCalc />
 
             {/* Conversion & Scaling Layouts */}
             <div className="w-full flex flex-col items-center justify-center z-10">

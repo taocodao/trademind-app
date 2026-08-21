@@ -3,6 +3,7 @@
 import { Shield, Scale, Flame, Target, Clock, TrendingUp } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useStrategyContext } from '@/components/providers/StrategyContext';
+import { AUTO_APPROVE_ENABLED } from '@/lib/feature-flags';
 
 type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
 
@@ -262,6 +263,10 @@ function EquityOrProSettings({
 
 // ── Main Export ────────────────────────────────────────────────────────────
 export function TQQQAutoApproveSettings() {
+    // Signals-only product model — Auto-Approve UI is disabled everywhere.
+    // Source kept for future reactivation via @/lib/feature-flags.
+    if (!AUTO_APPROVE_ENABLED) return null;
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const { activeStrategy } = useStrategyContext();
 
     if (activeStrategy === 'QQQ_LEAPS') {

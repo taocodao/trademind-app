@@ -107,11 +107,7 @@ export function SignalCard({ signal, onApprove, onReject, loading }: SignalCardP
                 <div>
                     Generated: {new Date(signal.created_at || (signal as any).createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ET
                 </div>
-                {(signal as any).autoApproved && (
-                    <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded border border-purple-200 font-medium">
-                        🤖 Auto-Approved
-                    </span>
-                )}
+                {/* Auto-Approved badge removed — signals-only product model: user enters every order manually. */}
             </div>
         </div>
     );

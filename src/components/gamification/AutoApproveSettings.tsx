@@ -14,6 +14,7 @@ import {
     ChevronUp,
     AlertTriangle,
 } from "lucide-react";
+import { AUTO_APPROVE_ENABLED } from "@/lib/feature-flags";
 
 // ─── Risk Profile Presets (from backtested data) ───────────────────────────
 
@@ -217,6 +218,10 @@ interface AutoApproveSettingsData {
 }
 
 export function AutoApproveSettings() {
+    // Signals-only product model — Auto-Approve UI is disabled everywhere.
+    // Source kept for future reactivation via @/lib/feature-flags.
+    if (!AUTO_APPROVE_ENABLED) return null;
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const [settings, setSettings] = useState<AutoApproveSettingsData>({
         enabled: false,
         theta: { enabled: true, riskLevel: "MEDIUM", customOverrides: {} },

@@ -332,15 +332,7 @@ function DashboardTab({ onToast, onTabChange }: { onToast: (m: string) => void; 
             </div>
 
             {/* Auto-approve toggle */}
-            <div className="glass-card px-4 py-3 flex items-center gap-3">
-                <div className="w-5 h-5 border border-white/20 rounded flex items-center justify-center">
-                    <div className="w-2.5 h-2.5 bg-white/20 rounded-sm" />
-                </div>
-                <div>
-                    <p className="text-sm font-semibold">{t("Demo.dashboard.autoApproveTitle")}</p>
-                    <p className="text-[11px] text-[#94a3b8]">{t("Demo.dashboard.autoApproveDesc")}</p>
-                </div>
-            </div>
+            {/* Auto-Approve card removed — signals-only product model. */}
 
             {/* Signal card (Turbo Pro) */}
             <div>
@@ -952,8 +944,8 @@ function ReferTab({ onToast }: { onToast: (m: string) => void }) {
 // ─── Tab: Setup ───────────────────────────────────────────────────────────────
 
 function SetupTab({ onToast }: { onToast: (m: string) => void }) {
-    const [autoApproveCore, setAutoApproveCore] = useState(false);
-    const [autoApprovePro, setAutoApprovePro] = useState(false);
+    // Auto-Approve removed under the signals-only product model.
+    // Local state hooks kept intentionally omitted.
     const [emailAlerts, setEmailAlerts] = useState(true);
 
     return (
@@ -1017,41 +1009,6 @@ function SetupTab({ onToast }: { onToast: (m: string) => void }) {
                             </div>
                         </div>
                     ))}
-                </div>
-            </div>
-
-            {/* Auto-Approve */}
-            <div className="glass-card p-5">
-                <h3 className="font-bold mb-4 flex items-center gap-2"><Zap className="w-4 h-4 text-amber-400" /> Auto-Approve Settings</h3>
-                <div className="space-y-3">
-                    {[
-                        { label: "TurboCore Auto-Approve",     val: autoApproveCore, set: setAutoApproveCore },
-                        { label: "TurboCore Pro Auto-Approve", val: autoApprovePro,  set: setAutoApprovePro  },
-                    ].map(s => (
-                        <div key={s.label} className="flex items-center justify-between">
-                            <p className="text-sm">{s.label}</p>
-                            <button
-                                onClick={() => { s.set(!s.val); onToast(`${s.label}: ${!s.val ? "Enabled" : "Disabled"} (demo)`); }}
-                                className={`relative w-12 h-6 rounded-full transition-colors ${s.val ? "bg-purple-600" : "bg-white/10"}`}
-                            >
-                                <div className={`absolute w-5 h-5 bg-white rounded-full top-0.5 transition-all ${s.val ? "left-6" : "left-0.5"}`} />
-                            </button>
-                        </div>
-                    ))}
-                </div>
-                <div className="mt-4">
-                    <p className="text-xs text-[#94a3b8] mb-2">Risk Level</p>
-                    <div className="flex gap-2">
-                        {["Low", "Medium", "High"].map(r => (
-                            <button
-                                key={r}
-                                onClick={() => onToast(`Risk level set to ${r} (demo)`)}
-                                className={`flex-1 py-2 rounded-lg text-xs font-bold border transition ${r === "Medium" ? "bg-amber-500/20 border-amber-500/40 text-amber-300" : "border-white/10 text-[#94a3b8] hover:border-white/20"}`}
-                            >
-                                {r}
-                            </button>
-                        ))}
-                    </div>
                 </div>
             </div>
 

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { SignalNotification } from '@/components/SignalNotification';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { AUTO_APPROVE_ENABLED } from '@/lib/feature-flags';
 
 // Types from DB schema
 interface AutoApproveSettings {
@@ -222,6 +223,11 @@ export function SignalProvider({ children }: SignalProviderProps) {
         if (processedSignalIds.current.has(signal.id)) return;
         // Skip if already executed by the current user
         if (signal.userExecution?.status === 'executed') return;
+
+        // Signals-only product model: Auto-Approve is globally disabled.
+        // Every signal must be reviewed and entered manually by the user
+        // in their own broker — no auto-dispatch to virtual or live execution.
+        if (!AUTO_APPROVE_ENABLED) return;
 
         const strategy = (signal.strategy || '').toLowerCase();
         

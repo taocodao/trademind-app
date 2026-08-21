@@ -1148,41 +1148,7 @@ function DashboardContent() {
                 {/* Your Progress */}
                 {/* <ProgressCard stats={gamStats} /> */}
 
-                {/* Auto-Approve Toggle — writes to DB, consistent with Settings page */}
-
-                <button
-
-                    onClick={() => setAutoApproval(!settings.autoApproval)}
-
-                    className="w-full flex items-center gap-3 glass-card px-4 py-3"
-
-                >
-
-                    {settings.autoApproval
-
-                        ? <CheckSquare className="w-5 h-5 text-tm-purple flex-shrink-0" />
-
-                        : <Square className="w-5 h-5 text-tm-muted flex-shrink-0" />}
-
-                    <div className="text-left">
-
-                        <p className="font-semibold text-sm">{t('dashboard.auto_approve.title')}</p>
-
-                        <p className="text-xs text-tm-muted">
-
-                            {settings.autoApproval
-
-                                ? t('dashboard.auto_approve.enabled')
-
-                                : t('dashboard.auto_approve.disabled')}
-
-                        </p>
-
-                    </div>
-
-                </button>
-
-
+                {/* Auto-Approve toggle removed — signals-only product model: user enters every order manually. */}
 
                 {/* Trade Signals */}
 

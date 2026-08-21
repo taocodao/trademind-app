@@ -62,7 +62,7 @@ export default function SettingsPage() {
                 {/* My Strategies Subscription */}
                 <MyStrategies />
                 
-                {/* Strategy-Specific Settings (Auto-Approve & Risk) */}
+                {/* Strategy-Specific Settings (Risk profile) — Auto-Approve removed under signals-only product model */}
                 <TQQQAutoApproveSettings />
 
                 {/* Email Alerts Setup */}

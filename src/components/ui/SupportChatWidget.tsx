@@ -8,7 +8,7 @@ import remarkGfm from 'remark-gfm';
 type Message = { role: 'user' | 'assistant'; content: string };
 
 const STARTER_CHIPS = [
-    'How does Auto-Approval work?',
+    'How do TradeMind signals reach my broker?',
     'What is QQQ Basic?',
     'How do I enter a signal at my broker?',
     'How does the shadow ledger work?',

@@ -108,7 +108,7 @@ const executeDiagonalStrategy: StrategyExecutor = async (
 const executeServerManagedStrategy: StrategyExecutor = async (accessToken, accountNumber, signal) => {
     throw new Error(
         `${signal.strategy} trades require live pricing and multi-leg execution which are managed by the EC2 backend. ` +
-        'Please use the manual approve button which will proxy to the server, or enable auto-approve in Settings.'
+        'Please use the manual approve button which will proxy to the server. TradeMind never submits orders to your brokerage — enter each order yourself in your own broker.'
     );
 };
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { BROKERAGE_INTEGRATION_ENABLED } from '@/lib/feature-flags';
+import { AUTO_APPROVE_ENABLED, BROKERAGE_INTEGRATION_ENABLED } from '@/lib/feature-flags';
 
 // ── Configuration ──────────────────────────────────────────────────────────
 const SUPPORTED_LOCALES = ['en', 'es', 'zh'] as const;
@@ -41,6 +41,19 @@ function detectLocale(req: NextRequest): SupportedLocale {
 // possible future reuse, but every one of their surfaces is short-circuited
 // here — status probes return { linked: false }, everything else 410 Gone —
 // so no client can reach the third-party API. Toggle in @/lib/feature-flags.
+// ── Auto-Approve kill switch ──────────────────────────────────────────────
+// Signals-only product model — the Auto-Approve feature is globally disabled.
+// GET requests to /api/settings/auto-approve are answered with a synthetic
+// "disabled" payload so any existing client still receives a consistent shape.
+// Writes (PUT/POST/DELETE) are 410 Gone.
+function classifyAutoApproveRoute(pathname: string, method: string): 'read' | 'write' | null {
+    if (pathname.startsWith('/api/settings/auto-approve') ||
+        pathname.startsWith('/api/admin/migrate-strategy-auto-approve')) {
+        return method === 'GET' ? 'read' : 'write';
+    }
+    return null;
+}
+
 function classifyBrokerageRoute(pathname: string): 'status' | 'action' | null {
     if (pathname.startsWith('/api/tastytrade/status') ||
         pathname.startsWith('/api/tastytrade/account') ||
@@ -60,6 +73,39 @@ function classifyBrokerageRoute(pathname: string): 'status' | 'action' | null {
 // ── Middleware ─────────────────────────────────────────────────────────────
 export function middleware(request: NextRequest) {
     const { pathname, search } = request.nextUrl;
+
+    // Auto-Approve kill switch: block every API surface at the edge.
+    if (!AUTO_APPROVE_ENABLED) {
+        const aaKind = classifyAutoApproveRoute(pathname, request.method);
+        if (aaKind === 'read') {
+            // Synthetic disabled payload compatible with the existing GET client
+            // (SignalProvider / AutoApproveSettings expect an object).
+            return NextResponse.json(
+                {
+                    enabled: false,
+                    disabled: true,
+                    reason: 'auto_approve_disabled',
+                    theta:    { enabled: false, riskLevel: 'MEDIUM', customOverrides: {} },
+                    diagonal: { enabled: false, riskLevel: 'MEDIUM', customOverrides: {} },
+                    zebra:    { enabled: false, riskLevel: 'MEDIUM', customOverrides: {} },
+                    dvo:      { enabled: false, riskLevel: 'MEDIUM', customOverrides: {} },
+                    globalAutoApprove: false,
+                    strategyAutoApprove: {},
+                },
+                { status: 200 },
+            );
+        }
+        if (aaKind === 'write') {
+            return NextResponse.json(
+                {
+                    error: 'Auto-Approve is disabled.',
+                    reason: 'auto_approve_disabled',
+                    detail: 'Signals are delivered by email/dashboard and you enter each order yourself — there is no auto-execution.',
+                },
+                { status: 410 },
+            );
+        }
+    }
 
     // Brokerage integration kill switch: block every API surface at the edge.
     if (!BROKERAGE_INTEGRATION_ENABLED) {
@@ -111,5 +157,8 @@ export const config = {
         '/c/:campaign*',
         '/api/tastytrade/:path*',
         '/api/internal/signals/:path*',
+        '/api/settings/auto-approve/:path*',
+        '/api/settings/auto-approve',
+        '/api/admin/migrate-strategy-auto-approve',
     ],
 };

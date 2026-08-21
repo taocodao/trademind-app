@@ -36,7 +36,6 @@ export const PRICING = {
                 'SMA200 Regime Gate',
                 'IV-Switching Composite (CSP / ZEBRA / CCS)',
                 'Crash Hedge Mode (SQQQ)',
-                'Tastytrade Auto-Execution',
                 'Virtual Shadow Portfolio',
                 'Pre-Market Brief',
                 'Signal History',

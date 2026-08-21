@@ -198,7 +198,6 @@ function PlanCard({
 const COMPARE_FEATURES = [
     { label: 'TurboCore ML Signal (daily)',   turbocore_pro_bundle: true,  qqq_leaps: false, full_access: true  },
     { label: 'SMA200 Regime Gate',            turbocore_pro_bundle: true,  qqq_leaps: false, full_access: true  },
-    { label: 'Tastytrade Auto-Execution',     turbocore_pro_bundle: true,  qqq_leaps: false, full_access: true  },
     { label: 'IV-Switching (CSP/ZEBRA/CCS)',  turbocore_pro_bundle: true,  qqq_leaps: false, full_access: true  },
     { label: 'Crash Hedge (SQQQ Mode)',       turbocore_pro_bundle: true,  qqq_leaps: false, full_access: true  },
     { label: 'QQQ LEAPS ML Signal',           turbocore_pro_bundle: false, qqq_leaps: true,  full_access: true  },

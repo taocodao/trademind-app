@@ -197,7 +197,11 @@
 .tm-winfull { border-top: 2px solid var(--s-line); background: rgba(139,92,246,.05); }
 
 /* ── Deck mode: one-page slide presentation ── */
-.tm-deck { position: fixed; top: 60px; left: 0; right: 0; bottom: 0; z-index: 40; display: flex; flex-direction: column; background: var(--s-bg); }
+/* Full viewport, in normal flow — NOT fixed. A fixed deck visually floats over
+   the sections that follow it (calculator, pricing, referral), making them
+   unreachable while looking "behind" the hero. Relative flow keeps one clean
+   page: deck → calculator → pricing → referral → footer. */
+.tm-deck { position: relative; height: calc(100vh - 60px); z-index: 1; display: flex; flex-direction: column; background: var(--s-bg); }
 .tm-deck-top {
     display: flex; align-items: center; gap: 18px;
     padding: 12px 28px; border-bottom: 1px solid var(--s-line); flex-shrink: 0;

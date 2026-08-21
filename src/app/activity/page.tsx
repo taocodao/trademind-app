@@ -266,7 +266,7 @@ export default function ActivityPage() {
                 <div className="px-6 mb-3">
                     <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-xs text-amber-300">
                         <AlertTriangle className="w-4 h-4 shrink-0" />
-                        {t('activity_page.tt_not_connected', 'Tastytrade not connected — only virtual and signal activity shown.')}
+                        {t('activity_page.tt_not_connected', 'Showing your virtual account activity and TradeMind signal history.')}
                     </div>
                 </div>
             )}
@@ -307,7 +307,7 @@ export default function ActivityPage() {
                         <p className="text-tm-muted text-sm">
                             {accountNumber 
                                 ? t('activity_page.no_activity_tt', 'No trades match the current filter.')
-                                : t('activity_page.no_activity_connect', 'Connect Tastytrade in Settings to see live transactions.')}
+                                : t('activity_page.no_activity_connect', 'No signals or virtual trades yet.')}
                         </p>
                     </div>
                 ) : (

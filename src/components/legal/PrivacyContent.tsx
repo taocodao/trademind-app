@@ -29,7 +29,7 @@ export function PrivacyContent() {
                 <h3>3. Toma de Decisiones Automatizada</h3>
                 <p>Nuestros algoritmos analizan datos del mercado y generan resultados idénticos para todos los suscriptores. No toman decisiones sobre ti como individuo.</p>
                 <h3>4. Compartir Datos</h3>
-                <p>Solo compartimos datos con: Stripe, Privy, Tastytrade (si conectado), Vercel/AWS y autoridades legales cuando sea requerido.</p>
+                <p>Solo compartimos datos con: Stripe, Privy, Vercel/AWS y autoridades legales cuando sea requerido.</p>
                 <h3>5. Retención de Datos</h3>
                 <p>Al eliminar la cuenta, los datos personales se eliminan en un plazo de 30 días.</p>
                 <h3>6. Tus Derechos</h3>
@@ -68,7 +68,7 @@ export function PrivacyContent() {
                 <h3>3. 自动化决策</h3>
                 <p>我们的算法分析市场数据，并为所有订阅用户生成相同的输出结果。它们不会针对您个人做出决策。</p>
                 <h3>4. 数据共享</h3>
-                <p>我们仅与以下方共享数据：Stripe、Privy、Tastytrade（若已连接）、Vercel/AWS，以及在法律要求时与相关部门共享。</p>
+                <p>我们仅与以下方共享数据：Stripe、Privy、Vercel/AWS，以及在法律要求时与相关部门共享。</p>
                 <h3>5. 数据保留</h3>
                 <p>账户删除后，个人数据将在30天内被移除。</p>
                 <h3>6. 您的权利</h3>
@@ -107,7 +107,7 @@ export function PrivacyContent() {
             <h3>3. Automated Decision-Making</h3>
             <p>Our algorithms analyze market data and generate identical outputs for all subscribers. They do not make decisions about you as an individual.</p>
             <h3>4. Data Sharing</h3>
-            <p>We share data only with: Stripe, Privy, Tastytrade (if connected), Vercel/AWS, and legal authorities when required.</p>
+            <p>We share data only with: Stripe, Privy, Vercel/AWS, and legal authorities when required.</p>
             <h3>5. Data Retention</h3>
             <p>Upon account deletion, personal data is removed within 30 days.</p>
             <h3>6. Your Rights (CCPA / California Residents)</h3>

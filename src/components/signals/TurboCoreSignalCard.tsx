@@ -686,7 +686,7 @@ function ManualOrderPanel({
       ))}
 
       <div className="text-[10px] text-yellow-400/90 text-center pt-1">
-        ⚡ {t('dashboard.signals.connect_tastytrade', 'Connect Tastytrade for live pricing & one-click execution')}
+        ⚡ {t('dashboard.signals.connect_tastytrade', 'Signals delivered by email — you enter each order in your own broker')}
       </div>
 
       {guide && (

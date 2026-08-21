@@ -63,7 +63,7 @@
             "features": [
                 "TQQQ 核心模型访问",
                 "SMA200 资本保全防护",
-                "Tastytrade 自动化执行",
+                "自动化信号推送",
                 "标准用户界面体验"
             ]
         },
@@ -252,10 +252,10 @@
         "active_target_change_plural": "{{count}} 个活跃目标变更",
         "aligned_title": "投资组合目标已对齐",
         "aligned_desc": "没有待处理的机器学习目标重新平衡请求。",
-        "track_only_notice": "没有使用 Tastytrade？<1>仅跟踪</1>可监控损益，无需执行订单。",
+        "track_only_notice": "TradeMind 从不连接您的券商。<1>仅跟踪</1>在您的虚拟账户中监控损益 — 每笔订单需您自己下单。",
         "auto_approve": {
             "title": "自动批准交易",
-            "enabled": "信号在 Tastytrade 上自动执行",
+            "enabled": "信号通过邮件自动推送",
             "disabled": "执行前需手动审阅"
         },
         "signals": {
@@ -268,7 +268,7 @@
             "sell": "卖出",
             "market": "市价",
             "sh": "股",
-            "connect_tastytrade": "连接 Tastytrade，实现实时定价和一键执行",
+            "connect_tastytrade": "信号通过邮件推送 — 由您在自己的券商下单",
             "submit_order": "提交订单",
             "submit_help": "模拟 · 整数股 · 市价",
             "executing": "执行中...",
@@ -325,11 +325,11 @@
     "activity_page": {
         "title": "活动日志",
         "subtitle": "追踪所有交易生命周期事件",
-        "tt_not_connected": "Tastytrade 未连接 — 仅显示虚拟和信号活动。",
+        "tt_not_connected": "显示您的虚拟账户活动和 TradeMind 信号历史。",
         "filter_placeholder": "按代码、策略或状态筛选...",
         "no_activity_title": "暂无活动记录",
         "no_activity_tt": "没有符合当前筛选条件的交易。",
-        "no_activity_connect": "在设置中连接 Tastytrade 以查看实时交易。",
+        "no_activity_connect": "暂无信号或虚拟交易。",
         "virtual_executed": "虚拟交易已执行",
         "ledger_updated": "账本已更新",
         "signal_received": "已接收信号",
@@ -387,8 +387,8 @@
             "step1Desc": "进入“设置” → 开启邮箱警报，这样每次生成新的交易信号时您都会收到通知。",
             "step2": "步骤 2：配置自动批准",
             "step2Desc": "在“设置”中，开启“自动批准”以让 TurboCore 自动执行交易 — 或者保持关闭以在执行前手动审核每个信号。",
-            "step3": "步骤 3：连接 Tastytrade（可选）",
-            "step3Desc": "绑定您的 Tastytrade 账户以进行一键真实交易。如果跳过此步，则在虚拟模式下交易 — 功能完全相同，只是模拟盘。",
+            "step3": "步骤 3：信号如何到达您的券商",
+            "step3Desc": "TradeMind 从不连接或向您的券商提交订单。每个信号都以虚拟模式记录到您的虚拟现金余额中 — 由您自己在您的券商中下单。",
             "step4": "步骤 4：美东时间下午 3:00 接收信号",
             "step4Desc": "在每个交易日的美东时间下午 3:00，人工智能引擎将评估市场状况并为 TurboCore 和 TurboCore Pro 生成重新平衡信号。"
         },
@@ -420,7 +420,7 @@
             "virtualBalance": "虚拟余额",
             "preview": "虚拟订单预览",
             "manualInstructions": "⚡ 手动下单说明 — 请在您的券商软件中输入",
-            "connectBanner": "⚡ 连接 Tastytrade 获得实时定价与一键执行",
+            "connectBanner": "⚡ 信号通过邮件推送 — 由您在自己的券商下每一笔单",
             "skipBtn": "跳过",
             "executeBtn": "执行交易",
             "toastDemo": "🎯 演示模式 — 无真实交易执行",
@@ -468,10 +468,10 @@
             "worksP2": " 会生成信号。AI 引擎会读取 IV（隐含波动率）、动量和宏观条件来判断市场处于 ",
             "worksRegimes": "BULL (牛市)、BEAR (熊市) 或 SIDEWAYS (盘整)",
             "worksP3": " 状态 — 然后计算每种状态下的最佳投资组合配置。",
-            "tastyConnected": "🏦 连接了 Tastytrade",
+            "tastyConnected": "🏦 信号如何到达您的券商",
             "tastyDesc1": "点击 ",
             "tastyExecBtn": "执行交易",
-            "tastyDesc2": " (或自动批准) → 订单会即时发送到您的 Tastytrade 账户。持仓会在“头寸”选项卡中实时显示。",
+            "tastyDesc2": " → 您收到邮件信号后，在自己的券商中下单。持仓会随着您的执行显示在“头寸”选项卡中。",
             "virtMode": "💻 虚拟模式 (无券商)",
             "virtDesc": "使用显示的订单说明手动执行交易，或选择跳过。虚拟账本会根据信号产生时的价格追踪您的模拟投资组合。",
             "title": "交易信号",
@@ -480,7 +480,7 @@
         },
         "positions": {
             "title": "您的投资组合 — 真实或虚拟",
-            "p1": "此表格显示您所有的未平仓头寸。如果您连接了 Tastytrade，这里将反映您的 ",
+            "p1": "此表格显示您在虚拟账户中所有未平仓头寸。这反映了您的 ",
             "p1b": "真实账户",
             "p1c": " — 头寸在每次执行后会直接从您的券商处获取。",
             "p2": "如果您处于 ",

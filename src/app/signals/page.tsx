@@ -472,9 +472,7 @@ export default function SignalsPage() {
                         <div className="flex items-center gap-2 mb-6 text-sm">
                             <AlertTriangle className="w-4 h-4 text-yellow-400" />
                             <span className="text-tm-muted">
-                                {settings?.tastytrade?.refreshToken 
-                                    ? "This will submit a real trade to Tastytrade" 
-                                    : "This will log a virtual trade to your Shadow Ledger"}
+                                This will log a virtual trade to your Shadow Ledger. TradeMind never submits orders to your brokerage.
                             </span>
                         </div>
 

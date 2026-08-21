@@ -140,7 +140,7 @@ export function TurboBounceSignalCard({
                         ) : (
                             <div className="flex items-center justify-center gap-1.5 text-[11px] text-tm-muted rounded-xl border border-white/10 px-1 py-1 text-center leading-tight">
                                 <AlertTriangle className="w-3 h-3 flex-shrink-0" />
-                                <span>Link Tastytrade<br />to execute</span>
+                                <span>Enter this order<br />in your broker</span>
                             </div>
                         )}
                         <button

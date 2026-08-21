@@ -276,10 +276,10 @@ function SignalCard({ signal, onApprove, onSkip }: { signal: typeof TURBOCORE_PR
                 </div>
             )}
 
-            {/* Connect banner */}
+            {/* Signals-only reminder */}
             <div className="px-5 pb-3">
                 <div className="border border-purple-500/20 rounded-lg py-2.5 text-center text-[11px] text-purple-300">
-                    ⚡ Connect Tastytrade for live pricing & one-click execution
+                    ⚡ Signals delivered by email — you place each order in your own broker
                 </div>
             </div>
 
@@ -978,8 +978,8 @@ function SetupTab({ onToast }: { onToast: (m: string) => void }) {
                     <div className="flex items-start gap-2">
                         <span className="w-5 h-5 rounded-full bg-blue-500/30 text-blue-300 text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
                         <div>
-                            <p className="font-bold text-white text-[11px]">Connect Tastytrade (Optional)</p>
-                            <p>Add your Tastytrade credentials to enable live order execution. Without it, all trades run in <strong className="text-white">Virtual Mode</strong> — orders are simulated against your virtual cash balance, positions are tracked in the Positions tab, and the strategy performance is fully measurable.</p>
+                            <p className="font-bold text-white text-[11px]">Signals-only product</p>
+                            <p>TradeMind never connects to or submits orders to your brokerage. Every signal is logged in <strong className="text-white">Virtual Mode</strong> — orders are simulated against your virtual cash balance, positions are tracked in the Positions tab, and strategy performance is fully measurable. You enter each trade yourself in your own broker.</p>
                         </div>
                     </div>
                 </div>
@@ -1069,15 +1069,15 @@ function SetupTab({ onToast }: { onToast: (m: string) => void }) {
                 <p className="text-xs text-[#94a3b8]">Alerts sent to: <span className="text-white font-mono">{DEMO_USER.email}</span></p>
             </div>
 
-            {/* Tastytrade */}
+            {/* Signals-only reminder — replaces prior Tastytrade Integration card */}
             <div className="glass-card p-5">
-                <h3 className="font-bold mb-3 flex items-center gap-2"><Shield className="w-4 h-4 text-[#94a3b8]" /> Tastytrade Integration</h3>
+                <h3 className="font-bold mb-3 flex items-center gap-2"><Shield className="w-4 h-4 text-[#94a3b8]" /> Signals-only Product</h3>
                 <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex items-start gap-3">
                     <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-amber-300">Not connected — running in virtual/shadow mode. Connect in real app for one-click execution.</p>
+                    <p className="text-xs text-amber-300">TradeMind never connects to your brokerage. Every trade runs in virtual/shadow mode. You enter each order yourself in your own broker.</p>
                 </div>
-                <button onClick={() => onToast("💡 Connect Tastytrade in the real app at trademind.bot")} className="mt-3 w-full py-2.5 rounded-xl border border-white/10 text-sm text-[#94a3b8] hover:text-white hover:border-white/20 transition">
-                    Connect Tastytrade Account
+                <button onClick={() => onToast("TradeMind never connects to your brokerage — you enter each order yourself")} className="mt-3 w-full py-2.5 rounded-xl border border-white/10 text-sm text-[#94a3b8] hover:text-white hover:border-white/20 transition">
+                    How signals reach my account
                 </button>
             </div>
 

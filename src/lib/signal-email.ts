@@ -269,11 +269,10 @@ function buildTextBody(data: SignalEmailData): string {
     }
 
     lines.push('-'.repeat(48));
-    if (data.live) {
-        lines.push('Execution: Live Tastytrade order submitted');
-    } else {
-        lines.push('Execution: Virtual portfolio updated');
-    }
+    // Signals-only product model: TradeMind never submits orders to your
+    // brokerage. Every signal updates the TradeMind virtual portfolio; the
+    // user enters the corresponding order themselves in their own broker.
+    lines.push('Execution: Virtual portfolio updated — enter this order in your own broker');
 
     lines.push('');
     lines.push('View your dashboard: https://www.trademind.bot/signals');
@@ -419,17 +418,11 @@ export function buildHtmlBody(data: SignalEmailData): string {
             </div>
         </div>` : '';
 
-    // Execution status
-    const statusHtml = data.live
-        ? `<div style="background:#f9fafb;border:1px solid #e5e7eb;
-                      border-radius:6px;padding:12px 16px;margin:0 0 8px;
-                      color:#111827;font-size:13px;">
-               <strong>Live Execution</strong> — Order submitted to Tastytrade
-           </div>`
-        : `<div style="background:#f9fafb;border:1px solid #e5e7eb;
+    // Execution status. Signals-only product model: never live-executed.
+    const statusHtml = `<div style="background:#f9fafb;border:1px solid #e5e7eb;
                       border-radius:6px;padding:12px 16px;margin:0 0 8px;
                       color:#374151;font-size:13px;">
-               <strong>Virtual Execution</strong> — Your TradeMind virtual account has been updated
+               <strong>Virtual Execution</strong> — Your TradeMind virtual account has been updated. Enter this order yourself in your own broker.
            </div>`;
 
     return `<!DOCTYPE html>

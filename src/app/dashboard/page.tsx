@@ -1247,7 +1247,7 @@ function DashboardContent() {
                                 )}
 
                                 {!tastyLinked && (
-                                    <div className="text-xs text-tm-muted text-center pt-1" dangerouslySetInnerHTML={{ __html: t('dashboard.track_only_notice', 'Not using Tastytrade? <span class="text-tm-purple">Track Only</span> monitors P&L without executing orders.') }} />
+                                    <div className="text-xs text-tm-muted text-center pt-1" dangerouslySetInnerHTML={{ __html: t('dashboard.track_only_notice', 'TradeMind never connects to your brokerage. <span class="text-tm-purple">Track Only</span> monitors P&L on your virtual account — you enter each order yourself.') }} />
                                 )}
                             </div>
                         )}

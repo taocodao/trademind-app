@@ -329,7 +329,7 @@ export function IVSwitchingSignalCard({ signal, onExecute, executingId, accountD
           </button>
           {!isLinked && (
             <div style={{ textAlign: "center", color: "#9ca3af", fontSize: "12px", marginTop: "8px" }}>
-              ⚡ Connect Tastytrade for live execution · Virtual tracking active
+              ⚡ Signals-only · you enter each order in your broker · Virtual tracking active
             </div>
           )}
         </>

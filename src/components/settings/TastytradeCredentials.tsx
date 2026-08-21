@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Link2, Link2Off, RefreshCw, Loader2, CheckCircle, ExternalLink } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
+import { BROKERAGE_INTEGRATION_ENABLED } from '@/lib/feature-flags';
 
 interface TastytradeStatus {
     linked: boolean;
@@ -12,6 +13,10 @@ interface TastytradeStatus {
 }
 
 export function TastytradeCredentials() {
+    // Signals-only product model — brokerage-connect UI is disabled everywhere.
+    // Source kept for a possible future reactivation via feature flag.
+    if (!BROKERAGE_INTEGRATION_ENABLED) return null;
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const [status, setStatus] = useState<TastytradeStatus | null>(null);
     const [loading, setLoading] = useState(true);
     const [disconnecting, setDisconnecting] = useState(false);

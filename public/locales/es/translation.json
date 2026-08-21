@@ -63,7 +63,7 @@
             "features": [
                 "Acceso al Modelo TQQQ Core",
                 "Puerta de Preservación SMA200",
-                "Ejecución Automatizada Tastytrade",
+                "Entrega Automatizada de Señales",
                 "Experiencia de Interfaz Estándar"
             ]
         },
@@ -252,10 +252,10 @@
         "active_target_change_plural": "{{count}} Cambios de Objetivo Activos",
         "aligned_title": "Objetivo de Cartera Alineado",
         "aligned_desc": "No hay rebalanceos de objetivos ML pendientes.",
-        "track_only_notice": "¿No usas Tastytrade? <1>Solo Seguir</1> monitorea las Ganancias/Pérdidas sin ejecutar órdenes.",
+        "track_only_notice": "TradeMind nunca se conecta a tu broker. <1>Solo Seguir</1> monitorea Ganancias/Pérdidas en tu cuenta virtual — tú introduces cada orden.",
         "auto_approve": {
             "title": "Auto-Aprobar Operaciones",
-            "enabled": "Las señales se ejecutan automáticamente en Tastytrade",
+            "enabled": "Las señales se entregan automáticamente por correo",
             "disabled": "Requiere revisión manual antes de ejecutarse"
         },
         "signals": {
@@ -268,7 +268,7 @@
             "sell": "VENDER",
             "market": "Mercado",
             "sh": "acc",
-            "connect_tastytrade": "Conecta Tastytrade para precios en vivo y ejecución 1-clic",
+            "connect_tastytrade": "Señales por correo — tú introduces cada orden en tu propio broker",
             "submit_order": "ENVIAR ORDEN",
             "submit_help": "Virtual · acciones enteras · precio de mercado",
             "executing": "EJECUTANDO...",
@@ -325,11 +325,11 @@
     "activity_page": {
         "title": "Registro de Actividad",
         "subtitle": "Seguimiento de todos los eventos del ciclo de operaciones",
-        "tt_not_connected": "Tastytrade no conectado — solo se muestra actividad virtual y de señales.",
+        "tt_not_connected": "Mostrando la actividad de tu cuenta virtual y el historial de señales de TradeMind.",
         "filter_placeholder": "Filtrar por símbolo, estrategia o estado...",
         "no_activity_title": "Sin actividad registrada",
         "no_activity_tt": "Ninguna operación coincide con el filtro actual.",
-        "no_activity_connect": "Conecta Tastytrade en Ajustes para ver transacciones en vivo.",
+        "no_activity_connect": "Aún no hay señales ni operaciones virtuales.",
         "virtual_executed": "Operación Virtual Ejecutada",
         "ledger_updated": "Libro Actualizado",
         "signal_received": "Señal Recibida",
@@ -387,8 +387,8 @@
             "step1Desc": "Ve a Configuración → habilita alertas por email para que se te notifique cada vez que se genere una nueva señal de trading.",
             "step2": "Paso 2: Configurar Aprobación Automática",
             "step2Desc": "En Configuración, activa la Aprobación Automática para permitir que TurboCore ejecute trades automáticamente — o déjalo desactivado para revisar manualmente cada señal primero.",
-            "step3": "Paso 3: Conectar Tastytrade (Opcional)",
-            "step3Desc": "Vincula tu cuenta de Tastytrade para ejecución real en un clic. Omite este paso para operar en Modo Virtual — todo funciona igual, pero simulado.",
+            "step3": "Paso 3: Cómo llegan las señales a tu broker",
+            "step3Desc": "TradeMind nunca se conecta ni envía órdenes a tu broker. Cada señal se registra en Modo Virtual contra tu saldo de efectivo virtual — tú introduces cada operación en tu propio broker.",
             "step4": "Paso 4: Las Señales Llegan a las 3:00 PM ET",
             "step4Desc": "Cada día de trading a las 3:00 PM ET, el motor de IA evalúa las condiciones del mercado y genera una señal de rebalanceo para TurboCore y TurboCore Pro."
         },
@@ -420,7 +420,7 @@
             "virtualBalance": "Balance Virtual",
             "preview": "Vista Previa de Orden Virtual",
             "manualInstructions": "⚡ INSTRUCCIONES DE ORDEN MANUAL — ingrésalas en tu broker",
-            "connectBanner": "⚡ Conecta Tastytrade para precios en vivo y ejecución en un clic",
+            "connectBanner": "⚡ Señales por correo — tú colocas cada orden en tu propio broker",
             "skipBtn": "Omitir",
             "executeBtn": "Ejecutar Trade",
             "toastDemo": "🎯 Modo demo — no se ejecutaron trades reales",
@@ -468,10 +468,10 @@
             "worksP2": ". El motor de IA lee IV (Volatilidad Implícita), impulso y condiciones macro para determinar si el mercado está en régimen ",
             "worksRegimes": "BULL, BEAR o SIDEWAYS",
             "worksP3": " — luego calcula la asignación de portafolio óptima para cada régimen.",
-            "tastyConnected": "🏦 Con Tastytrade Conectado",
+            "tastyConnected": "🏦 Cómo llegan las señales a tu broker",
             "tastyDesc1": "Haz clic en ",
             "tastyExecBtn": "Ejecutar Trade",
-            "tastyDesc2": " (o Aprobación Automática) → las órdenes van en vivo en tu cuenta de Tastytrade al instante. Las posiciones aparecen en la pestaña Posiciones en tiempo real.",
+            "tastyDesc2": " → recibes la señal por correo e introduces la orden en tu propio broker. Las posiciones aparecen en la pestaña Posiciones a medida que las ejecutas.",
             "virtMode": "💻 Modo Virtual (Sin Broker)",
             "virtDesc": "Ejecuta el trade manualmente usando las instrucciones de orden mostradas, u omítela. El libro virtual rastrea tu portafolio simulado basado en los precios al momento de la señal.",
             "title": "Señales de Trade",
@@ -480,7 +480,7 @@
         },
         "positions": {
             "title": "Tu Portafolio — Real o Virtual",
-            "p1": "Esta tabla muestra todas tus posiciones abiertas. Si conectaste Tastytrade, esto refleja tu ",
+            "p1": "Esta tabla muestra todas tus posiciones abiertas en tu cuenta virtual. Esto refleja tu ",
             "p1b": "cuenta real",
             "p1c": " — las posiciones se obtienen directamente de tu broker después de cada ejecución.",
             "p2": "Si estás en ",

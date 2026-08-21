@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Link2, ExternalLink, AlertCircle, Loader2 } from "lucide-react";
 import { usePrivy } from "@privy-io/react-auth";
+import { BROKERAGE_INTEGRATION_ENABLED } from "@/lib/feature-flags";
 
 interface TastytradeLinkProps {
     onLinked?: () => void;
@@ -10,6 +11,9 @@ interface TastytradeLinkProps {
 }
 
 export function TastytradeLink({ onLinked, onSkip }: TastytradeLinkProps) {
+    // Signals-only product model — brokerage-linking UI is disabled everywhere.
+    // Source kept for a possible future reactivation via feature flag.
+    if (!BROKERAGE_INTEGRATION_ENABLED) return null;
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const { getAccessToken } = usePrivy();

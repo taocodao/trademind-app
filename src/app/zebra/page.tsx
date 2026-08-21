@@ -57,6 +57,10 @@ export default function ZebraPage() {
 
     // Handle Execution
     const handleExecute = async (signal: any) => {
+        // Brokerage integration is disabled under the signals-only product model.
+        // Users enter their own orders manually; TradeMind never submits trades.
+        alert('TradeMind never submits orders to your brokerage. Use this signal as a guide to enter the trade yourself in your broker.');
+        return;
         if (!settings?.tastytrade?.refreshToken || !settings?.tastytrade?.accounts?.[0]?.['account-number']) {
             alert('Please configure Tastytrade credentials in Settings first.');
             return;

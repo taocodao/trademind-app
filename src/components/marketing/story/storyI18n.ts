@@ -13,10 +13,6 @@ export type StoryLang = 'en' | 'es' | 'zh';
 
 export interface StoryOverlay {
     chapters: Record<string, { kicker: string; title: string; text: string }>;
-    hero: {
-        eyebrow: string; h1a: string; h1b: string; sub: string;
-        play: string; hintNarrated: string; hintSilent: string; note: string;
-    };
     ui: Record<string, string>;
     beats: { label: string; tip: string }[];          // order must match MAP_BEATS
     beatTimes?: number[];                             // narration timing for the map (defaults to English)
@@ -70,15 +66,6 @@ const es: StoryOverlay = {
             kicker: 'Capítulo 9', title: 'Juzga tú mismo',
             text: 'Abajo: cada operación. Cada precio. Cada pérdida. Ochocientas seis ejecuciones, cada una etiquetada según cómo fue valorada. Juzga tú mismo. Esta página es material educativo, no asesoría de inversión ni una solicitud. Rendimiento simulado: los primeros años valorados por el modelo, los últimos quince meses verificados contra la cinta real de la bolsa. TradeMind nunca se conecta a tu bróker. Las señales solo te ayudan a ingresar la orden tú mismo.',
         },
-    },
-    hero: {
-        eyebrow: 'TradeMind · Estrategia QQQ LEAPS',
-        h1a: 'Escucha cada operación.', h1b: 'Juzga por ti mismo.',
-        sub: 'Cinco años y medio, totalmente divulgados: 36,3% de crecimiento anual promedio frente al 16,6% de QQQ, con una caída máxima del 17,8% en lugar del 35,6%. Cada operación a la vista. Cada pérdida incluida. Sin cherry-picking.',
-        play: '▶ Comenzar la historia',
-        hintNarrated: 'Un historial, leído en voz alta — 12 diapositivas · sincronizado con audio · ~8 minutos · transcripción completa en la última diapositiva',
-        hintSilent: 'Un historial, en texto — 12 diapositivas · una lectura de 8 minutos · metodología completa dentro',
-        note: 'Pulsa reproducir para comenzar la historia.',
     },
     ui: {
         // slide titles
@@ -245,15 +232,6 @@ const zh: StoryOverlay = {
             kicker: '第九章', title: '请你自行判断',
             text: '下面:每一笔交易。每一个价格。每一笔亏损。806笔成交,每笔都标注了定价方式。请你自行判断。本页面是教育材料,不是投资建议或要约。模拟业绩——早年由模型定价,最后十五个月用真实交易所行情核验。TradeMind从不连接你的券商。信号只是帮助你自己下单。',
         },
-    },
-    hero: {
-        eyebrow: 'TradeMind · QQQ LEAPS 策略',
-        h1a: '听见每一笔交易。', h1b: '自己做判断。',
-        sub: '五年半完整披露:年均增长 36.3%,同期 QQQ 为 16.6%;最大回撤 17.8%,而 QQQ 为 35.6%。每笔交易公开,每笔亏损在列,不挑数据。',
-        play: '▶ 开始聆听',
-        hintNarrated: '一份交易记录,读给你听——12页 · 语音同步 · 约8分钟 · 完整文字稿在最后一页',
-        hintSilent: '一份交易记录,自己读——12页 · 约8分钟读完 · 内含完整方法论',
-        note: '按播放键开始。',
     },
     ui: {
         // slide titles

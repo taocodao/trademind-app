@@ -6,6 +6,9 @@ import { ReferralPromoSection } from '@/components/marketing/ReferralPromoSectio
 import { TrustBadges } from '@/components/marketing/TrustBadges';
 import { LegalFooter } from '@/components/marketing/LegalFooter';
 import { StoryLanding } from '@/components/marketing/story/StoryLanding';
+import { CoPilotHero } from '@/components/marketing/CoPilotHero';
+import { ModelTrustSection } from '@/components/marketing/ModelTrustSection';
+import { PatienceSection } from '@/components/marketing/PatienceSection';
 import { MillionaireCalc } from '@/components/marketing/MillionaireCalc';
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
@@ -83,6 +86,15 @@ export default function SinglePageMarketing() {
     return (
         <main className="min-h-screen flex flex-col bg-[#0A0A0F] overflow-x-hidden pt-16">
             <MarketingHeader />
+
+            {/* Static hero — slogan + co-pilot framing + trust stats */}
+            <CoPilotHero />
+
+            {/* The Model, Not the Hype — why signals can be trusted */}
+            <ModelTrustSection />
+
+            {/* Patience Is the Strategy — entries timeline */}
+            <PatienceSection />
 
             {/* Narrated scrollytelling track record — the landing story */}
             <StoryLanding

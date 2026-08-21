@@ -475,3 +475,79 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
 .tm-mile .who { display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--s-ink2); font-weight: 600; }
 .tm-mile .age { font-family: Georgia, serif; font-weight: 300; font-size: 30px; margin-top: 8px; letter-spacing: -.01em; }
 .tm-mile .sub2 { font-size: 12px; color: var(--s-ink3); margin-top: 4px; line-height: 1.5; }
+
+/* ═══════════ Static homepage sections (co-pilot hero, model, patience) ═══════════ */
+
+.tm-hero2 {
+    min-height: calc(100vh - 60px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 72px 24px 56px;
+    border-bottom: 1px solid var(--s-line);
+}
+.tm-hero2-inner { max-width: 880px; margin: 0 auto; text-align: center; }
+.tm-hero2 .tm-h1 { margin: 18px 0 20px; }
+.tm-hero2 .tm-sub { max-width: 720px; margin: 0 auto; }
+
+.tm-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+    background: var(--s-line); border: 1px solid var(--s-line);
+    border-radius: 14px; overflow: hidden;
+    margin: 40px auto 10px; max-width: 780px;
+}
+.tm-stat { background: var(--s-panel); padding: 22px 18px 18px; }
+.tm-stat-big {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 40px; font-weight: 700; color: var(--s-amber); line-height: 1.05;
+}
+.tm-stat-label { margin-top: 8px; font-size: 13.5px; line-height: 1.45; color: var(--s-ink2); }
+.tm-stats-src { font-size: 11px; color: var(--s-ink3); margin-bottom: 34px; }
+
+.tm-hero2-ctas {
+    display: flex; gap: 14px; justify-content: center; align-items: center;
+    flex-wrap: wrap; margin-bottom: 18px;
+}
+.tm-hero2-calc {
+    background: none; border: 1px solid var(--s-line); border-radius: 999px;
+    color: var(--s-ink); font-size: 15px; padding: 13px 22px; cursor: pointer;
+    font-family: inherit; transition: border-color .15s ease, color .15s ease;
+}
+.tm-hero2-calc:hover { border-color: var(--s-amber); color: var(--s-amber); }
+.tm-hero2-micro {
+    margin-top: 26px; font-size: 13px; color: var(--s-ink3);
+    font-style: italic; max-width: 520px; margin-left: auto; margin-right: auto;
+}
+
+/* ── shared section chrome ── */
+.tm-modelsec, .tm-patience { padding: 96px 24px; border-bottom: 1px solid var(--s-line); }
+.tm-sec-inner { max-width: 1080px; margin: 0 auto; }
+.tm-sec-title {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(28px, 4vw, 44px); font-weight: 700; color: var(--s-ink);
+    line-height: 1.15; margin: 14px 0 18px; max-width: 760px;
+}
+.tm-sec-p { font-size: 16.5px; line-height: 1.65; color: var(--s-ink2); max-width: 720px; margin: 0 0 14px; }
+
+/* ── model cards ── */
+.tm-model-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 40px; }
+.tm-model-card {
+    background: var(--s-panel); border: 1px solid var(--s-line);
+    border-radius: 14px; padding: 26px 24px;
+}
+.tm-model-card-t {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 19px; font-weight: 700; color: var(--s-amber); margin-bottom: 12px; line-height: 1.3;
+}
+.tm-model-card-p { font-size: 14.5px; line-height: 1.65; color: var(--s-ink2); margin: 0; }
+
+/* ── patience timeline ── */
+.tm-patience-timeline { width: 100%; height: auto; margin: 44px 0 14px; display: block; }
+.tm-patience-year { fill: var(--s-ink3); font-size: 15px; font-family: inherit; }
+.tm-patience-cap { font-size: 13px; color: var(--s-ink3); text-align: center; }
+
+@media (max-width: 860px) {
+    .tm-stats { grid-template-columns: 1fr; }
+    .tm-model-cards { grid-template-columns: 1fr; }
+    .tm-modelsec, .tm-patience { padding: 64px 20px; }
+    .tm-hero2 { padding: 56px 20px 44px; }
+    .tm-stat-big { font-size: 34px; }
+}

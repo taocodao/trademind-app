@@ -28,7 +28,7 @@ interface StoryLandingProps {
 
 type Variant = 'narrated' | 'silent';
 
-const SLIDE_IDS = ['hero', ...CHAPTERS.map(c => c.id), 'appendix', 'close'];
+const SLIDE_IDS = [...CHAPTERS.map(c => c.id), 'appendix', 'close'];
 
 function track(event: string, chapter?: string, variant?: Variant) {
     try {
@@ -43,14 +43,6 @@ function track(event: string, chapter?: string, variant?: Variant) {
 
 /* English slide copy (default language) — es/zh live in storyI18n.ts */
 const EN = {
-    hero: {
-        eyebrow: 'TradeMind · QQQ LEAPS Strategy', h1a: 'Hear every trade.', h1b: 'Judge for yourself.',
-        sub: '5.6 years, fully disclosed: 36.3% average annual growth vs. QQQ’s 16.6% — worst drop 17.8% instead of 35.6%. Every trade shown. Every loss included. No cherry-picking.',
-        play: '▶ Begin the story',
-        hintNarrated: 'A track record, read aloud — 12 slides · audio-synced · ~8 minutes · full transcript on the last slide',
-        hintSilent: 'A track record, in print — 12 slides · an 8-minute read · full methodology inside',
-        note: 'Press play to begin the story.',
-    },
     ui: {
         ch1title: 'September 2, 2025', ch2title: 'One contract, a hundred shares',
         comptitle: 'What patience looked like', compFrom: '$10,000 in January 2021', compAria: 'Growth of ten thousand dollars, strategy versus QQQ buy and hold, January 2021 to August 2026',
@@ -132,7 +124,6 @@ export function StoryLanding({ onCta, ctaLabel }: StoryLandingProps) {
     const lang: StoryLang = (i18n.language || 'en').split('-')[0] === 'es' ? 'es'
         : (i18n.language || 'en').split('-')[0] === 'zh' ? 'zh' : 'en';
     const ov = STORY_I18N[lang];
-    const hero = ov?.hero ?? EN.hero;
     const ui = ov?.ui ?? EN.ui;
     const fallback = ov?.fallback ?? EN.fallback;
     const aria = ov?.aria ?? EN.aria;
@@ -213,8 +204,16 @@ export function StoryLanding({ onCta, ctaLabel }: StoryLandingProps) {
         setStarted(true);
         startedRef.current = true;
         track('story_start', undefined, variant);
-        goTo(1);
+        goTo(0);
     };
+
+    /* The static hero above the deck dispatches this event from its play button */
+    useEffect(() => {
+        const fn = () => begin();
+        window.addEventListener('tm:begin-story', fn);
+        return () => window.removeEventListener('tm:begin-story', fn);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const togglePlay = () => {
         if (!started) { begin(); return; }
@@ -345,17 +344,6 @@ export function StoryLanding({ onCta, ctaLabel }: StoryLandingProps) {
     /* ── slide content ── */
     const slideContent = (id: string) => {
         switch (id) {
-            case 'hero': return (
-                <div className="tm-ch-inner">
-                    <div className="tm-eyebrow">{hero.eyebrow}</div>
-                    <h1 className="tm-h1">{hero.h1a}<br /><em>{hero.h1b}</em></h1>
-                    <p className="tm-sub">{hero.sub}</p>
-                    <button className="tm-play" onClick={begin}>{hero.play}</button>
-                    <div className="tm-hint">
-                        {variant === 'narrated' ? hero.hintNarrated : hero.hintSilent}
-                    </div>
-                </div>
-            );
             case 'ch1': return (
                 <div className="tm-ch-inner">
                     <div className="tm-kicker">{slideKicker('ch1')}</div>
@@ -627,7 +615,7 @@ export function StoryLanding({ onCta, ctaLabel }: StoryLandingProps) {
         : '';
 
     return (
-        <div className="tm-story tm-deck">
+        <div className="tm-story tm-deck" id="story">
             {/* ── top bar: rolling one-line transcript ── */}
             <div className="tm-deck-top">
                 <div className={`tm-ticker ${variant === 'silent' ? 'static' : ''}`} ref={tickerRef}

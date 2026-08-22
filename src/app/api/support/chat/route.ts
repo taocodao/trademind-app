@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
     try {
-        // Require authentication but no tier gating — support is for everyone
+        // Require authentication but no tier gating, support is for everyone
         const user = await getUserFromRequest(req);
 
         const { message, history } = await req.json();

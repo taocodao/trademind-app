@@ -188,7 +188,7 @@ export default function GeneratePage() {
             {/* Step 1: Platform */}
             <div className="promo-glass p-5">
               <label className="block text-xs font-semibold text-[#94A3B8] uppercase tracking-wider mb-3">
-                Step 1 — Select Platform
+                Step 1, Select Platform
               </label>
               <PlatformSelector selected={platform} onSelect={setPlatform} />
             </div>
@@ -196,7 +196,7 @@ export default function GeneratePage() {
             {/* Step 2: Theme */}
             <div className="promo-glass p-5">
               <label className="block text-xs font-semibold text-[#94A3B8] uppercase tracking-wider mb-3">
-                Step 2 — Select Theme
+                Step 2, Select Theme
               </label>
               <ThemeGrid
                 selected={theme}
@@ -209,7 +209,7 @@ export default function GeneratePage() {
             {/* Step 3: Tone */}
             <div className="promo-glass p-5">
               <label className="block text-xs font-semibold text-[#94A3B8] uppercase tracking-wider mb-3">
-                Step 3 — Select Tone
+                Step 3, Select Tone
               </label>
               <ToneDropdown selected={tone} onSelect={setTone} />
             </div>
@@ -217,7 +217,7 @@ export default function GeneratePage() {
             {/* Step 4: Details */}
             <div className="promo-glass p-5">
               <label className="block text-xs font-semibold text-[#94A3B8] uppercase tracking-wider mb-4">
-                Step 4 — Add Your Details <span className="text-[#64748B] normal-case font-normal">(optional)</span>
+                Step 4, Add Your Details <span className="text-[#64748B] normal-case font-normal">(optional)</span>
               </label>
               <div className="space-y-3">
                 <div>

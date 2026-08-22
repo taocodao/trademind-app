@@ -51,10 +51,10 @@ export function ReferralPromoSection() {
                 </div>
 
                 <h2 className="text-3xl font-bold text-white mb-3 z-10">
-                    {t('referral.title', 'Refer a friend — you both get free months')}
+                    {t('referral.title', 'Refer a friend, you both get free months')}
                 </h2>
                 <p className="text-zinc-400 max-w-2xl mx-auto mb-2 z-10">
-                    {t('referral.desc', `Share your unique link. When a friend subscribes with your code, they get ${REFEREE_MONTHS} extra months free and you get ${REFERRER_MONTHS} months free. Both unlock once their subscription has been active for ${VESTING_DAYS} days — applied automatically as subscription credits.`)}
+                    {t('referral.desc', `Share your unique link. When a friend subscribes with your code, they get ${REFEREE_MONTHS} extra months free and you get ${REFERRER_MONTHS} months free. Both unlock once their subscription has been active for ${VESTING_DAYS} days, applied automatically as subscription credits.`)}
                 </p>
                 <p className="text-xs text-zinc-500 mb-6 z-10">
                     {t('referral.example', 'Free months are priced off each person\'s own plan and applied as credit toward future renewals.')}
@@ -70,7 +70,7 @@ export function ReferralPromoSection() {
                             </p>
                         </div>
                         <p className="text-xs text-zinc-500 mb-4 text-center">
-                            {t('referral.email_cta_desc', "Enter your email and we'll send you the link — share it and earn free months when a friend subscribes.")}
+                            {t('referral.email_cta_desc', "Enter your email and we'll send you the link, share it and earn free months when a friend subscribes.")}
                         </p>
 
                         {status === 'success' ? (
@@ -126,7 +126,7 @@ export function ReferralPromoSection() {
                     <div className="flex-1 h-px bg-white/8" />
                 </div>
 
-                {/* How it works — vested program */}
+                {/* How it works, vested program */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left mb-8 w-full z-10">
                     <div className="bg-white/5 p-5 rounded-xl border border-white/10 flex flex-col gap-2">
                         <div className="w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-sm shrink-0">1</div>
@@ -146,7 +146,7 @@ export function ReferralPromoSection() {
                         <div className="w-7 h-7 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 font-bold text-sm shrink-0">3</div>
                         <h4 className="font-bold text-white text-sm">{t('referral.step3_title', `Both unlock at ${VESTING_DAYS} days`)}</h4>
                         <span className="text-xs text-zinc-400">
-                            {t('referral.step3_desc', `Once their subscription has been active ${VESTING_DAYS} days, the free months vest automatically as subscription credits. If they cancel early, the pending reward is voided — that keeps the program honest.`)}
+                            {t('referral.step3_desc', `Once their subscription has been active ${VESTING_DAYS} days, the free months vest automatically as subscription credits. If they cancel early, the pending reward is voided, that keeps the program honest.`)}
                         </span>
                     </div>
                 </div>

@@ -92,7 +92,7 @@ export async function DELETE(req: NextRequest) {
         const row = await query(`SELECT blob_path FROM media_kit_assets WHERE id = $1`, [id]);
         if (!row.rows.length) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-        // Delete blob (best-effort — don't fail if already gone)
+        // Delete blob (best-effort, don't fail if already gone)
         try {
             const { del } = await import('@vercel/blob');
             await del(row.rows[0].blob_path);

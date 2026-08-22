@@ -494,13 +494,24 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
     border-radius: 14px; overflow: hidden;
     margin: 40px auto 10px; max-width: 780px;
 }
-.tm-stat { background: var(--s-panel); padding: 22px 18px 18px; }
+.tm-stat {
+    background: var(--s-panel); padding: 22px 20px 20px;
+    display: grid; grid-template-rows: auto auto 1fr; gap: 6px;
+    text-align: left;
+}
 .tm-stat-big {
     font-family: Georgia, 'Times New Roman', serif;
     font-size: 40px; font-weight: 700; color: var(--s-amber); line-height: 1.05;
 }
-.tm-stat-label { margin-top: 8px; font-size: 13.5px; line-height: 1.45; color: var(--s-ink2); }
-.tm-stats-src { font-size: 11px; color: var(--s-ink3); margin-bottom: 34px; }
+.tm-stat-label {
+    font-size: 13.5px; line-height: 1.45; color: var(--s-ink);
+    font-weight: 600;
+}
+.tm-stat-clarify {
+    font-size: 12.5px; line-height: 1.55; color: var(--s-ink2);
+    margin-top: 2px;
+}
+.tm-stats-src { font-size: 11px; color: var(--s-ink3); margin-bottom: 34px; margin-top: 12px; }
 
 .tm-hero2-ctas {
     display: flex; gap: 14px; justify-content: center; align-items: center;
@@ -539,14 +550,77 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
 }
 .tm-model-card-p { font-size: 14.5px; line-height: 1.65; color: var(--s-ink2); margin: 0; }
 
-/* ── patience timeline ── */
-.tm-patience-timeline { width: 100%; height: auto; margin: 44px 0 14px; display: block; }
+/* ── patience timeline (enlarged, annotated) ── */
+.tm-patience-chartwrap {
+    max-width: 1040px; margin: 40px auto 18px;
+}
+.tm-patience-timeline {
+    width: 100%; height: auto; display: block;
+    background: rgba(20, 20, 31, 0.35);
+    border: 1px solid var(--s-line);
+    border-radius: 12px;
+}
 .tm-patience-year { fill: var(--s-ink3); font-size: 15px; font-family: inherit; }
-.tm-patience-cap { font-size: 13px; color: var(--s-ink3); text-align: center; }
+.tm-patience-cap {
+    font-size: 13px; color: var(--s-ink3); text-align: center;
+    max-width: 720px; margin: 6px auto 0;
+}
+.tm-patience-window {
+    font-size: 12.5px; color: var(--s-ink3);
+    text-align: center; max-width: 780px;
+    margin: 14px auto 0; line-height: 1.6; font-style: italic;
+}
+.tm-patience-legend {
+    display: flex; justify-content: center; gap: 28px; flex-wrap: wrap;
+    font-size: 12.5px; color: var(--s-ink2);
+    margin-top: 12px;
+}
+.tm-patience-legend-item {
+    display: inline-flex; align-items: center; gap: 8px;
+}
+.tm-patience-legend-dot {
+    width: 10px; height: 10px; border-radius: 999px;
+    background: var(--s-amber); display: inline-block;
+}
+.tm-patience-legend-swatch {
+    width: 20px; height: 10px; border-radius: 2px;
+    background: rgba(139, 92, 246, 0.16); display: inline-block;
+    border: 1px solid rgba(139, 92, 246, 0.35);
+}
+.tm-patience-entrylabel { pointer-events: none; user-select: none; }
+
+/* ── story deck control bar: Home button ── */
+.tm-cbtn.tm-home {
+    letter-spacing: .02em;
+}
+.tm-cbtn.tm-home:hover {
+    border-color: var(--s-amber); color: var(--s-amber);
+}
+
+/* ── marketing header: accessible pills + focus rings ── */
+.tm-mh-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 0.5rem 1.1rem; border-radius: 999px;
+    font-size: 13.5px; font-weight: 700;
+    text-decoration: none;
+    transition: transform .12s ease, box-shadow .18s ease, background .18s ease;
+}
+.tm-mh-btn:hover { transform: translateY(-1px); }
+.tm-mh-login:hover { box-shadow: 0 6px 18px rgba(139, 92, 246, 0.35); }
+.tm-mh-demo:hover { background: rgba(167, 139, 250, 0.10); }
+.tm-mh-btn:focus-visible,
+.tm-mh-lang:focus-visible {
+    outline: 2px solid #A78BFA;
+    outline-offset: 2px;
+}
+.tm-mh-lang { cursor: pointer; }
+.tm-mh-lang:hover { color: #FFFFFF !important; }
 
 @media (max-width: 860px) {
     .tm-stats { grid-template-columns: 1fr; }
     .tm-model-cards { grid-template-columns: 1fr; }
+    .tm-patience-entrylabel { display: none; }
+    .tm-patience-legend { gap: 14px; font-size: 12px; }
     .tm-modelsec, .tm-patience { padding: 64px 20px; }
     .tm-hero2 { padding: 56px 20px 44px; }
     .tm-stat-big { font-size: 34px; }

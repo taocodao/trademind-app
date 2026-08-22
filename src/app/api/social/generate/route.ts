@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
             tone?: 'professional' | 'punchy' | 'casual';
             forceRegenerate?: boolean;
             customizationRequest?: string;
-            locale?: string; // 'en' | 'es' | 'zh' — user's active language
+            locale?: string; // 'en' | 'es' | 'zh', user's active language
         };
 
         // Normalise and validate locale
@@ -251,7 +251,7 @@ export async function POST(req: NextRequest) {
                 messages: [
                     {
                         role: 'system',
-                        content: `You are a social media editor for a fintech platform. You will receive an existing social media post and a user's modification request. Make ONLY the changes the user asks for — do not rewrite from scratch unless explicitly asked. Preserve the core message, referral link, and disclaimer. Remove any markdown formatting (no **bold**, no *italic*, no # headings).${safeLocale !== 'en' ? ` IMPORTANT: The post is in ${safeLocale === 'es' ? 'Spanish' : 'Simplified Chinese'}. Keep it in that language — do not translate back to English.` : ''}`,
+                        content: `You are a social media editor for a fintech platform. You will receive an existing social media post and a user's modification request. Make ONLY the changes the user asks for, do not rewrite from scratch unless explicitly asked. Preserve the core message, referral link, and disclaimer. Remove any markdown formatting (no **bold**, no *italic*, no # headings).${safeLocale !== 'en' ? ` IMPORTANT: The post is in ${safeLocale === 'es' ? 'Spanish' : 'Simplified Chinese'}. Keep it in that language, do not translate back to English.` : ''}`,
                     },
                     {
                         role: 'user',
@@ -297,16 +297,16 @@ export async function POST(req: NextRequest) {
         const userMessage = `Generate a ${platform} ${postMode === 'education' ? 'educational trading' : 'referral'} post for me.
 
 My referral/promo code: ${promoCode}
-My referral link (auto-applies free trial — use this URL, not the bare code): ${referralLink}
+My referral link (auto-applies free trial, use this URL, not the bare code): ${referralLink}
 
 Template style: ${templateStyle}
 Tone direction: ${toneDirective}
 Character limit: ${constraints.maxChars} characters.
-${!constraints.supportsLinks ? 'IMPORTANT: This platform does not support clickable links — write "link in bio" and show the URL as plain text.' : ''}
+${!constraints.supportsLinks ? 'IMPORTANT: This platform does not support clickable links, write "link in bio" and show the URL as plain text.' : ''}
 
-IMPORTANT FORMATTING: Do NOT use any markdown formatting. No asterisks, no **bold**, no *italic*, no # headings. Write in plain text only — exactly as it would appear in a social media post.
+IMPORTANT FORMATTING: Do NOT use any markdown formatting. No asterisks, no **bold**, no *italic*, no # headings. Write in plain text only, exactly as it would appear in a social media post.
 
-Make the post feel genuine — like a real trader who actually uses TradeMind, not a marketing ad.
+Make the post feel genuine, like a real trader who actually uses TradeMind, not a marketing ad.
 Do NOT start with "As a TradeMind user" or any AI-sounding preamble.`.trim();
 
         const openai = getOpenAIClient();
@@ -318,7 +318,7 @@ Do NOT start with "As a TradeMind user" or any AI-sounding preamble.`.trim();
             ],
             max_tokens: 800,
             temperature: 0.85,
-            // Do NOT enable streaming for this endpoint — streaming can split CJK
+            // Do NOT enable streaming for this endpoint, streaming can split CJK
             // multi-byte characters across chunk boundaries causing parse errors.
         });
 
@@ -330,7 +330,7 @@ Do NOT start with "As a TradeMind user" or any AI-sounding preamble.`.trim();
         // Strip any residual markdown the model slipped in despite the instruction
         const generatedPost = stripMarkdown(rawPost);
 
-        // Save to cache (upsert — force-regenerate overwrites the old row)
+        // Save to cache (upsert, force-regenerate overwrites the old row)
         await upsertCachedPost(user.privyDid, platform, templateStyle, tone, safeLocale, generatedPost)
             .catch(e => console.warn('[social/generate] Cache write failed:', e.message));
 

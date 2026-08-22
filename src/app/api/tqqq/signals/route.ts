@@ -24,7 +24,7 @@ export async function GET() {
         }
 
         const data = await res.json();
-        // Normalise — backend may return array or {signals:[]}
+        // Normalise, backend may return array or {signals:[]}
         const signals = Array.isArray(data) ? data : (data.signals ?? []);
         return NextResponse.json(signals);
     } catch {

@@ -31,13 +31,13 @@ async function ensureTable() {
 /**
  * POST /api/admin/media-kit/upload
  * FormData fields:
- *   file        — the binary file
- *   title       — display title
- *   description — short description
- *   platforms   — JSON array e.g. ["LinkedIn","Instagram"]
- *   tag         — optional badge e.g. "Square" | "Widescreen"
- *   file_type   — "image" | "video" | "copy"
- *   sort_order  — optional integer
+ *   file       , the binary file
+ *   title      , display title
+ *   description, short description
+ *   platforms  , JSON array e.g. ["LinkedIn","Instagram"]
+ *   tag        , optional badge e.g. "Square" | "Widescreen"
+ *   file_type  , "image" | "video" | "copy"
+ *   sort_order , optional integer
  */
 export async function POST(req: NextRequest) {
     try {

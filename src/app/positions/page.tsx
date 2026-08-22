@@ -190,7 +190,7 @@ export default function PositionsPage() {
         } catch (e) { console.error('Delete failed', e); }
     };
 
-    // Always fetch from virtual account — never Tastytrade
+    // Always fetch from virtual account, never Tastytrade
     const fetchVirtualPositions = useCallback(async () => {
         let virtualBalance = 25000;
         let isDefault = false;
@@ -362,7 +362,7 @@ export default function PositionsPage() {
                     <div className="flex items-center gap-2 mb-4">
                         <Wallet className="w-5 h-5 text-tm-purple" />
                         <h3 className="font-bold border-b border-transparent">{t('positions_page.account_overview', 'Account Overview')}</h3>
-                        {/* Deposit / Withdraw — always visible for virtual account */}
+                        {/* Deposit / Withdraw, always visible for virtual account */}
                         <div className="ml-auto flex gap-2">
                             <button onClick={() => setShowTransferModal('deposit')} className="text-[10px] bg-green-500/20 text-green-400 px-3 py-1 rounded-full font-bold hover:bg-green-500/30 transition">
                                 {t('positions_page.deposit', 'DEPOSIT')}
@@ -766,7 +766,7 @@ function SpreadPositionCard({ spread }: { spread: SpreadGroup }) {
                     </div>
                     <div>
                         <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-bold text-base">{parsed0?.underlying || '—'} · {label}</h3>
+                            <h3 className="font-bold text-base">{parsed0?.underlying || ','} · {label}</h3>
                             <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold border ${accentCls}`}>
                                 {spread.legs.length} {spread.legs.length !== 1 ? t('positions_page.legs_plural', 'LEGS') : t('positions_page.legs', 'LEG')}
                             </span>
@@ -780,7 +780,7 @@ function SpreadPositionCard({ spread }: { spread: SpreadGroup }) {
                 </div>
                 <div className="text-right">
                     <p className="text-[10px] text-tm-muted uppercase font-semibold tracking-wider">Max P/L</p>
-                    <p className="font-mono text-sm font-bold text-tm-muted">—</p>
+                    <p className="font-mono text-sm font-bold text-tm-muted">,</p>
                 </div>
             </div>
 

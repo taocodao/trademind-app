@@ -8,7 +8,7 @@ import { WORDS_I18N } from './wordsI18n';
 import { DecisionMap } from './DecisionMap';
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   StoryLanding — "A track record, read aloud." · deck edition
+   StoryLanding, "A track record, read aloud." · deck edition
    One-page slide presentation: arrows/keys navigate, narration auto-plays per
    slide, transcript underlines word-by-word and auto-scrolls (karaoke).
 
@@ -41,13 +41,13 @@ function track(event: string, chapter?: string, variant?: Variant) {
     } catch { /* instrumentation never breaks the page */ }
 }
 
-/* English slide copy (default language) — es/zh live in storyI18n.ts */
+/* English slide copy (default language), es/zh live in storyI18n.ts */
 const EN = {
     ui: {
         ch1title: 'September 2, 2025', ch2title: 'One contract, a hundred shares',
         comptitle: 'What patience looked like', compFrom: '$10,000 in January 2021', compAria: 'Growth of ten thousand dollars, strategy versus QQQ buy and hold, January 2021 to August 2026',
         compCap: 'Both engines blended; the final fifteen months are tape-verified. ',
-        compCapB: 'Drawdowns are the tuition of compounding — the smaller the hole, the faster you’re back at your peak.',
+        compCapB: 'Drawdowns are the tuition of compounding, the smaller the hole, the faster you’re back at your peak.',
         compZone: 'QQQ underwater · ~25 months', compHole: '−17.8% · back at peak in 10 weeks',
         ch3title: 'Winning often ≠ winning', maptitle: 'Five and a half years, every decision',
         ch4title: 'Autumn 2023, lived day by day', ch5title: 'Us vs. simply buying QQQ',
@@ -55,61 +55,61 @@ const EN = {
         ch1fig: 'mid-price fill · real exchange quote $131.00 / $136.00 · first entry of the final, tape-verified cycle',
         contract: 'Contract', positioning: 'Positioning', entryChecklist: 'Entry checklist', fillSource: 'Fill source',
         ch1pos: 'Deep in the money · ~1 year to expiry',
-        ch1check: '5 gates — momentum · trend · volatility · regime · ML — all green',
+        ch1check: '5 gates, momentum · trend · volatility · regime · ML, all green',
         ch1src: 'OPRA tape, mid-price, commission included',
         ch2a: 'dollar-for-dollar with QQQ', ch2b: 'of time for the thesis to work', ch2c: 'of the cost of shares outright',
         ch2cap1: 'Leverage with a defined cost and no margin loan. ', ch2cap2: 'When QQQ falls, this falls faster.',
         ch3a: 'covered-call trades · 5.6 years', ch3b: 'win rate', ch3c: 'net result of the overlay',
-        ch3p1: 'The data also taught us when ', ch3p2: 'not', ch3p3: ' to sell: strong trend + thin premium = no sale — a rule tested in public, adopted after 21 out-of-sample trials. And still: on the real tape, the final 15 months\' overlay lost $1,776 net. ',
+        ch3p1: 'The data also taught us when ', ch3p2: 'not', ch3p3: ' to sell: strong trend + thin premium = no sale, a rule tested in public, adopted after 21 out-of-sample trials. And still: on the real tape, the final 15 months\' overlay lost $1,776 net. ',
         ch3p4: 'Every loss is in the ledger.',
         mapCap1: 'Tap any marker for the actual fill. ',
-        mapCap2: 'The losses are annotated too — they are part of the record.',
+        mapCap2: 'The losses are annotated too, they are part of the record.',
         mapLegendQ: 'QQQ price', mapLegendS: 'TradeMind portfolio',
         mapIdx: 'both indexed to 100 · Jan 2021', replay: '↺ Replay',
         mapAria: 'QQQ price versus strategy portfolio value, indexed to 100, January 2021 to August 2026, with eight annotated decision points',
-        ch4a: 'September 5, 2023 — the peak', ch4b: 'October 26 — seven weeks later', ch4c: 'maximum drawdown · model-priced years',
-        ch4cap1: 'The model that prices the early years smooths the storms — on the real tape, March 2026 measured ',
+        ch4a: 'September 5, 2023, the peak', ch4b: 'October 26, seven weeks later', ch4c: 'maximum drawdown · model-priced years',
+        ch4cap1: 'The model that prices the early years smooths the storms, on the real tape, March 2026 measured ',
         ch4cap2: '. Both numbers stay on this page, because both are true. ',
-        ch4cap3: 'The next drawdown could be deeper — the recovery is never owed to you.',
+        ch4cap3: 'The next drawdown could be deeper, the recovery is never owed to you.',
         ch5a: 'strategy · 5.6 years', ch5b: 'QQQ buy & hold', ch5c: 'our worst hole', ch5d: 'QQQ\'s worst hole',
-        ch5cap1: 'Sharpe ratio: 1.48 vs 0.80. We won on every measure over this window — ',
+        ch5cap1: 'Sharpe ratio: 1.48 vs 0.80. We won on every measure over this window, ',
         ch5cap2: 'and that is exactly why you should be skeptical. Five years is one set of weather; the next bear will not look like the last one.',
         status: 'Status', livePaper: 'Live paper trading · IBKR', since: 'Since', sinceVal: 'August 1, 2026', curPos: 'Current position',
         cash: '100% cash', dips: 'Qualifying dips so far', gate: 'Overlay gate',
-        gateVal: 'Trend × premium rule — live since Aug 17, 2026', logged: 'Decisions logged',
+        gateVal: 'Trend × premium rule, live since Aug 17, 2026', logged: 'Decisions logged',
         loggedVal: 'Every trading day, in public',
         ch6cap1: 'Patience is the strategy. When it acts, you see it the same time we do. ',
         ch6cap2: 'Live results may be better or worse than anything simulated.',
         ch7title: 'All {n} fills. Nothing hidden.',
         ch7pre1: 'Every fill in this ledger is ', ch7pre2: 'model-priced',
-        ch7pre3: ' (Black-Scholes on VIX-implied volatility, $1/contract; modeled strikes shown rounded to the nearest dollar, fixed-tenor expiries shown by month). The final 15 months were independently re-run on the real OPRA tape — see the appendix.',
+        ch7pre3: ' (Black-Scholes on VIX-implied volatility, $1/contract; modeled strikes shown rounded to the nearest dollar, fixed-tenor expiries shown by month). The final 15 months were independently re-run on the real OPRA tape, see the appendix.',
         appKicker: 'Appendix · How the record is made',
-        appTitle: 'How we backtest — and how the strategy earns changes',
+        appTitle: 'How we backtest, and how the strategy earns changes',
         m1t: 'Two pricing layers, both disclosed',
-        m1p: '2021 – May 2025: model-priced fills — Black-Scholes on VIX-implied volatility, $1/contract commissions, modeled strikes (shown rounded) and fixed-tenor expiries. June 2025 – Aug 2026: independently re-run on the real OPRA NBBO tape via Databento — mid-price fills on actual listed contracts, real listed expirations, $0.65/contract.',
+        m1p: '2021 to May 2025: model-priced fills, Black-Scholes on VIX-implied volatility, $1/contract commissions, modeled strikes (shown rounded) and fixed-tenor expiries. June 2025 to Aug 2026: independently re-run on the real OPRA NBBO tape via Databento, mid-price fills on actual listed contracts, real listed expirations, $0.65/contract.',
         m2t: 'The fidelity cross-check',
-        m2p: 'The same final 15 months, both engines. Model-priced: +61.1%, worst dip −11.7%. Real tape: +83.9%, worst dip −30.4%. The model understates the storms — which is why every drawdown number on this page says which engine measured it.',
+        m2p: 'The same final 15 months, both engines. Model-priced: +61.1%, worst dip −11.7%. Real tape: +83.9%, worst dip −30.4%. The model understates the storms, which is why every drawdown number on this page says which engine measured it.',
         m3t: 'Ideas earn their place',
-        m3p: 'Improvements are tested as walk-forward experiments — trained on past data, judged on 21 out-of-sample paths, and adopted only if they clear a strict bar. The overlay\'s trend × premium gate cleared it (18 of 21) and went live August 17, 2026. Ideas that fail get rejected in public.',
+        m3p: 'Improvements are tested as walk-forward experiments, trained on past data, judged on 21 out-of-sample paths, and adopted only if they clear a strict bar. The overlay\'s trend × premium gate cleared it (18 of 21) and went live August 17, 2026. Ideas that fail get rejected in public.',
         wTitle: 'The same tape, different windows',
-        wSub: 'No strategy wins every month. Here is the full record broken into its regimes — including the windows where buy-and-hold was the better seat.',
-        wCap1: 'Same simulation, same rules — just sliced. ',
+        wSub: 'No strategy wins every month. Here is the full record broken into its regimes, including the windows where buy-and-hold was the better seat.',
+        wCap1: 'Same simulation, same rules, just sliced. ',
         wCap2: 'The two-year grind is the window where buy-and-hold beat us (+41.7% vs +38.7%). It stays in the table.',
         closeKicker: 'The fine print, in the open', closeTitle: 'Methodology & disclosures',
         disc1: 'Methodology.',
-        disc1p: ' Simulation January 4, 2021 – August 14, 2026. 2021 – May 2025 fills are model-priced: Black-Scholes on VIX-implied volatility, $1/contract commissions, modeled strikes (shown rounded to the nearest dollar) and fixed-tenor expiries — not listed contracts. June 2025 – August 14, 2026 was independently re-run on real OPRA NBBO quotes (Databento): mid-price fills on the actual listed contract at each decision bar, real listed expirations, $0.65/contract — that 15-month segment returned +83.9% with a −30.4% maximum drawdown (model engine for the same window: +61.1%, −11.7%). Live layer: IBKR paper account, decisions logged daily since August 1, 2026.',
-        disc2: 'Simulated performance. The final fifteen months are as close to live as a backtest gets — real quotes, mid-price fills. Past performance — simulated or live — does not guarantee future results.',
-        disc2p: ' Options involve substantial risk and are not suitable for every investor; you can lose your entire investment. Simulated results have inherent limitations: no actual money was at risk, some results benefit from hindsight, and simulations can over- or under-compensate for liquidity and market impact. TradeMind never connects to or submits orders to your brokerage — signals only help you enter the order yourself. This page is educational material, not investment advice or a solicitation.',
+        disc1p: ' Simulation January 4, 2021 to August 14, 2026. 2021 to May 2025 fills are model-priced: Black-Scholes on VIX-implied volatility, $1/contract commissions, modeled strikes (shown rounded to the nearest dollar) and fixed-tenor expiries, not listed contracts. June 2025 to August 14, 2026 was independently re-run on real OPRA NBBO quotes (Databento): mid-price fills on the actual listed contract at each decision bar, real listed expirations, $0.65/contract, that 15-month segment returned +83.9% with a −30.4% maximum drawdown (model engine for the same window: +61.1%, −11.7%). Live layer: IBKR paper account, decisions logged daily since August 1, 2026.',
+        disc2: 'Simulated performance. The final fifteen months are as close to live as a backtest gets, real quotes, mid-price fills. Past performance, simulated or live, does not guarantee future results.',
+        disc2p: ' Options involve substantial risk and are not suitable for every investor; you can lose your entire investment. Simulated results have inherent limitations: no actual money was at risk, some results benefit from hindsight, and simulations can over- or under-compensate for liquidity and market impact. TradeMind never connects to or submits orders to your brokerage, signals only help you enter the order yourself. This page is educational material, not investment advice or a solicitation.',
         transcriptSummary: 'Full narration transcript',
         cta: 'Start your account',
         winFull: 'Full record', winFullDates: 'Jan 2021 → Aug 2026',
-        playLbl: '▶ Play', pauseLbl: '❚❚ Pause',
+        playLbl: '▶ Play', pauseLbl: '❚❚ Pause', homeLbl: '⌂ Home',
         ch4from: 'Jan 2021', ch4to: 'Aug 2026 · $169,249',
         ch4aria: 'Strategy equity curve, January 2021 to August 2026',
     } as Record<string, string>,
     fallback: {
         hero: 'Press play to begin the story.',
-        appendix: 'How the record is made — methodology and regime windows.',
+        appendix: 'How the record is made, methodology and regime windows.',
         close: 'Methodology, disclosures, and the full transcript.',
     },
     aria: {
@@ -215,6 +215,18 @@ export function StoryLanding({ onCta, ctaLabel }: StoryLandingProps) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    /* Exit the deck: pause any audio and jump the page back to the hero.
+       Called by the leftmost control-bar button and by the Escape key. */
+    const goHome = useCallback(() => {
+        try { playerRef.current?.pause(); } catch { /* noop */ }
+        setPlaying(false);
+        if (typeof window !== 'undefined') {
+            const hero = document.getElementById('hero');
+            if (hero) hero.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            else window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }, []);
+
     const togglePlay = () => {
         if (!started) { begin(); return; }
         const el = playerRef.current;
@@ -277,6 +289,7 @@ export function StoryLanding({ onCta, ctaLabel }: StoryLandingProps) {
             if (e.key === 'ArrowRight') goTo(slideIdxRef.current + 1, { autoplay: startedRef.current });
             else if (e.key === 'ArrowLeft') goTo(slideIdxRef.current - 1, { autoplay: startedRef.current });
             else if (e.key === ' ') { e.preventDefault(); if (narrationOn) togglePlay(); }
+            else if (e.key === 'Escape') goHome();
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
@@ -511,7 +524,7 @@ export function StoryLanding({ onCta, ctaLabel }: StoryLandingProps) {
                                         <td className="num tm-mono">{r.n}</td>
                                         <td className="num tm-mono">{r.px.toFixed(2)}</td>
                                         <td className={`num tm-mono ${r.pnl > 0 ? 'tm-pos' : r.pnl < 0 ? 'tm-neg' : 'muted'}`}>
-                                            {r.pnl !== 0 ? `${r.pnl > 0 ? '+' : ''}${r.pnl.toFixed(2)}` : '—'}
+                                            {r.pnl !== 0 ? `${r.pnl > 0 ? '+' : ''}${r.pnl.toFixed(2)}` : ','}
                                         </td>
                                         <td className="muted tm-reason">{ledgerL?.reasons[r.reason] ?? r.reason}</td>
                                     </tr>
@@ -588,7 +601,7 @@ export function StoryLanding({ onCta, ctaLabel }: StoryLandingProps) {
                             <summary onClick={() => track(aria.transcriptOpen, undefined, variant)}>{ui.transcriptSummary}</summary>
                             {chapters.map(c => (
                                 <div className="tm-t-ch" key={c.id}>
-                                    <h4>{c.kicker} — {c.title}</h4>
+                                    <h4>{c.kicker}, {c.title}</h4>
                                     <p>{c.text}</p>
                                 </div>
                             ))}
@@ -648,6 +661,9 @@ export function StoryLanding({ onCta, ctaLabel }: StoryLandingProps) {
             <div className="tm-deck-bar">
                 <div className="tm-deck-progress" style={{ width: `${progress * 100}%` }} />
                 <div className="tm-deck-bar-row">
+                    <button className="tm-cbtn tm-home" onClick={goHome} aria-label={ui.homeLbl}>
+                        {ui.homeLbl}
+                    </button>
                     <button className="tm-nav" onClick={() => goTo(slideIdx - 1, { autoplay: started })}
                         disabled={slideIdx === 0} aria-label={aria.prev}>◀</button>
                     {variant === 'narrated' && (

@@ -4,7 +4,7 @@
  * Marks a signal as "approved" by the user, confirming they have manually
  * entered the orders into their own brokerage account.
  *
- * This does NOT execute any trades — it only records the user's confirmation
+ * This does NOT execute any trades, it only records the user's confirmation
  * and mirrors the orders to their virtual account for P&L tracking.
  *
  * Users receive signal emails with order instructions, enter the trades
@@ -26,7 +26,7 @@ export async function POST(
         const { id } = await params;
         const body = await request.json().catch(() => ({}));
 
-        // Resolve Privy user ID — never fall back to a shared default key
+        // Resolve Privy user ID, never fall back to a shared default key
         const userId = await getPrivyUserId(request as NextRequest);
         if (!userId) {
             return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
@@ -46,18 +46,18 @@ export async function POST(
         // orders to their virtual account for P&L tracking.
         // ========================================================================
 
-        // Get user's Tastytrade credentials from Redis (for reference only — not used for execution)
+        // Get user's Tastytrade credentials from Redis (for reference only, not used for execution)
         const tokens = await getTastytradeTokens(userId);
         const hasTastytrade = tokens?.refreshToken;
 
         if (hasTastytrade) {
-            console.log(`ℹ️ User ${userId} has Tastytrade connected (reference only — not used for execution)`);
+            console.log(`ℹ️ User ${userId} has Tastytrade connected (reference only, not used for execution)`);
         }
 
         // Build virtual orders from signal (for virtual account mirroring)
         const orders = await buildVirtualOrdersFromSignal(signalData, strategy, userId);
 
-        // Execute virtually (idempotent — returns gracefully if already executed)
+        // Execute virtually (idempotent, returns gracefully if already executed)
         try {
             const execResult = await executeVirtualOrders(userId, id, strategy, orders);
             if (execResult.alreadyExecuted) {
@@ -109,7 +109,7 @@ export async function POST(
 
 /**
  * Build virtual orders from a signal.
- * Fetches virtual state directly from DB (never via HTTP cookie-forwarding — that fails on serverless).
+ * Fetches virtual state directly from DB (never via HTTP cookie-forwarding, that fails on serverless).
  * Handles: equity rebalance legs, LEAPS (tracked as placeholder option position), and legacy signals.
  */
 async function buildVirtualOrdersFromSignal(signal: any, strategy: string, userId: string): Promise<any[]> {
@@ -117,7 +117,7 @@ async function buildVirtualOrdersFromSignal(signal: any, strategy: string, userI
 
     // ── QQQ LEAPS: option-specific virtual order ─────────────────────────────
     // Signals from signal_publisher/qqq_leaps.py carry strike/contracts/entry_px
-    // rather than TurboCore's target_pct legs — handle them explicitly.
+    // rather than TurboCore's target_pct legs, handle them explicitly.
     if (String(signal.strategy).toUpperCase() === 'QQQ_LEAPS') {
         const action = (signal.action || 'ENTER').toUpperCase();
         if (action === 'HOLD') return []; // No trade on HOLD

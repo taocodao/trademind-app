@@ -86,7 +86,7 @@ Return JSON ONLY:
       const bullets: string = Array.isArray(content.bullets)
         ? content.bullets.map((b: any, i: number) => `${i + 1}. ${b.emoji ?? ''} ${b.text ?? b}`).join('\n')
         : '';
-      const whopContent = `**${regimeEmoji} TurboCore Pre-Market Brief — ${today}**\n\n**Today's Regime:** ${turboRegime} (${turboConf}% confidence)\n\n${bullets}\n\n---\n_3:00 PM signal with exact allocation coming at market close. Stay disciplined._`;
+      const whopContent = `**${regimeEmoji} TurboCore Pre-Market Brief, ${today}**\n\n**Today's Regime:** ${turboRegime} (${turboConf}% confidence)\n\n${bullets}\n\n---\n_3:00 PM signal with exact allocation coming at market close. Stay disciplined._`;
       await postToWhopChannel(channelId, whopContent).catch(e =>
         console.warn('[Morning Brief] Whop post failed (non-fatal):', e)
       );

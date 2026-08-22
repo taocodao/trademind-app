@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
 
     const systemPrompt = {
       role: 'system',
-      content: `You are TradeMind AI — an educational investment copilot (not a financial advisor).
+      content: `You are TradeMind AI, an educational investment copilot (not a financial advisor).
 TurboCore signal today: ${turboRegime} (${turboConf}% confidence), ML Score: ${mlScore}/100.
 User plan: ${user.tier}.
 Rules: Be educational, not directive. Never say "you should buy/sell X". 

@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     }
 }
 
-// GET /api/landing-event — quick funnel summary (chapter completion by variant).
+// GET /api/landing-event, quick funnel summary (chapter completion by variant).
 export async function GET() {
     if (!process.env.DATABASE_URL) {
         return NextResponse.json({ ok: false, error: "no database configured" }, { status: 503 });

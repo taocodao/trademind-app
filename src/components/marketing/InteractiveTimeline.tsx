@@ -79,7 +79,7 @@ export function InteractiveTimeline({ data, strategyMode = 'standard' }: { data:
             {/* Main Interactive Chart */}
             <div className="w-full h-[400px] glass-card p-6 relative transition-all duration-500">
                 <div className="absolute top-4 right-6 text-[10px] text-tm-muted uppercase tracking-widest z-10 font-mono">
-                    HYPOTHETICAL BACKTESTED RESULTS — NOT ACTUAL TRADING
+                    HYPOTHETICAL BACKTESTED RESULTS, NOT ACTUAL TRADING
                 </div>
                 <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={plottedData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
@@ -127,11 +127,11 @@ export function InteractiveTimeline({ data, strategyMode = 'standard' }: { data:
                                         switch (year) {
                                             case 2019: narrative = `Starting with just $${(5000 * multiplier).toLocaleString(undefined, { maximumFractionDigits: 0 })}... the engine found 183 mean-reversion opportunities in its first year, growing the account 48%.`; break;
                                             case 2020: narrative = `2020 brought COVID chaos. The engine adapted, staying profitable with +$${(987 * multiplier).toLocaleString(undefined, { maximumFractionDigits: 0 })} while markets panicked.`; break;
-                                            case 2021: narrative = `2021 was the breakout — $${(5847 * multiplier).toLocaleString(undefined, { maximumFractionDigits: 0 })} in profit. The account nearly doubled to $${(14236 * multiplier).toLocaleString(undefined, { maximumFractionDigits: 0 })}.`; break;
+                                            case 2021: narrative = `2021 was the breakout, $${(5847 * multiplier).toLocaleString(undefined, { maximumFractionDigits: 0 })} in profit. The account nearly doubled to $${(14236 * multiplier).toLocaleString(undefined, { maximumFractionDigits: 0 })}.`; break;
                                             case 2022: narrative = `Then 2022 hit. TQQQ lost 79%. Our worst year: -35%. But the crash filter protected capital...`; break;
                                             case 2023:
                                             case 2024: narrative = `Those who stayed saw 2023 return +43% and 2024 deliver +45%. Patience was rewarded.`; break;
-                                            case 2025: narrative = `By 2025, $${(5000 * multiplier).toLocaleString(undefined, { maximumFractionDigits: 0 })} became $${(21811 * multiplier).toLocaleString(undefined, { maximumFractionDigits: 0 })}. +336% total return. The secret isn't any one trade — it's compounding.`; break;
+                                            case 2025: narrative = `By 2025, $${(5000 * multiplier).toLocaleString(undefined, { maximumFractionDigits: 0 })} became $${(21811 * multiplier).toLocaleString(undefined, { maximumFractionDigits: 0 })}. +336% total return. The secret isn't any one trade, it's compounding.`; break;
                                             default: narrative = "Markets overreact. TurboBounce catches the snapback. This is 7 years of real data...";
                                         }
                                     }

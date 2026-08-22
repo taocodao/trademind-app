@@ -2,7 +2,7 @@ import { PromoNav } from '../components/PromoNav';
 import { PromoFooter } from '../components/PromoFooter';
 
 const METRICS = [
-  { label: 'CAGR (2019–2025)', value: '27.8%', color: '#10B981', icon: '📈' },
+  { label: 'CAGR (2019 to 2025)', value: '27.8%', color: '#10B981', icon: '📈' },
   { label: 'Win Rate', value: '86%', color: '#10B981', icon: '✅' },
   { label: 'Max Drawdown', value: '-5.1%', color: '#F59E0B', icon: '📉' },
   { label: 'Sharpe Ratio', value: '2.1', color: '#10B981', icon: '⚡' },
@@ -36,7 +36,7 @@ export default function ResultsPage() {
         <div className="mb-10 text-center">
           <div className="inline-flex items-center gap-2 bg-[#7C3AED]/10 border border-[#7C3AED]/20 rounded-full px-4 py-1.5 mb-5">
             <span className="text-[#A78BFA] text-xs font-semibold uppercase tracking-wider">Backtest Data</span>
-            <span className="text-[#64748B] text-xs">2019–2025 · Simulated</span>
+            <span className="text-[#64748B] text-xs">2019 to 2025 · Simulated</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-[#F8FAFC] mb-3">
             TurboCore Strategy Results
@@ -98,7 +98,7 @@ export default function ResultsPage() {
           <div className="flex items-start gap-4">
             <div className="text-3xl">🛡️</div>
             <div>
-              <h3 className="font-semibold text-[#F8FAFC] mb-2">2022 Bear Market — The Ultimate Stress Test</h3>
+              <h3 className="font-semibold text-[#F8FAFC] mb-2">2022 Bear Market, The Ultimate Stress Test</h3>
               <p className="text-sm text-[#94A3B8] leading-relaxed">
                 In 2022, the Nasdaq collapsed. QQQ fell <span className="text-[#EF4444] font-bold">-32.6%</span>,
                 TQQQ (3× leveraged) fell <span className="text-[#EF4444] font-bold">-83.4%</span>. TurboCore's
@@ -112,7 +112,7 @@ export default function ResultsPage() {
 
         {/* Disclaimer */}
         <div className="text-center text-xs text-[#64748B] max-w-2xl mx-auto">
-          <strong className="text-[#94A3B8]">Important:</strong> All data represents backtested simulation results from 2019–2025.
+          <strong className="text-[#94A3B8]">Important:</strong> All data represents backtested simulation results from 2019 to 2025.
           Past performance does not guarantee future results. TradeMind does not provide financial advice.
           Live trading involves the risk of loss.
         </div>

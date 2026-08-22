@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "No active subscription found" }, { status: 400 });
         }
 
-        // Retrieve current subscription to get the ITEM ID (critical — must replace item, not add)
+        // Retrieve current subscription to get the ITEM ID (critical, must replace item, not add)
         const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
         const itemId = subscription.items.data[0].id;
 

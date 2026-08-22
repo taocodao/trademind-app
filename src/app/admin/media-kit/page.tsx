@@ -149,7 +149,7 @@ export default function AdminMediaKitPage() {
                             <span className="text-[11px] font-bold tracking-wider text-indigo-400 bg-indigo-400/10 border border-indigo-400/20 px-2 py-0.5 rounded-full">ADMIN</span>
                             <h1 className="text-xl font-bold text-white">Media Kit Manager</h1>
                         </div>
-                        <p className="text-xs text-zinc-500">Upload assets to Vercel Blob CDN — published assets appear instantly on the user-facing Media Kit page.</p>
+                        <p className="text-xs text-zinc-500">Upload assets to Vercel Blob CDN, published assets appear instantly on the user-facing Media Kit page.</p>
                     </div>
                     <div className="flex items-center gap-3">
                         <a href="/media-kit" target="_blank" rel="noopener noreferrer"
@@ -194,7 +194,7 @@ export default function AdminMediaKitPage() {
                                 <div className="space-y-1">
                                     <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
                                     <p className="text-sm font-semibold text-emerald-300">{file.name}</p>
-                                    <p className="text-xs text-zinc-500">{(file.size / 1024 / 1024).toFixed(2)} MB — click to change</p>
+                                    <p className="text-xs text-zinc-500">{(file.size / 1024 / 1024).toFixed(2)} MB, click to change</p>
                                 </div>
                             ) : (
                                 <div className="space-y-2">
@@ -302,7 +302,7 @@ export default function AdminMediaKitPage() {
                     </div>
                 ) : (
                     <div className="space-y-3">
-                        <p className="text-xs text-zinc-600">{assets.length} asset{assets.length !== 1 ? 's' : ''} — {assets.filter(a => a.is_published).length} published</p>
+                        <p className="text-xs text-zinc-600">{assets.length} asset{assets.length !== 1 ? 's' : ''}, {assets.filter(a => a.is_published).length} published</p>
                         {assets.map(a => (
                             <div key={a.id} className={`rounded-2xl border ${a.is_published ? 'border-white/8 bg-white/3' : 'border-white/5 bg-white/1 opacity-60'} overflow-hidden transition-all`}>
                                 <div className="flex gap-4 p-4 items-start">
@@ -330,7 +330,7 @@ export default function AdminMediaKitPage() {
                                                 <span className="text-[10px] font-bold px-1.5 py-0.5 bg-zinc-800 text-zinc-500 rounded-full">Hidden</span>
                                             )}
                                         </div>
-                                        <p className="text-[11px] text-zinc-500 truncate mb-1.5">{a.description || '—'}</p>
+                                        <p className="text-[11px] text-zinc-500 truncate mb-1.5">{a.description || ','}</p>
                                         <div className="flex flex-wrap gap-1">
                                             {a.platforms.map(p => (
                                                 <span key={p} className="text-[9px] font-semibold px-1.5 py-0.5 bg-white/5 text-zinc-500 rounded-full">{p}</span>

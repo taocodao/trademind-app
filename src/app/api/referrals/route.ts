@@ -129,7 +129,7 @@ export async function GET(req: NextRequest) {
                 joinedAt: r.created_at,
             })),
             activity: activityResult.rows,
-            // Referee perspective — what THIS user earned for being referred
+            // Referee perspective, what THIS user earned for being referred
             refereeStatus: refereeRow ? {
                 referredBy: refereeRow.referrer_code,
                 referredByName: refereeRow.referrer_first_name || null,

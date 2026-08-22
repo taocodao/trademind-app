@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAccount, getAccountActivities, addManualActivity, type ActivityType } from '@/lib/accounts';
 import { getUserId } from '@/lib/auth';
 
-// GET /api/accounts/[id]/activities — the account's activity ledger
+// GET /api/accounts/[id]/activities, the account's activity ledger
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const userId = await getUserId();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ account, activities });
 }
 
-// POST /api/accounts/[id]/activities — add a manual activity (trade or cash adjustment)
+// POST /api/accounts/[id]/activities, add a manual activity (trade or cash adjustment)
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const userId = await getUserId();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

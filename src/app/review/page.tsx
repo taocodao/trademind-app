@@ -3,7 +3,7 @@ import { PromoNav } from './components/PromoNav';
 import { PromoFooter } from './components/PromoFooter';
 
 const STATS = [
-  { value: '27.8%', label: 'CAGR (2019–2025)', color: '#10B981' },
+  { value: '27.8%', label: 'CAGR (2019 to 2025)', color: '#10B981' },
   { value: '86%', label: 'Win Rate', color: '#10B981' },
   { value: '-5.1%', label: 'Max Drawdown', color: '#F59E0B' },
   { value: '-11%', label: 'vs -83% TQQQ in 2022', color: '#10B981' },
@@ -13,7 +13,7 @@ const FEATURES = [
   {
     icon: '📡',
     title: '6 Platforms Supported',
-    description: 'TikTok, Discord, Whop, X, Instagram, LinkedIn — each with its own AI-tuned prompt.',
+    description: 'TikTok, Discord, Whop, X, Instagram, LinkedIn, each with its own AI-tuned prompt.',
   },
   {
     icon: '🎨',
@@ -59,7 +59,7 @@ export default function ReviewHomePage() {
           </h1>
 
           <p className="text-lg text-[#94A3B8] max-w-2xl mx-auto mb-10 leading-relaxed fade-in-up fade-in-up-2">
-            AI-powered post generator for ambassadors. Select your platform, pick a theme, and get 3 ready-to-post variations — with NFA compliance automatically included.
+            AI-powered post generator for ambassadors. Select your platform, pick a theme, and get 3 ready-to-post variations, with NFA compliance automatically included.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 fade-in-up fade-in-up-3">

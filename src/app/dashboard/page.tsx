@@ -159,7 +159,7 @@ function TopNav({ onLogout, onRefresh, loading }: {
 
                 <div className="flex items-center gap-1">
 
-                    {/* Home — active */}
+                    {/* Home, active */}
 
                     <span className="flex flex-col items-center px-3 py-1 text-tm-purple">
 
@@ -307,7 +307,7 @@ function ProgressCard({ stats }: { stats: GamStats }) {
 
                     <Medal className="w-5 h-5 text-tm-purple mx-auto mb-1" />
 
-                    <p className="text-lg font-bold text-tm-purple">{stats.rank ?? '—'}</p>
+                    <p className="text-lg font-bold text-tm-purple">{stats.rank ?? ','}</p>
 
                     <p className="text-[10px] text-tm-muted">{t('dashboard.progress.rank')}</p>
 
@@ -636,14 +636,14 @@ function DashboardContent() {
 
 
 
-            // Step 1: Get account number — skip silently if user has no TT tokens
+            // Step 1: Get account number, skip silently if user has no TT tokens
 
             const acctRes = await fetch('/api/tastytrade/account');
 
             if (!acctRes.ok) {
 
                 if (acctRes.status === 401) {
-                    // No TT connection — this is normal for virtual-only users. Don't show error.
+                    // No TT connection, this is normal for virtual-only users. Don't show error.
                     setData(null);
                     return;
                 }
@@ -764,12 +764,12 @@ function DashboardContent() {
                 const liveResult = await response.json();
                 const liveOrderId = liveResult.orderId || liveResult.order_id || null;
                 setToast({ msg: 'QQQ Basic Rebalance queued successfully', ok: true });
-                // Flip card to Executed immediately — same as auto-approve path
+                // Flip card to Executed immediately, same as auto-approve path
                 updateSignalExecution(String(signal.id), liveOrderId);
                 fetchOrders();
                 fetchAccountData(); // Immediately refresh positions matching user request
             } else {
-                // Tier 2b: Virtual Sync — no Tastytrade connected
+                // Tier 2b: Virtual Sync, no Tastytrade connected
                 // The approve route automatically detects missing TT tokens and runs
                 // buildVirtualOrdersFromSignal → /api/virtual-accounts/execute
                 const endpoint = `/api/signals/${signal.id}/approve`;
@@ -792,8 +792,8 @@ function DashboardContent() {
                     throw new Error(errMsg || 'Virtual execution failed');
                 }
 
-                setToast({ msg: `Virtual Execution Complete — Positions updated!`, ok: true });
-                // Flip card to Executed immediately — same as auto-approve path
+                setToast({ msg: `Virtual Execution Complete, Positions updated!`, ok: true });
+                // Flip card to Executed immediately, same as auto-approve path
                 updateSignalExecution(String(signal.id), null);
             }
         } catch (err: any) {
@@ -869,7 +869,7 @@ function DashboardContent() {
 
 
 
-                {/* Header — Logo + Language Selector */}
+                {/* Header, Logo + Language Selector */}
 
                 <div className="glass-card p-3 flex items-center gap-3">
 
@@ -891,7 +891,7 @@ function DashboardContent() {
                         </div>
                     </Link>
 
-                    {/* Setup Guide — mobile pill */}
+                    {/* Setup Guide, mobile pill */}
                     <button
                         onClick={() => window.dispatchEvent(new Event('open-onboarding'))}
                         className="flex sm:hidden items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-blue-500 to-tm-purple text-white hover:opacity-90 transition-all text-[10px] font-bold border border-white/20 shadow-md whitespace-nowrap"
@@ -900,7 +900,7 @@ function DashboardContent() {
                         <span>{t('dashboard.setup_short', 'Setup')}</span>
                     </button>
 
-                    {/* Setup Guide — desktop */}
+                    {/* Setup Guide, desktop */}
                     <button
                         onClick={() => window.dispatchEvent(new Event('open-onboarding'))}
                         className="hidden sm:flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-blue-500 to-tm-purple text-white hover:opacity-90 transition-all text-sm font-bold border border-white/20 shadow-lg shadow-tm-purple/30 whitespace-nowrap shrink-0"
@@ -1004,8 +1004,8 @@ function DashboardContent() {
                                 <div className="flex-1 min-w-0">
                                     <p className="text-xs font-bold text-white">
                                         {isWhopTrial
-                                            ? `Whop Trial — ${tierLabel} (${membership.trialDaysTotal || 30} days)`
-                                            : `Free Trial #${trialNum} — ${tierLabel}`}
+                                            ? `Whop Trial, ${tierLabel} (${membership.trialDaysTotal || 30} days)`
+                                            : `Free Trial #${trialNum}, ${tierLabel}`}
                                     </p>
                                     <p className="text-[10px] text-tm-muted">
                                         {daysLeft > 0 ? t(daysLeft === 1 ? 'dashboard.days_remaining' : 'dashboard.days_remaining_plural', '{{days}} days remaining · No credit card needed yet', { days: daysLeft }) : t('dashboard.expires_today', 'Expires today!')}
@@ -1022,7 +1022,7 @@ function DashboardContent() {
                             <span className="text-2xl mb-2">⏳</span>
                             <h2 className="text-base font-bold mb-1">{t('dashboard.trial_ended', 'Your Free Trial Has Ended')}</h2>
                             <p className="text-xs text-tm-muted mb-4 max-w-sm">
-                                {t('dashboard.trial_ended_desc', "Welcome back! As a special offer, you're eligible for one more {{days}}-day free trial — no credit card required.", { days: membership.trialDaysTotal })}
+                                {t('dashboard.trial_ended_desc', "Welcome back! As a special offer, you're eligible for one more {{days}}-day free trial, no credit card required.", { days: membership.trialDaysTotal })}
                             </p>
                             <div className="flex flex-col gap-2 w-full">
                                 <button
@@ -1068,7 +1068,7 @@ function DashboardContent() {
                     ) : null;
 
                     // ── First-time observer with trial not yet started ─────────
-                    // (shouldn't normally show — auto-start handles this — but fallback)
+                    // (shouldn't normally show, auto-start handles this, but fallback)
                     const NotStartedCTA = !trialActive && !trialExpired && membership.tier === 'observer' ? (
                         <div className="glass-card p-6 flex flex-col items-center justify-center text-center mt-4 border-tm-purple/20">
                             <div className="w-16 h-16 rounded-full bg-tm-purple/10 flex items-center justify-center mb-4 border border-tm-purple/20">
@@ -1148,7 +1148,7 @@ function DashboardContent() {
                 {/* Your Progress */}
                 {/* <ProgressCard stats={gamStats} /> */}
 
-                {/* Auto-Approve toggle removed — signals-only product model: user enters every order manually. */}
+                {/* Auto-Approve toggle removed, signals-only product model: user enters every order manually. */}
 
                 {/* Trade Signals */}
 
@@ -1180,9 +1180,9 @@ function DashboardContent() {
                                 <p className="font-semibold text-sm">{t('dashboard.aligned_title', 'Portfolio Target Aligned')}</p>
                                 <p className="text-xs text-tm-muted">
                                     {activeStrategy === 'QQQ_LEAPS'
-                                        ? t('dashboard.leaps_aligned_desc', 'No LEAPS ENTER/EXIT signal today — position on target.')
+                                        ? t('dashboard.leaps_aligned_desc', 'No LEAPS ENTER/EXIT signal today, position on target.')
                                         : activeStrategy === 'TQQQ_TURBOCORE_PRO'
-                                        ? t('dashboard.pro_aligned_desc', 'No IV-Switching signal today — portfolio on target.')
+                                        ? t('dashboard.pro_aligned_desc', 'No IV-Switching signal today, portfolio on target.')
                                         : t('dashboard.aligned_desc', 'No pending ML target rebalances requested.')}
                                 </p>
                             </div>
@@ -1213,7 +1213,7 @@ function DashboardContent() {
                                 )}
 
                                 {!tastyLinked && (
-                                    <div className="text-xs text-tm-muted text-center pt-1" dangerouslySetInnerHTML={{ __html: t('dashboard.track_only_notice', 'TradeMind never connects to your brokerage. <span class="text-tm-purple">Track Only</span> monitors P&L on your virtual account — you enter each order yourself.') }} />
+                                    <div className="text-xs text-tm-muted text-center pt-1" dangerouslySetInnerHTML={{ __html: t('dashboard.track_only_notice', 'TradeMind never connects to your brokerage. <span class="text-tm-purple">Track Only</span> monitors P&L on your virtual account, you enter each order yourself.') }} />
                                 )}
                             </div>
                         )}
@@ -1228,7 +1228,7 @@ function DashboardContent() {
 
             </div>
 
-            {/* Share FAB — floating referral entry point, above bottom nav */}
+            {/* Share FAB, floating referral entry point, above bottom nav */}
             <Link
                 href="/refer"
                 aria-label="Share & Earn"

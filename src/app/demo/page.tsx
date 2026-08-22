@@ -38,10 +38,10 @@ const TURBOCORE_PRO_SIGNAL = {
     orders: [
         { action: "BUY",         symbol: "QQQ",              type: "Market",     amount: 1222, qty: "2 sh",         detail: null },
         { action: "BUY",         symbol: "QLD (2x)",         type: "Market",     amount: 136,  qty: "1 sh",         detail: null },
-        { action: "BUY TO OPEN", symbol: "QQQ LEAPS Call",   type: "Limit (ask)", amount: 2412, qty: "+0 contracts", detail: "Strike = $395 | ~12 months out | 0.70 delta ITM call — approx ~$214/contract" },
+        { action: "BUY TO OPEN", symbol: "QQQ LEAPS Call",   type: "Limit (ask)", amount: 2412, qty: "+0 contracts", detail: "Strike = $395 | ~12 months out | 0.70 delta ITM call, approx ~$214/contract" },
         { action: "BUY",         symbol: "SGOV",             type: "Market",     amount: 188,  qty: "1 sh",         detail: null },
     ],
-    rationale: "IV is compressing in a sideways regime — holding QQQ/QLD core, extending via LEAPS for leveraged upside. SGOV provides a liquidity buffer during consolidation.",
+    rationale: "IV is compressing in a sideways regime, holding QQQ/QLD core, extending via LEAPS for leveraged upside. SGOV provides a liquidity buffer during consolidation.",
 };
 
 const DEMO_POSITIONS = [
@@ -251,7 +251,7 @@ function SignalCard({ signal, onApprove, onSkip }: { signal: typeof TURBOCORE_PR
                         <span className="text-xs font-bold text-purple-300">{t("Demo.signalCard.preview")}</span>
                     </div>
                     <div className="text-[10px] text-amber-400 font-bold mb-2">
-                        ⚡ MANUAL ORDER INSTRUCTIONS — enter these in your broker
+                        ⚡ MANUAL ORDER INSTRUCTIONS, enter these in your broker
                     </div>
                     <div className="space-y-1.5">
                         {signal.orders.map((o, i) => (
@@ -279,7 +279,7 @@ function SignalCard({ signal, onApprove, onSkip }: { signal: typeof TURBOCORE_PR
             {/* Signals-only reminder */}
             <div className="px-5 pb-3">
                 <div className="border border-purple-500/20 rounded-lg py-2.5 text-center text-[11px] text-purple-300">
-                    ⚡ Signals delivered by email — you place each order in your own broker
+                    ⚡ Signals delivered by email, you place each order in your own broker
                 </div>
             </div>
 
@@ -332,7 +332,7 @@ function DashboardTab({ onToast, onTabChange }: { onToast: (m: string) => void; 
             </div>
 
             {/* Auto-approve toggle */}
-            {/* Auto-Approve card removed — signals-only product model. */}
+            {/* Auto-Approve card removed, signals-only product model. */}
 
             {/* Signal card (Turbo Pro) */}
             <div>
@@ -449,7 +449,7 @@ function AITab({ onToast }: { onToast: (m: string) => void }) {
                             <Bot className="w-4 h-4 text-purple-400" />
                         </div>
                         <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-[#94a3b8] leading-relaxed">
-                            The ML model detected compressed IV across QQQ options (VIX at 16.2) combined with declining volume confirming a consolidation phase. In SIDEWAYS regime, the portfolio shifts toward LEAPS for leveraged upside participation while maintaining SGOV as a liquidity buffer. The 50.2% confidence reflects genuine uncertainty — the model is near its decision boundary, suggesting a potential regime change within 3–5 sessions.
+                            The ML model detected compressed IV across QQQ options (VIX at 16.2) combined with declining volume confirming a consolidation phase. In SIDEWAYS regime, the portfolio shifts toward LEAPS for leveraged upside participation while maintaining SGOV as a liquidity buffer. The 50.2% confidence reflects genuine uncertainty, the model is near its decision boundary, suggesting a potential regime change within 3 to 5 sessions.
                         </div>
                     </div>
                     <div className="border-t border-white/5 pt-3">
@@ -821,9 +821,9 @@ function ReferTab({ onToast }: { onToast: (m: string) => void }) {
 
     return (
         <div className="space-y-5">
-            <TabInfo color="rose" icon="🎁" title="Earn Free Subscription Days — For Both of You">
-                <p>Share your unique referral link with friends. When they sign up using your link, <strong className="text-white">you both get $50 in free subscription days</strong> — no waiting, applied automatically.</p>
-                <p className="mt-1">When their card is first charged after the trial, you both receive <strong className="text-white">another $50 in free days</strong> — that's <strong className="text-white">$100 total each</strong>. Credits are converted to free days based on your plan's daily rate, so you always get extra trading time instead of cash.</p>
+            <TabInfo color="rose" icon="🎁" title="Earn Free Subscription Days, For Both of You">
+                <p>Share your unique referral link with friends. When they sign up using your link, <strong className="text-white">you both get $50 in free subscription days</strong>, no waiting, applied automatically.</p>
+                <p className="mt-1">When their card is first charged after the trial, you both receive <strong className="text-white">another $50 in free days</strong>, that's <strong className="text-white">$100 total each</strong>. Credits are converted to free days based on your plan's daily rate, so you always get extra trading time instead of cash.</p>
                 <div className="mt-2 grid grid-cols-3 gap-2 text-center">
                     {[{step:"1",label:"Share your link",color:"text-purple-300"},{step:"2",label:"Friend signs up → Both get $50",color:"text-emerald-300"},{step:"3",label:"Friend's 1st charge → Both get $50 more",color:"text-amber-300"}].map(s => (
                         <div key={s.step} className="bg-white/5 rounded-lg p-2">
@@ -922,8 +922,8 @@ function ReferTab({ onToast }: { onToast: (m: string) => void }) {
                 {showDetails && (
                     <div className="p-5 border-t border-white/5 space-y-4 bg-black/20">
                         {[
-                            { num: "1", color: "bg-purple-500/20 text-purple-400", title: "Stage 1 — Friend Signs Up (Both Get $50)", desc: "Your friend gets $50 in bonus trial days. You get your subscription extended by $50 in free days." },
-                            { num: "2", color: "bg-emerald-500/20 text-emerald-400", title: "Stage 2 — First Charge (Both Get Another $50)", desc: "When your friend's card is first charged, you both receive another $50 in free subscription days." },
+                            { num: "1", color: "bg-purple-500/20 text-purple-400", title: "Stage 1, Friend Signs Up (Both Get $50)", desc: "Your friend gets $50 in bonus trial days. You get your subscription extended by $50 in free days." },
+                            { num: "2", color: "bg-emerald-500/20 text-emerald-400", title: "Stage 2, First Charge (Both Get Another $50)", desc: "When your friend's card is first charged, you both receive another $50 in free subscription days." },
                             { num: "★", color: "bg-amber-500/20 text-amber-400", title: "Annual Plan Bonus", desc: "Friend subscribes annually? Both receive a larger $75 bonus in one shot." },
                         ].map(step => (
                             <div key={step.num} className="flex gap-4">
@@ -964,14 +964,14 @@ function SetupTab({ onToast }: { onToast: (m: string) => void }) {
                         <span className="w-5 h-5 rounded-full bg-emerald-500/30 text-emerald-300 text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
                         <div>
                             <p className="font-bold text-white text-[11px]">Set Auto-Approve (Recommended)</p>
-                            <p>With Auto-Approve ON, TurboCore executes each signal automatically — you don't need to be at your computer. With it OFF, you'll approve each trade manually in the Signals or Dashboard tab.</p>
+                            <p>With Auto-Approve ON, TurboCore executes each signal automatically, you don't need to be at your computer. With it OFF, you'll approve each trade manually in the Signals or Dashboard tab.</p>
                         </div>
                     </div>
                     <div className="flex items-start gap-2">
                         <span className="w-5 h-5 rounded-full bg-blue-500/30 text-blue-300 text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
                         <div>
                             <p className="font-bold text-white text-[11px]">Signals-only product</p>
-                            <p>TradeMind never connects to or submits orders to your brokerage. Every signal is logged in <strong className="text-white">Virtual Mode</strong> — orders are simulated against your virtual cash balance, positions are tracked in the Positions tab, and strategy performance is fully measurable. You enter each trade yourself in your own broker.</p>
+                            <p>TradeMind never connects to or submits orders to your brokerage. Every signal is logged in <strong className="text-white">Virtual Mode</strong>, orders are simulated against your virtual cash balance, positions are tracked in the Positions tab, and strategy performance is fully measurable. You enter each trade yourself in your own broker.</p>
                         </div>
                     </div>
                 </div>
@@ -1026,14 +1026,14 @@ function SetupTab({ onToast }: { onToast: (m: string) => void }) {
                 <p className="text-xs text-[#94a3b8]">Alerts sent to: <span className="text-white font-mono">{DEMO_USER.email}</span></p>
             </div>
 
-            {/* Signals-only reminder — replaces prior Tastytrade Integration card */}
+            {/* Signals-only reminder, replaces prior Tastytrade Integration card */}
             <div className="glass-card p-5">
                 <h3 className="font-bold mb-3 flex items-center gap-2"><Shield className="w-4 h-4 text-[#94a3b8]" /> Signals-only Product</h3>
                 <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex items-start gap-3">
                     <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
                     <p className="text-xs text-amber-300">TradeMind never connects to your brokerage. Every trade runs in virtual/shadow mode. You enter each order yourself in your own broker.</p>
                 </div>
-                <button onClick={() => onToast("TradeMind never connects to your brokerage — you enter each order yourself")} className="mt-3 w-full py-2.5 rounded-xl border border-white/10 text-sm text-[#94a3b8] hover:text-white hover:border-white/20 transition">
+                <button onClick={() => onToast("TradeMind never connects to your brokerage, you enter each order yourself")} className="mt-3 w-full py-2.5 rounded-xl border border-white/10 text-sm text-[#94a3b8] hover:text-white hover:border-white/20 transition">
                     How signals reach my account
                 </button>
             </div>
@@ -1087,18 +1087,18 @@ function HeroScreen({ onStart }: { onStart: () => void }) {
                     <span className="text-3xl font-black tracking-tight">TradeMind</span>
                 </div>
                 <p className="text-lg text-[#94a3b8] leading-relaxed">
-                    The smartest automated trading copilot — AI-driven signals, options strategies, and portfolio automation.
+                    The smartest automated trading copilot, AI-driven signals, options strategies, and portfolio automation.
                 </p>
 
                 {/* Process overview */}
                 <div className="text-left bg-white/5 border border-white/10 rounded-2xl p-5 mt-6">
-                    <p className="text-xs font-bold text-purple-300 uppercase tracking-wider mb-4">How It Works — End to End</p>
+                    <p className="text-xs font-bold text-purple-300 uppercase tracking-wider mb-4">How It Works, End to End</p>
                     <div className="space-y-3">
                         {[
                             { icon: "📧", title: "Set Up Your Account",          desc: "Subscribe → add your email for signal alerts → optionally connect Tastytrade for live execution." },
                             { icon: "🤖", title: "AI Generates Signals at 3 PM ET", desc: "Every trading day, the ML engine reads volatility & momentum and calculates your optimal allocation." },
                             { icon: "⚡", title: "Signals Auto-Execute or Wait for You", desc: "With Auto-Approve ON: orders go live instantly. With it OFF: review and approve each signal in the app." },
-                            { icon: "💼", title: "Positions Update Automatically",  desc: "Tastytrade users see live positions. Virtual users see their shadow ledger — deposit cash anytime." },
+                            { icon: "💼", title: "Positions Update Automatically",  desc: "Tastytrade users see live positions. Virtual users see their shadow ledger, deposit cash anytime." },
                             { icon: "📈", title: "Track Everything in Activity Log",  desc: "Full audit trail of every signal, trade, virtual execution, and deposit across both strategies." },
                         ].map((s, i) => (
                             <div key={i} className="flex gap-3">
@@ -1191,7 +1191,7 @@ export default function DemoPage() {
                 <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
                     <span className="text-xs font-bold text-purple-300">INTERACTIVE DEMO</span>
-                    <span className="text-xs text-[#94a3b8] hidden sm:inline">— All data is simulated. No real trades.</span>
+                    <span className="text-xs text-[#94a3b8] hidden sm:inline">, All data is simulated. No real trades.</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <button onClick={() => setShowHero(true)} className="text-[11px] text-[#94a3b8] hover:text-white transition">← Hero</button>

@@ -27,7 +27,7 @@ export async function POST(
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // DISABLED: Return immediately — auto-execution is no longer supported
+    // DISABLED: Return immediately, auto-execution is no longer supported
     return NextResponse.json({
         success: false,
         error: 'Auto-execution is disabled',
@@ -50,7 +50,7 @@ export async function POST(
               AND us.subscription_status IN ('active', 'trialing')
         `);
 
-        // Filter by strategy tier — both_bundle gets ALL signals (Core AND Pro)
+        // Filter by strategy tier, both_bundle gets ALL signals (Core AND Pro)
         const targetTiers: string[] = ['both_bundle'];
         if (strategy.toUpperCase().includes('PRO')) {
             targetTiers.push('turbocore_pro');
@@ -96,14 +96,14 @@ async function processUserSignal(
     // ── Idempotency guard ─────────────────────────────────────────────────────
     const existingExecution = await getUserExecutionForSignal(userId, signalId);
     if (existingExecution?.status === 'executed') {
-        console.log(`⏭️ [GHOST] Skipping ${userId} — already executed ${signalId}`);
+        console.log(`⏭️ [GHOST] Skipping ${userId}, already executed ${signalId}`);
         results.push({ userId, status: 'already_executed' });
         return;
     }
     // If a previous 'failed' record exists from the old auto_approve path, we will
-    // upsert it to 'executed' below — don't skip, continue processing.
+    // upsert it to 'executed' below, don't skip, continue processing.
     if (existingExecution?.status === 'failed') {
-        console.log(`♻️ [GHOST] Re-processing ${userId} — upgrading failed→executed for ${signalId}`);
+        console.log(`♻️ [GHOST] Re-processing ${userId}, upgrading failed→executed for ${signalId}`);
     }
 
     // ── Resolve Tastytrade tokens ─────────────────────────────────────────────
@@ -134,11 +134,11 @@ async function processUserSignal(
             accountNumber = acctData?.data?.items?.[0]?.account?.['account-number'];
 
             if (!accountNumber) {
-                console.warn(`[GHOST] No TT account found for ${userId} — falling back to virtual`);
+                console.warn(`[GHOST] No TT account found for ${userId}, falling back to virtual`);
                 accessToken = undefined;
             }
         } catch (authErr) {
-            console.warn(`[GHOST] TT auth failed for ${userId} — falling back to virtual:`, authErr);
+            console.warn(`[GHOST] TT auth failed for ${userId}, falling back to virtual:`, authErr);
             accessToken = undefined;
             accountNumber = undefined;
         }
@@ -260,7 +260,7 @@ async function processUserSignal(
 
     // ── STEP 6: Send Resend email ─────────────────────────────────────────────
     if (user.email_signal_alerts && user.email) {
-        // Non-blocking — do not await
+        // Non-blocking, do not await
         sendSignalEmail(user.email, {
             strategy,
             regime: signal.regime,

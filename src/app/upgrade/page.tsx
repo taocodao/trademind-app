@@ -8,7 +8,7 @@ import { CheckCircle, Zap, Brain, Layers, Clock, ArrowRight, Star, Gift, Calenda
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-// Annual-only pricing — the only interval sold.
+// Annual-only pricing, the only interval sold.
 
 interface TrialInfo {
     trialEndsAt: string | null;
@@ -105,7 +105,7 @@ function PlanCard({
     const subText = `$${plan.annualPerMonth.toFixed(2)}/mo equivalent · 30% off the monthly rate`;
 
     // POST creates a Stripe Checkout Session and redirects (GET /api/stripe/checkout
-    // does not exist — the old <a href> link 405'd)
+    // does not exist, the old <a href> link 405'd)
     const handleCheckout = async () => {
         const priceId = ANNUAL_PRICE_IDS[planKey];
         if (!priceId) {
@@ -232,7 +232,7 @@ function CompareTable() {
                                 <td key={p} className="text-center p-4">
                                     {(row as any)[p]
                                         ? <CheckCircle className="w-4 h-4 text-green-400 mx-auto" />
-                                        : <span className="text-gray-600">—</span>}
+                                        : <span className="text-gray-600">,</span>}
                                 </td>
                             ))}
                         </tr>
@@ -252,7 +252,7 @@ const FAQ_ITEMS = [
     },
     {
         q: 'How does the referral program work?',
-        a: 'Share your referral link. When a friend subscribes and stays active for 75 days, they get 4 extra months free and you get 8 months free — applied automatically as subscription credits.',
+        a: 'Share your referral link. When a friend subscribes and stays active for 75 days, they get 4 extra months free and you get 8 months free, applied automatically as subscription credits.',
     },
     {
         q: 'Can I cancel anytime?',
@@ -260,7 +260,7 @@ const FAQ_ITEMS = [
     },
     {
         q: 'Does TradeMind connect to my brokerage?',
-        a: 'No — TradeMind never connects to or submits orders to your brokerage. Signals only help you enter the order yourself, in any account you choose.',
+        a: 'No, TradeMind never connects to or submits orders to your brokerage. Signals only help you enter the order yourself, in any account you choose.',
     },
 ];
 
@@ -314,7 +314,7 @@ function UpgradePageInner() {
     if (ready && !authenticated) {
         return (
             <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6" style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
-                <title>TradeMind — Sign in to continue</title>
+                <title>TradeMind, Sign in to continue</title>
                 <div className="w-full max-w-sm text-center">
                     <h1 className="text-2xl font-bold mb-3">Sign in to choose your plan</h1>
                     <p className="text-gray-400 text-sm mb-8">
@@ -336,7 +336,7 @@ function UpgradePageInner() {
 
     return (
         <div className="min-h-screen bg-black text-white" style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
-            <title>TradeMind — Choose Your Plan</title>
+            <title>TradeMind, Choose Your Plan</title>
 
             {/* ── Trial Banner ─────────────────────────────────────────────── */}
             {fromTrial && fromWhop && (
@@ -347,7 +347,7 @@ function UpgradePageInner() {
                     textAlign: 'center',
                 }}>
                     <p style={{ margin: 0, color: '#c4b5fd', fontSize: '14px', fontWeight: 600 }}>
-                        ✅ Welcome back — your account is ready.{' '}
+                        ✅ Welcome back, your account is ready.{' '}
                         <span style={{ color: '#fff' }}>
                             Your {trialDaysParam}-day trial history is saved. Your ${trialFee} trial fee
                             becomes bonus days when you pick a plan below.
@@ -373,7 +373,7 @@ function UpgradePageInner() {
 
                     <p className="text-gray-400 text-lg mb-8">
                         Two strategies. One platform.
-                        Annual billing only — one bill a year, 30% off the monthly rate.
+                        Annual billing only, one bill a year, 30% off the monthly rate.
                     </p>
 
                     {creditExpiry && (
@@ -433,8 +433,8 @@ function UpgradePageInner() {
             <section className="max-w-4xl mx-auto px-4 mb-16">
                 <div className="grid md:grid-cols-3 gap-4">
                     {[
-                        { stat: '39.3%', label: 'CAGR — 3× S&P average' },
-                        { stat: '86%',   label: 'Win rate — 7-year backtest' },
+                        { stat: '39.3%', label: 'CAGR, 3× S&P average' },
+                        { stat: '86%',   label: 'Win rate, 7-year backtest' },
                         { stat: '−5.1%', label: 'Max drawdown vs TQQQ −83%' },
                     ].map(({ stat, label }) => (
                         <div key={stat} className="text-center bg-white/5 border border-white/10 rounded-xl p-5">

@@ -1,7 +1,7 @@
 /**
  * GET /api/cron/vest-referrals
  *
- * Daily job — vests due referral rewards. A referral conversion starts as
+ * Daily job, vests due referral rewards. A referral conversion starts as
  * 'pending' and only pays out (referrer +8mo / referee +4mo, as credits priced
  * off each recipient's own plan) after the referee stays active for
  * PRICING.referral.vestingDays (default 75).

@@ -1,13 +1,13 @@
 /**
  * GET /api/cron/reconcile-credits
  *
- * Monthly reconciliation job — catches any user whose loyalty credits were NOT
+ * Monthly reconciliation job, catches any user whose loyalty credits were NOT
  * issued via the Stripe invoice.paid webhook (e.g., Stripe retry window expired).
  *
  * Scheduled via vercel.json cron: "0 9 1 * *" (9 AM UTC, 1st of each month).
  * Protected by CRON_SECRET header set by Vercel automatically.
  *
- * Safety: uses ON CONFLICT DO NOTHING — idempotent, safe to re-run any time.
+ * Safety: uses ON CONFLICT DO NOTHING, idempotent, safe to re-run any time.
  * Unlike the webhook path, source key here is 'loyalty_month_N_reconcile_YYYY-MM'
  * so it never collides with invoice-based rows.
  */
@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
                 const source = `loyalty_month_${month}_reconcile_${runTag}`;
 
                 // Check if webhook already issued credit for this month
-                // (webhook uses 'loyalty_month_N_<invoice_id>' — different prefix)
+                // (webhook uses 'loyalty_month_N_<invoice_id>', different prefix)
                 const existing = await pool.query(
                     `SELECT 1 FROM user_credits
                      WHERE user_id = $1 AND source LIKE $2`,
@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
                 );
 
                 if (existing.rowCount && existing.rowCount > 0) {
-                    // Webhook already handled this month — skip
+                    // Webhook already handled this month, skip
                     continue;
                 }
 

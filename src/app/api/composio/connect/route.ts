@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
         const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://trademind.bot';
         const callbackUrl = `${appUrl}/api/composio/callback?platform=${platform}`;
 
-        // Composio userId — strip Privy DID prefix (did:privy:xxx → xxx) for alphanumeric safety
+        // Composio userId, strip Privy DID prefix (did:privy:xxx → xxx) for alphanumeric safety
         const composioUserId = user.privyDid.replace(/^did:privy:/, '');
 
         // ── Call Composio REST API directly ───────────────────────────────────

@@ -18,16 +18,16 @@ import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-// GET ?email=xxx&secret=yyy              — heal by email
-// GET ?secret=yyy&diagnose=true          — show all recent Whop records
-// GET ?secret=yyy&fix_user_id=wh_xxx&days=30  — force-fix by Whop user_id
+// GET ?email=xxx&secret=yyy             , heal by email
+// GET ?secret=yyy&diagnose=true         , show all recent Whop records
+// GET ?secret=yyy&fix_user_id=wh_xxx&days=30 , force-fix by Whop user_id
 export async function GET(req: NextRequest): Promise<NextResponse> {
     const secret = req.nextUrl.searchParams.get('secret');
     if (!secret || secret !== process.env.INTERNAL_API_SECRET) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Diagnostic mode — show all recent Whop data in DB
+    // Diagnostic mode, show all recent Whop data in DB
     if (req.nextUrl.searchParams.get('diagnose') === 'true') {
         const [events, trials, settings] = await Promise.all([
             query(`SELECT user_id, event_type, created_at,
@@ -140,7 +140,7 @@ async function healUser(email: string): Promise<NextResponse> {
     const tier   = isActive ? 'full_access' : 'observer';
     const status = isActive ? 'active'      : 'canceled';
 
-    // Step 3: Update ALL rows for this email (no Stripe guard — this is explicit admin action)
+    // Step 3: Update ALL rows for this email (no Stripe guard, this is explicit admin action)
     const updateResult = await query(
         `UPDATE user_settings SET
             billing_source       = 'whop',

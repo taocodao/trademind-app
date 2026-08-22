@@ -1,5 +1,5 @@
 /**
- * Execute All — IV-Switching Composite Signal (TurboCore Pro)
+ * Execute All, IV-Switching Composite Signal (TurboCore Pro)
  *
  * Delta-based execution for BOTH TT-linked and virtual users:
  *   1. Compute TARGET quantities (virtual $25K NLV × target_pct / live price)
@@ -270,7 +270,7 @@ export async function POST(
 
                 try {
                     // Parse the signal's computed strike from the OCC symbol
-                    // OCC format: "QQQ   YYMMDDCSSSSSSSS" — strike = last 8 digits / 1000
+                    // OCC format: "QQQ   YYMMDDCSSSSSSSS", strike = last 8 digits / 1000
                     const strikePart = rawSym.replace(/\s/g, '').slice(-8); // last 8 chars
                     const signalStrike = parseInt(strikePart, 10) / 1000;
                     const isCall = rawSym.includes('C');
@@ -281,13 +281,13 @@ export async function POST(
                         headers: { Authorization: `Bearer ${accessToken}`, 'User-Agent': 'TradeMind/1.0' },
                     });
                     if (!chainResp.ok) {
-                        console.warn(`[approve-options] Option chain fetch failed (${chainResp.status}) — using original symbol`);
+                        console.warn(`[approve-options] Option chain fetch failed (${chainResp.status}), using original symbol`);
                         return leg;
                     }
                     const chainData = await chainResp.json();
                     // TT /option-chains/{sym}/nested structure:
                     //   data.items = [ { expirations: [...], underlying-symbol: "QQQ", ... } ]
-                    // items[0] is the underlying wrapper — NOT an array of expirations.
+                    // items[0] is the underlying wrapper, NOT an array of expirations.
                     // Expirations are one level deeper at items[0].expirations[].
                     const chainWrapper = chainData?.data?.items?.[0];
                     const expirations: any[] = chainWrapper?.expirations || [];
@@ -300,7 +300,7 @@ export async function POST(
                     const targetDateStr = `20${yymmdd.slice(0,2)}-${yymmdd.slice(2,4)}-${yymmdd.slice(4,6)}`;
                     const targetTs = new Date(targetDateStr).getTime();
 
-                    // Log what TT actually has — critical for debugging
+                    // Log what TT actually has, critical for debugging
                     const expDates = expirations.map((e: any) => e['expiration-date']).slice(0, 20);
                     console.log(`[approve-options] QQQ chain expirations (first 20):`, expDates);
                     console.log(`[approve-options] Signal target expiration: ${targetDateStr}`);
@@ -324,11 +324,11 @@ export async function POST(
                                 const dteDiff = (x: any) => Math.abs((new Date(x['expiration-date']).getTime() - targetTs));
                                 return dteDiff(a) - dteDiff(b);
                             })[0];
-                        if (exp) console.log(`[approve-options] Date match failed — using DTE fallback: ${exp['expiration-date']}`);
+                        if (exp) console.log(`[approve-options] Date match failed, using DTE fallback: ${exp['expiration-date']}`);
                     }
 
                     if (!exp) {
-                        console.warn(`[approve-options] No expiration near ${targetDateStr} in TT chain (${expirations.length} total) — using original`);
+                        console.warn(`[approve-options] No expiration near ${targetDateStr} in TT chain (${expirations.length} total), using original`);
                         return leg;
                     }
 
@@ -342,7 +342,7 @@ export async function POST(
 
                     const catalogSymbol: string | null = isCall ? closest.call : closest.put;
                     if (!catalogSymbol) {
-                        console.warn(`[approve-options] No catalog symbol for QQQ ${closest['strike-price']} ${isCall ? 'C' : 'P'} — using original`);
+                        console.warn(`[approve-options] No catalog symbol for QQQ ${closest['strike-price']} ${isCall ? 'C' : 'P'}, using original`);
                         return leg;
                     }
 
@@ -351,7 +351,7 @@ export async function POST(
                     return { ...leg, symbol: catalogSymbol };
 
                 } catch (resolveErr: any) {
-                    console.warn(`[approve-options] Symbol resolution failed for ${rawSym} — using original:`, resolveErr.message);
+                    console.warn(`[approve-options] Symbol resolution failed for ${rawSym}, using original:`, resolveErr.message);
                     return leg;
                 }
             }));
@@ -423,7 +423,7 @@ export async function POST(
                 }
                 console.log(`[approve-options] Saved ${optionsLegs.length} options legs to shadow_positions`);
             } else if (optionsLegs.length > 0) {
-                console.log(`[approve-options] Skipping options shadow save — TT order failed, no phantom position created`);
+                console.log(`[approve-options] Skipping options shadow save, TT order failed, no phantom position created`);
             }
 
             // Update virtual cash

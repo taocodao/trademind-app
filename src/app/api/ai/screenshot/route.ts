@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'OpenAI API key not configured' }, { status: 500 });
     }
 
-    // Build the user message content — include image if provided
+    // Build the user message content, include image if provided
     const userContent: any[] = [];
 
     if (imageBase64) {

@@ -27,7 +27,7 @@ async function resolveUserId(req: NextRequest): Promise<string | null> {
  * Business rules:
  *  - Each unique user may have up to 2 trial periods (env MAX_TRIALS, default 2)
  *  - Trial 1 is auto-started on first dashboard load (body: { isSecondTrial: false })
- *  - Trial 2 must be explicitly requested (body: { isSecondTrial: true }) — used for
+ *  - Trial 2 must be explicitly requested (body: { isSecondTrial: true }), used for
  *    win-back campaigns or returning inactive users
  *  - If user already has an active Stripe subscription → reject (no trial needed)
  *  - All state is written to user_settings so it can be audited
@@ -54,10 +54,10 @@ export async function POST(req: NextRequest) {
 
         // ── Block for Whop-billed users ───────────────────────────────────────
         // Whop users have a real paid trial (whop_trial_ends_at). The in-app
-        // trial system must never run for them — it would corrupt their access.
+        // trial system must never run for them, it would corrupt their access.
         if (res.rows.length > 0 && res.rows[0].billing_source === 'whop') {
             return NextResponse.json({
-                error: 'Whop trial already active — in-app trial not applicable.',
+                error: 'Whop trial already active, in-app trial not applicable.',
                 code:  'WHOP_TRIAL_ACTIVE',
             }, { status: 409 });
         }
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
             const row = res.rows[0];
             const stripeStatus = row.subscription_status;
             if (['active', 'trialing', 'past_due'].includes(stripeStatus ?? '')) {
-                return NextResponse.json({ error: 'Already subscribed — no trial needed.', code: 'ALREADY_SUBSCRIBED' }, { status: 409 });
+                return NextResponse.json({ error: 'Already subscribed, no trial needed.', code: 'ALREADY_SUBSCRIBED' }, { status: 409 });
             }
 
             const trialCount: number = row.app_trial_count || 0;
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
             if (!isSecondTrial && trial1Start) {
                 const trialEndDate = new Date(trial1Start.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
                 if (new Date() < trialEndDate) {
-                    // Trial still running — idempotent success
+                    // Trial still running, idempotent success
                     return NextResponse.json({
                         success: true,
                         alreadyActive: true,

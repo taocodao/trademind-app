@@ -56,13 +56,13 @@ export default function SettingsPage() {
 
             <div className="px-4 space-y-4">
                 
-                {/* Subscription Tier Management — self-contained, fetches its own data */}
+                {/* Subscription Tier Management, self-contained, fetches its own data */}
                 <SubscriptionManager />
 
                 {/* My Strategies Subscription */}
                 <MyStrategies />
                 
-                {/* Strategy-Specific Settings (Risk profile) — Auto-Approve removed under signals-only product model */}
+                {/* Strategy-Specific Settings (Risk profile), Auto-Approve removed under signals-only product model */}
                 <TQQQAutoApproveSettings />
 
                 {/* Email Alerts Setup */}

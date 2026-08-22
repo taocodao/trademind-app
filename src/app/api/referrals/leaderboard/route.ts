@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 /**
  * GET /api/referrals/leaderboard
  * Returns the top 10 referrers for the current calendar month.
- * Public — no auth required (usernames are display names, not emails or DIDs).
+ * Public, no auth required (usernames are display names, not emails or DIDs).
  */
 export async function GET(req: NextRequest) {
     try {

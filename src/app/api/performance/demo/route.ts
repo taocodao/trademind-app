@@ -7,7 +7,7 @@ export const revalidate = 0;
 const DELAY_DAYS = 3; // Show data 3 trading days old
 
 /**
- * Public API — no auth required.
+ * Public API, no auth required.
  * Returns the demo portfolio performance with a 3-day delay.
  * Used on the marketing/landing page to show live strategy track record.
  */

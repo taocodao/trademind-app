@@ -78,7 +78,7 @@ export default function AdminPage() {
 
         {error && (
           <div className="bg-[#EF4444]/10 border border-[#EF4444]/20 rounded-xl p-4 text-sm text-[#EF4444] mb-6">
-            ⚠ {error} — This page requires admin role verification in the database.
+            ⚠ {error}, This page requires admin role verification in the database.
           </div>
         )}
 

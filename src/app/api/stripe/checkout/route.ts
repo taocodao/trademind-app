@@ -18,12 +18,12 @@ async function getUserId(req: NextRequest): Promise<string | null> {
     if (authHeader?.startsWith("Bearer ")) {
         const token = authHeader.slice(7);
         try {
-            // Privy JWT payload is base64-encoded — the `sub` claim is the user DID
+            // Privy JWT payload is base64-encoded, the `sub` claim is the user DID
             const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString());
             const sub: string = payload?.sub || payload?.privy_did || "";
             if (sub) return sub;
         } catch {
-            // malformed token — fall through to 401
+            // malformed token, fall through to 401
         }
     }
     return null;
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
         }
 
         // ── EFFECTIVE monthly rate per price ID (annual-only pricing: annual/12) ─
-        // Used for referral bonus day calculation — must reflect what customers
+        // Used for referral bonus day calculation, must reflect what customers
         // actually pay per month, not the old reference monthly anchor.
         const MONTHLY_PRICES: Record<string, number> = {
             // QQQ Basic (turbocore_pro_bundle) $252/yr → $21/mo effective
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
             // QQQ LEAPS $336/yr → $28/mo effective
             [process.env.NEXT_PUBLIC_STRIPE_QQQ_LEAPS_ANNUAL_PRICE_ID            || '']: 28,
             [process.env.NEXT_PUBLIC_STRIPE_LEAPS_ANNUAL_PRICE_ID                || '']: 28,
-            // Legacy price IDs (grandfathered subscriptions) — historical rates
+            // Legacy price IDs (grandfathered subscriptions), historical rates
             [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_MONTHLY_PRICE_ID || '']: 29,
             [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_ANNUAL_PRICE_ID  || '']: 20.75,
             [process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID       || '']: 49,

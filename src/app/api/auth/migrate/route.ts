@@ -4,22 +4,22 @@
  * GET /api/auth/migrate?token=<jwt>
  *
  * Validates the migration token and redirects directly to a
- * Stripe Checkout Session — no Privy login required before payment.
+ * Stripe Checkout Session, no Privy login required before payment.
  *
  * Flow:
  *   1. Validate JWT token (signature + expiry + single-use DB check)
  *   2. Consume token immediately (prevents replay)
  *   3. Look up or create Stripe Customer for the user's email
  *   4. Create Stripe Checkout Session (Bundle plan, trial credit applied)
- *   5. Redirect to session.url — user lands directly on payment form
+ *   5. Redirect to session.url, user lands directly on payment form
  *
  * The existing checkout.session.completed webhook handles DB activation
- * via metadata.userId — no additional webhook code needed.
+ * via metadata.userId, no additional webhook code needed.
  *
  * Graceful fallback: if Stripe session creation fails, redirect to
  * /upgrade?from=trial&ref=whop (original manual flow).
  *
- * Token is single-use — consumed immediately on first redemption.
+ * Token is single-use, consumed immediately on first redemption.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const user = userResult.rows[0];
 
     if (!user) {
-        // User record doesn't exist — redirect to signup with email pre-filled
+        // User record doesn't exist, redirect to signup with email pre-filled
         const signupUrl = new URL(`${baseUrl}/signup`);
         signupUrl.searchParams.set('email', payload.email);
         signupUrl.searchParams.set('ref', 'whop');
@@ -74,7 +74,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     ).catch(() => {});
 
     // ── 4. Create Stripe Checkout Session ─────────────────────────────────────
-    // User is sent directly to Stripe's hosted payment form — no Privy login needed.
+    // User is sent directly to Stripe's hosted payment form, no Privy login needed.
     // The existing checkout.session.completed webhook activates their subscription
     // via metadata.userId (same key used by /api/stripe/checkout route).
     try {
@@ -138,7 +138,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         const couponId = process.env.WHOP_TRIAL_CREDIT_COUPON_ID;
         if (couponId) {
             sessionParams.discounts = [{ coupon: couponId }];
-            // Note: allow_promotion_codes is incompatible with discounts[] — remove it
+            // Note: allow_promotion_codes is incompatible with discounts[], remove it
             delete (sessionParams as any).allow_promotion_codes;
         }
 
@@ -148,7 +148,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         return NextResponse.redirect(session.url!);
 
     } catch (stripeErr: any) {
-        // Non-fatal — Stripe may be misconfigured or temporarily unavailable.
+        // Non-fatal, Stripe may be misconfigured or temporarily unavailable.
         // Fall through to the manual /upgrade page (original behaviour).
         console.warn('[Migration] Stripe Checkout Session failed (falling back to /upgrade):', stripeErr.message);
     }

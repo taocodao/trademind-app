@@ -6,7 +6,7 @@ import { getStripe } from '@/lib/stripe-server';
 export const dynamic = 'force-dynamic';
 
 async function getUserId(req: NextRequest): Promise<string | null> {
-    // 1. Cookie-based (primary — works for browser requests)
+    // 1. Cookie-based (primary, works for browser requests)
     const cookieStore = await cookies();
     const directId = cookieStore.get('privy-user-id')?.value;
     if (directId) return directId;
@@ -30,7 +30,7 @@ async function getUserId(req: NextRequest): Promise<string | null> {
     return null;
 }
 
-// POST — cancel subscription
+// POST, cancel subscription
 export async function POST(req: NextRequest) {
     try {
         const userId = await getUserId(req);
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 
         let subscription: any;
         if (status === 'trialing') {
-            // Immediate cancel for trial users — no charge ever made
+            // Immediate cancel for trial users, no charge ever made
             subscription = await getStripe().subscriptions.cancel(subscriptionId);
         } else {
             // Graceful cancel: revoke at end of billing period
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     }
 }
 
-// PUT — reactivate (undo cancel_at_period_end)
+// PUT, reactivate (undo cancel_at_period_end)
 export async function PUT(req: NextRequest) {
     try {
         const userId = await getUserId(req);

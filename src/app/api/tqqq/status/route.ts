@@ -33,7 +33,7 @@ export async function GET() {
             tqqq_price: 0,
             position_multiplier: 1,
             early_warning: false,
-            message: 'Status unavailable — backend offline',
+            message: 'Status unavailable, backend offline',
             timestamp: null,
         }, { status: 200 });
     }

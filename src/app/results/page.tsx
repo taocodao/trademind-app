@@ -1,5 +1,5 @@
 /**
- * /results — TradeMind Live Track Record Page
+ * /results, TradeMind Live Track Record Page
  * =============================================
  * Server component. Fetches from /api/signals/track-record and renders
  * a public, SEO-friendly table of the last 90 days of signal history
@@ -14,7 +14,7 @@ import Link from 'next/link';
 export const metadata: Metadata = {
     title: 'Live Signal Track Record | TradeMind',
     description:
-        'Every TurboCore ML regime signal since 2026 — date, regime called, confidence, and 5-day QQQ return outcome. Verified, timestamped, and updated daily.',
+        'Every TurboCore ML regime signal since 2026, date, regime called, confidence, and 5-day QQQ return outcome. Verified, timestamped, and updated daily.',
 };
 
 const REGIME_COLOR: Record<string, string> = {
@@ -79,7 +79,7 @@ export default async function ResultsPage() {
                 <div className="text-center mb-12">
                     <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 rounded-full px-4 py-1.5 text-purple-400 text-sm font-medium mb-6">
                         <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse inline-block" />
-                        Live Track Record — Updated Daily
+                        Live Track Record, Updated Daily
                     </div>
                     <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-4">
                         Every Signal. Every Outcome.
@@ -180,12 +180,12 @@ export default async function ResultsPage() {
                                                 <td className="px-4 py-3 text-right text-gray-400 font-mono text-xs">
                                                     {row.qqq_price_signal_date !== null
                                                         ? `$${row.qqq_price_signal_date.toFixed(2)}`
-                                                        : '—'}
+                                                        : ','}
                                                 </td>
                                                 <td className="px-4 py-3 text-right text-gray-400 font-mono text-xs">
                                                     {row.qqq_price_5d_later !== null
                                                         ? `$${row.qqq_price_5d_later.toFixed(2)}`
-                                                        : '—'}
+                                                        : ','}
                                                 </td>
                                                 <td className="px-4 py-3 text-right font-semibold font-mono" style={{ color: retColor }}>
                                                     {ret !== null
@@ -210,13 +210,13 @@ export default async function ResultsPage() {
                 <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-5 mb-10 text-sm text-gray-400 leading-relaxed">
                     <p className="font-semibold text-yellow-400 mb-2">Important Disclosures</p>
                     <p>
-                        The 5-day QQQ return shown is the market return following the regime signal — it does
+                        The 5-day QQQ return shown is the market return following the regime signal, it does
                         not represent actual trading results, account performance, or guaranteed returns.
                         TradeMind signals are <strong className="text-white">educational analysis only</strong> and
                         are not personalized investment advice. Past signal outcomes do not guarantee future results.
                         All investing involves risk, including possible loss of principal.
-                        The 7-year backtest (2018–2024) was conducted using walk-forward methodology on historical
-                        data — it was never trained on future data and should not be interpreted as a live performance record.
+                        The 7-year backtest (2018 to 2024) was conducted using walk-forward methodology on historical
+                        data, it was never trained on future data and should not be interpreted as a live performance record.
                     </p>
                 </div>
 

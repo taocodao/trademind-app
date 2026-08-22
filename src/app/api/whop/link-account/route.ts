@@ -51,7 +51,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
 
     if (!trialResult.rows.length) {
-        // No Whop trial found for this email — they may have used a different email
+        // No Whop trial found for this email, they may have used a different email
         return NextResponse.json({
             linked: false,
             reason: 'No Whop trial found for this email. Please use the exact email from your Whop account.',

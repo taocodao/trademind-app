@@ -13,7 +13,7 @@ export const runtime = 'nodejs'; // Required for raw body access in App Router
 
 // ── Config ─────────────────────────────────────────────────────────────────
 // REFERRAL_FEE: total bilateral credit per referral (default $100)
-// Split in half: $50 at signup, $50 at first charge — both referrer AND referee
+// Split in half: $50 at signup, $50 at first charge, both referrer AND referee
 const REFERRAL_FEE = parseInt(process.env.REFERRAL_FEE || '100', 10);
 const REFERRAL_HALF = REFERRAL_FEE / 2;
 const REFERRAL_ANNUAL_BONUS = parseInt(process.env.REFERRAL_ANNUAL_BONUS || '150', 10);
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
         return new Response("Webhook secret not configured", { status: 500 });
     }
 
-    // Must use req.text() — App Router auto-parses JSON which corrupts Stripe signature
+    // Must use req.text(), App Router auto-parses JSON which corrupts Stripe signature
     const rawBody = await req.text();
     const sig = req.headers.get("stripe-signature");
 
@@ -40,12 +40,12 @@ export async function POST(req: NextRequest) {
         return new Response(`Webhook Error: ${err.message}`, { status: 400 });
     }
 
-    // Process async — always return 200 quickly to prevent Stripe retries
+    // Process async, always return 200 quickly to prevent Stripe retries
     try {
         await processWebhookEvent(event);
     } catch (err) {
         console.error("Webhook processing error:", err);
-        // Return 200 regardless — log separately. Non-200 causes Stripe to retry.
+        // Return 200 regardless, log separately. Non-200 causes Stripe to retry.
     }
 
     return new Response("OK", { status: 200 });
@@ -165,7 +165,7 @@ async function processWebhookEvent(event: Stripe.Event) {
                             referrerUserId,
                             REFERRAL_HALF,
                             referralId,
-                            `Referral Stage 1 (signup) — friend joined, referrer credited $${REFERRAL_HALF}`
+                            `Referral Stage 1 (signup), friend joined, referrer credited $${REFERRAL_HALF}`
                         );
                         await pool.query(
                             `UPDATE referrals SET signup_bonus_paid = true, updated_at = NOW() WHERE id = $1`,
@@ -174,7 +174,7 @@ async function processWebhookEvent(event: Stripe.Event) {
                         await pool.query(
                             `INSERT INTO referral_activity (referral_id, event_type, credit_amount, description)
                              VALUES ($1, 'stage1_referrer', $2, $3)`,
-                            [referralId, REFERRAL_HALF, `Stage 1: Referrer credited $${REFERRAL_HALF} in free days — friend signed up`]
+                            [referralId, REFERRAL_HALF, `Stage 1: Referrer credited $${REFERRAL_HALF} in free days, friend signed up`]
                         );
                         console.log(`🎁 Stage 1 (signup): Referrer ${referrerUserId} extended by $${REFERRAL_HALF} worth of days`);
                     }
@@ -284,7 +284,7 @@ async function processWebhookEvent(event: Stripe.Event) {
             break;
         }
 
-        // ── Trial ending in 3 days — send reminder email ───────────────────
+        // ── Trial ending in 3 days, send reminder email ───────────────────
         case "customer.subscription.trial_will_end": {
             const subscription = event.data.object as Stripe.Subscription;
             const customerId = subscription.customer as string;
@@ -292,7 +292,7 @@ async function processWebhookEvent(event: Stripe.Event) {
             break;
         }
 
-        // ── Invoice paid — trigger Stage 2 bilateral referral credits ──────
+        // ── Invoice paid, trigger Stage 2 bilateral referral credits ──────
         case "invoice.payment_succeeded": {
             const invoice = event.data.object as Stripe.Invoice;
             await handleInvoicePaymentSucceeded(invoice);
@@ -304,8 +304,8 @@ async function processWebhookEvent(event: Stripe.Event) {
             const invoice = event.data.object as Stripe.Invoice;
             const customerId = invoice.customer as string;
 
-            // Look up user — if they came from Whop, send a payment recovery DM
-            // (NOT a winback DM — this is involuntary churn, different message)
+            // Look up user, if they came from Whop, send a payment recovery DM
+            // (NOT a winback DM, this is involuntary churn, different message)
             const failedUserRes = await pool.query(
                 `SELECT user_id, whop_user_id FROM user_settings WHERE stripe_customer_id = $1`,
                 [customerId]
@@ -321,7 +321,7 @@ async function processWebhookEvent(event: Stripe.Event) {
                 ).catch(() => {});
             }
 
-            console.log(`💳 Payment failed for customer ${customerId}${failedUser?.whop_user_id ? ' — recovery DM sent' : ''}`);
+            console.log(`💳 Payment failed for customer ${customerId}${failedUser?.whop_user_id ? ', recovery DM sent' : ''}`);
             break;
         }
 
@@ -344,7 +344,7 @@ async function processWebhookEvent(event: Stripe.Event) {
     }
 }
 
-// ── Stage 2: First real charge — bilateral credit for both parties ─────────
+// ── Stage 2: First real charge, bilateral credit for both parties ─────────
 // 
 // Referral credit model (REFERRAL_FEE env, default $100):
 //   Stage 1 (signup): Referee gets bonus trial days + Referrer gets extension (handled in checkout.session.completed)
@@ -352,17 +352,17 @@ async function processWebhookEvent(event: Stripe.Event) {
 //   Annual bonus: BOTH get REFERRAL_ANNUAL_HALF in free days
 //
 // All credits applied as subscription extension days (credit_dollars / plan_daily_rate).
-// Cash balance credits are NOT used — only day extensions.
+// Cash balance credits are NOT used, only day extensions.
 //
 async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     const customerId = invoice.customer as string;
     const billingReason = invoice.billing_reason;
     const subscriptionId = (invoice as any).subscription as string;
 
-    // ── Loyalty Credits: issued on every renewal cycle (month 1–5) ───────────
+    // ── Loyalty Credits: issued on every renewal cycle (month 1 to 5) ───────────
     // billing_reason='subscription_cycle' = renewal after initial subscription_create.
     // We derive month number from subscription.start_date vs invoice.period_start.
-    // Idempotency key: 'loyalty_month_N_<invoice.id>' — UNIQUE on (user_id, source)
+    // Idempotency key: 'loyalty_month_N_<invoice.id>', UNIQUE on (user_id, source)
     // prevents double-credit even if Stripe delivers this event twice.
     if (billingReason === 'subscription_cycle' && subscriptionId) {
         try {
@@ -385,7 +385,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
             const userId = userRow.rows[0]?.user_id;
 
             if (userId) {
-                // ── Loyalty Credits (months 1–N) ──────────────────────────────
+                // ── Loyalty Credits (months 1 to N) ──────────────────────────────
                 if (monthNumber <= maxLoyaltyMonths) {
                     const loyaltySource = `loyalty_month_${monthNumber}_${invoice.id}`;
                     const creditCents = PRICING.loyalty.creditCentsPerMonth;
@@ -399,7 +399,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
                 }
 
                 // ── Installment Credits ($25 × 4 months = $100 total) ─────────
-                // Issued for the first 4 billing cycles (months 1–4) to offset
+                // Issued for the first 4 billing cycles (months 1 to 4) to offset
                 // the post-trial monthly cost. Idempotent: source includes invoice.id.
                 if (monthNumber <= maxInstallmentMonths) {
                     const installSource = `installment_month_${monthNumber}_${invoice.id}`;
@@ -412,7 +412,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
                     );
                     console.log(`💳 Installment credit: $${(installCents/100).toFixed(0)} issued to ${userId} (month ${monthNumber}/${maxInstallmentMonths})`);
                 } else {
-                    console.log(`[Installment] Month ${monthNumber} exceeds 4 — no installment credit (customer ${customerId})`);
+                    console.log(`[Installment] Month ${monthNumber} exceeds 4, no installment credit (customer ${customerId})`);
                 }
             }
         } catch (loyaltyErr) {
@@ -480,12 +480,12 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
             ref.referrer_user_id,
             creditAmount,
             ref.id,
-            `Stage 2 ${label} — friend's card charged, referrer credited $${creditAmount}`
+            `Stage 2 ${label}, friend's card charged, referrer credited $${creditAmount}`
         );
         await pool.query(
             `INSERT INTO referral_activity (referral_id, event_type, credit_amount, description)
              VALUES ($1, 'stage2_referrer', $2, $3)`,
-            [ref.id, creditAmount, `Stage 2: Referrer credited $${creditAmount} in free days — friend's first charge`]
+            [ref.id, creditAmount, `Stage 2: Referrer credited $${creditAmount} in free days, friend's first charge`]
         );
 
         // 2. Extend REFEREE's subscription (bilateral)
@@ -493,12 +493,12 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
             ref.referred_user_id,
             creditAmount,
             ref.id,
-            `Stage 2 ${label} — referee credited $${creditAmount} for completing trial`
+            `Stage 2 ${label}, referee credited $${creditAmount} for completing trial`
         );
         await pool.query(
             `INSERT INTO referral_activity (referral_id, event_type, credit_amount, description)
              VALUES ($1, 'stage2_referee', $2, $3)`,
-            [ref.id, creditAmount, `Stage 2: Referee credited $${creditAmount} in free days — first charge completed`]
+            [ref.id, creditAmount, `Stage 2: Referee credited $${creditAmount} in free days, first charge completed`]
         );
 
         await pool.query(
@@ -540,7 +540,7 @@ async function recordCardFingerprint(userId: string, stripeCustomerId: string) {
     }
 }
 
-// ── Referral relationship storage — returns referrerUserId if successfully linked ──
+// ── Referral relationship storage, returns referrerUserId if successfully linked ──
 async function linkReferral(referralCode: string, referredUserId: string, referredCustomerId: string): Promise<string | null> {
     try {
         let referrerUserId = await resolvePromoCode(referralCode);
@@ -562,7 +562,7 @@ async function linkReferral(referralCode: string, referredUserId: string, referr
         if (newRef.rows.length) {
             await pool.query(
                 `INSERT INTO referral_activity (referral_id, event_type, description)
-                 VALUES ($1, 'subscribed', 'Friend started trial — referral linked') ON CONFLICT DO NOTHING`,
+                 VALUES ($1, 'subscribed', 'Friend started trial, referral linked') ON CONFLICT DO NOTHING`,
                 [newRef.rows[0].id]
             );
         }
@@ -585,14 +585,14 @@ async function markWhopTrialMigrated(email: string, tier: string): Promise<void>
         [tier, email]
     );
 
-    if (!result.rows.length) return; // Not a Whop trial — no-op
+    if (!result.rows.length) return; // Not a Whop trial, no-op
 
     const { whop_user_id } = result.rows[0];
 
-    // Send a quick thank-you DM (non-fatal — they may have revoked Whop access)
+    // Send a quick thank-you DM (non-fatal, they may have revoked Whop access)
     await sendWhopDM(
         whop_user_id,
-        `✅ **You're all set on trademind.bot.** Welcome to the full platform — signals continue daily. See you there.`
+        `✅ **You're all set on trademind.bot.** Welcome to the full platform, signals continue daily. See you there.`
     ).catch(() => {});
 
     console.log(`[Stripe Webhook] Whop trial migrated: ${email} → ${tier}`);
@@ -611,7 +611,7 @@ function determineTierFromPrice(priceId: string): string {
         [process.env.NEXT_PUBLIC_STRIPE_FULL_ACCESS_MONTHLY_PRICE_ID            || '']: 'full_access',
         [process.env.NEXT_PUBLIC_STRIPE_FULL_ACCESS_ANNUAL_PRICE_ID             || '']: 'full_access',
         [process.env.NEXT_PUBLIC_STRIPE_FULL_ACCESS_BIENNIAL_PRICE_ID           || '']: 'full_access',
-        // Legacy keys — kept during migration so existing subscribers aren't affected
+        // Legacy keys, kept during migration so existing subscribers aren't affected
         [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_MONTHLY_PRICE_ID || '']: 'turbocore',
         [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_ANNUAL_PRICE_ID  || '']: 'turbocore',
         [process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID       || '']: 'turbocore_pro_bundle',

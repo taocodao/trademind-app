@@ -38,7 +38,7 @@ const TIERS = [
         annual: 249,
         monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_MONTHLY_PRICE_ID || '',
         annualPriceId: process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_ANNUAL_PRICE_ID || '',
-        features: ['Daily AI regime signal (BULL / SIDEWAYS / BEAR)', 'ML confidence score 0–100', 'Virtual portfolio management', 'Works with any brokerage'],
+        features: ['Daily AI regime signal (BULL / SIDEWAYS / BEAR)', 'ML confidence score 0 to 100', 'Virtual portfolio management', 'Works with any brokerage'],
         popular: false,
     },
     {
@@ -49,7 +49,7 @@ const TIERS = [
         annual: 399,
         monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID || '',
         annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID || '',
-        features: ['Everything in TurboCore', 'QQQ LEAPS options (3–4× leverage, no daily decay)', '39.3% historical CAGR', 'Dynamic VIX-adjusted sizing'],
+        features: ['Everything in TurboCore', 'QQQ LEAPS options (3 to 4× leverage, no daily decay)', '39.3% historical CAGR', 'Dynamic VIX-adjusted sizing'],
         popular: false,
     },
     {
@@ -224,7 +224,7 @@ export default function CampaignPage() {
                     {refCode && (
                         <div className="w-full bg-purple-900/30 border border-purple-500/30 rounded-xl p-4 space-y-2">
                             <div className="flex items-center gap-2 text-purple-300 font-bold text-sm">
-                                🎁 Your $100 Referral Credit — Applied Automatically
+                                🎁 Your $100 Referral Credit, Applied Automatically
                             </div>
                             <div className="text-[11px] text-zinc-400 space-y-1">
                                 <p>• <strong className="text-white">At signup:</strong> Get <span className="text-purple-300">$50 worth of extra free days</span> added to your trial (on top of 14 days)</p>
@@ -272,7 +272,7 @@ export default function CampaignPage() {
                 <section className="max-w-5xl mx-auto px-6 mt-12 animate-in fade-in slide-in-from-bottom-4 duration-300">
                     <div className="text-center mb-6">
                         <h2 className="text-2xl font-black text-white mb-1">Choose Your Plan</h2>
-                        <p className="text-sm text-zinc-400">Card collected now — charged after your extended free trial.</p>
+                        <p className="text-sm text-zinc-400">Card collected now, charged after your extended free trial.</p>
 
                         {/* Billing toggle */}
                         <div className="inline-flex items-center bg-white/5 p-1 rounded-full border border-white/10 mt-4">

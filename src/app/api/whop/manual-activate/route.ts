@@ -106,6 +106,6 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         trialDays: days,
         trialEndsAt: trialEndsAt.toISOString(),
         daysRemaining: days,
-        nextStep: 'Hard refresh your dashboard (Ctrl+Shift+R) — your 30-day Full Access trial is now active.',
+        nextStep: 'Hard refresh your dashboard (Ctrl+Shift+R), your 30-day Full Access trial is now active.',
     });
 }

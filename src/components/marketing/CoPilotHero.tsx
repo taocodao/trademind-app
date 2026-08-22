@@ -23,7 +23,7 @@ export function CoPilotHero() {
     };
 
     return (
-        <section className="tm-story tm-hero2">
+        <section id="hero" className="tm-story tm-hero2">
             <div className="tm-hero2-inner">
                 <div className="tm-eyebrow">{c.eyebrow}</div>
                 <h1 className="tm-h1">{c.h1a}<br /><em>{c.h1b}</em></h1>
@@ -34,6 +34,7 @@ export function CoPilotHero() {
                         <div className="tm-stat" key={i}>
                             <div className="tm-stat-big">{s.big}</div>
                             <div className="tm-stat-label">{s.label}</div>
+                            <div className="tm-stat-clarify">{s.clarifier}</div>
                         </div>
                     ))}
                 </div>

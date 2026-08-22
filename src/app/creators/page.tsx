@@ -40,12 +40,12 @@ export default function CreatorsPage() {
     };
 
     const benefits = [
-        { icon: DollarSign, title: '20% Recurring Commission', desc: 'Earn 20% of each referred subscriber\'s monthly or annual payment — every single renewal.' },
+        { icon: DollarSign, title: '20% Recurring Commission', desc: 'Earn 20% of each referred subscriber\'s monthly or annual payment, every single renewal.' },
         { icon: Star, title: 'Diamond Tier Status', desc: 'Instantly granted Diamond tier: 1 year free subscription + all tier rewards.' },
-        { icon: Video, title: 'Media Kit & Assets', desc: 'Brand assets, talking points, demo video clips, and pre-written risk disclosures — reducing your production effort.' },
+        { icon: Video, title: 'Media Kit & Assets', desc: 'Brand assets, talking points, demo video clips, and pre-written risk disclosures, reducing your production effort.' },
         { icon: Users, title: 'Discord Creator Channel', desc: 'Private Discord channel with the TradeMind team + other top creators. Monthly performance calls.' },
         { icon: TrendingUp, title: 'Co-Creation Opportunities', desc: 'Be featured in official TradeMind TikTok content. Get early access to new features before public launch.' },
-        { icon: Shield, title: 'Compliance Support', desc: 'We provide pre-approved disclosure language you can use in your content — protecting you and us.' },
+        { icon: Shield, title: 'Compliance Support', desc: 'We provide pre-approved disclosure language you can use in your content, protecting you and us.' },
     ];
 
     return (
@@ -60,14 +60,14 @@ export default function CreatorsPage() {
                         <ArrowLeft className="w-4 h-4" /> Back to Referral Dashboard
                     </Link>
                     <div className="inline-flex items-center gap-2 bg-tm-purple/20 border border-tm-purple/30 text-tm-purple text-xs font-semibold px-3 py-1.5 rounded-full mb-4">
-                        💎 Exclusive — Apply to Join
+                        💎 Exclusive, Apply to Join
                     </div>
                     <h1 className="text-4xl font-extrabold text-white mb-4 leading-tight">
                         TradeMind Creator Program
                     </h1>
                     <p className="text-lg text-tm-muted max-w-xl mx-auto">
                         Turn your TikTok, YouTube, or Instagram audience into recurring income.
-                        Create authentic content about trading signals — we handle the rest.
+                        Create authentic content about trading signals, we handle the rest.
                     </p>
                 </div>
             </div>
@@ -175,7 +175,7 @@ export default function CreatorsPage() {
                                 </label>
                                 <textarea
                                     required
-                                    placeholder="e.g. I post 60-second FinTok videos explaining options strategies. My audience is 80% Gen Z retail investors aged 18–28."
+                                    placeholder="e.g. I post 60-second FinTok videos explaining options strategies. My audience is 80% Gen Z retail investors aged 18 to 28."
                                     value={form.contentDescription}
                                     onChange={e => setForm(f => ({ ...f, contentDescription: e.target.value }))}
                                     rows={3}
@@ -218,7 +218,7 @@ export default function CreatorsPage() {
                         {[
                             {
                                 q: 'Is there a minimum follower requirement?',
-                                a: 'No hard minimum — we care more about engagement and niche relevance than raw follower counts. A 5K highly-engaged FinTok audience beats 100K passive followers.',
+                                a: 'No hard minimum, we care more about engagement and niche relevance than raw follower counts. A 5K highly-engaged FinTok audience beats 100K passive followers.',
                             },
                             {
                                 q: 'How does the 20% commission work?',
@@ -226,7 +226,7 @@ export default function CreatorsPage() {
                             },
                             {
                                 q: 'Can I still say whatever I want?',
-                                a: 'Yes — we do not mandate scripts or talking points. The only requirements are compliance disclosures (#ad, not financial advice) and not making specific investment recommendations.',
+                                a: 'Yes, we do not mandate scripts or talking points. The only requirements are compliance disclosures (#ad, not financial advice) and not making specific investment recommendations.',
                             },
                             {
                                 q: 'How long until I hear back?',

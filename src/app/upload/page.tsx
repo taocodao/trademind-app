@@ -162,7 +162,7 @@ export default function UploadPage() {
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold text-zinc-400">Title *</label>
                         <input value={title} onChange={e => setTitle(e.target.value)}
-                            placeholder='e.g. "Introduction Video — English"'
+                            placeholder='e.g. "Introduction Video, English"'
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50" />
                     </div>
 

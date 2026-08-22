@@ -5,7 +5,7 @@
  * Returns the last 90 days of TurboCore signals with QQQ return outcomes
  * (populated by EC2 populate_signal_returns.py after market close).
  *
- * Public endpoint — no auth required. Cached at edge for 5 minutes.
+ * Public endpoint, no auth required. Cached at edge for 5 minutes.
  */
 
 import { NextResponse } from 'next/server';

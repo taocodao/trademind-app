@@ -17,7 +17,7 @@ async function getUserId(): Promise<string | null> {
     }
 }
 
-// GET /api/accounts — list the user's named accounts
+// GET /api/accounts, list the user's named accounts
 export async function GET() {
     const userId = await getUserId();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -30,7 +30,7 @@ export async function GET() {
     }
 }
 
-// POST /api/accounts — create a named account
+// POST /api/accounts, create a named account
 export async function POST(req: NextRequest) {
     const userId = await getUserId();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

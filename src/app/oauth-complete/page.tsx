@@ -23,13 +23,13 @@ function OAuthCompleteInner() {
                     '*'
                 );
             } catch (_) {
-                // Cross-origin opener — postMessage may fail silently, focus trigger covers us
+                // Cross-origin opener, postMessage may fail silently, focus trigger covers us
             }
             setClosing(true);
             // Small delay so user sees the success message
             setTimeout(() => window.close(), 1200);
         } else {
-            // Direct navigation (settings page flow) — redirect to settings
+            // Direct navigation (settings page flow), redirect to settings
             const base = '/settings/social-connections';
             if (status === 'success') {
                 window.location.replace(`${base}?success=true&platform=${platform}`);

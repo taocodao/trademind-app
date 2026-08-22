@@ -63,7 +63,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         [date]
     );
     if (existing.rows.length) {
-        console.log(`[Whop Signal] Already posted for ${date} — skipping`);
+        console.log(`[Whop Signal] Already posted for ${date}, skipping`);
         return NextResponse.json({ skipped: true, date });
     }
 
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // the EC2 signal omits a leg (e.g. QLD is absent in non-leveraged regimes)
     const { QQQ = 0, QLD = 0, TQQQ = 0, SGOV = 0 } = allocation ?? {};
 
-    const content = `**${emoji} TURBOCORE SIGNAL — ${date}**
+    const content = `**${emoji} TURBOCORE SIGNAL, ${date}**
 **Regime:** ${regime} | Confidence: ${confidence}%
 
 **Today's Allocation:**

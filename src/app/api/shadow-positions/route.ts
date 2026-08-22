@@ -25,7 +25,7 @@ export async function GET(request: Request) {
         const strategy = searchParams.get('strategy') || undefined;
 
         // Raw query so we can pick up instrument_type + leg_action columns
-        // (added via migration — COALESCE guards pre-migration rows)
+        // (added via migration, COALESCE guards pre-migration rows)
         let queryText = `
             SELECT id, user_id, strategy, symbol, quantity, avg_price, signal_id, executed_at,
                    COALESCE(instrument_type, 'equity') AS instrument_type,

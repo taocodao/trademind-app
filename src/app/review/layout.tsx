@@ -3,7 +3,7 @@ import './promo.css';
 import { PrivyProvider } from '@/components/providers/PrivyProvider';
 
 export const metadata: Metadata = {
-  title: 'TradeMind Ambassador Hub — AI Post Generator',
+  title: 'TradeMind Ambassador Hub, AI Post Generator',
   description:
     'Generate AI-powered promotional posts for TradeMind in seconds. Select your platform, pick a theme, and copy-paste to TikTok, Discord, X, Instagram, LinkedIn, or Whop.',
   openGraph: {

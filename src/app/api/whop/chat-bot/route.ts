@@ -29,7 +29,7 @@ const REGIME_EMOJI: Record<string, string> = {
 // ── Command handlers ──────────────────────────────────────────────────────────
 
 async function cmdSignal(): Promise<string> {
-    // Read from whop_posts — populated by EC2 signal bridge (/api/internal/publish-to-whop)
+    // Read from whop_posts, populated by EC2 signal bridge (/api/internal/publish-to-whop)
     const { rows } = await query(
         `SELECT content, signal_date, regime, confidence
          FROM whop_posts
@@ -64,15 +64,15 @@ async function cmdRegime(): Promise<string> {
 function cmdHelp(): string {
     return `**TradeMind Bot Commands**
 
-\`!signal\` — Today's full TurboCore allocation
-\`!regime\` — Current market regime + confidence
-\`!record\` — Last 30 days of signal history
-\`!methodology\` — How the ML regime model works
-\`!plan\` — Subscription plan options and pricing
-\`!backtest\` — 7-year performance summary
-\`!review\` — Leave a review on Whop
-\`!refer\` — Earn 40% commission by referring friends
-\`!help\` — Show this help message
+\`!signal\`, Today's full TurboCore allocation
+\`!regime\`, Current market regime + confidence
+\`!record\`, Last 30 days of signal history
+\`!methodology\`, How the ML regime model works
+\`!plan\`, Subscription plan options and pricing
+\`!backtest\`, 7-year performance summary
+\`!review\`, Leave a review on Whop
+\`!refer\`, Earn 40% commission by referring friends
+\`!help\`, Show this help message
 
 _Signals drop daily at 3 PM ET. Morning briefs at 8:15 AM ET._`;
 }
@@ -80,16 +80,16 @@ _Signals drop daily at 3 PM ET. Morning briefs at 8:15 AM ET._`;
 function cmdPlan(): string {
     return `**TradeMind Plans** (after your trial)
 
-• **TurboCore** $29/mo — daily signals, morning brief, auto-execution
-• **TurboCore Pro** $49/mo — signals + LEAPS strategy + enhanced ML
-• **Both Bundle** $69/mo — everything, unlimited
+• **TurboCore** $29/mo, daily signals, morning brief, auto-execution
+• **TurboCore Pro** $49/mo, signals + LEAPS strategy + enhanced ML
+• **Both Bundle** $69/mo, everything, unlimited
 
 Your $15 trial credit converts to bonus days at checkout.
 Upgrade at: trademind.bot/upgrade`;
 }
 
 function cmdBacktest(): string {
-    return `**TurboCore 7-Year Backtest (2018–2024)**
+    return `**TurboCore 7-Year Backtest (2018 to 2024)**
 
 • CAGR: **27.8%** (vs TQQQ 35% raw, with -83% 2022 drawdown)
 • Max Drawdown: **-5.1%** (vs TQQQ -83% in 2022)
@@ -113,9 +113,9 @@ async function cmdRecord(): Promise<string> {
 
     const EMOJI: Record<string, string> = { BULL: '🟢', SIDEWAYS: '🟡', BEAR: '🔴' };
     const lines = rows.map((r: any) =>
-        `• ${r.signal_date} — ${EMOJI[r.regime] ?? '📊'} **${r.regime}** (${r.confidence}% confidence)`
+        `• ${r.signal_date}, ${EMOJI[r.regime] ?? '📊'} **${r.regime}** (${r.confidence}% confidence)`
     );
-    return `**TradeMind Signal Record — Last 30 Days**
+    return `**TradeMind Signal Record, Last 30 Days**
 
 ${lines.join('\n')}
 
@@ -130,9 +130,9 @@ function cmdMethodology(): string {
 
 2. A trained classifier maps those inputs to one of three **market regimes**: BULL, SIDEWAYS, or BEAR.
 
-3. Each regime has pre-optimized allocations across QQQ, QLD (2×), TQQQ (3×), and SGOV (cash) — sized for that regime's risk profile.
+3. Each regime has pre-optimized allocations across QQQ, QLD (2×), TQQQ (3×), and SGOV (cash), sized for that regime's risk profile.
 
-4. Backtested on 7 years (2018–2024) using walk-forward methodology — never trained on future data.
+4. Backtested on 7 years (2018 to 2024) using walk-forward methodology, never trained on future data.
    Result: CAGR 27.8%, Max Drawdown -5.1%.
 
 _We don't predict stock prices. We classify what kind of market we're in and position accordingly._

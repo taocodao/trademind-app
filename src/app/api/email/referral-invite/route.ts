@@ -35,7 +35,7 @@ function buildEmailHtml(email: string): string {
           <tr>
             <td style="padding:36px 40px;">
               <p style="color:rgba(255,255,255,0.8);font-size:16px;line-height:1.7;margin:0 0 24px;">
-                Hi there! 👋 Here's your personal referral link that unlocks <strong style="color:#a78bfa;">$100 worth of free subscription days</strong> — split between you and whoever you invite.
+                Hi there! 👋 Here's your personal referral link that unlocks <strong style="color:#a78bfa;">$100 worth of free subscription days</strong>, split between you and whoever you invite.
               </p>
 
               <!-- CTA Box -->
@@ -60,7 +60,7 @@ function buildEmailHtml(email: string): string {
                     <div style="width:28px;height:28px;background:rgba(124,58,237,0.2);border-radius:50%;text-align:center;line-height:28px;color:#a78bfa;font-weight:700;font-size:13px;">1</div>
                   </td>
                   <td style="vertical-align:top;padding:12px 0;">
-                    <p style="margin:0;color:#ffffff;font-size:14px;font-weight:600;">Stage 1 — At Signup (instant $50 for both)</p>
+                    <p style="margin:0;color:#ffffff;font-size:14px;font-weight:600;">Stage 1, At Signup (instant $50 for both)</p>
                     <p style="margin:4px 0 0;color:rgba(255,255,255,0.5);font-size:13px;line-height:1.6;">Your friend gets $50 in extra trial days on top of the 14-day base trial. You get $50 added to your subscription immediately.</p>
                   </td>
                 </tr>
@@ -69,7 +69,7 @@ function buildEmailHtml(email: string): string {
                     <div style="width:28px;height:28px;background:rgba(34,197,94,0.2);border-radius:50%;text-align:center;line-height:28px;color:#4ade80;font-weight:700;font-size:13px;">2</div>
                   </td>
                   <td style="vertical-align:top;padding:12px 0;">
-                    <p style="margin:0;color:#ffffff;font-size:14px;font-weight:600;">Stage 2 — At First Charge (another $50 for both)</p>
+                    <p style="margin:0;color:#ffffff;font-size:14px;font-weight:600;">Stage 2, At First Charge (another $50 for both)</p>
                     <p style="margin:4px 0 0;color:rgba(255,255,255,0.5);font-size:13px;line-height:1.6;">When your friend's card is first charged, both of you automatically get another $50 in free subscription days. Total: $100 each.</p>
                   </td>
                 </tr>
@@ -106,7 +106,7 @@ export async function POST(req: Request) {
         }
 
         if (!RESEND_API_KEY) {
-            console.warn('RESEND_API_KEY not configured — referral invite email skipped.');
+            console.warn('RESEND_API_KEY not configured, referral invite email skipped.');
             return NextResponse.json({ error: 'Email service not configured on server. Add RESEND_API_KEY to Vercel env vars.' }, { status: 503 });
         }
 
@@ -137,7 +137,7 @@ export async function POST(req: Request) {
             );
         }
 
-        console.log('[referral-invite] Email sent to', email, '— Resend id:', (resBody as any)?.id);
+        console.log('[referral-invite] Email sent to', email, ', Resend id:', (resBody as any)?.id);
         return NextResponse.json({ success: true });
 
     } catch (err: any) {
@@ -146,7 +146,7 @@ export async function POST(req: Request) {
     }
 }
 
-// GET — quick health check: hit /api/email/referral-invite in browser to verify key + domain
+// GET, quick health check: hit /api/email/referral-invite in browser to verify key + domain
 export async function GET() {
     if (!RESEND_API_KEY) {
         return NextResponse.json({ ok: false, reason: 'RESEND_API_KEY env var is missing on Vercel' });

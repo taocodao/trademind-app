@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 /**
- * PUBLIC endpoint — returns 5-day delayed virtual portfolio summary
+ * PUBLIC endpoint, returns 5-day delayed virtual portfolio summary
  * for the 2 strategies (TurboCore Pro, QQQ LEAPS).
  * No authentication required.
  *

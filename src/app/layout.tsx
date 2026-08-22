@@ -13,19 +13,19 @@ import Script from "next/script";
 // Fonts migrated to globals.css
 
 export const metadata: Metadata = {
-    title: "TradeMind — Hear every trade. Judge for yourself.",
-    description: "A fully disclosed QQQ LEAPS track record, read aloud — every entry, every loss, every price from the real exchange tape.",
+    title: "TradeMind, Hear every trade. Judge for yourself.",
+    description: "A fully disclosed QQQ LEAPS track record, read aloud, every entry, every loss, every price from the real exchange tape.",
     manifest: "/manifest.json",
     openGraph: {
         title: "When could $10,000 make you a millionaire?",
-        description: "Type your age. Get your answer. Every assumption labeled — backtested rates, not promises.",
+        description: "Type your age. Get your answer. Every assumption labeled, backtested rates, not promises.",
         images: ["/share-card.png"],
         type: "website",
     },
     twitter: {
         card: "summary_large_image",
         title: "When could $10,000 make you a millionaire?",
-        description: "Type your age. Get your answer. Every assumption labeled — backtested rates, not promises.",
+        description: "Type your age. Get your answer. Every assumption labeled, backtested rates, not promises.",
         images: ["/share-card.png"],
     },
 };

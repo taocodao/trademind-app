@@ -3,7 +3,7 @@ import { getAccount, getAccountPositions } from '@/lib/accounts';
 import { phaseForNlv, getAccountPhase, getPhaseSpec } from '@/lib/account-phase';
 import { getUserId } from '@/lib/auth';
 
-// GET /api/accounts/[id]/positions — positions with live market value
+// GET /api/accounts/[id]/positions, positions with live market value
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const userId = await getUserId();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

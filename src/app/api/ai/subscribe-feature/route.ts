@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
         const canUseFree = freeUsed < freeLimit;
 
         if (canUseFree) {
-            // Free pick — no Stripe charge, just insert DB row
+            // Free pick, no Stripe charge, just insert DB row
             await query(
                 `INSERT INTO ai_feature_subscriptions (user_id, feature_key, is_free_entitlement, status)
                  VALUES ($1, $2, true, 'active')
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ success: true, method: 'free_entitlement' });
         }
 
-        // Paid — add Stripe subscription item
+        // Paid, add Stripe subscription item
         const settingsResult = await query(
             `SELECT stripe_subscription_id, app_trial_tier, app_trial_started_at, app_trial_2_started_at, app_trial_count FROM user_settings WHERE user_id = $1`,
             [user.privyDid]
@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
             subscription = await getStripe().subscriptions.retrieve(subscriptionId);
         } catch (stripeErr: any) {
             if (stripeErr.code === 'resource_missing') {
-                // Stale subscription ID — clear it from DB so user can re-subscribe cleanly
+                // Stale subscription ID, clear it from DB so user can re-subscribe cleanly
                 await query(
                     `UPDATE user_settings SET stripe_subscription_id = NULL WHERE user_id = $1`,
                     [user.privyDid]

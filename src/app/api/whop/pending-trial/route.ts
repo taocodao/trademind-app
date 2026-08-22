@@ -5,8 +5,8 @@
  * and a trial record exists for the user.
  *
  * Query params:
- *   ?email=user@example.com   — look up by email (preferred)
- *   ?payment_id=pay_xxx       — look up by Whop payment/receipt ID (fallback)
+ *   ?email=user@example.com  , look up by email (preferred)
+ *   ?payment_id=pay_xxx      , look up by Whop payment/receipt ID (fallback)
  *
  * Returns: { status: 'pending' | 'ready', email?, trialEndsAt?, whopUserId? }
  *
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     if (!rows.length) {
         return NextResponse.json({
             status:     'pending',
-            message:    'Trial record not found yet — webhook may still be processing.',
+            message:    'Trial record not found yet, webhook may still be processing.',
             retryAfter: 3,
         });
     }

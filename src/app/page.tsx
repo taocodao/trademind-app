@@ -71,7 +71,7 @@ export default function SinglePageMarketing() {
                 }
             });
         } catch {
-            // localStorage may be unavailable in certain browsers — fail silently
+            // localStorage may be unavailable in certain browsers, fail silently
         }
     }, [router]);
 
@@ -87,16 +87,16 @@ export default function SinglePageMarketing() {
         <main className="min-h-screen flex flex-col bg-[#0A0A0F] overflow-x-hidden pt-16">
             <MarketingHeader />
 
-            {/* Static hero — slogan + co-pilot framing + trust stats */}
+            {/* Static hero, slogan + co-pilot framing + trust stats */}
             <CoPilotHero />
 
-            {/* The Model, Not the Hype — why signals can be trusted */}
+            {/* The Model, Not the Hype, why signals can be trusted */}
             <ModelTrustSection />
 
-            {/* Patience Is the Strategy — entries timeline */}
+            {/* Patience Is the Strategy, entries timeline */}
             <PatienceSection />
 
-            {/* Narrated scrollytelling track record — the landing story */}
+            {/* Narrated scrollytelling track record, the landing story */}
             <StoryLanding
                 onCta={() => {
                     const el = document.getElementById('pricing');

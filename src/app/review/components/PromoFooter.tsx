@@ -80,7 +80,7 @@ export function PromoFooter() {
             © 2026 TradeMind. All rights reserved.
           </p>
           <p className="text-xs text-[#64748B] max-w-xl leading-relaxed">
-            <strong className="text-[#94A3B8]">Disclaimer:</strong> Not financial advice. Past performance does not guarantee future results. All backtest data reflects historical simulation (2019–2025). Live trading involves risk of loss.
+            <strong className="text-[#94A3B8]">Disclaimer:</strong> Not financial advice. Past performance does not guarantee future results. All backtest data reflects historical simulation (2019 to 2025). Live trading involves risk of loss.
           </p>
         </div>
       </div>

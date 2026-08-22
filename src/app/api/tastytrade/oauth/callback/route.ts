@@ -28,9 +28,9 @@ export async function GET(request: NextRequest) {
         const tokenResponse = await exchangeCodeForTokens(code);
 
         // Extract user ID from state parameter (encoded by /api/tastytrade/oauth/url)
-        // SECURITY: if we can't identify the user, abort — do NOT fall back to a shared key.
+        // SECURITY: if we can't identify the user, abort, do NOT fall back to a shared key.
         if (!state) {
-            console.error("[OAuth Callback] No state parameter — cannot identify user. Aborting.");
+            console.error("[OAuth Callback] No state parameter, cannot identify user. Aborting.");
             return NextResponse.redirect(
                 new URL("/dashboard?error=missing_state", request.url)
             );

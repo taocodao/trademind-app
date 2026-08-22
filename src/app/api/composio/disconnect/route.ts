@@ -25,7 +25,7 @@ export async function DELETE(req: NextRequest) {
 
         const composioAccountId: string | null = connResult.rows[0]?.composio_account_id ?? null;
 
-        // Delete from Composio — best effort (don't fail if Composio errors)
+        // Delete from Composio, best effort (don't fail if Composio errors)
         if (composioAccountId) {
             try {
                 await fetch(

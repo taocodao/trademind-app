@@ -4,10 +4,10 @@ import pool from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-// Helper — extract userId AND email from Privy cookie / Bearer token + X-User-Email header.
+// Helper, extract userId AND email from Privy cookie / Bearer token + X-User-Email header.
 //
 // IMPORTANT: The Privy *access* token (sent as Bearer) does NOT contain the user's email
-// in its payload — the email lives in the Privy ID token, which the frontend does not send.
+// in its payload, the email lives in the Privy ID token, which the frontend does not send.
 // The correct approach is:
 //   - userId  ← Bearer token sub claim (or privy-user-id cookie)
 //   - email   ← X-User-Email header, explicitly set by the frontend from usePrivy().user
@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
         // ── New user: no row yet ─────────────────────────────────────────────
         // Seed the row with the Privy email immediately, then check inline for
         // a Whop trial so a user who bought before logging in sees their trial
-        // on the very first page load — not after a second refresh.
+        // on the very first page load, not after a second refresh.
         if (result.rows.length === 0) {
             if (privyEmail) {
                 await pool.query(
@@ -149,7 +149,7 @@ export async function GET(req: NextRequest) {
                             appTrialTier: whopTier, trialDaysTotal: whopDays,
                         });
                     }
-                } catch { /* non-fatal — fall through to observer */ }
+                } catch { /* non-fatal, fall through to observer */ }
             }
             return NextResponse.json({
                 tier: 'observer', status: null, billingInterval: null,
@@ -176,7 +176,7 @@ export async function GET(req: NextRequest) {
                 `UPDATE user_settings SET email = $1, updated_at = NOW()
                  WHERE user_id = $2 AND email IS NULL`,
                 [privyEmail, userId]
-            ).catch(() => {}); // non-fatal — don't block the response
+            ).catch(() => {}); // non-fatal, don't block the response
             row.email = privyEmail; // reflect in current response too
         }
 
@@ -351,7 +351,7 @@ export async function GET(req: NextRequest) {
             });
         }
 
-        // ── No active Stripe sub — compute in-app trial status ────────────────
+        // ── No active Stripe sub, compute in-app trial status ────────────────
         const MAX_TRIALS = 2;
         const trialCount: number = row.app_trial_count || 0;
         const trial1Start: Date | null = row.app_trial_started_at ? new Date(row.app_trial_started_at) : null;

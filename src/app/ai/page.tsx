@@ -153,7 +153,7 @@ export default function AIHubPage() {
                     <span className="text-sm">🎉</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-white">Free Trial #{trialNum} — {(appTrialTier || '').replace('_', ' ')} Access</p>
+                    <p className="text-xs font-bold text-white">Free Trial #{trialNum}, {(appTrialTier || '').replace('_', ' ')} Access</p>
                     <p className="text-[10px] text-tm-muted">
                         {trialDaysLeft > 0 ? `${trialDaysLeft} day${trialDaysLeft !== 1 ? 's' : ''} remaining · No credit card needed yet` : 'Expires today!'}
                     </p>

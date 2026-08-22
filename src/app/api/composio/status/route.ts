@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
  * GET /api/composio/status
  * Returns social platform connection statuses for the current user.
  *
- * Query params: ?platform=linkedin  (optional — omit to get all)
+ * Query params: ?platform=linkedin  (optional, omit to get all)
  * Response: { connections: Record<platform, { status, connectedAt }> }
  */
 export async function GET(req: NextRequest) {
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
                         connections[row.platform] = { status: 'expired', connectedAt: row.connected_at };
                     }
                 } catch {
-                    // Composio API error — treat as expired, don't block the page
+                    // Composio API error, treat as expired, don't block the page
                     connections[row.platform] = { status: 'expired', connectedAt: row.connected_at };
                 }
             } else {

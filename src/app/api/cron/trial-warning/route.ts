@@ -4,7 +4,7 @@
  * GET /api/cron/trial-warning
  * Schedule: 0 14 * * *  (9 AM ET daily)
  *
- * Finds all active trials ending within 5–6 days that haven't
+ * Finds all active trials ending within 5 to 6 days that haven't
  * received a warning yet, and sends them a Whop DM + Resend email.
  *
  * Idempotent: warning_sent_at is set after first successful send,
@@ -22,13 +22,13 @@ const UPGRADE_URL = process.env.NEXT_PUBLIC_APP_URL
     : 'https://trademind.bot/upgrade';
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
-    // Auth check — Vercel Cron passes this automatically
+    // Auth check, Vercel Cron passes this automatically
     const auth = req.headers.get('authorization');
     if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Trials ending in 5–6 days that haven't been warned yet
+    // Trials ending in 5 to 6 days that haven't been warned yet
     const warningWindowStart = new Date();
     const warningWindowEnd   = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000);
 
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         const dmContent =
 `⏰ **Your TradeMind trial ends in ${daysLeft} day${daysLeft !== 1 ? 's' : ''} (${endDate}).**
 
-You've been getting daily TurboCore signals and the morning brief. When your trial ends, you'll get a link to continue on **trademind.bot** — no new signup needed, your history stays intact.
+You've been getting daily TurboCore signals and the morning brief. When your trial ends, you'll get a link to continue on **trademind.bot**, no new signup needed, your history stays intact.
 
 **Plans from $29/mo.** Your $15 trial converts to bonus days at checkout:
 ${UPGRADE_URL}
@@ -67,7 +67,7 @@ _Keep following the signals until then._`;
             // Whop DM (non-fatal)
             await sendWhopDM(trial.whop_user_id, dmContent);
 
-            // Resend email (non-fatal — only if RESEND_API_KEY is configured)
+            // Resend email (non-fatal, only if RESEND_API_KEY is configured)
             if (process.env.RESEND_API_KEY && trial.email) {
                 await sendTrialWarningEmail({
                     to:        trial.email,
@@ -121,7 +121,7 @@ async function sendTrialWarningEmail(params: {
   <h2 style="color: #f97316;">⏰ Your trial ends in ${params.daysLeft} days</h2>
   <p>Hey ${params.name},</p>
   <p>Your 30-day TradeMind trial ends on <strong>${params.endDate}</strong>.</p>
-  <p>When it does, you'll get a magic link to continue on trademind.bot — your signal history and virtual portfolio carry over automatically.</p>
+  <p>When it does, you'll get a magic link to continue on trademind.bot, your signal history and virtual portfolio carry over automatically.</p>
   <p>Your <strong>$15 trial fee</strong> converts to bonus subscription days at checkout. No extra cost.</p>
   <a href="${params.upgradeUrl}" style="display: inline-block; background: #7c3aed; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin: 16px 0;">
     See Plans →

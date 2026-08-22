@@ -18,7 +18,7 @@ export function EducationCenter() {
         {
             id: '5k-en',
             title: 'TurboCore 5K Report (Archive)',
-            description: 'Archived report for the former TurboCore strategy (retired 2026 — superseded by QQQ Basic).',
+            description: 'Archived report for the former TurboCore strategy (retired 2026, superseded by QQQ Basic).',
             url: '/files/TurboCore_5K_Report_English.md',
             icon: <FileText className="w-5 h-5 text-tm-purple" />,
             type: 'Report',
@@ -45,7 +45,7 @@ export function EducationCenter() {
         {
             id: 'pro-5k-en',
             title: 'TurboCore Pro 5K Report (Archive)',
-            description: 'Archived 5K report for the former TurboCore Pro strategy (retired 2026 — renamed QQQ Basic).',
+            description: 'Archived 5K report for the former TurboCore Pro strategy (retired 2026, renamed QQQ Basic).',
             url: '/pro_files/TurboCore-Pro-5K-Report-English.md',
             icon: <FileText className="w-5 h-5 text-tm-purple" />,
             type: 'Report',
@@ -54,7 +54,7 @@ export function EducationCenter() {
         {
             id: 'pro-report-en',
             title: 'TurboCore Pro Report (Archive)',
-            description: 'Archived research report for the former TurboCore Pro strategy (retired 2026 — renamed QQQ Basic).',
+            description: 'Archived research report for the former TurboCore Pro strategy (retired 2026, renamed QQQ Basic).',
             url: '/pro_files/TurboCore_Pro_Report_English.md',
             icon: <BookOpen className="w-5 h-5 text-tm-blue" />,
             type: 'Analysis',
@@ -63,7 +63,7 @@ export function EducationCenter() {
         {
             id: 'pro-comp-en',
             title: 'TurboCore Pro Competitive Analysis 2026 (Archive)',
-            description: 'Archived market analysis for the former TurboCore Pro strategy (retired 2026 — renamed QQQ Basic).',
+            description: 'Archived market analysis for the former TurboCore Pro strategy (retired 2026, renamed QQQ Basic).',
             url: '/pro_files/TurboCore-Pro-Competitive-Report-2026-English.md',
             icon: <FileText className="w-5 h-5 text-tm-purple" />,
             type: 'Analysis',
@@ -73,7 +73,7 @@ export function EducationCenter() {
         {
             id: '5k-es',
             title: 'Informe TurboCore 5K (Archivo)',
-            description: 'Informe archivado de la antigua estrategia TurboCore (retirada en 2026 — reemplazada por QQQ Basic).',
+            description: 'Informe archivado de la antigua estrategia TurboCore (retirada en 2026, reemplazada por QQQ Basic).',
             url: '/files/TurboCore_5K_Report_Spanish.md',
             icon: <FileText className="w-5 h-5 text-tm-purple" />,
             type: 'Informe',
@@ -100,7 +100,7 @@ export function EducationCenter() {
         {
             id: 'pro-5k-es',
             title: 'Informe TurboCore Pro 5K (Archivo)',
-            description: 'Informe archivado de la antigua estrategia TurboCore Pro (retirada en 2026 — renombrada QQQ Basic).',
+            description: 'Informe archivado de la antigua estrategia TurboCore Pro (retirada en 2026, renombrada QQQ Basic).',
             url: '/pro_files/TurboCore-Pro-5K-Report-Spanish.md',
             icon: <FileText className="w-5 h-5 text-tm-purple" />,
             type: 'Informe',
@@ -109,7 +109,7 @@ export function EducationCenter() {
         {
             id: 'pro-report-es',
             title: 'Informe TurboCore Pro (Archivo)',
-            description: 'Informe archivado de la antigua estrategia TurboCore Pro (retirada en 2026 — renombrada QQQ Basic).',
+            description: 'Informe archivado de la antigua estrategia TurboCore Pro (retirada en 2026, renombrada QQQ Basic).',
             url: '/pro_files/TurboCore_Pro_Reporte_Espanol.md',
             icon: <BookOpen className="w-5 h-5 text-tm-blue" />,
             type: 'Análisis',
@@ -118,7 +118,7 @@ export function EducationCenter() {
         {
             id: 'pro-comp-es',
             title: 'Análisis Competitivo TurboCore Pro 2026 (Archivo)',
-            description: 'Análisis archivado de la antigua estrategia TurboCore Pro (retirada en 2026 — renombrada QQQ Basic).',
+            description: 'Análisis archivado de la antigua estrategia TurboCore Pro (retirada en 2026, renombrada QQQ Basic).',
             url: '/pro_files/TurboCore-Pro-Informe-Competitivo-2026-Spanish.md',
             icon: <FileText className="w-5 h-5 text-tm-purple" />,
             type: 'Análisis',
@@ -128,7 +128,7 @@ export function EducationCenter() {
         {
             id: '5k-zh',
             title: 'TurboCore 5K 报告（存档）',
-            description: '已停用策略 TurboCore 的存档报告（2026年退役 — 由 QQQ Basic 取代）。',
+            description: '已停用策略 TurboCore 的存档报告（2026年退役, 由 QQQ Basic 取代）。',
             url: '/files/TurboCore_5K_Report_Chinese.md',
             icon: <FileText className="w-5 h-5 text-tm-purple" />,
             type: '报告',
@@ -155,7 +155,7 @@ export function EducationCenter() {
         {
             id: 'pro-5k-zh',
             title: 'TurboCore Pro 5K 报告（存档）',
-            description: '已停用策略 TurboCore Pro 的存档 5K 报告（2026年退役 — 更名为 QQQ Basic）。',
+            description: '已停用策略 TurboCore Pro 的存档 5K 报告（2026年退役, 更名为 QQQ Basic）。',
             url: '/pro_files/TurboCore-Pro-5K-Report-Chinese.md',
             icon: <FileText className="w-5 h-5 text-tm-purple" />,
             type: '报告',
@@ -164,7 +164,7 @@ export function EducationCenter() {
         {
             id: 'pro-report-zh',
             title: 'TurboCore Pro 主要报告（存档）',
-            description: '已停用策略 TurboCore Pro 的存档研究报告（2026年退役 — 更名为 QQQ Basic）。',
+            description: '已停用策略 TurboCore Pro 的存档研究报告（2026年退役, 更名为 QQQ Basic）。',
             url: '/pro_files/TurboCore_Pro_报告_中文.md',
             icon: <BookOpen className="w-5 h-5 text-tm-blue" />,
             type: '分析',
@@ -173,7 +173,7 @@ export function EducationCenter() {
         {
             id: 'pro-comp-zh',
             title: 'TurboCore Pro 2026 竞争分析报告（存档）',
-            description: '已停用策略 TurboCore Pro 的存档竞争分析（2026年退役 — 更名为 QQQ Basic）。',
+            description: '已停用策略 TurboCore Pro 的存档竞争分析（2026年退役, 更名为 QQQ Basic）。',
             url: '/pro_files/TurboCore-Pro-竞争报告-2026-Chinese.md',
             icon: <FileText className="w-5 h-5 text-tm-purple" />,
             type: '分析',

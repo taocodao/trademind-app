@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
  * GET /api/media-kit/assets
  * Returns a unified media library:
  *   1. Admin-uploaded assets from media_kit_assets DB table (with full metadata)
- *   2. Existing Vercel Blob files not in DB (hero videos, etc.) — shown with path-derived names
+ *   2. Existing Vercel Blob files not in DB (hero videos, etc.), shown with path-derived names
  *
  * DB assets take priority: if a blob_path already has a DB entry, it is NOT duplicated.
  */

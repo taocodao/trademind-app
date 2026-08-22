@@ -2,7 +2,7 @@
  * Winback Cron
  * ============
  * GET /api/cron/winback
- * Schedule: 0 14 * * *  (9 AM ET daily — same as trial-warning)
+ * Schedule: 0 14 * * *  (9 AM ET daily, same as trial-warning)
  *
  * Processes the scheduled_messages queue. Currently handles 'winback'
  * type DMs sent 48h after trial deactivation.
@@ -22,7 +22,7 @@ const UPGRADE_URL = process.env.NEXT_PUBLIC_APP_URL
     : 'https://trademind.bot/upgrade';
 
 const WINBACK_MESSAGES: Record<string, string> = {
-    default: `Hey — noticed you recently left TradeMind.
+    default: `Hey, noticed you recently left TradeMind.
 
 If you're still following markets: TurboCore's regime detection has been actively protecting capital during recent volatility. The signals kept running while you were gone.
 
@@ -51,13 +51,13 @@ async function buildDay7DynamicMessage(): Promise<string> {
 ${signalLine}
 
 Here's the system you've been running on:
-• **CAGR 27.8%** over 7 years (2018–2024 backtest)
-• **Max Drawdown -5.1%** — vs TQQQ -83% in 2022
-• **Win Rate 86%** — 6 of 7 years positive
+• **CAGR 27.8%** over 7 years (2018 to 2024 backtest)
+• **Max Drawdown -5.1%**, vs TQQQ -83% in 2022
+• **Win Rate 86%**, 6 of 7 years positive
 
 Full track record: trademind.bot/results
 
-If you're finding value, type **!review** in chat — it takes 30 seconds and helps other traders find us.
+If you're finding value, type **!review** in chat, it takes 30 seconds and helps other traders find us.
 
 23 days left in your trial. Plans from $29/mo: ${UPGRADE_URL}
 

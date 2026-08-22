@@ -32,7 +32,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         let event: any;
         const secret = process.env.WHOP_WEBHOOK_SECRET ?? '';
         if (!secret) {
-            console.warn('[Whop Webhook] WHOP_WEBHOOK_SECRET not set — skipping verification');
+            console.warn('[Whop Webhook] WHOP_WEBHOOK_SECRET not set, skipping verification');
             event = JSON.parse(body);
         } else {
             try {
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
                     whopClient.webhooks.unwrap(body, { headers: headersObj })
                 );
             } catch (sigErr: any) {
-                // Signature failed — try parsing anyway and log for debugging
+                // Signature failed, try parsing anyway and log for debugging
                 console.error('[Whop Webhook] Signature verification failed:', sigErr.message, '| Attempting raw parse for debug');
                 try { event = JSON.parse(body); }
                 catch { return NextResponse.json({ error: 'Invalid signature and invalid JSON' }, { status: 401 }); }
@@ -60,18 +60,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         console.log(`[Whop Webhook] event="${action}" user=${userId} email=${userEmail}`);
 
         switch (action) {
-            // Membership activated (dot notation — Whop v1 current)
+            // Membership activated (dot notation, Whop v1 current)
             case 'membership.activated':
             // Legacy underscore fallback
             case 'membership_activated':
                 await handleMemberActivated(data, body);
                 break;
 
-            // Payment succeeded — also trigger activation in case membership event is missed
+            // Payment succeeded, also trigger activation in case membership event is missed
             case 'payment.succeeded':
             case 'payment_succeeded':
                 console.log(`[Whop Webhook] Payment succeeded for ${userId} (${userEmail})`);
-                // payment.succeeded fires before membership.activated — activation handled there
+                // payment.succeeded fires before membership.activated, activation handled there
                 break;
 
             // Membership deactivated
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
                 if (data.cancel_at_period_end === true) {
                     await sendWhopDM(
                         userId,
-                        `Hey — we noticed you turned off renewal. Before your access ends, reply "deal" for 30% off your next month, or "pause" to hold your spot for 30 days at no charge.`
+                        `Hey, we noticed you turned off renewal. Before your access ends, reply "deal" for 30% off your next month, or "pause" to hold your spot for 30 days at no charge.`
                     ).catch(() => {});
                 }
                 break;
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
                 break;
 
             default:
-                console.log(`[Whop Webhook] Unhandled event: "${action}" — full payload keys: ${Object.keys(event).join(', ')}`);
+                console.log(`[Whop Webhook] Unhandled event: "${action}", full payload keys: ${Object.keys(event).join(', ')}`);
         }
 
         // Log to whop_events for analytics (non-fatal)
@@ -126,21 +126,21 @@ async function handleMemberActivated(data: any, rawBody: string) {
     //   60-day $20  → "trademind-algo-signals-60day"
     //
     // We search the FULL raw payload JSON as a string so it doesn't matter which
-    // nested field Whop uses — if the slug is anywhere in the payload, we find it.
+    // nested field Whop uses, if the slug is anywhere in the payload, we find it.
     const SLUG_60 = 'trademind-algo-signals-60day';
     const SLUG_30 = 'trademind-algo-signals-30day';
 
     const rawBodyStr = typeof rawBody === 'string' ? rawBody : JSON.stringify(data);
     const is60Day = rawBodyStr.includes(SLUG_60);
     const is30Day = rawBodyStr.includes(SLUG_30);
-    const trialDays = is60Day ? 60 : 30;  // hardcoded — only two products exist
+    const trialDays = is60Day ? 60 : 30;  // hardcoded, only two products exist
 
     // Also extract slug for tier mapping and logging
     const productSlug = is60Day ? SLUG_60 : is30Day ? SLUG_30 : (extractProductSlug(data) || '');
     const planId      = data.plan_id ?? data.plan?.id ?? data.membership?.plan_id ?? '';
     const slugOrId    = productSlug || planId;
 
-    console.log(`[Whop Webhook] Activation — slug: "${productSlug}" trialDays=${trialDays} (is60Day=${is60Day} is30Day=${is30Day}) user: ${data.user?.id ?? data.user_id}`);
+    console.log(`[Whop Webhook] Activation, slug: "${productSlug}" trialDays=${trialDays} (is60Day=${is60Day} is30Day=${is30Day}) user: ${data.user?.id ?? data.user_id}`);
     // Full payload dump so we can verify field locations in production
     console.log('[Whop Webhook] Full payload:', rawBodyStr.slice(0, 1500));
 
@@ -186,7 +186,7 @@ async function handleMemberActivated(data: any, rawBody: string) {
     // ── Step 1: Determine the canonical user_id to write against ─────────────
     // CRITICAL: If a user_settings row already exists for this email (i.e. the
     // user logged into TradeMind via Privy before buying on Whop), we MUST update
-    // THAT row — not create a new orphan row keyed by the Whop user ID.
+    // THAT row, not create a new orphan row keyed by the Whop user ID.
     // Without this, the webhook and the Privy session write to completely separate
     // rows and the subscription never shows up in the user's dashboard.
     let canonicalUserId = userId; // default: Whop user ID (fallback for new users)
@@ -235,7 +235,7 @@ async function handleMemberActivated(data: any, rawBody: string) {
         [userId, data.member?.id ?? '', membershipId, email, name, trialEndsAt.toISOString()]
     );
 
-    // 3. Record trial conversion (legacy table — kept for existing queries)
+    // 3. Record trial conversion (legacy table, kept for existing queries)
     await query(
         `INSERT INTO trial_conversions
             (user_id, trial_source, trial_started_at, converted, converted_plan, converted_at)
@@ -250,7 +250,7 @@ async function handleMemberActivated(data: any, rawBody: string) {
     );
 
     // 3. Issue trial bonus credits ($10 or $20 depending on product)
-    // Uses isWhopTrialProduct() which matches by slug — no env vars needed.
+    // Uses isWhopTrialProduct() which matches by slug, no env vars needed.
     if (isWhopTrialProduct(slugOrId)) {
         // $20 credit for 60-day product, $10 for 30-day product
         const creditCents = trialDays === 60 ? 2000 : 1000;
@@ -278,17 +278,17 @@ Your **${trialDays}-day Full Access trial** runs until **${endDate}**. You have 
 
 **Start here:**
 
-**1. Turn on push notifications** — the TurboCore signal arrives at 3 PM ET every trading day.
+**1. Turn on push notifications**, the TurboCore signal arrives at 3 PM ET every trading day.
 
 **2. Check #morning-brief** every day at 8:15 AM ET before market open.
 
-**3. When the 3 PM signal drops** — execute in any brokerage in under 2 minutes.
+**3. When the 3 PM signal drops**, execute in any brokerage in under 2 minutes.
 
-**4. Start TurboCore 101** — the 30-minute course in the Courses tab.
+**4. Start TurboCore 101**, the 30-minute course in the Courses tab.
 
 ---
 On **${endDate}**, you'll get a magic link to continue on trademind.bot.
-Your **$${trialDays === 60 ? 20 : 10} trial fee converts to bonus subscription days** at checkout — no wasted money.
+Your **$${trialDays === 60 ? 20 : 10} trial fee converts to bonus subscription days** at checkout, no wasted money.
 
 **Plans after trial:**
 • Turbo Core + Pro  $69/mo
@@ -320,7 +320,7 @@ _Educational analysis only. Not personalized investment advice._`
          VALUES ($1, 'mid_trial_day3', NOW() + INTERVAL '3 days', $2)`,
         [
             userId,
-            `👋 Hey ${firstName} — quick check-in after your first 3 days.\n\n` +
+            `👋 Hey ${firstName}, quick check-in after your first 3 days.\n\n` +
             `You should have received your first TurboCore signals by now. ` +
             `If you missed any, type **!signal** in chat to see the latest allocation.\n\n` +
             `**A few things to try this week:**\n` +
@@ -332,7 +332,7 @@ _Educational analysis only. Not personalized investment advice._`
         ]
     ).catch(() => {});
 
-    // Day 7: dynamic — cron builds this with the actual signal from 7 days ago
+    // Day 7: dynamic, cron builds this with the actual signal from 7 days ago
     await query(
         `INSERT INTO scheduled_messages (user_id, message_type, send_at)
          VALUES ($1, 'mid_trial_day7_dynamic', NOW() + INTERVAL '7 days')`,
@@ -350,7 +350,7 @@ async function handleObserverActivated({ userId, email, firstName }: {
         ? `${process.env.NEXT_PUBLIC_APP_URL}/upgrade`
         : 'https://trademind.bot/upgrade';
 
-    // Upsert as observer tier — open-ended access (no renewal_period_end logic)
+    // Upsert as observer tier, open-ended access (no renewal_period_end logic)
     await query(
         `INSERT INTO user_settings
              (user_id, email, subscription_tier, subscription_status, billing_source, auth_provider, whop_user_id, updated_at)
@@ -361,7 +361,7 @@ async function handleObserverActivated({ userId, email, firstName }: {
         [userId, email]
     );
 
-    // FOMO welcome DM — show what paid members get, CTA to $15 trial
+    // FOMO welcome DM, show what paid members get, CTA to $15 trial
     await sendWhopDM(userId,
         `Welcome to TradeMind Observer, ${firstName}!
 
@@ -437,12 +437,12 @@ async function handleMemberCancelled(data: any) {
         console.warn('[Whop] Migration token generation failed:', e);
     }
 
-    // 4. Send migration DM (Whop DM may fail if access expired — non-fatal)
+    // 4. Send migration DM (Whop DM may fail if access expired, non-fatal)
     const name = data.user?.name ?? data.user?.username ?? '';
     const firstName = name.split(' ')[0] || 'Trader';
     await sendWhopDM(userId, buildMigrationDm(firstName, magicLink)).catch(() => {});
 
-    // 5. Send migration email (primary channel — always works)
+    // 5. Send migration email (primary channel, always works)
     const resolvedEmail = data.user?.email ?? email;
     if (process.env.RESEND_API_KEY && resolvedEmail && magicLink) {
         await sendMigrationEmail({
@@ -459,7 +459,7 @@ async function handleMemberCancelled(data: any) {
         [userId]
     ).catch(() => {});
 
-    // 7. Queue T+7 survey DM — second re-engagement touch after churn
+    // 7. Queue T+7 survey DM, second re-engagement touch after churn
     const upgradeUrl = process.env.NEXT_PUBLIC_APP_URL
         ? `${process.env.NEXT_PUBLIC_APP_URL}/upgrade`
         : 'https://trademind.bot/upgrade';
@@ -468,7 +468,7 @@ async function handleMemberCancelled(data: any) {
          VALUES ($1, 'churn_survey_day7', NOW() + INTERVAL '7 days', $2)`,
         [
             userId,
-            `Quick question — what would have made TradeMind worth keeping?\n\n` +
+            `Quick question, what would have made TradeMind worth keeping?\n\n` +
             `Reply with a number:\n` +
             `1️⃣ Price was too high\n` +
             `2️⃣ Didn't see enough signals\n` +
@@ -479,7 +479,7 @@ async function handleMemberCancelled(data: any) {
         ]
     ).catch(() => {});
 
-    console.log(`[Whop] Member deactivated: ${userId} — magic link sent`);
+    console.log(`[Whop] Member deactivated: ${userId}, magic link sent`);
 }
 
 // ── Message builders ──────────────────────────────────────────────────────────
@@ -492,18 +492,18 @@ function buildMigrationDm(firstName: string, magicLink: string | null): string {
 
 Thanks for being part of the community, ${firstName}.
 
-Your account on **trademind.bot** is already set up with your trial history. Click the link below to continue — no new signup required:
+Your account on **trademind.bot** is already set up with your trial history. Click the link below to continue, no new signup required:
 
 👉 ${link}
 
 **Choose your plan:**
-• **Turbo Core + Pro** $69/mo — TurboCore signal + IV-Switching options
-• **QQQ LEAPS**        $59/mo — ML-powered LEAPS ENTER / EXIT signals
-• **Full Access**      $100/mo — all 3 strategies (same as your trial)
+• **Turbo Core + Pro** $69/mo, TurboCore signal + IV-Switching options
+• **QQQ LEAPS**        $59/mo, ML-powered LEAPS ENTER / EXIT signals
+• **Full Access**      $100/mo, all 3 strategies (same as your trial)
 
 **Yearly plans: 30% off · 2-year: 40% off**
 
-Your trial fee ($10 or $20) converts to **bonus subscription days** — no money wasted.
+Your trial fee ($10 or $20) converts to **bonus subscription days**, no money wasted.
 
 Link valid for 7 days.
 
@@ -533,7 +533,7 @@ async function sendWelcomeEmail(params: {
         body: JSON.stringify({
             from:    'TradeMind <support@trademind.bot>',
             to:      [params.to],
-            subject: 'Welcome to TradeMind — your 30-day trial starts now',
+            subject: 'Welcome to TradeMind, your 30-day trial starts now',
             html: `
 <!DOCTYPE html>
 <html>
@@ -542,7 +542,7 @@ async function sendWelcomeEmail(params: {
   <p>Your 30-day trial is now active and runs until <strong>${endDate}</strong>.</p>
   <p><strong>What to do first:</strong></p>
   <ul>
-    <li>Turn on push notifications for Whop — that's how the 3 PM signal reaches you</li>
+    <li>Turn on push notifications for Whop, that's how the 3 PM signal reaches you</li>
     <li>Check #morning-brief on Whop every day at 8:15 AM ET</li>
     <li>Start TurboCore 101 in the Courses tab</li>
   </ul>
@@ -571,14 +571,14 @@ async function sendMigrationEmail(params: {
         body: JSON.stringify({
             from:    'TradeMind <support@trademind.bot>',
             to:      [params.to],
-            subject: 'Your TradeMind trial has ended — continue here',
+            subject: 'Your TradeMind trial has ended, continue here',
             html: `
 <!DOCTYPE html>
 <html>
 <body style="font-family:-apple-system,sans-serif;background:#0a0a0a;color:#fff;padding:32px;max-width:600px;margin:0 auto">
   <h2 style="color:#f97316">Your 30-day trial has ended</h2>
   <p>Hey ${params.name},</p>
-  <p>Thanks for trying TradeMind. Your account is already set up on trademind.bot — click below to continue, no new signup needed:</p>
+  <p>Thanks for trying TradeMind. Your account is already set up on trademind.bot, click below to continue, no new signup needed:</p>
   <a href="${params.magicLink}" style="display:inline-block;background:#7c3aed;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0;font-size:16px">
     Continue on TradeMind →
   </a>
@@ -588,7 +588,7 @@ async function sendMigrationEmail(params: {
     <li>TurboCore Pro: $49/mo</li>
     <li>Both Bundle: $69/mo</li>
   </ul>
-  <p>Your $15 trial fee converts to bonus subscription days — use code <strong>TRIALBACK15</strong> at checkout.</p>
+  <p>Your $15 trial fee converts to bonus subscription days, use code <strong>TRIALBACK15</strong> at checkout.</p>
   <p style="color:#888;font-size:12px">Link valid for 7 days. TradeMind · Educational analysis only · Not personalized investment advice</p>
 </body>
 </html>`,

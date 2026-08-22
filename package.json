@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:https": "node server.js",
+    "prebuild": "node scripts/check-dashes.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

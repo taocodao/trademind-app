@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from '@/lib/promo/auth';
 import { query } from '@/lib/db';
 
-// Simple admin check — extend with a proper role system if needed
+// Simple admin check, extend with a proper role system if needed
 const ADMIN_USER_IDS = (process.env.PROMO_ADMIN_USER_IDS || '').split(',').filter(Boolean);
 
 export async function GET(req: NextRequest) {

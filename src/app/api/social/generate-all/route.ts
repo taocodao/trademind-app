@@ -20,8 +20,8 @@ export const maxDuration = 60; // Vercel: max 60s for hobby; increase if on Pro
  * Bulk-generates all platform × template × tone permutations for a user
  * and saves each to social_post_cache.
  *
- * - Skips combinations already cached (idempotent — safe to call multiple times)
- * - Campaign template is hardcoded — written directly to cache, no OpenAI call
+ * - Skips combinations already cached (idempotent, safe to call multiple times)
+ * - Campaign template is hardcoded, written directly to cache, no OpenAI call
  * - Returns a summary: { total, skipped, generated, failed }
  *
  * Triggered once on first modal open per user (from ShareModal.tsx useEffect).
@@ -140,21 +140,21 @@ async function generateOne(
         : '\nDo NOT include any hashtags.';
     const emojiGuide    =
         strategy.emojiLevel === 'none'   ? 'Do NOT use any emojis.' :
-        strategy.emojiLevel === 'low'    ? 'Use 1–3 structural emojis maximum (✅ 💡 📊 ⚡️ 👇). Avoid money/gain emojis.' :
-        strategy.emojiLevel === 'medium' ? 'Use 3–6 emojis. Cultural/emotional context. Avoid 🚀💰📈 in combination.' :
-                                           'Use 5–10 emojis freely — this platform expects high emoji density.';
+        strategy.emojiLevel === 'low'    ? 'Use 1 to 3 structural emojis maximum (✅ 💡 📊 ⚡️ 👇). Avoid money/gain emojis.' :
+        strategy.emojiLevel === 'medium' ? 'Use 3 to 6 emojis. Cultural/emotional context. Avoid 🚀💰📈 in combination.' :
+                                           'Use 5 to 10 emojis freely, this platform expects high emoji density.';
 
     const userMessage = `Generate a ${platform} ${postMode === 'education' ? 'educational trading' : 'referral'} post.
 
 My referral/promo code: ${promoCode}
-My referral link (use this full URL in CTA, not just the code): ${strategy.linkPlacement === 'bio' || strategy.linkPlacement === 'dm_only' ? '[do not include URL — see CTA instructions below]' : referralLink}
+My referral link (use this full URL in CTA, not just the code): ${strategy.linkPlacement === 'bio' || strategy.linkPlacement === 'dm_only' ? '[do not include URL, see CTA instructions below]' : referralLink}
 CTA format to use: ${strategy.ctaFormat.replace('[URL]', referralLink).replace('[PROMOCODE]', promoCode)}
 Link placement: ${strategy.linkPlacement}
 
 Template style: ${template}
 Tone direction: ${toneDirective}
-Target length: ${strategy.optimalChars.min}–${strategy.optimalChars.max} characters.
-${!constraints.supportsLinks ? 'IMPORTANT: This platform does not support clickable links in posts. Write "link in bio" or "DM me" — never paste the raw URL.' : ''}
+Target length: ${strategy.optimalChars.min},${strategy.optimalChars.max} characters.
+${!constraints.supportsLinks ? 'IMPORTANT: This platform does not support clickable links in posts. Write "link in bio" or "DM me", never paste the raw URL.' : ''}
 
 ${emojiGuide}
 ${hashtagBlock}
@@ -166,7 +166,7 @@ Disclaimer to append at the end: "${strategy.disclaimer}"
 
 CRITICAL FORMATTING RULES:
 - Do NOT use any markdown formatting: no **bold**, no *italic*, no # headings, no backticks
-- Write in plain text only — exactly as it would appear posted on ${platform}
+- Write in plain text only, exactly as it would appear posted on ${platform}
 - Do NOT start with "As a TradeMind user" or any AI-sounding preamble
 - Make it feel like a real person who actually uses TradeMind wrote this`.trim();
 

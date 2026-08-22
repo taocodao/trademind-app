@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAccount, reverseActivity, editActivity, type ActivityType } from '@/lib/accounts';
 import { getUserId } from '@/lib/auth';
 
-// PATCH /api/accounts/[id]/activities/[activityId] — edit an activity (reverses + reapplies)
+// PATCH /api/accounts/[id]/activities/[activityId], edit an activity (reverses + reapplies)
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string; activityId: string }> }) {
     const userId = await getUserId();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -30,7 +30,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 }
 
-// DELETE /api/accounts/[id]/activities/[activityId] — delete (reverses its effect)
+// DELETE /api/accounts/[id]/activities/[activityId], delete (reverses its effect)
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string; activityId: string }> }) {
     const userId = await getUserId();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

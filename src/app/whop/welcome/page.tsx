@@ -1,21 +1,21 @@
 'use client';
 
 /**
- * /whop/welcome — Post-Checkout Welcome Page
+ * /whop/welcome, Post-Checkout Welcome Page
  * ============================================
  * Whop redirects here after a successful checkout.
  *
  * New Flow (no OTP required):
  *   1. Show success screen immediately
  *   2. Offer "Continue with Google" (one click) OR "Sign in with Email" (magic link)
- *   3. Privy handles authentication — no passcode typing required
+ *   3. Privy handles authentication, no passcode typing required
  *   4. After login: call /api/whop/link-account to merge Whop email → Privy session
  *   5. Redirect to /dashboard (authenticated + trial active)
  *
  * Why no email-entry step:
  *   Whop already captured the user's email (regardless of whether they used Google,
  *   Discord, or email to sign into Whop) and sent it to us via webhook. We don't
- *   need to ask for it again — the self-healing tier API matches by email automatically.
+ *   need to ask for it again, the self-healing tier API matches by email automatically.
  */
 
 import { useEffect, useState, useRef, Suspense } from 'react';
@@ -28,7 +28,7 @@ import { CheckCircle, Mail, Loader2, ArrowRight, Zap, Shield, Star, Chrome } fro
 type Stage =
   | 'landing'         // Initial success screen + login options
   | 'email_input'     // Ask for email (for magic link path)
-  | 'magic_sent'      // Magic link sent — tell user to check inbox
+  | 'magic_sent'      // Magic link sent, tell user to check inbox
   | 'linking'         // Calling link-account API
   | 'done';           // Redirect to dashboard
 
@@ -103,7 +103,7 @@ function WhopWelcomeContent() {
         try {
             // sendCode sends a magic link when Privy is configured for magic links,
             // or an OTP otherwise. Either way, no code-typing UI is shown here for
-            // the magic link path — user just clicks the link in their inbox.
+            // the magic link path, user just clicks the link in their inbox.
             await sendCode({ email: normalizedEmail });
             setStage('magic_sent');
         } catch (err: any) {
@@ -127,7 +127,7 @@ function WhopWelcomeContent() {
                 body: JSON.stringify({ whopEmail: privyEmail }),
             });
         } catch {
-            // Non-fatal — self-healing tier API will reconcile on first dashboard load
+            // Non-fatal, self-healing tier API will reconcile on first dashboard load
         } finally {
             setStage('done');
             await sleep(600);
@@ -162,7 +162,7 @@ function WhopWelcomeContent() {
                             </h1>
                             <p className="text-gray-400 leading-relaxed">
                                 Your <span className="text-purple-400 font-semibold">{trialDays}-day Full Access trial</span> is active.
-                                Sign in below to reach your dashboard — your trial is already linked.
+                                Sign in below to reach your dashboard, your trial is already linked.
                             </p>
                         </div>
 
@@ -247,7 +247,7 @@ function WhopWelcomeContent() {
                         <p className="text-gray-400 text-sm leading-relaxed mb-6">
                             We sent a sign-in link to{' '}
                             <span className="text-white font-medium">{email}</span>.
-                            Click the link to access your dashboard — no code needed.
+                            Click the link to access your dashboard, no code needed.
                         </p>
                         <button
                             onClick={() => { setStage('landing'); setEmail(''); setError(''); }}

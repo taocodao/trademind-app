@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
         // Only Group A platforms support direct posting
         if (!DIRECT_POST_PLATFORMS.includes(platform)) {
             return NextResponse.json(
-                { error: `${platform} direct posting is not supported — use the copy feature instead.` },
+                { error: `${platform} direct posting is not supported, use the copy feature instead.` },
                 { status: 400 }
             );
         }

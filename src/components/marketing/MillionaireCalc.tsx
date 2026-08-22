@@ -3,15 +3,15 @@
 import { useMemo, useState } from 'react';
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   MillionaireCalc — "When could $10,000 make you a millionaire?"
+   MillionaireCalc, "When could $10,000 make you a millionaire?"
    Ported 1:1 from the static landing page's age tool (public/landing/index.html):
    same rates, same math, same disclosures, plus the share bar.
    Rates are LABELED hypothetical figures (7-year model backtest, stress case,
-   QQQ buy & hold) — never a promise. Keep every label intact.
+   QQQ buy & hold), never a promise. Keep every label intact.
    ───────────────────────────────────────────────────────────────────────────── */
 
 const RATES = [
-    { label: 'TradeMind backtest', sub: '30.0%/yr · 2019–2026 · hypothetical', r: 0.30, color: '#e0a458', dash: '' },
+    { label: 'TradeMind backtest', sub: '30.0%/yr · 2019 to 2026 · hypothetical', r: 0.30, color: '#e0a458', dash: '' },
     { label: 'Half the backtest', sub: '15.0%/yr · stress case', r: 0.15, color: '#5c6577', dash: '6 5' },
     { label: 'QQQ buy & hold', sub: '13.5%/yr · same window', r: 0.135, color: '#5c8de0', dash: '' },
 ];
@@ -34,7 +34,7 @@ function ageAt(series: number[], target: number, startAge: number): number | nul
     return null;
 }
 
-const SHARE_TEXT = 'When could $10,000 make you a millionaire? I ran the numbers — every assumption labeled →';
+const SHARE_TEXT = 'When could $10,000 make you a millionaire? I ran the numbers, every assumption labeled →';
 
 export function MillionaireCalc() {
     const [age, setAge] = useState(35);
@@ -106,7 +106,7 @@ export function MillionaireCalc() {
         try {
             await navigator.clipboard.writeText(SHARE_TEXT + ' ' + decodeURIComponent(shareUrl));
             setCopied(true);
-        } catch { /* clipboard blocked — user copies manually */ }
+        } catch { /* clipboard blocked, user copies manually */ }
         setTimeout(() => setCopied(false), 1800);
     };
 
@@ -115,7 +115,7 @@ export function MillionaireCalc() {
             <div className="tm-calc-inner">
                 <div className="tm-kicker">Run your own numbers</div>
                 <h2 className="tm-calc-title">When could $10,000 make you a millionaire?</h2>
-                <p className="tm-calc-sub">One question, one answer. Type your age — the math does the rest.</p>
+                <p className="tm-calc-sub">One question, one answer. Type your age, the math does the rest.</p>
 
                 <div className="tm-ageinput">
                     <label htmlFor="tm-mAge">Your age</label>
@@ -152,7 +152,7 @@ export function MillionaireCalc() {
                 </div>
 
                 <div className="tm-gapline">
-                    At these hypothetical rates, the backtest pace reaches $1M about <b>{gapYears} years sooner</b> than buy-and-hold — whatever age you start.
+                    At these hypothetical rates, the backtest pace reaches $1M about <b>{gapYears} years sooner</b> than buy-and-hold, whatever age you start.
                 </div>
 
                 <div className="tm-sharebar">
@@ -176,8 +176,8 @@ export function MillionaireCalc() {
                 </div>
 
                 <div className="tm-calcdisc">
-                    <b>Your situation will differ.</b> This tool illustrates one hypothetical profile. Yours — income, tax status, risk tolerance, time horizon — is different, and the results shown may not be relevant to it.<br /><br />
-                    <b>Assumptions.</b> A $10,000 <b>starting balance</b> (an existing balance — not a one-year IRA contribution, which is capped at $7,000 in 2026). Constant annual returns: 30.0% = the strategy's <b>7-year model backtest</b>, 2019–2026; 15.0% = an arbitrary stress case at half that rate; 13.5% = QQQ buy-and-hold over the same 7-year window. No additions, taxes, or fees. Real returns vary year to year — the <b>order</b> of gains and losses changes outcomes, sometimes dramatically.<br /><br />
+                    <b>Your situation will differ.</b> This tool illustrates one hypothetical profile. Yours, income, tax status, risk tolerance, time horizon, is different, and the results shown may not be relevant to it.<br /><br />
+                    <b>Assumptions.</b> A $10,000 <b>starting balance</b> (an existing balance, not a one-year IRA contribution, which is capped at $7,000 in 2026). Constant annual returns: 30.0% = the strategy's <b>7-year model backtest</b>, 2019 to 2026; 15.0% = an arbitrary stress case at half that rate; 13.5% = QQQ buy-and-hold over the same 7-year window. No additions, taxes, or fees. Real returns vary year to year, the <b>order</b> of gains and losses changes outcomes, sometimes dramatically.<br /><br />
                     <b>Risks &amp; limitations.</b> These are hypothetical, backtested figures. They were not achieved by any actual account, do not represent live trading, and do not guarantee future results. Options involve substantial risk, including loss of the entire investment.
                 </div>
 
@@ -243,7 +243,7 @@ export function MillionaireCalc() {
                         </div>
                     </div>
                     <div className="tm-calcdisc">
-                        <b>Assumptions.</b> Constant annual returns: 30.0% = the strategy's <b>7-year model backtest</b>, 2019–2026 (separate from the narrated record); 13.5% = QQQ buy-and-hold over the same window; 15.0% = an arbitrary stress case at half the backtest rate. Annual compounding, contributions at year-end, no taxes or fees; “today’s dollars” deflates at 2.5%/yr. Projections stop after 20 years — extrapolating any backtest further is storytelling, not math. Hypothetical, backtested figures — not achieved by any actual account, and no guarantee of future results.
+                        <b>Assumptions.</b> Constant annual returns: 30.0% = the strategy's <b>7-year model backtest</b>, 2019 to 2026 (separate from the narrated record); 13.5% = QQQ buy-and-hold over the same window; 15.0% = an arbitrary stress case at half the backtest rate. Annual compounding, contributions at year-end, no taxes or fees; “today’s dollars” deflates at 2.5%/yr. Projections stop after 20 years, extrapolating any backtest further is storytelling, not math. Hypothetical, backtested figures, not achieved by any actual account, and no guarantee of future results.
                     </div>
                 </details>
             </div>

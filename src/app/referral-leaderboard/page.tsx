@@ -50,7 +50,7 @@ export default function ReferralLeaderboardPage() {
                         <p className="font-bold text-white text-sm mb-1">📱 On TikTok?</p>
                         <p className="text-xs text-tm-muted leading-relaxed">
                             Rank in the Top 10 and you have a built-in content hook:
-                            <em className="text-white"> "I'm a top TradeMind affiliate this month 🤑 — use code TRADEMIND"</em>
+                            <em className="text-white"> "I'm a top TradeMind affiliate this month 🤑, use code TRADEMIND"</em>
                         </p>
                     </div>
                 </div>
@@ -70,7 +70,7 @@ export default function ReferralLeaderboardPage() {
                     <div className="text-center text-tm-muted py-12 bg-tm-surface rounded-2xl border border-tm-border">
                         <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
                         <p className="font-bold text-white mb-1">No referrals yet this month</p>
-                        <p className="text-sm">Be the first — share your code!</p>
+                        <p className="text-sm">Be the first, share your code!</p>
                     </div>
                 ) : (
                     <div className="space-y-3">
@@ -113,8 +113,8 @@ export default function ReferralLeaderboardPage() {
                 <div className="bg-tm-surface border border-tm-border rounded-2xl overflow-hidden">
                     {[
                         { rank: '#1', prize: '1 full year free + Elite Affiliate badge', bg: 'bg-amber-500/10', text: 'text-amber-400' },
-                        { rank: '#2–3', prize: '6 months free + Discord VIP access', bg: 'bg-slate-400/10', text: 'text-slate-300' },
-                        { rank: '#4–10', prize: '3 months free subscription', bg: 'bg-tm-bg', text: 'text-tm-muted' },
+                        { rank: '#2 to 3', prize: '6 months free + Discord VIP access', bg: 'bg-slate-400/10', text: 'text-slate-300' },
+                        { rank: '#4 to 10', prize: '3 months free subscription', bg: 'bg-tm-bg', text: 'text-tm-muted' },
                     ].map(p => (
                         <div key={p.rank} className={`${p.bg} border-b border-tm-border last:border-0 p-4 flex items-center gap-4`}>
                             <span className={`font-black text-lg w-12 shrink-0 ${p.text}`}>{p.rank}</span>

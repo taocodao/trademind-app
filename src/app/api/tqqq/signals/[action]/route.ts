@@ -1,6 +1,6 @@
 /**
  * POST /api/tqqq/signals/execute
- * Approve & execute a TQQQ signal on Tastytrade — calls Tastytrade REST API
+ * Approve & execute a TQQQ signal on Tastytrade, calls Tastytrade REST API
  * directly from Vercel, no EC2 backend needed.
  * Body: { signalId: string, quantity?: number }
  *
@@ -56,7 +56,7 @@ async function updateSignalStatus(signalId: string, status: string, extraData: a
             body: JSON.stringify({ signalId, status, ...extraData }),
             signal: AbortSignal.timeout(5000),
         });
-    } catch { /* non-critical — signal display update */ }
+    } catch { /* non-critical, signal display update */ }
 }
 
 // ─── POST /api/tqqq/signals/[action] ─────────────────────────────────────────
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
         const userId = await getPrivyUserId();
         console.log(`[${action}] userId: ${userId}`);
 
-        // ─── TRACK ONLY — just update status on EC2 ──────────────────────
+        // ─── TRACK ONLY, just update status on EC2 ──────────────────────
         if (action === 'track') {
             await updateSignalStatus(signalId, 'track');
             return NextResponse.json({ status: 'tracked', signalId });
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // ─── EXECUTE — call Tastytrade REST API directly ─────────────────
+        // ─── EXECUTE, call Tastytrade REST API directly ─────────────────
         const tokens = await getTastytradeTokens(userId);
         if (!tokens || !tokens.accessToken || !tokens.accountNumber) {
             console.log(`[execute] No tokens for userId=${userId}`);

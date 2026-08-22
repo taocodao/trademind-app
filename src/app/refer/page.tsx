@@ -128,7 +128,7 @@ export default function ReferPage() {
                             </span>
                         </div>
                         <p className="text-xs text-zinc-400 mb-4">
-                            {t('refer_page.you_were_referred', "You were referred! Here's your")} <strong className="text-white">${rs.referralFee} {t('refer_page.total_reward', 'total reward')}</strong> {t('refer_page.applied_as_days', '— applied as free subscription days, no action needed.')}
+                            {t('refer_page.you_were_referred', "You were referred! Here's your")} <strong className="text-white">${rs.referralFee} {t('refer_page.total_reward', 'total reward')}</strong> {t('refer_page.applied_as_days', ', applied as free subscription days, no action needed.')}
                         </p>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -144,7 +144,7 @@ export default function ReferPage() {
                                         {rs.signupBonusPaid ? t('refer_page.signup_bonus_applied', '✓ Signup Bonus Applied') : t('refer_page.signup_bonus_pending', 'Signup Bonus Pending')}
                                     </div>
                                     <div className="text-xs text-zinc-400 mt-0.5">
-                                        <span className="text-purple-300 font-semibold">${half} {t('refer_page.signup_free_days', 'in free trial days')}</span> {t('refer_page.signup_extends', '— extends your trial before your first charge.')}
+                                        <span className="text-purple-300 font-semibold">${half} {t('refer_page.signup_free_days', 'in free trial days')}</span> {t('refer_page.signup_extends', ', extends your trial before your first charge.')}
                                     </div>
                                 </div>
                             </div>
@@ -158,7 +158,7 @@ export default function ReferPage() {
                                 </div>
                                 <div>
                                     <div className="text-sm font-bold text-white">
-                                        {rs.paymentBonusPaid ? t('refer_page.charge_bonus_applied', '✓ First Charge Bonus Applied') : t('refer_page.charge_bonus_pending', 'First Charge Bonus — Coming')}
+                                        {rs.paymentBonusPaid ? t('refer_page.charge_bonus_applied', '✓ First Charge Bonus Applied') : t('refer_page.charge_bonus_pending', 'First Charge Bonus, Coming')}
                                     </div>
                                     <div className="text-xs text-zinc-400 mt-0.5">
                                         <span className="text-green-400 font-semibold">${half} {t('refer_page.charge_more_days', 'more in free days')}</span> {t('refer_page.charge_auto', 'credited automatically when your first payment processes.')}
@@ -238,7 +238,7 @@ export default function ReferPage() {
                 </Link>
             </div>
 
-            {/* How It Works — Collapsible */}
+            {/* How It Works, Collapsible */}
             <div className="bg-tm-surface border border-tm-border rounded-xl overflow-hidden mb-8">
                 <button
                     onClick={() => setShowDetails(!showDetails)}
@@ -258,10 +258,10 @@ export default function ReferPage() {
                                 <div className="flex gap-4">
                                     <div className="w-8 h-8 rounded-full bg-tm-purple/20 text-tm-purple font-bold flex items-center justify-center shrink-0">1</div>
                                     <div>
-                                        <div className="font-bold text-sm mb-1">{t('refer_page.stage1_title', 'Stage 1 — Friend Signs Up (Both Get $50)')}</div>
+                                        <div className="font-bold text-sm mb-1">{t('refer_page.stage1_title', 'Stage 1, Friend Signs Up (Both Get $50)')}</div>
                                         <div className="text-xs text-tm-muted leading-relaxed">
                                             <ul className="space-y-1 list-disc list-inside">
-                                                <li><strong className="text-white">{t('refer_page.stage1_friend_gets', 'Your friend (referee)')}</strong> {t('refer_page.stage1_friend_desc', 'gets $50 worth of bonus trial days added on top of the 14-day base — no charge until the extended trial ends.')}</li>
+                                                <li><strong className="text-white">{t('refer_page.stage1_friend_gets', 'Your friend (referee)')}</strong> {t('refer_page.stage1_friend_desc', 'gets $50 worth of bonus trial days added on top of the 14-day base, no charge until the extended trial ends.')}</li>
                                                 <li><strong className="text-white">{t('refer_page.stage1_you', 'You (referrer)')}</strong> {t('refer_page.stage1_you_desc', 'get your subscription extended immediately by the equivalent $50 in free days.')}</li>
                                             </ul>
                                         </div>
@@ -270,7 +270,7 @@ export default function ReferPage() {
                                 <div className="flex gap-4">
                                     <div className="w-8 h-8 rounded-full bg-green-500/20 text-green-400 font-bold flex items-center justify-center shrink-0">2</div>
                                     <div>
-                                        <div className="font-bold text-sm mb-1">{t('refer_page.stage2_title', 'Stage 2 — First Charge (Both Get Another $50)')}</div>
+                                        <div className="font-bold text-sm mb-1">{t('refer_page.stage2_title', 'Stage 2, First Charge (Both Get Another $50)')}</div>
                                         <div className="text-xs text-tm-muted leading-relaxed">
                                             {t('refer_page.stage2_friend_desc', "When your friend's card is first charged after their trial:")}
                                             <ul className="mt-1.5 space-y-1 list-disc list-inside">
@@ -335,7 +335,7 @@ export default function ReferPage() {
                 )}
             </div>
 
-            {/* Referrals List — full width */}
+            {/* Referrals List, full width */}
             <section className="mb-8">
                 <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                     <Users className="w-5 h-5 text-blue-400" /> {t('refer_page.your_referrals', 'Your Referrals')}
@@ -385,7 +385,7 @@ export default function ReferPage() {
                 </div>
             </section>
 
-            {/* Recent Activity — full width BELOW referrals */}
+            {/* Recent Activity, full width BELOW referrals */}
             <section>
                 <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                     <Activity className="w-5 h-5 text-emerald-400" /> {t('refer_page.recent_activity', 'Recent Activity')}

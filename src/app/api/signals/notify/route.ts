@@ -22,7 +22,7 @@ export async function POST(req: Request) {
         // The fan-out mutates virtual accounts and emails users, so it requires
         // a shared secret. Plain SSE pings (no signal_id) stay open.
         // Auth accepts either the INTERNAL_API_SECRET env var or the
-        // internal_config.fanout_secret DB value — the DB path lets the EC2
+        // internal_config.fanout_secret DB value, the DB path lets the EC2
         // publishers (which already hold DATABASE_URL) authenticate without
         // a Vercel env change.
         if (signalId) {
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
 
                     // Await the fan-out so it completes before the response returns.
                     // On Vercel serverless, an un-awaited promise is killed when the
-                    // function freezes after the response — which silently dropped
+                    // function freezes after the response, which silently dropped
                     // every account execution. maxDuration=60 gives it room to finish.
                     try {
                         const fanoutResult = await fanoutSignal(signalId.toString(), {
@@ -82,7 +82,7 @@ export async function POST(req: Request) {
                 }
             } catch (err) {
                 console.error(`[Notify] Failed to fetch/process signal ${signalId}:`, err);
-                // Don't fail the request — SSE notification already sent
+                // Don't fail the request, SSE notification already sent
             }
         }
 

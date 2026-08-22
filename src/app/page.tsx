@@ -7,9 +7,11 @@ import { TrustBadges } from '@/components/marketing/TrustBadges';
 import { LegalFooter } from '@/components/marketing/LegalFooter';
 import { StoryLanding } from '@/components/marketing/story/StoryLanding';
 import { CoPilotHero } from '@/components/marketing/CoPilotHero';
+import { DisciplineSection } from '@/components/marketing/DisciplineSection';
 import { ModelTrustSection } from '@/components/marketing/ModelTrustSection';
 import { PatienceSection } from '@/components/marketing/PatienceSection';
 import { MillionaireCalc } from '@/components/marketing/MillionaireCalc';
+import { LifeSection } from '@/components/marketing/LifeSection';
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import { ArrowRight } from 'lucide-react';
@@ -90,6 +92,9 @@ export default function SinglePageMarketing() {
             {/* Static hero, slogan + co-pilot framing + trust stats */}
             <CoPilotHero />
 
+            {/* Institutional-style discipline band (P2): bridges hero to model section */}
+            <DisciplineSection />
+
             {/* The Model, Not the Hype, why signals can be trusted */}
             <ModelTrustSection />
 
@@ -108,6 +113,9 @@ export default function SinglePageMarketing() {
 
             {/* Run-your-own-numbers tool + share bar (from the static landing) */}
             <MillionaireCalc />
+
+            {/* Built-around-your-life band (P3): sits immediately before pricing */}
+            <LifeSection />
 
             {/* Conversion & Scaling Layouts */}
             <div className="w-full flex flex-col items-center justify-center z-10">

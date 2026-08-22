@@ -43,7 +43,7 @@
     "pricing": {
         "title": "Precios Transparentes.",
         "subtitle": "Sin Comisiones por AUM.",
-        "description": "Somos una plataforma de software, no un fondo de cobertura. No tomamos un porcentaje de tu riqueza. Quédate con el 100% de tus ganancias compuestas.",
+        "description": "Somos una plataforma de software, no un hedge fund. No cobramos un porcentaje de tu patrimonio, y nunca lo custodiamos. Tu dinero se queda en tu bróker, a tu nombre, bajo tu control. Te quedas con el 100 por ciento de lo que sea que componga.",
         "popular": "Más Popular",
         "billed": "Facturado anualmente o mensualmente. Cancela en cualquier momento en línea.",
         "monthly_tab": "Mensual",
@@ -120,8 +120,8 @@
         }
     },
     "referral": {
-        "title": "El Referido Anti-Fraude de $100",
-        "desc": "Dale a tus amigos una prueba gratuita de 14 días. Si se quedan, te pagamos al instante.",
+        "title": "Te pagan cuando un amigo se queda, no cuando hace clic.",
+        "desc": "Regálale a un amigo una prueba gratuita de 14 días. Si sigue suscrito a los 75 días, ambos reciben crédito. Si cancela antes, nadie cobra, eso es lo que mantiene esto honesto.",
         "btn": "Activar Código de Referido",
         "stage1_title": "Etapa 1: Activación",
         "stage1_desc": "Consigue <strong className=\"text-tm-green\">$50 de crédito</strong> cuando paguen su primer mes después de la prueba de 14 días.",

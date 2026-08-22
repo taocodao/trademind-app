@@ -51,10 +51,10 @@ export function ReferralPromoSection() {
                 </div>
 
                 <h2 className="text-3xl font-bold text-white mb-3 z-10">
-                    {t('referral.title', 'Refer a friend, you both get free months')}
+                    {t('referral.title', 'Get paid when a friend stays, not when they click.')}
                 </h2>
                 <p className="text-zinc-400 max-w-2xl mx-auto mb-2 z-10">
-                    {t('referral.desc', `Share your unique link. When a friend subscribes with your code, they get ${REFEREE_MONTHS} extra months free and you get ${REFERRER_MONTHS} months free. Both unlock once their subscription has been active for ${VESTING_DAYS} days, applied automatically as subscription credits.`)}
+                    {t('referral.desc', `Give a friend a 14 day free trial. If they are still subscribed at ${VESTING_DAYS} days, you both get credited (${REFERRER_MONTHS} months for you, ${REFEREE_MONTHS} months for them). If they cancel early, nobody gets paid, that is what keeps this honest.`)}
                 </p>
                 <p className="text-xs text-zinc-500 mb-6 z-10">
                     {t('referral.example', 'Free months are priced off each person\'s own plan and applied as credit toward future renewals.')}

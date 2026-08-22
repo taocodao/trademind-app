@@ -43,7 +43,7 @@
     "pricing": {
         "title": "Transparent Pricing.",
         "subtitle": "Zero AUM Fees.",
-        "description": "We are a software platform, not a hedge fund. We don't take a percentage of your wealth. Keep 100% of your compounding gains.",
+        "description": "We are a software platform, not a hedge fund. We don't take a percentage of your wealth, and we never hold it. Your money stays at your broker, in your name, under your control. You keep 100 percent of whatever it compounds to.",
         "popular": "Most Popular",
         "billed": "Billed annually or monthly. Cancel anytime online.",
         "monthly_tab": "Monthly",
@@ -120,8 +120,8 @@
         }
     },
     "referral": {
-        "title": "The $100 Anti-Fraud Referral",
-        "desc": "Give your friends a 14-day free trial. If they stay, you get paid.",
+        "title": "Get paid when a friend stays, not when they click.",
+        "desc": "Give a friend a 14 day free trial. If they are still subscribed at 75 days, you both get credited. If they cancel early, nobody gets paid, that is what keeps this honest.",
         "btn": "Activate Referral Code",
         "stage1_title": "Stage 1: Activation",
         "stage1_desc": "Get <strong className=\"text-tm-green\">$50 credit</strong> when they pay for their first month after the 14-day trial.",

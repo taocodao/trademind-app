@@ -114,8 +114,8 @@ export function MillionaireCalc() {
         <section className="tm-calc" id="calc">
             <div className="tm-calc-inner">
                 <div className="tm-kicker">Run your own numbers</div>
-                <h2 className="tm-calc-title">When could $10,000 make you a millionaire?</h2>
-                <p className="tm-calc-sub">One question, one answer. Type your age, the math does the rest.</p>
+                <h2 className="tm-calc-title">What does patience actually buy you?</h2>
+                <p className="tm-calc-sub">One question, one answer. Type your age and compare three labeled rates: the backtest, a stress case at half that rate, and plain buy and hold.</p>
 
                 <div className="tm-ageinput">
                     <label htmlFor="tm-mAge">Your age</label>
@@ -153,6 +153,9 @@ export function MillionaireCalc() {
 
                 <div className="tm-gapline">
                     At these hypothetical rates, the backtest pace reaches $1M about <b>{gapYears} years sooner</b> than buy-and-hold, whatever age you start.
+                </div>
+                <div className="tm-stressnote">
+                    Notice what the stress case does. Half the rate does not mean half the time, it means fifteen more years. That sensitivity is the real lesson of this tool.
                 </div>
 
                 <div className="tm-sharebar">

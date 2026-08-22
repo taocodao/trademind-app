@@ -48,7 +48,7 @@
         "billed": "Billed annually or monthly. Cancel anytime online.",
         "monthly_tab": "Monthly",
         "annual_tab": "Annually",
-        "save_badge": "SAVE",
+        "save_badge": "SAVE 30%",
         "trial_notice": "ALL TIERS INCLUDE A 14-DAY FREE TRIAL",
         "trial_notice_sub": "All plans include a 14-day free trial. Cancel anytime.",
         "loading": "Redirecting...",
@@ -65,7 +65,8 @@
                 "SMA200 Capital Preservation Gate",
                 "Automated Signal Delivery",
                 "Standard UI Experience"
-            ]
+            ],
+            "tagline": "The regime-aware ML foundation"
         },
         "turbocore_pro": {
             "name": "TurboCore Pro",
@@ -96,6 +97,10 @@
                 "Custom Portfolio Allocation Tooling",
                 "Direct Founder Office Hours"
             ]
+        },
+        "annual_only": "Annual billing only",
+        "qqq_leaps": {
+            "tagline": "ML-powered long-term options on QQQ"
         }
     },
     "education": {

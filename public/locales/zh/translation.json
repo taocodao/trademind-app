@@ -48,7 +48,7 @@
         "billed": "按年或按月计费。可随时在线取消。",
         "monthly_tab": "按月",
         "annual_tab": "按年",
-        "save_badge": "立省",
+        "save_badge": "立省 30%",
         "trial_notice": "所有层级均包含 14 天免费试用",
         "trial_notice_sub": "所有计划均包含 14 天免费试用。随时取消。",
         "loading": "正在跳转...",
@@ -65,7 +65,8 @@
                 "SMA200 资本保全防护",
                 "自动化信号推送",
                 "标准用户界面体验"
-            ]
+            ],
+            "tagline": "识别市场行情的机器学习基础"
         },
         "turbocore_pro": {
             "name": "TurboCore Pro",
@@ -96,6 +97,10 @@
                 "自定义投资组合分配工具",
                 "直接预约创始人 一对一"
             ]
+        },
+        "annual_only": "仅按年计费",
+        "qqq_leaps": {
+            "tagline": "以机器学习驱动的 QQQ 长期期权"
         }
     },
     "education": {

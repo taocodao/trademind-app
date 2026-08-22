@@ -48,7 +48,7 @@
         "billed": "Facturado anualmente o mensualmente. Cancela en cualquier momento en línea.",
         "monthly_tab": "Mensual",
         "annual_tab": "Anual",
-        "save_badge": "AHORRA",
+        "save_badge": "AHORRA 30%",
         "trial_notice": "TODOS LOS NIVELES INCLUYEN UNA PRUEBA GRATUITA DE 14 DÍAS",
         "trial_notice_sub": "Todos los planes incluyen una prueba gratuita de 14 días. Cancela en cualquier momento.",
         "loading": "Redirigiendo...",
@@ -65,7 +65,8 @@
                 "Puerta de Preservación SMA200",
                 "Entrega Automatizada de Señales",
                 "Experiencia de Interfaz Estándar"
-            ]
+            ],
+            "tagline": "La base de ML consciente del régimen"
         },
         "turbocore_pro": {
             "name": "TurboCore Pro",
@@ -96,6 +97,10 @@
                 "Herramientas de Asignación Personalizadas",
                 "Charlas Directas con el Fundador"
             ]
+        },
+        "annual_only": "Facturación anual únicamente",
+        "qqq_leaps": {
+            "tagline": "Opciones a largo plazo sobre QQQ, con motor ML"
         }
     },
     "education": {

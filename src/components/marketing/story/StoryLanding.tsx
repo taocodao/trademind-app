@@ -641,7 +641,7 @@ export function StoryLanding({ onCta, ctaLabel }: StoryLandingProps) {
                                     variant === 'silent' ? ''
                                     : k === wordIdx ? 'cur'
                                     : k < wordIdx ? 'said' : ''
-                                }>{w.w} </span>
+                                }>{(w.w.charCodeAt(0) === 0x2014 || w.w.charCodeAt(0) === 0x2013) ? ',' : w.w} </span>
                             ))
                             : <span className="tm-ticker-note">{stripFallback}</span>}
                     </div>

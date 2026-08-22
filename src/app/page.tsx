@@ -8,10 +8,12 @@ import { LegalFooter } from '@/components/marketing/LegalFooter';
 import { StoryLanding } from '@/components/marketing/story/StoryLanding';
 import { CoPilotHero } from '@/components/marketing/CoPilotHero';
 import { DisciplineSection } from '@/components/marketing/DisciplineSection';
+import { RecordSection } from '@/components/marketing/RecordSection';
 import { ModelTrustSection } from '@/components/marketing/ModelTrustSection';
 import { PatienceSection } from '@/components/marketing/PatienceSection';
 import { MillionaireCalc } from '@/components/marketing/MillionaireCalc';
 import { LifeSection } from '@/components/marketing/LifeSection';
+import { HeroCtas } from '@/components/marketing/HeroCtas';
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import { ArrowRight } from 'lucide-react';
@@ -89,11 +91,20 @@ export default function SinglePageMarketing() {
         <main className="min-h-screen flex flex-col bg-[#0A0A0F] overflow-x-hidden pt-16">
             <MarketingHeader />
 
-            {/* Static hero, slogan + co-pilot framing + trust stats */}
+            {/* Hero flow: slogan headline, extended subhead, capability cards */}
             <CoPilotHero />
 
-            {/* Institutional-style discipline band (P2): bridges hero to model section */}
+            {/* Institutional-style discipline band, compact, inside the hero flow */}
             <DisciplineSection />
+
+            {/* The record, in full: V4 backtest vs QQQ buy & hold, tooltip headers */}
+            <RecordSection />
+
+            {/* Built-around-your-life band, directly above the hero CTAs */}
+            <LifeSection />
+
+            {/* Hero CTAs: begin the story + calculator jump */}
+            <HeroCtas />
 
             {/* The Model, Not the Hype, why signals can be trusted */}
             <ModelTrustSection />
@@ -113,9 +124,6 @@ export default function SinglePageMarketing() {
 
             {/* Run-your-own-numbers tool + share bar (from the static landing) */}
             <MillionaireCalc />
-
-            {/* Built-around-your-life band (P3): sits immediately before pricing */}
-            <LifeSection />
 
             {/* Conversion & Scaling Layouts */}
             <div className="w-full flex flex-col items-center justify-center z-10">

@@ -490,14 +490,16 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
     border-bottom: 1px solid var(--s-line);
 }
 .tm-hero2-inner { max-width: 880px; margin: 0 auto; text-align: center; }
-.tm-hero2 .tm-h1 { margin: 18px 0 20px; }
+/* Hero headline is sized so the second slogan line stays on one line on
+   desktop: the two-line split is part of the approved copy. */
+.tm-hero2 .tm-h1 { margin: 18px 0 20px; font-size: clamp(34px, 4.8vw, 58px); max-width: 16em; }
 .tm-hero2 .tm-sub { max-width: 720px; margin: 0 auto; }
 
 .tm-stats {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
     background: var(--s-line); border: 1px solid var(--s-line);
     border-radius: 14px; overflow: hidden;
-    margin: 40px auto 10px; max-width: 780px;
+    margin: 40px auto 0; max-width: 780px;
 }
 .tm-stat {
     background: var(--s-panel); padding: 22px 20px 20px;
@@ -506,7 +508,7 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
 }
 .tm-stat-big {
     font-family: Georgia, 'Times New Roman', serif;
-    font-size: 40px; font-weight: 700; color: var(--s-amber); line-height: 1.05;
+    font-size: 34px; font-weight: 700; color: var(--s-amber); line-height: 1.08;
 }
 .tm-stat-label {
     font-size: 13.5px; line-height: 1.45; color: var(--s-ink);
@@ -516,7 +518,11 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
     font-size: 12.5px; line-height: 1.55; color: var(--s-ink2);
     margin-top: 2px;
 }
-.tm-stats-src { font-size: 11px; color: var(--s-ink3); margin-bottom: 34px; margin-top: 12px; }
+/* ── hero CTA block (after the life band) ── */
+.tm-heroctas {
+    padding: 72px 24px 80px; text-align: center;
+    border-bottom: 1px solid var(--s-line);
+}
 
 .tm-hero2-ctas {
     display: flex; gap: 14px; justify-content: center; align-items: center;
@@ -629,6 +635,75 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
     .tm-modelsec, .tm-patience { padding: 64px 20px; }
     .tm-hero2 { padding: 56px 20px 44px; }
     .tm-stat-big { font-size: 34px; }
+}
+
+/* ── record table (hero backtest band) ────────────────────────────────── */
+.tm-band-record .tm-band-inner { gap: 18px; }
+.tm-record-wrap { width: 100%; max-width: 860px; margin-top: 16px; }
+.tm-record { width: 100%; border-collapse: collapse; }
+.tm-record th, .tm-record td { padding: 14px 12px; }
+.tm-record thead th {
+    font-size: 12px; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--s-ink3); font-weight: 600; text-align: right;
+    border-bottom: 1px solid var(--s-line);
+}
+.tm-record thead th.tm-record-namecol { text-align: left; }
+.tm-record tbody th {
+    text-align: left; font-size: 15px; font-weight: 600; color: var(--s-ink);
+    border-bottom: 1px solid var(--s-line);
+}
+.tm-record td {
+    text-align: right; font-size: 16px;
+    font-family: ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+    border-bottom: 1px solid var(--s-line);
+}
+.tm-record-v4 td { color: var(--s-amber); font-weight: 700; }
+.tm-record-qqq th { color: var(--s-ink3); font-weight: 500; }
+.tm-record-qqq td { color: var(--s-ink3); }
+.tm-record tbody tr:last-child th, .tm-record tbody tr:last-child td { border-bottom: none; }
+
+.tm-record-foot {
+    font-size: 12.5px; color: var(--s-ink3); line-height: 1.6;
+    max-width: 720px; margin: 8px 0 0;
+}
+.tm-record-callout {
+    font-size: 15.5px; color: var(--s-ink); font-weight: 600;
+    margin: 4px 0 0; max-width: 720px;
+}
+.tm-record-cap {
+    font-size: 11.5px; color: var(--s-ink3); line-height: 1.65;
+    max-width: 760px; margin: 12px 0 0;
+}
+
+/* ── metric tooltips (hover / tap / keyboard focus) ── */
+.tm-tip {
+    background: none; border: none; padding: 0; margin: 0;
+    font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit;
+    border-bottom: 1px dotted var(--s-ink3); cursor: help; position: relative;
+}
+.tm-tip:focus-visible { outline: 2px solid var(--s-violet); outline-offset: 2px; }
+.tm-tip::after {
+    content: attr(data-tip);
+    position: absolute; top: calc(100% + 10px); left: 50%; transform: translateX(-50%);
+    width: 250px; padding: 12px 14px;
+    background: #1B1B28; border: 1px solid var(--s-line); border-radius: 10px;
+    color: var(--s-ink2); font-size: 12.5px; line-height: 1.55; font-weight: 400;
+    text-transform: none; letter-spacing: normal; text-align: left;
+    opacity: 0; pointer-events: none; transition: opacity .15s ease; z-index: 50;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+}
+.tm-tip:hover::after, .tm-tip:focus::after { opacity: 1; }
+.tm-tip-l::after { left: 0; transform: none; }
+.tm-tip-r::after { left: auto; right: 0; transform: none; }
+
+@media (max-width: 860px) {
+    .tm-band-record { padding-left: 12px; padding-right: 12px; }
+    .tm-record th, .tm-record td { padding: 8px 3px; }
+    .tm-record thead th { font-size: 9.5px; letter-spacing: .02em; }
+    .tm-record tbody th { font-size: 12px; }
+    .tm-record td { font-size: 11.5px; }
+    .tm-tip::after { width: 210px; }
 }
 
 /* ── discipline + life bands (owner P2, P3) ─────────────────────────────── */

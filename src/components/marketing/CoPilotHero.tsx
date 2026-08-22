@@ -1,9 +1,9 @@
 'use client';
 
-/* CoPilotHero — the static homepage hero. Slogan headline (kept per owner),
-   co-pilot subhead, sourced trust-stat row, and two CTAs: begin the narrated
-   deck (dispatches tm:begin-story, which StoryLanding listens for) and jump
-   to the calculator. */
+/* CoPilotHero — the static homepage hero. Two-line slogan headline (kept per
+   owner), extended co-pilot subhead, and the capability card row (fixed
+   schedule / zero emotion / five gates). The CTAs live in HeroCtas, after the
+   discipline band, the record table, and the life band. */
 
 import { useTranslation } from 'react-i18next';
 import { SECTIONS_I18N, SectionLang } from './sectionsI18n';
@@ -13,14 +13,6 @@ export function CoPilotHero() {
     const base = (i18n.language || 'en').split('-')[0];
     const lang: SectionLang = base === 'es' ? 'es' : base === 'zh' ? 'zh' : 'en';
     const c = SECTIONS_I18N[lang].hero;
-
-    const beginStory = () => {
-        document.getElementById('story')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        window.dispatchEvent(new Event('tm:begin-story'));
-    };
-    const toCalc = () => {
-        document.getElementById('calc')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
 
     return (
         <section id="hero" className="tm-story tm-hero2">
@@ -38,15 +30,6 @@ export function CoPilotHero() {
                         </div>
                     ))}
                 </div>
-                <div className="tm-stats-src">{c.statsSrc}</div>
-
-                <div className="tm-hero2-ctas">
-                    <button className="tm-play" onClick={beginStory}>{c.play}</button>
-                    <button className="tm-hero2-calc" onClick={toCalc}>{c.calcCta}</button>
-                </div>
-                <div className="tm-hint">{c.hint}</div>
-                <div className="tm-hint">{c.hintSilent}</div>
-                <div className="tm-hero2-micro">{c.micro}</div>
             </div>
         </section>
     );

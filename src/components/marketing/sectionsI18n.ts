@@ -16,7 +16,6 @@ export interface SectionsCopy {
         h1a: string; h1b: string;
         sub: string;
         stats: { big: string; label: string; clarifier: string }[];
-        statsSrc: string;
         play: string; calcCta: string; micro: string;
         hint: string; hintSilent: string;
     };
@@ -36,13 +35,25 @@ export interface SectionsCopy {
         xAxis: string;
         longest: string;
     };
-    // "Institutional-style discipline" band. Prestige framing without the
-    // "hedge fund" phrase (which is a legal-marketing trap for a public page),
-    // and without the "24/7" language (US equities and options do not trade
-    // around the clock; a careful reader will catch it).
+    // "Institutional-style discipline" band, compact form inside the hero
+    // flow. Prestige framing without the "hedge fund" phrase (which is a
+    // legal-marketing trap for a public page), and without the "24/7"
+    // language (US equities and options do not trade around the clock; a
+    // careful reader will catch it).
     discipline: {
-        kicker: string; title: string; p: string;
-        cards: { t: string; p: string }[];
+        kicker: string; title: string; p: string; close: string;
+    };
+    // "The record, in full" backtest table. The caption is load-bearing:
+    // it is the substantiation that makes showing the table defensible, and
+    // the Max DD column must keep equal visual weight with CAGR.
+    record: {
+        kicker: string; title: string;
+        cols: { total: string; cagr: string; sharpe: string; maxdd: string; calmar: string };
+        tips: { total: string; cagr: string; sharpe: string; maxdd: string; calmar: string };
+        v4Name: string; qqqName: string;
+        v4: { total: string; cagr: string; sharpe: string; maxdd: string; calmar: string };
+        qqq: { total: string; cagr: string; sharpe: string; maxdd: string; calmar: string };
+        footnote: string; callout: string; caption: string;
     };
     // "Built around your life" band. Explicitly disclaims income promises
     // while delivering the freedom framing the owner asked for.
@@ -54,27 +65,26 @@ export interface SectionsCopy {
 const EN_SECTIONS: SectionsCopy = {
     hero: {
         eyebrow: 'For the retirement account you already have',
-        h1a: 'Your retirement account is on autopilot.',
-        h1b: 'It is time for a co-pilot.',
-        sub: 'TradeMind never touches your account. It hands you the instruments. Every signal comes from a quant model with its reasoning attached, not a hunch. You still fly the plane. We just make sure you can see the whole runway.',
+        h1a: 'Your account is on autopilot',
+        h1b: 'It is time for a co-pilot to fly it higher',
+        sub: 'TradeMind never touches your account. It hands you the instruments. Every signal comes from a quant model with its reasoning attached, not a hunch. You still fly the plane. We just make sure you can see the whole runway, every session, with no opinion about what it wants to happen.',
         stats: [
             {
-                big: '71%',
-                label: 'of near retirees say they are behind on saving',
-                clarifier: 'Feeling behind is the norm, not the exception.',
+                big: 'Every session',
+                label: 'Watched on a fixed schedule',
+                clarifier: 'Hourly evaluation, one signal window each trading day, logged whether it acts or not. You see the days nothing happened too.',
             },
             {
-                big: '1/3',
-                label: 'what the typical saver actually holds, versus the average',
-                clarifier: 'Averages are lifted by a few very large accounts. Across every age group, the median 401(k) is barely a third of the average.',
+                big: 'Zero',
+                label: 'Emotional inputs in the decision',
+                clarifier: 'The model has no P&L anxiety and no need to be right. It cannot revenge-trade a loss or hold a loser hoping it comes back.',
             },
             {
                 big: '5',
-                label: 'conditions that must agree before any trade',
+                label: 'Conditions that must agree before any trade',
                 clarifier: 'Momentum, trend, volatility, regime, and a model confidence score. If one disagrees, nothing happens.',
             },
         ],
-        statsSrc: 'Sources: MarketWatch retirement survey (Dec 2022); Vanguard, How America Saves (2026).',
         play: '▶ Begin the story',
         calcCta: 'See how the co-pilot would have flown your balance →',
         micro: 'This is a long term commitment, measured in years and not weeks. We think it is worth the patience.',
@@ -113,19 +123,34 @@ const EN_SECTIONS: SectionsCopy = {
         longest: 'Longest stretch in cash: 22 months',
     },
     discipline: {
-        kicker: 'What a co-pilot actually does',
-        title: 'Institutional style discipline, without the institution.',
-        p: 'The model watches the market every session, on a fixed schedule, with no opinion about what it wants to happen. It does not get bored in a flat market or scared in a falling one. Five conditions have to agree before anything happens, position size is capped by rule, and the cash floor scales with volatility. That is the whole edge: not prediction, just a process that does the same thing on the worst day as on the best one.',
-        cards: [
-            { t: 'Watches every session', p: 'Hourly evaluation, one signal window per day, logged whether it acts or not. Weekends and holidays are in the record too, so you see the days nothing happened.' },
-            { t: 'No opinion, no ego', p: 'The model has no P&L anxiety and no need to be right. It cannot revenge trade a loss or hold a loser hoping it comes back.' },
-            { t: 'Risk capped by rule, not by nerve', p: 'A hard ceiling on gross exposure, a volatility scaled cash reserve, and an automatic step down after losses. The limits are in the code, not in someone\'s discipline that day.' },
-        ],
+        kicker: 'Institutional-style discipline, without the institution',
+        title: 'The edge is not prediction. It is doing the same thing on the worst day as on the best one.',
+        p: 'Position size is capped by rule. The cash reserve scales with volatility. Exposure steps down automatically after losses. None of that depends on anyone\'s discipline holding up on a bad morning. The limits are in the code, and the code does not have a bad morning.',
+        close: 'Eleven entries in five and a half years. Most weeks, the honest answer is that nothing needs doing.',
+    },
+    record: {
+        kicker: 'The record, in full',
+        title: 'Five and a half years, measured against simply holding QQQ',
+        cols: { total: 'Total return', cagr: 'CAGR', sharpe: 'Sharpe', maxdd: 'Max DD', calmar: 'Calmar' },
+        tips: {
+            total: 'Cumulative growth across the entire 5.6-year window, before any taxes. It is the most flattering way to state a result, which is why it sits next to four risk measures rather than alone.',
+            cagr: 'Compound annual growth rate: the single yearly rate that would produce the same end result over the whole period. It smooths a bumpy path into one number, which is exactly why the drawdown column matters too.',
+            sharpe: 'Return per unit of volatility. Higher means the same return arrived with a smoother ride. Below 1.0 is generally considered modest; above 1.0 is considered strong. It says nothing about the size of the worst single loss.',
+            maxdd: 'Maximum drawdown: the deepest peak-to-trough fall, measured at the worst possible entry point. This is the number that decides whether a strategy is survivable in practice, because it is the moment most people quit.',
+            calmar: 'Annual return divided by maximum drawdown. It asks a blunt question: how much return did you earn for each unit of the worst pain? Higher is better, and it punishes strategies that produce good averages through deep holes.',
+        },
+        v4Name: 'TradeMind V4',
+        qqqName: 'QQQ buy & hold',
+        v4: { total: '+464.2%', cagr: '36.3%', sharpe: '1.475', maxdd: '-17.8%', calmar: '2.04' },
+        qqq: { total: '+136.4%', cagr: '16.6%', sharpe: '0.795', maxdd: '-35.6%', calmar: '0.47' },
+        footnote: 'Worst drawdown period: TradeMind, Sep to Oct 2023. QQQ buy & hold, Nov 2021 through Dec 2022.',
+        callout: 'Our deepest hole took two months to dig. Buy-and-hold\'s took fourteen.',
+        caption: '2021 to 2026 continuous window, 5.6 years, model-priced. Hypothetical backtested performance: not achieved by any actual account, not live trading, and not a prediction. The next drawdown could be deeper. Every entry, exit, and loss in this record is in the ledger below.',
     },
     life: {
         kicker: 'Built around your life, not the other way around',
         title: 'Market exposure that does not become a second job.',
-        p: 'Eleven entries in five and a half years. Most weeks, the honest answer is that nothing needs doing. You get one email when the model acts, with the order already sized and the reasoning attached. You place it at your own broker, in your own time, and go back to your life. No screens to watch, no positions to babysit, no reason to check your phone at 10 a.m. on a Tuesday.',
+        p: 'You get one email when the model acts, with the order already sized and the reasoning attached. You place it at your own broker, in your own time, and go back to your life. No screens to watch, no positions to babysit, no reason to check your phone at ten on a Tuesday.',
         close: 'We are not promising an income. We are removing the need to sit in front of a screen to have a systematic strategy running.',
     },
 };
@@ -133,27 +158,26 @@ const EN_SECTIONS: SectionsCopy = {
 const ES_SECTIONS: SectionsCopy = {
     hero: {
         eyebrow: 'Para la cuenta de retiro que ya tienes',
-        h1a: 'Tu cuenta de retiro va en piloto automático.',
-        h1b: 'Es hora de un copiloto.',
-        sub: 'TradeMind nunca toca tu cuenta. Te entrega los instrumentos. Cada señal proviene de un modelo cuantitativo con su razonamiento adjunto, no de una corazonada. Tú sigues pilotando el avión. Nosotros solo nos aseguramos de que veas toda la pista.',
+        h1a: 'Tu cuenta va en piloto automático',
+        h1b: 'Es hora de un copiloto que la vuele más alto',
+        sub: 'TradeMind nunca toca tu cuenta. Te entrega los instrumentos. Cada señal proviene de un modelo cuantitativo con su razonamiento adjunto, no de una corazonada. Tú sigues pilotando el avión. Nosotros solo nos aseguramos de que veas toda la pista, en cada sesión, sin opinión sobre lo que quiere que pase.',
         stats: [
             {
-                big: '71%',
-                label: 'de quienes se acercan al retiro dicen ir atrasados en ahorro',
-                clarifier: 'Sentirse atrasado es la norma, no la excepción.',
+                big: 'Cada sesión',
+                label: 'Vigilado en un horario fijo',
+                clarifier: 'Evaluación por hora, una ventana de señal cada día de trading, registrada actúe o no. También ves los días en que no pasó nada.',
             },
             {
-                big: '1/3',
-                label: 'lo que el ahorrador típico realmente tiene, frente al promedio',
-                clarifier: 'Los promedios se inflan por unas pocas cuentas muy grandes. En cada grupo de edad, la mediana del 401(k) apenas alcanza un tercio del promedio.',
+                big: 'Cero',
+                label: 'Factores emocionales en la decisión',
+                clarifier: 'El modelo no tiene ansiedad de P&L ni necesidad de tener razón. No puede vengarse de una pérdida ni aferrarse a una posición perdedora esperando que vuelva.',
             },
             {
                 big: '5',
-                label: 'condiciones que deben coincidir antes de cualquier operación',
+                label: 'Condiciones que deben coincidir antes de cualquier operación',
                 clarifier: 'Momentum, tendencia, volatilidad, régimen y una puntuación de confianza del modelo. Si una discrepa, no pasa nada.',
             },
         ],
-        statsSrc: 'Fuentes: encuesta de retiro de MarketWatch (dic 2022); Vanguard, How America Saves (2026).',
         play: '▶ Comenzar la historia',
         calcCta: 'Mira cómo el copiloto habría volado tu saldo →',
         micro: 'Este es un compromiso de largo plazo, medido en años y no en semanas. Creemos que la paciencia lo vale.',
@@ -192,19 +216,34 @@ const ES_SECTIONS: SectionsCopy = {
         longest: 'Racha más larga en efectivo: 22 meses',
     },
     discipline: {
-        kicker: 'Qué hace de verdad un copiloto',
-        title: 'Disciplina de estilo institucional, sin la institución.',
-        p: 'El modelo mira el mercado en cada sesión, en un horario fijo, sin opinión sobre lo que quiere que pase. No se aburre en un mercado plano ni se asusta en uno que cae. Cinco condiciones tienen que estar de acuerdo antes de que ocurra algo, el tamaño de la posición está topado por regla, y el piso de efectivo escala con la volatilidad. Ese es todo el edge: no es predicción, es un proceso que hace lo mismo en el peor día que en el mejor.',
-        cards: [
-            { t: 'Mira cada sesión', p: 'Evaluación por hora, una ventana de señal al día, registrada actúe o no. Fines de semana y feriados también están en el registro, así ves los días en los que no pasó nada.' },
-            { t: 'Sin opinión, sin ego', p: 'El modelo no tiene ansiedad de P&L ni necesidad de tener razón. No puede vengarse de una pérdida ni aferrarse a una posición perdedora esperando que vuelva.' },
-            { t: 'Riesgo topado por regla, no por nervio', p: 'Un techo duro a la exposición bruta, una reserva de efectivo que escala con la volatilidad, y una reducción automática tras pérdidas. Los límites están en el código, no en la disciplina de alguien ese día.' },
-        ],
+        kicker: 'Disciplina de estilo institucional, sin la institución',
+        title: 'La ventaja no es predecir. Es hacer lo mismo en el peor día que en el mejor.',
+        p: 'El tamaño de la posición está topado por regla. La reserva de efectivo escala con la volatilidad. La exposición baja automáticamente después de pérdidas. Nada de eso depende de que la disciplina de alguien aguante una mala mañana. Los límites están en el código, y el código no tiene malas mañanas.',
+        close: 'Once entradas en cinco años y medio. La mayoría de las semanas, la respuesta honesta es que no hay nada que hacer.',
+    },
+    record: {
+        kicker: 'El historial, completo',
+        title: 'Cinco años y medio, medidos contra simplemente mantener QQQ',
+        cols: { total: 'Rendimiento total', cagr: 'CAGR', sharpe: 'Sharpe', maxdd: 'Max DD', calmar: 'Calmar' },
+        tips: {
+            total: 'Crecimiento acumulado durante toda la ventana de 5,6 años, antes de impuestos. Es la forma más favorecedora de presentar un resultado, y por eso aparece junto a cuatro medidas de riesgo en lugar de sola.',
+            cagr: 'Tasa de crecimiento anual compuesta: la única tasa anual que produciría el mismo resultado final durante todo el período. Suaviza un camino irregular en un solo número, y exactamente por eso la columna de drawdown también importa.',
+            sharpe: 'Rendimiento por unidad de volatilidad. Más alto significa que el mismo rendimiento llegó con un recorrido más suave. Por debajo de 1,0 se considera modesto; por encima de 1,0 se considera fuerte. No dice nada sobre el tamaño de la peor pérdida individual.',
+            maxdd: 'Drawdown máximo: la caída más profunda de pico a valle, medida desde el peor punto de entrada posible. Es el número que decide si una estrategia es sobrevivible en la práctica, porque es el momento en que la mayoría abandona.',
+            calmar: 'Rendimiento anual dividido por el drawdown máximo. Hace una pregunta directa: cuánto rendimiento ganaste por cada unidad del peor dolor. Más alto es mejor, y castiga las estrategias que logran buenos promedios a través de hoyos profundos.',
+        },
+        v4Name: 'TradeMind V4',
+        qqqName: 'QQQ buy & hold',
+        v4: { total: '+464.2%', cagr: '36.3%', sharpe: '1.475', maxdd: '-17.8%', calmar: '2.04' },
+        qqq: { total: '+136.4%', cagr: '16.6%', sharpe: '0.795', maxdd: '-35.6%', calmar: '0.47' },
+        footnote: 'Peor período de drawdown: TradeMind, sep a oct 2023. QQQ buy & hold, nov 2021 a dic 2022.',
+        callout: 'Nuestro hoyo más profundo tardó dos meses en cavarse. El de buy and hold tardó catorce.',
+        caption: 'Ventana continua 2021 a 2026, 5,6 años, con precios de modelo. Rendimiento hipotético de backtest: no logrado por ninguna cuenta real, no es trading en vivo y no es una predicción. El próximo drawdown podría ser más profundo. Cada entrada, salida y pérdida de este historial está en el registro de abajo.',
     },
     life: {
         kicker: 'Construido en torno a tu vida, no al revés',
         title: 'Exposición al mercado que no se vuelve un segundo trabajo.',
-        p: 'Once entradas en cinco años y medio. La mayoría de las semanas, la respuesta honesta es que no hay nada que hacer. Recibes un correo cuando el modelo actúa, con la orden ya dimensionada y el razonamiento adjunto. La colocas en tu propio bróker, en tu propio tiempo, y vuelves a tu vida. Sin pantallas que vigilar, sin posiciones que cuidar, sin motivo para revisar el teléfono un martes a las 10 de la mañana.',
+        p: 'Recibes un correo cuando el modelo actúa, con la orden ya dimensionada y el razonamiento adjunto. La colocas en tu propio bróker, en tu propio tiempo, y vuelves a tu vida. Sin pantallas que vigilar, sin posiciones que cuidar, sin motivo para revisar el teléfono un martes a las diez.',
         close: 'No estamos prometiendo un ingreso. Estamos quitando la necesidad de estar sentado frente a una pantalla para tener una estrategia sistemática funcionando.',
     },
 };
@@ -212,19 +251,19 @@ const ES_SECTIONS: SectionsCopy = {
 const ZH_SECTIONS: SectionsCopy = {
     hero: {
         eyebrow: '为你已有的退休账户而建',
-        h1a: '你的退休账户在自动驾驶。',
-        h1b: '是时候配一位副驾驶了。',
-        sub: 'TradeMind 从不触碰你的账户,而是把仪表交到你手中。每个信号都来自量化模型,并附上它的判断依据,而不是凭感觉。飞机仍由你驾驶,我们只是让你看清整条跑道。',
+        h1a: '你的账户在自动驾驶',
+        h1b: '是时候让副驾驶带你飞得更高',
+        sub: 'TradeMind 从不触碰你的账户,而是把仪表交到你手中。每个信号都来自量化模型,并附上它的判断依据,而不是凭感觉。飞机仍由你驾驶,我们只是让你看清整条跑道,每个交易时段如此,对结果不带任何偏好。',
         stats: [
             {
-                big: '71%',
-                label: '临近退休者表示自己储蓄落后',
-                clarifier: '觉得落后是常态,而不是例外。',
+                big: '每个时段',
+                label: '按固定时刻表盯盘',
+                clarifier: '每小时评估一次,每个交易日一个信号窗口,不论是否出手都会记录。你也能看到什么都没发生的日子。',
             },
             {
-                big: '1/3',
-                label: '中位储户实际拥有的金额,相对于平均值',
-                clarifier: '平均值被少数额度很大的账户拉高。在每个年龄段,401(k) 的中位数都仅为平均值的三分之一左右。',
+                big: '零',
+                label: '决策中的情绪输入',
+                clarifier: '模型没有盈亏焦虑,也不需要被证明是对的。它不会因为亏损而报复性交易,也不会死抱亏损仓位盼它回来。',
             },
             {
                 big: '5',
@@ -232,7 +271,6 @@ const ZH_SECTIONS: SectionsCopy = {
                 clarifier: '动量、趋势、波动率、市场状态,以及模型置信度评分。任何一项不成立,就不出手。',
             },
         ],
-        statsSrc: '来源:MarketWatch 退休调查(2022年12月);Vanguard《How America Saves》(2026)。',
         play: '▶ 开始聆听',
         calcCta: '看看副驾驶会如何驾驭你的余额 →',
         micro: '这是一份长期承诺,以年计而不是以周计。我们认为这份耐心值得。',
@@ -271,19 +309,34 @@ const ZH_SECTIONS: SectionsCopy = {
         longest: '最长空仓时段:22 个月',
     },
     discipline: {
-        kicker: '副驾驶到底在做什么',
-        title: '机构式的纪律,而不必身在机构。',
-        p: '模型每个交易时段都盯着市场,按固定时刻表运行,对结果没有任何偏好。它不会在横盘里犯困,也不会在下跌里害怕。五个条件必须同时满足才会有动作,仓位由规则封顶,现金底线随波动率放大。这就是全部的优势:不是预测,而是一个流程,最坏的一天和最好的一天做同一件事。',
-        cards: [
-            { t: '每个时段都在看', p: '每小时评估一次,每天一个信号窗口,不论是否出手都会记录。周末和假日也都在记录里,你能看到什么都没发生的日子。' },
-            { t: '没有情绪,没有面子', p: '模型没有盈亏焦虑,也不需要被证明是对的。它不会因为亏了就报复交易,也不会死抱亏损盼它回来。' },
-            { t: '风险由规则封顶,而不是由勇气封顶', p: '总敞口有硬顶,现金储备随波动率放大,亏损后自动降档。上限在代码里,不在某个人当天的自制力里。' },
-        ],
+        kicker: '机构式的纪律,而不必身在机构',
+        title: '优势不在于预测,而在于最坏的一天和最好的一天做同一件事。',
+        p: '仓位由规则封顶。现金储备随波动率放大。亏损之后敞口自动下调。这些都不依赖某个人在某个糟糕的早晨还能否保持自律。上限写在代码里,而代码没有糟糕的早晨。',
+        close: '五年半,十一次入场。大多数周,诚实的答案是什么都不需要做。',
+    },
+    record: {
+        kicker: '完整记录',
+        title: '五年半,与简单持有 QQQ 对比',
+        cols: { total: '总回报', cagr: 'CAGR', sharpe: 'Sharpe', maxdd: '最大回撤', calmar: 'Calmar' },
+        tips: {
+            total: '整个 5.6 年窗口的累计增长,税前。这是对结果最有利的表述方式,所以它旁边并列着四项风险指标,而不是单独出现。',
+            cagr: '复合年增长率:在整个期间能产生相同最终结果的单一年化利率。它把颠簸的路径抹平成一个数字,正因如此,回撤那一列同样重要。',
+            sharpe: '每单位波动率换来的回报。数值越高,说明同样的回报过程更平稳。低于 1.0 一般算普通,高于 1.0 算强。它不说明单笔最大亏损有多大。',
+            maxdd: '最大回撤:从最不利的入场点衡量,峰值到谷底最深的一次下跌。这个数字决定一个策略在实践中能否活下来,因为它就是大多数人放弃的时刻。',
+            calmar: '年回报除以最大回撤。它直接问一个问题:每承受一份最痛的亏损,你赚到多少回报。越高越好,它会惩罚那些靠深坑换来好平均值的策略。',
+        },
+        v4Name: 'TradeMind V4',
+        qqqName: 'QQQ 买入并持有',
+        v4: { total: '+464.2%', cagr: '36.3%', sharpe: '1.475', maxdd: '-17.8%', calmar: '2.04' },
+        qqq: { total: '+136.4%', cagr: '16.6%', sharpe: '0.795', maxdd: '-35.6%', calmar: '0.47' },
+        footnote: '最差回撤区间:TradeMind,2023 年 9 月到 10 月。QQQ 买入并持有,2021 年 11 月到 2022 年 12 月。',
+        callout: '我们最深的坑,两个月挖成。买入并持有的那个,花了十四个月。',
+        caption: '2021 到 2026 连续窗口,5.6 年,模型定价。假设性回测表现:没有任何真实账户实现过,不是实盘交易,也不是预测。下一次回撤可能更深。此记录中的每一次入场、出场和亏损,都记录在下方的账本里。',
     },
     life: {
         kicker: '围绕你的生活,而不是相反',
         title: '让市场敞口不变成第二份工作。',
-        p: '五年半里 11 次入场。大多数周,诚实的答案是什么都不用做。模型出手时你会收到一封邮件,里面已经算好仓位、附上理由。你在自己的券商里、按自己的时间下单,然后回到自己的生活。不用盯屏,不用照看仓位,也没有理由在周二早上十点掏手机看。',
+        p: '模型出手时你会收到一封邮件,里面已经算好仓位、附上理由。你在自己的券商里、按自己的时间下单,然后回到自己的生活。不用盯屏,不用照看仓位,也没有理由在周二上午十点掏手机看。',
         close: '我们不是在承诺收入。我们只是让你不必坐在屏幕前,也能有一个系统化策略在跑。',
     },
 };

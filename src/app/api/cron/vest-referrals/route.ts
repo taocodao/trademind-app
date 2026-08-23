@@ -1,19 +1,18 @@
 /**
  * GET /api/cron/vest-referrals
  *
- * Daily job, vests due referral rewards. A referral conversion starts as
- * 'pending' and only pays out (referrer +8mo / referee +4mo, as credits priced
- * off each recipient's own plan) after the referee stays active for
- * PRICING.referral.vestingDays (default 75).
+ * Daily job, vests due referrer day grants. A referral conversion starts as
+ * 'pending' after the referee's first paid account and pays the referrer only
+ * after the referee stays active for 75 days.
  *
- *   - Referee churned before vesting → both sides voided
- *   - Referrer over the trailing-12-month cap → excess months forfeited
+ *   - Referee churned before vesting means the referrer grant is void
+ *   - Referrer rewards are capped at 12 per trailing 12 months
  *
  * Scheduled via vercel.json cron: "0 13 * * *" (13:00 UTC = 9 AM ET).
  * Protected by CRON_SECRET header set by Vercel automatically.
  *
- * Idempotent: credit source keys embed the referral event id, and the
- * user_credits (user_id, source) unique index absorbs any double-run.
+ * The vesting implementation resolves the current designated reward account
+ * and either extends its Stripe subscription or parks days for checkout.
  */
 
 import { NextRequest, NextResponse } from 'next/server';

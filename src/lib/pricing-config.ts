@@ -124,20 +124,32 @@ export const PRICING = {
         referralBothSidesCents: parseInt(process.env.REFERRAL_CREDIT_CENTS ?? '10000', 10),
     },
 
-    // ── Vested Referral Program ──────────────────────────────────────────────
-    // Referrer earns `referrerMonths` of free service, referee earns
-    // `refereeMonths`, credited ONLY after the referee's subscription stays
-    // active for `vestingDays`. Months convert to credits at vest time from
-    // each recipient's own plan price:  credit = months / 12 × plan.annual.
-    // Anti-gaming: `maxReferrerMonthsPerYear` caps how many referrer months can
-    // vest per trailing 12 months. `compensationTrackThresholdCents` is the
-    // trailing-12-month per-referrer total we flag for review (FTC/1099 hygiene).
+    // ── Vested Referral Program (LEGACY, superseded Aug 23, 2026) ───────────
     referral: {
         referrerMonths:                 parseInt(process.env.REFERRAL_REFERRER_MONTHS  ?? '8',  10),
         refereeMonths:                  parseInt(process.env.REFERRAL_REFEREE_MONTHS   ?? '4',  10),
         vestingDays:                    parseInt(process.env.REFERRAL_VESTING_DAYS     ?? '75', 10),
         maxReferrerMonthsPerYear:       parseInt(process.env.REFERRAL_MAX_MONTHS_YEAR  ?? '12', 10),
         compensationTrackThresholdCents: parseInt(process.env.REFERRAL_COMP_THRESHOLD_CENTS ?? '100000', 10), // $1,000
+    },
+
+    // ── Day-Grant Referral Program (current, locked Aug 23, 2026) ───────────
+    // Login-based referral with a designated reward account. Per successful
+    // referral: referrer gets $100, referee gets $50, both converted into
+    // extra subscription days at the reward account's plan rate:
+    //   days = floor(dollars x 30 / effectiveMonthly)   ($21 Basic / $28 LEAPS)
+    //   $100 -> 142 days Basic / 107 LEAPS;  $50 -> 71 / 53.
+    // Referred signups get NO free month on the referred account; the referee
+    // bonus is paid as days at first payment (immediate). The referrer reward
+    // vests after `vestingDays` of the referee's subscription staying active.
+    referralDays: {
+        referrerDollars:                parseInt(process.env.REFERRAL_REFERRER_DOLLARS ?? '100', 10),
+        refereeDollars:                 parseInt(process.env.REFERRAL_REFEREE_DOLLARS  ?? '50',  10),
+        vestingDays:                    parseInt(process.env.REFERRAL_VESTING_DAYS     ?? '75',  10),
+        maxReferrerDollarsPerYear:      parseInt(process.env.REFERRAL_MAX_DOLLARS_YEAR ?? '1200', 10),
+        compensationTrackThresholdCents: parseInt(process.env.REFERRAL_COMP_THRESHOLD_CENTS ?? '100000', 10), // $1,000
+        // Parked referrer days expire if never applied to a paid subscription.
+        parkedDaysExpiryDays:           365,
     },
 } as const;
 

@@ -1,84 +1,55 @@
 /**
- * Referral System
- * ===============
- * Generates unique referral codes, tracks conversion events,
- * and issues credits to both referrer and referred user.
+ * Account-based referral day grants.
  *
- * VESTED PROGRAM (current):
- *   Referrer earns PRICING.referral.referrerMonths of free service (default 8),
- *   referee earns refereeMonths (default 4) — credited ONLY after the referee's
- *   subscription stays active for vestingDays (default 75). Months convert to
- *   credits at vest time from each recipient's own plan annual price:
- *       credit_cents = round(months / 12 × plan.annual × 100)
- *   Anti-gaming: referrer months vesting per trailing 12 months are capped at
- *   maxReferrerMonthsPerYear (default 12). Per-referrer trailing-12-month
- *   compensation is tracked against compensationTrackThresholdCents ($1,000).
- *
- * LEGACY FLAT PROGRAM: REFERRAL_CREDIT_CENTS (default $100/side, instant).
- *   Pre-existing referral_events rows are grandfathered with status='vested'.
+ * A referral is attributed at signup, the referee receives its day grant on
+ * their first paid account, and the referrer reward vests only after 75 days
+ * of the referee account remaining active.
  */
 
 import { query } from '@/lib/db';
-import { issueCredits } from '@/lib/credits';
+import { extendStripeSubscription } from '@/lib/credits';
+import { daysForDollars, getMembershipByAccount, updateMembership, type AccountMembership } from '@/lib/membership';
 import { PRICING } from '@/lib/pricing-config';
 
-// ── Code Generation ───────────────────────────────────────────────────────────
-
 function generateReferralCode(firstName: string): string {
-    const name   = (firstName || 'USER').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6);
-    const year   = new Date().getFullYear();
+    const name = (firstName || 'USER').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6);
+    const year = new Date().getFullYear();
     const suffix = Math.random().toString(36).slice(2, 5).toUpperCase();
     return `TM-${name}${year}-${suffix}`;
 }
 
-/** Ensure a user has a referral code — creates one if missing */
+/** Ensure a user has a referral code, creating one if missing. */
 export async function ensureReferralCode(userId: string, firstName: string): Promise<string> {
-    const existing = await query(
-        `SELECT referral_code FROM user_settings WHERE user_id = $1`,
-        [userId]
-    );
+    const existing = await query(`SELECT referral_code FROM user_settings WHERE user_id = $1`, [userId]);
     if (existing.rows[0]?.referral_code) return existing.rows[0].referral_code;
 
-    // Generate unique code — retry on collision (max 5 attempts)
-    let code = '';
-    for (let i = 0; i < 5; i++) {
-        code = generateReferralCode(firstName);
-        const collision = await query(
-            `SELECT 1 FROM user_settings WHERE referral_code = $1`, [code]
-        );
-        if (collision.rowCount === 0) break;
+    for (let attempt = 0; attempt < 5; attempt++) {
+        const code = generateReferralCode(firstName);
+        const collision = await query(`SELECT 1 FROM user_settings WHERE referral_code = $1`, [code]);
+        if (collision.rowCount !== 0) continue;
+        try {
+            await query(`UPDATE user_settings SET referral_code = $1 WHERE user_id = $2`, [code, userId]);
+            return code;
+        } catch (error) {
+            if (attempt === 4) throw error;
+        }
     }
-
-    await query(
-        `UPDATE user_settings SET referral_code = $1 WHERE user_id = $2`,
-        [code, userId]
-    );
-    return code;
+    throw new Error('Could not generate a unique referral code');
 }
 
-/** Look up a referrer by their code */
+/** Look up a referrer by their code. */
 export async function getReferrerByCode(code: string): Promise<{ userId: string } | null> {
     const result = await query(
         `SELECT user_id FROM user_settings WHERE referral_code = $1`,
-        [code]
+        [code.trim().toUpperCase()]
     );
     return result.rows[0] ? { userId: result.rows[0].user_id } : null;
 }
 
-// ── Conversion ────────────────────────────────────────────────────────────────
-
 /**
- * Record a referral conversion and issue credits to both sides.
- *
- * Credit amount = PRICING.credits.referralBothSidesCents
- * (env: REFERRAL_CREDIT_CENTS, default $100 = 10000 cents per side)
- *
- * Flat — no tiers. Amount is configurable at any time via env var.
- * Bonus days at redemption depend on the user's plan price (plan-specific).
- *
- * Called from:
- *   - Stripe webhook on first successful payment
- *   - Whop webhook on membership.went_valid (for trial→paid conversions)
+ * Retained only while a non-owned legacy Whop route still imports it.
+ * Referral conversion is now created at signup and advanced by
+ * handleReferralFirstPayment on the referred account's first Stripe payment.
  */
 export async function recordReferralConversion(
     referrerId: string,
@@ -87,224 +58,284 @@ export async function recordReferralConversion(
     billingSource: 'stripe' | 'whop',
     convertedPlan: string
 ): Promise<void> {
-    const cfg = PRICING.referral;
-
-    // Planned credit amounts (for display/audit) — recomputed from live pricing
-    // at vest time, so a price change between conversion and vesting is honored.
-    const plan                = resolvePlanKey(convertedPlan);
-    const referrerCreditCents = monthsToCreditCents(cfg.referrerMonths, plan);
-    const referredCreditCents = monthsToCreditCents(cfg.refereeMonths,  plan);
-
-    // Insert as PENDING — credits are issued by vestDueReferrals() only after
-    // the referee stays active for the vesting window.
-    // UNIQUE(referred_id) prevents double-crediting.
-    const inserted = await query(
-        `INSERT INTO referral_events
-            (referrer_id, referred_id, referral_code, converted_plan, converted_at,
-             referrer_credit, referred_credit, billing_source,
-             status, vests_at, referrer_months, referred_months)
-         VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7,
-                 'pending', NOW() + ($8 || ' days')::INTERVAL, $9, $10)
-         ON CONFLICT (referred_id) DO NOTHING
-         RETURNING id`,
-        [referrerId, referredId, referralCode, convertedPlan,
-         referrerCreditCents, referredCreditCents, billingSource,
-         cfg.vestingDays, cfg.referrerMonths, cfg.refereeMonths]
-    );
-
-    if (inserted.rowCount === 0) {
-        console.log(`[Referral] Skipped duplicate — ${referredId} already has a referral event`);
-        return;
-    }
-
-    console.log(
-        `[Referral] ${referrerId} → ${referredId} (${convertedPlan}): PENDING — ` +
-        `referrer +${cfg.referrerMonths}mo, referee +${cfg.refereeMonths}mo, ` +
-        `vests in ${cfg.vestingDays} days if referee stays active`
-    );
+    console.warn('[Referral] Deprecated recordReferralConversion ignored', {
+        referrerId,
+        referredId,
+        referralCode,
+        billingSource,
+        convertedPlan,
+    });
 }
 
-// ── Vesting ───────────────────────────────────────────────────────────────────
-
-/** Map a subscription tier / plan string to a PRICING.plans key */
-function resolvePlanKey(tierOrPlan: string | null | undefined): keyof typeof PRICING.plans {
-    if (tierOrPlan && tierOrPlan in PRICING.plans) return tierOrPlan as keyof typeof PRICING.plans;
-    return 'full_access';
-}
-
-/** Convert free-service months to credit cents using the recipient's plan annual price */
-function monthsToCreditCents(months: number, planKey: keyof typeof PRICING.plans): number {
-    if (months <= 0) return 0;
-    return Math.round((months / 12) * PRICING.plans[planKey].annual * 100);
-}
-
-/** Referrer months already vested in the trailing 12 months (annual-cap check) */
-async function referrerMonthsVestedTrailing12(referrerId: string): Promise<number> {
-    const r = await query(
-        `SELECT COALESCE(SUM(referrer_months), 0) AS months
-         FROM referral_events
-         WHERE referrer_id = $1 AND status = 'vested'
-           AND vested_at > NOW() - INTERVAL '12 months'`,
-        [referrerId]
-    );
-    return parseInt(r.rows[0]?.months ?? '0', 10);
+async function getOwnedMembership(accountId: number, userId: string): Promise<AccountMembership | null> {
+    const membership = await getMembershipByAccount(accountId);
+    return membership?.user_id === userId ? membership : null;
 }
 
 /**
- * Vest all due referral events. Called daily by /api/cron/vest-referrals.
- *
- * For each pending event past its vests_at:
- *   - Referee subscription no longer active → VOID both sides ('referee_churned')
- *   - Referee active → referee vests in full; referrer vests up to the remaining
- *     annual cap (excess months are forfeited, void_reason='annual_cap')
- *
- * Idempotent: credit source keys embed the event id, and the
- * user_credits (user_id, source) unique index absorbs any double-run.
+ * Resolve the referrer's currently designated reward account. If it is gone,
+ * use any of their active memberships. A designated account without a Stripe
+ * subscription remains valid, because the vested days can be parked there.
  */
+async function resolveRewardMembership(referrerId: string): Promise<AccountMembership | null> {
+    const settings = await query(
+        `SELECT referral_reward_account_id FROM user_settings WHERE user_id = $1`,
+        [referrerId]
+    );
+    const designatedId = settings.rows[0]?.referral_reward_account_id;
+    if (designatedId) {
+        const designated = await getOwnedMembership(Number(designatedId), referrerId);
+        if (designated) return designated;
+    }
+
+    const fallback = await query(
+        `SELECT m.account_id
+         FROM account_memberships m
+         JOIN accounts a ON a.id = m.account_id
+         WHERE m.user_id = $1 AND m.status = 'active' AND a.status = 'active'
+         ORDER BY m.updated_at DESC, m.id DESC
+         LIMIT 1`,
+        [referrerId]
+    );
+    if (!fallback.rows[0]?.account_id) return null;
+    return getOwnedMembership(Number(fallback.rows[0].account_id), referrerId);
+}
+
+async function referrerRewardsVestedTrailing12(referrerId: string): Promise<number> {
+    const result = await query(
+        `SELECT COUNT(*) AS total
+         FROM referral_events
+         WHERE referrer_id = $1
+           AND status = 'vested'
+           AND referrer_days > 0
+           AND vested_at > NOW() - INTERVAL '12 months'`,
+        [referrerId]
+    );
+    return Number(result.rows[0]?.total ?? 0);
+}
+
+/** Remove unclaimed parked grants after their configured 365-day window. */
+async function expireParkedReferrerDays(): Promise<void> {
+    const expired = await query(
+        `SELECT id, referrer_reward_account_id, referrer_days
+         FROM referral_events
+         WHERE status = 'vested'
+           AND referrer_reward_account_id IS NOT NULL
+           AND referrer_days > 0
+           AND referrer_applied_at < NOW() - ($1 || ' days')::INTERVAL
+           AND void_reason IS NULL`,
+        [PRICING.referralDays.parkedDaysExpiryDays]
+    );
+
+    for (const event of expired.rows) {
+        const membership = await getMembershipByAccount(Number(event.referrer_reward_account_id));
+        // A Stripe subscription means the grant was applied at checkout or directly
+        // to Stripe, so it is no longer a parked balance that can expire.
+        if (!membership || membership.stripe_subscription_id) continue;
+
+        await updateMembership(membership.account_id, {
+            pending_bonus_days: Math.max(0, membership.pending_bonus_days - Number(event.referrer_days)),
+        });
+        await query(
+            `UPDATE referral_events
+             SET status = 'void', referrer_days = 0, void_reason = 'parked_days_expired'
+             WHERE id = $1 AND status = 'vested'`,
+            [event.id]
+        );
+        console.log(`[Referral] Expired parked referrer days for event ${event.id}`);
+    }
+}
+
+/**
+ * Called by the Stripe webhook when a referred account's first payment
+ * completes. The signature is intentionally fixed for the webhook contract.
+ */
+export async function handleReferralFirstPayment(opts: {
+    referredUserId: string;
+    accountId: number;
+    plan: 'basic' | 'leaps';
+    stripeSubscriptionId: string;
+}): Promise<void> {
+    const eventResult = await query(
+        `SELECT id, status, referred_applied_at
+         FROM referral_events
+         WHERE referred_id = $1 AND referred_account_id = $2
+         LIMIT 1`,
+        [opts.referredUserId, opts.accountId]
+    );
+    const event = eventResult.rows[0];
+    if (!event) return;
+
+    if (event.referred_applied_at) {
+        console.log(`[Referral] First-payment grant already applied for ${event.id}`);
+        return;
+    }
+    if (!['attributed', 'pending'].includes(event.status)) {
+        console.log(`[Referral] Ignored first payment for ${event.id}, status=${event.status}`);
+        return;
+    }
+
+    const membership = await getOwnedMembership(opts.accountId, opts.referredUserId);
+    if (!membership) throw new Error(`Referral account ${opts.accountId} is not owned by the referred user`);
+
+    const refereeDays = daysForDollars(PRICING.referralDays.refereeDollars, opts.plan);
+    await extendStripeSubscription(opts.stripeSubscriptionId, refereeDays);
+
+    await query(
+        `UPDATE referral_events
+         SET status = 'pending',
+             converted_plan = $2,
+             converted_at = COALESCE(converted_at, NOW()),
+             vests_at = NOW() + ($3 || ' days')::INTERVAL,
+             referred_plan = $4,
+             referred_days = $5,
+             referred_applied_at = NOW()
+         WHERE id = $1`,
+        [event.id, opts.plan, PRICING.referralDays.vestingDays, opts.plan, refereeDays]
+    );
+    await updateMembership(membership.account_id, { status: 'active', stripe_subscription_id: opts.stripeSubscriptionId });
+
+    console.log(`[Referral] Applied ${refereeDays} referee days for event ${event.id}; referrer vests in ${PRICING.referralDays.vestingDays} days`);
+}
+
+/** Vest due referrer grants. Called by the protected daily cron. */
 export async function vestDueReferrals(): Promise<{ vested: number; voided: number; capped: number }> {
+    await expireParkedReferrerDays();
     const due = await query(
-        `SELECT id, referrer_id, referred_id, converted_plan, referrer_months, referred_months
+        `SELECT id, referrer_id, referred_id, referred_account_id
          FROM referral_events
          WHERE status = 'pending' AND vests_at <= NOW()
          ORDER BY vests_at ASC
          LIMIT 200`
     );
 
-    let vested = 0, voided = 0, capped = 0;
+    let vested = 0;
+    let voided = 0;
+    let capped = 0;
 
-    for (const ev of due.rows) {
-        // Referee must still be an active subscriber
-        const ref = await query(
-            `SELECT subscription_status, subscription_tier FROM user_settings WHERE user_id = $1`,
-            [ev.referred_id]
-        );
-        const refereeStatus = ref.rows[0]?.subscription_status;
-        const refereeTier   = ref.rows[0]?.subscription_tier ?? ev.converted_plan;
-
-        if (refereeStatus !== 'active') {
+    for (const event of due.rows) {
+        const refereeMembership = event.referred_account_id
+            ? await getOwnedMembership(Number(event.referred_account_id), event.referred_id)
+            : null;
+        if (!refereeMembership || refereeMembership.status !== 'active') {
             await query(
-                `UPDATE referral_events SET status = 'voided', void_reason = 'referee_churned' WHERE id = $1`,
-                [ev.id]
+                `UPDATE referral_events
+                 SET status = 'void', void_reason = 'referee_churned'
+                 WHERE id = $1 AND status = 'pending'`,
+                [event.id]
             );
             voided++;
-            console.log(`[Referral] VOIDED ${ev.id} — referee ${ev.referred_id} no longer active (${refereeStatus})`);
             continue;
         }
 
-        // Referee side always vests in full — priced off THEIR plan
-        const refereePlan   = resolvePlanKey(refereeTier);
-        const refereeCents  = monthsToCreditCents(ev.referred_months, refereePlan);
+        const previousRewards = await referrerRewardsVestedTrailing12(event.referrer_id);
+        const capReached = previousRewards >= PRICING.referralDays.maxReferrerDollarsPerYear / PRICING.referralDays.referrerDollars;
+        const rewardMembership = capReached ? null : await resolveRewardMembership(event.referrer_id);
+        const rewardDays = rewardMembership
+            ? daysForDollars(PRICING.referralDays.referrerDollars, rewardMembership.plan)
+            : 0;
 
-        // Referrer side — priced off the REFERRER's own plan, capped per trailing 12 months
-        const rfer = await query(
-            `SELECT subscription_tier FROM user_settings WHERE user_id = $1`,
-            [ev.referrer_id]
-        );
-        const referrerPlan     = resolvePlanKey(rfer.rows[0]?.subscription_tier);
-        const alreadyVested    = await referrerMonthsVestedTrailing12(ev.referrer_id);
-        const remainingCap     = Math.max(0, PRICING.referral.maxReferrerMonthsPerYear - alreadyVested);
-        const referrerMonthsIn = Math.min(ev.referrer_months, remainingCap);
-        const referrerCents    = monthsToCreditCents(referrerMonthsIn, referrerPlan);
-        const hitCap           = referrerMonthsIn < ev.referrer_months;
+        if (rewardMembership && rewardDays > 0) {
+            if (rewardMembership.stripe_subscription_id) {
+                await extendStripeSubscription(rewardMembership.stripe_subscription_id, rewardDays);
+            } else {
+                await updateMembership(rewardMembership.account_id, {
+                    pending_bonus_days: rewardMembership.pending_bonus_days + rewardDays,
+                });
+            }
+        }
 
-        if (referrerCents > 0) await issueCredits(ev.referrer_id, referrerCents, `referral_vest_${ev.id}`);
-        if (refereeCents  > 0) await issueCredits(ev.referred_id, refereeCents,  `referral_bonus_vest_${ev.id}`);
-
+        const reason = capReached ? 'annual_cap' : rewardMembership ? null : 'no_reward_account';
         await query(
             `UPDATE referral_events
-             SET status = 'vested', vested_at = NOW(),
-                 referrer_months = $2, referrer_credit = $3, referred_credit = $4,
-                 void_reason = $5
-             WHERE id = $1`,
-            [ev.id, referrerMonthsIn, referrerCents, refereeCents, hitCap ? 'annual_cap' : null]
+             SET status = 'vested',
+                 vested_at = NOW(),
+                 referrer_reward_account_id = $2,
+                 referrer_days = $3,
+                 referrer_applied_at = CASE WHEN $3 > 0 THEN NOW() ELSE NULL END,
+                 void_reason = $4
+             WHERE id = $1 AND status = 'pending'`,
+            [event.id, rewardMembership?.account_id ?? null, rewardDays, reason]
         );
-
         vested++;
-        if (hitCap) capped++;
-        console.log(
-            `[Referral] VESTED ${ev.id}: referrer +${referrerMonthsIn}mo ($${(referrerCents/100).toFixed(2)}${hitCap ? ', capped' : ''}), ` +
-            `referee +${ev.referred_months}mo ($${(refereeCents/100).toFixed(2)})`
-        );
+        if (capReached) capped++;
+        console.log(`[Referral] Vested event ${event.id}: ${rewardDays} referrer days${reason ? ` (${reason})` : ''}`);
     }
 
     return { vested, voided, capped };
 }
 
-// ── Compensation tracking (FTC/1099 hygiene) ─────────────────────────────────
-
-/**
- * Trailing-12-month referral compensation for one referrer, in cents.
- * Flagged against PRICING.referral.compensationTrackThresholdCents ($1,000)
- * so we can review heavy earners (disclosure enforcement, tax forms).
- */
+/** Trailing-12-month earned referrer value, used for review flagging. */
 export async function getReferrerCompensationTrailing12(userId: string): Promise<{
     totalCents: number;
     thresholdCents: number;
     exceedsThreshold: boolean;
 }> {
-    const r = await query(
-        `SELECT COALESCE(SUM(amount), 0) AS total
-         FROM user_credits
-         WHERE user_id = $1 AND source LIKE 'referral%'
-           AND issued_at > NOW() - INTERVAL '12 months'`,
+    const result = await query(
+        `SELECT COUNT(*) FILTER (WHERE referrer_days > 0) AS reward_count
+         FROM referral_events
+         WHERE referrer_id = $1
+           AND status = 'vested'
+           AND vested_at > NOW() - INTERVAL '12 months'`,
         [userId]
     );
-    const totalCents = parseInt(r.rows[0]?.total ?? '0', 10);
-    const thresholdCents = PRICING.referral.compensationTrackThresholdCents;
+    const totalCents = Number(result.rows[0]?.reward_count ?? 0) * PRICING.referralDays.referrerDollars * 100;
+    const thresholdCents = PRICING.referralDays.compensationTrackThresholdCents;
     return { totalCents, thresholdCents, exceedsThreshold: totalCents >= thresholdCents };
 }
 
-// ── Stats ─────────────────────────────────────────────────────────────────────
+export async function getReferralStats(userId: string) {
+    const [settingsResult, totalsResult, eventsResult, compensation] = await Promise.all([
+        query(`SELECT referral_code, referral_reward_account_id FROM user_settings WHERE user_id = $1`, [userId]),
+        query(
+            `SELECT COUNT(*) AS total,
+                    COALESCE(SUM(referrer_days) FILTER (WHERE status = 'vested'), 0) AS earned_days,
+                    COALESCE(SUM(referrer_days) FILTER (WHERE status = 'pending'), 0) AS pending_days
+             FROM referral_events WHERE referrer_id = $1`,
+            [userId]
+        ),
+        query(
+            `SELECT id, converted_at, status, vests_at, vested_at, referrer_days,
+                    referred_days, referred_plan, void_reason
+             FROM referral_events
+             WHERE referrer_id = $1
+             ORDER BY COALESCE(converted_at, vested_at) DESC NULLS LAST
+             LIMIT 10`,
+            [userId]
+        ),
+        getReferrerCompensationTrailing12(userId),
+    ]);
 
-/** Get referral stats for the account/referrals page */
-export async function getReferralStats(userId: string): Promise<{
-    code: string;
-    shareLink: string;
-    totalReferrals: number;
-    totalEarnedCents: number;
-    pendingMonths: number;
-    vestedMonths: number;
-    recentEvents: any[];
-    referrerMonthsPerReferral: number;
-    refereeMonthsPerReferral: number;
-    vestingDays: number;
-    compensation: { totalCents: number; thresholdCents: number; exceedsThreshold: boolean };
-}> {
-    const codeResult = await query(
-        `SELECT referral_code FROM user_settings WHERE user_id = $1`, [userId]
-    );
-    const code = codeResult.rows[0]?.referral_code ?? '';
-
-    const statsResult = await query(
-        `SELECT COUNT(*) AS total,
-                COALESCE(SUM(referrer_credit) FILTER (WHERE status = 'vested'), 0) AS earned,
-                COALESCE(SUM(referrer_months) FILTER (WHERE status = 'pending'), 0) AS pending_months,
-                COALESCE(SUM(referrer_months) FILTER (WHERE status = 'vested'),  0) AS vested_months
-         FROM referral_events WHERE referrer_id = $1`,
-        [userId]
-    );
-
-    const recentResult = await query(
-        `SELECT converted_plan, converted_at, status, vests_at, vested_at,
-                referrer_months, referred_months, referrer_credit, billing_source, void_reason
-         FROM referral_events WHERE referrer_id = $1
-         ORDER BY converted_at DESC LIMIT 10`,
-        [userId]
-    );
-
-    const compensation = await getReferrerCompensationTrailing12(userId);
+    const rewardAccountId = settingsResult.rows[0]?.referral_reward_account_id
+        ? Number(settingsResult.rows[0].referral_reward_account_id)
+        : null;
+    const rewardMembership = rewardAccountId ? await getOwnedMembership(rewardAccountId, userId) : null;
+    const code = settingsResult.rows[0]?.referral_code ?? '';
 
     return {
         code,
-        shareLink: `https://trademind.bot/?ref=${code}`,
-        totalReferrals:           parseInt(statsResult.rows[0]?.total          ?? '0', 10),
-        totalEarnedCents:         parseInt(statsResult.rows[0]?.earned         ?? '0', 10),
-        pendingMonths:            parseInt(statsResult.rows[0]?.pending_months ?? '0', 10),
-        vestedMonths:             parseInt(statsResult.rows[0]?.vested_months  ?? '0', 10),
-        recentEvents:             recentResult.rows,
-        referrerMonthsPerReferral: PRICING.referral.referrerMonths,
-        refereeMonthsPerReferral:  PRICING.referral.refereeMonths,
-        vestingDays:               PRICING.referral.vestingDays,
+        shareLink: code ? `https://trademind.bot/?ref=${code}` : '',
+        totalReferrals: Number(totalsResult.rows[0]?.total ?? 0),
+        totalEarnedDays: Number(totalsResult.rows[0]?.earned_days ?? 0),
+        pendingDays: Number(totalsResult.rows[0]?.pending_days ?? 0),
+        recentEvents: eventsResult.rows,
+        rewardAccount: rewardMembership ? {
+            accountId: rewardMembership.account_id,
+            plan: rewardMembership.plan,
+            status: rewardMembership.status,
+            hasStripeSubscription: Boolean(rewardMembership.stripe_subscription_id),
+            pendingBonusDays: rewardMembership.pending_bonus_days,
+        } : null,
+        program: {
+            referrerDollars: PRICING.referralDays.referrerDollars,
+            refereeDollars: PRICING.referralDays.refereeDollars,
+            vestingDays: PRICING.referralDays.vestingDays,
+            maxReferrerDollarsPerYear: PRICING.referralDays.maxReferrerDollarsPerYear,
+            referrerDaysBasic: daysForDollars(PRICING.referralDays.referrerDollars, 'basic'),
+            referrerDaysLeaps: daysForDollars(PRICING.referralDays.referrerDollars, 'leaps'),
+            refereeDaysBasic: daysForDollars(PRICING.referralDays.refereeDollars, 'basic'),
+            refereeDaysLeaps: daysForDollars(PRICING.referralDays.refereeDollars, 'leaps'),
+        },
         compensation,
     };
 }

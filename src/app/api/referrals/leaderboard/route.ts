@@ -14,14 +14,14 @@ export async function GET(req: NextRequest) {
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
         const result = await query(
-            `SELECT 
+            `SELECT
                 u.first_name,
                 u.referral_code,
-                COUNT(r.id) as referral_count,
-                COUNT(CASE WHEN r.stage1_paid OR r.annual_bonus_paid THEN 1 END) as converted_count
-             FROM referrals r
-             JOIN user_settings u ON u.user_id = r.referrer_user_id
-             WHERE r.created_at >= $1
+                COUNT(e.id) as referral_count,
+                COUNT(*) FILTER (WHERE e.status IN ('pending', 'vested')) as converted_count
+             FROM referral_events e
+             JOIN user_settings u ON u.user_id = e.referrer_id
+             WHERE e.converted_at >= $1
              GROUP BY u.user_id, u.first_name, u.referral_code
              ORDER BY referral_count DESC
              LIMIT 10`,

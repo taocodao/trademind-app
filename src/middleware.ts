@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AUTO_APPROVE_ENABLED, BROKERAGE_INTEGRATION_ENABLED } from '@/lib/feature-flags';
+import { AUTO_APPROVE_ENABLED } from '@/lib/feature-flags';
 
 // ── Configuration ──────────────────────────────────────────────────────────
 const SUPPORTED_LOCALES = ['en', 'es', 'zh'] as const;
@@ -34,13 +34,6 @@ function detectLocale(req: NextRequest): SupportedLocale {
     return DEFAULT_LOCALE;
 }
 
-// ── Brokerage integration kill switch ──────────────────────────────────────
-// The signals-only product model forbids TradeMind from connecting to or
-// executing at a user's brokerage. The underlying Tastytrade route sources
-// (src/app/api/tastytrade/*, and the auto-execute endpoint) are kept for
-// possible future reuse, but every one of their surfaces is short-circuited
-// here — status probes return { linked: false }, everything else 410 Gone —
-// so no client can reach the third-party API. Toggle in @/lib/feature-flags.
 // ── Auto-Approve kill switch ──────────────────────────────────────────────
 // Signals-only product model — the Auto-Approve feature is globally disabled.
 // GET requests to /api/settings/auto-approve are answered with a synthetic
@@ -50,22 +43,6 @@ function classifyAutoApproveRoute(pathname: string, method: string): 'read' | 'w
     if (pathname.startsWith('/api/settings/auto-approve') ||
         pathname.startsWith('/api/admin/migrate-strategy-auto-approve')) {
         return method === 'GET' ? 'read' : 'write';
-    }
-    return null;
-}
-
-function classifyBrokerageRoute(pathname: string): 'status' | 'action' | null {
-    if (pathname.startsWith('/api/tastytrade/status') ||
-        pathname.startsWith('/api/tastytrade/account') ||
-        pathname.startsWith('/api/tastytrade/balance') ||
-        pathname.startsWith('/api/tastytrade/positions') ||
-        pathname.startsWith('/api/tastytrade/live-positions') ||
-        pathname.startsWith('/api/tastytrade/transactions')) {
-        return 'status';
-    }
-    if (pathname.startsWith('/api/tastytrade')) return 'action';
-    if (pathname.startsWith('/api/internal/signals/') && pathname.includes('/auto-execute')) {
-        return 'action';
     }
     return null;
 }
@@ -107,27 +84,6 @@ export function middleware(request: NextRequest) {
         }
     }
 
-    // Brokerage integration kill switch: block every API surface at the edge.
-    if (!BROKERAGE_INTEGRATION_ENABLED) {
-        const kind = classifyBrokerageRoute(pathname);
-        if (kind === 'status') {
-            return NextResponse.json(
-                { linked: false, disabled: true, reason: 'brokerage_integration_disabled' },
-                { status: 200 },
-            );
-        }
-        if (kind === 'action') {
-            return NextResponse.json(
-                {
-                    error: 'Brokerage integration is disabled.',
-                    reason: 'brokerage_integration_disabled',
-                    detail: 'TradeMind never connects to or submits orders to your brokerage. Signals are delivered for you to enter yourself.',
-                },
-                { status: 410 },
-            );
-        }
-    }
-
     // Referral landing page route: /c/[campaign] → /[locale]/c/[campaign]
     if (!pathname.startsWith('/c/')) {
         return NextResponse.next();
@@ -150,13 +106,10 @@ export function middleware(request: NextRequest) {
 }
 
 // ── Matcher ────────────────────────────────────────────────────────────────
-// Intercept bare /c/* referral links AND the brokerage-integration surfaces.
-// Everything else passes through untouched.
+// Intercept bare /c/* referral links and the auto-approve configuration.
 export const config = {
     matcher: [
         '/c/:campaign*',
-        '/api/tastytrade/:path*',
-        '/api/internal/signals/:path*',
         '/api/settings/auto-approve/:path*',
         '/api/settings/auto-approve',
         '/api/admin/migrate-strategy-auto-approve',

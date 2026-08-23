@@ -56,6 +56,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
             if (res.ok) {
                 const data = await res.json();
                 setAccounts(data.accounts || []);
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new Event('tm-accounts-changed'));
+                }
             }
         } catch (e) {
             console.error('[AccountContext] fetch failed', e);

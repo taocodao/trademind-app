@@ -14,21 +14,7 @@ interface TradeMindActivity {
     source: 'trademind';
 }
 
-interface TastytradeTransaction {
-    id: string;
-    source: 'tastytrade';
-    symbol: string;
-    description: string;
-    action: string;
-    quantity: number;
-    price: number;
-    value: number;
-    executed_at: string;
-    order_id: string;
-    strategy: string;
-}
-
-type ActivityItem = (TradeMindActivity | TastytradeTransaction) & { _sortDate: number };
+type ActivityItem = TradeMindActivity & { _sortDate: number };
 
 function getRelativeTime(dateString: string) {
     const date = new Date(dateString);
@@ -57,7 +43,7 @@ function strategyBadge(strategy: string | null | undefined) {
     );
 }
 
-export function ActivityLog({ limit = 20, accountNumber }: { limit?: number; accountNumber?: string }) {
+export function ActivityLog({ limit = 20 }: { limit?: number }) {
     const [items, setItems] = useState<ActivityItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [clearing, setClearing] = useState(false);
@@ -68,34 +54,18 @@ export function ActivityLog({ limit = 20, accountNumber }: { limit?: number; acc
             const tmRes = await fetch(`/api/activity?limit=${limit}`);
             const tmData = tmRes.ok ? await tmRes.json() : { activities: [] };
 
-            // Fetch real Tastytrade transactions (if account number available)
-            let ttTransactions: TastytradeTransaction[] = [];
-            if (accountNumber) {
-                const ttRes = await fetch(`/api/tastytrade/transactions?accountNumber=${accountNumber}`);
-                if (ttRes.ok) {
-                    const ttData = await ttRes.json();
-                    ttTransactions = ttData.transactions || [];
-                }
-            }
-
-            // Merge and sort by date
+            // Activity records are kept in TradeMind's account-centric ledger.
             const tmItems: ActivityItem[] = (tmData.activities || []).map((a: TradeMindActivity) => ({
                 ...a,
                 _sortDate: new Date(a.created_at).getTime(),
             }));
-            const ttItems: ActivityItem[] = ttTransactions.map((t: TastytradeTransaction) => ({
-                ...t,
-                _sortDate: new Date(t.executed_at).getTime(),
-            }));
-
-            const merged = [...tmItems, ...ttItems].sort((a, b) => b._sortDate - a._sortDate);
-            setItems(merged.slice(0, limit));
+            setItems(tmItems.sort((a, b) => b._sortDate - a._sortDate).slice(0, limit));
         } catch (e) {
             console.error('Failed to load activity', e);
         } finally {
             setLoading(false);
         }
-    }, [limit, accountNumber]);
+    }, [limit]);
 
     useEffect(() => {
         fetchAll();
@@ -158,8 +128,6 @@ export function ActivityLog({ limit = 20, accountNumber }: { limit?: number; acc
                     <p className="text-tm-muted text-sm text-center py-4">No recent activity</p>
                 ) : (
                     items.map((item) => {
-                        const isTT = item.source === 'tastytrade';
-                        const ttItem = item as TastytradeTransaction;
                         const tmItem = item as TradeMindActivity;
 
                         return (
@@ -168,9 +136,7 @@ export function ActivityLog({ limit = 20, accountNumber }: { limit?: number; acc
                                 className="flex items-center justify-between text-sm border-b border-white/5 pb-3 last:border-0 last:pb-0"
                             >
                                 <div className="flex items-center gap-3">
-                                    {isTT ? (
-                                        <CheckCircle className="w-4 h-4 text-tm-green shrink-0" />
-                                    ) : tmItem.status === 'executed' ? (
+                                    {tmItem.status === 'executed' ? (
                                         <CheckCircle className="w-4 h-4 text-tm-green shrink-0" />
                                     ) : tmItem.status === 'failed' ? (
                                         <XCircle className="w-4 h-4 text-tm-red shrink-0" />
@@ -183,23 +149,16 @@ export function ActivityLog({ limit = 20, accountNumber }: { limit?: number; acc
                                                 <span className="text-white font-mono">{item.symbol}</span>
                                             )}
                                             {strategyBadge(item.strategy)}
-                                            {isTT && (
-                                                <span className="bg-emerald-500/20 text-emerald-400 px-1.5 rounded text-[10px]">
-                                                    LIVE
-                                                </span>
-                                            )}
                                         </p>
                                         <p className="text-xs text-tm-muted">
-                                            {isTT
-                                                ? `${ttItem.action} ${ttItem.quantity} @ $${ttItem.price?.toFixed(2)}`
-                                                : tmItem.status === 'executed'
-                                                    ? `Order #${tmItem.order_id}`
-                                                    : tmItem.status}
+                                            {tmItem.status === 'executed'
+                                                ? `Order #${tmItem.order_id}`
+                                                : tmItem.status}
                                         </p>
                                     </div>
                                 </div>
                                 <span className="text-xs text-tm-muted whitespace-nowrap">
-                                    {getRelativeTime(isTT ? ttItem.executed_at : tmItem.created_at)}
+                                    {getRelativeTime(tmItem.created_at)}
                                 </span>
                             </div>
                         );

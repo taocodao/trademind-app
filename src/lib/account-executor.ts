@@ -1,7 +1,7 @@
 /**
  * Account-scoped Order Generation + Execution
  * ============================================
- * Account-centric counterparts of per-user-order-generator / virtual-executor.
+ * Account-centric signal sizing and execution ledger helpers.
  * They size orders off the NAMED account's ledger (accounts / account_positions)
  * and write trades into account_activities, with (account, signal) idempotency.
  */
@@ -17,7 +17,7 @@ import {
 import { evaluateAccountPhase, type PhaseEvalResult } from '@/lib/account-phase';
 import { computeReserve, deltaCeiling, currentDeltaExposure, CASH_MGMT } from '@/lib/cash-management';
 import { tierMultiplier, leapsMaxContracts } from '@/lib/risk-tiers';
-import type { GenericSignal, SignalLeg, DeltaOrder, OptionsOrder, UserOrders } from '@/lib/per-user-order-generator';
+import type { GenericSignal, SignalLeg, DeltaOrder, OptionsOrder, AccountOrders } from '@/lib/signal-orders';
 import type { Account } from '@/lib/accounts';
 
 // ─── Order Generation ────────────────────────────────────────────────────────
@@ -30,7 +30,7 @@ export async function generateAccountOrders(
     signal: GenericSignal,
     accountId: number,
     priorNlv: number | null = null
-): Promise<UserOrders> {
+): Promise<AccountOrders> {
     const account = await getAccount(accountId);
     if (!account) throw new Error(`Account ${accountId} not found`);
 
@@ -118,7 +118,7 @@ export async function generateAccountOrders(
         phaseTransitioned: phaseEval.transitioned,
         phaseFrom: phaseEval.fromPhase,
         phaseReason: phaseEval.reason,
-    } as UserOrders & {
+    } as AccountOrders & {
         phase: string;
         phaseCap: number;
         phaseTransitioned: boolean;

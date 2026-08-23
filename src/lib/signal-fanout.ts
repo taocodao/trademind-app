@@ -25,7 +25,7 @@ import {
 import { listEntitledAccountsByStrategy } from '@/lib/membership';
 import { tierMultiplier, scaleAllocation } from '@/lib/risk-tiers';
 import { generateAccountOrders, executeAccountOrders } from '@/lib/account-executor';
-import type { GenericSignal, SignalLeg } from '@/lib/per-user-order-generator';
+import type { GenericSignal, SignalLeg } from '@/lib/signal-orders';
 import { sendSignalEmail, sendPhaseTransitionEmail } from '@/lib/signal-email';
 
 // ─── Types ───────────────────────────────────────────────────────────────────

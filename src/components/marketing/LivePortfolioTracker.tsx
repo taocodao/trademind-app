@@ -24,7 +24,6 @@ interface StrategyAccount {
 interface PortfolioSummary {
     accounts:     StrategyAccount[];
     delay_days:   number;
-    generated_at: string;
     data_through: string | null;
 }
 
@@ -229,10 +228,46 @@ export function LivePortfolioTracker() {
 
     const fetchData = async () => {
         try {
-            const res = await fetch('/api/virtual-accounts/portfolio-summary', { cache: 'no-store' });
+            const res = await fetch('/api/performance/demo', { cache: 'no-store' });
             if (res.ok) {
                 const json = await res.json();
-                setData(json);
+                const coreHistory = json.core?.history || [];
+                const proHistory = json.pro?.history || [];
+                const accounts = [
+                    {
+                        strategy: 'turbocore_core',
+                        name: json.core?.label || 'TurboCore',
+                        initial: json.core?.startingBalance || 0,
+                        nav: json.core?.currentNlv || 0,
+                        total_return: json.core?.totalReturnPct || 0,
+                        cagr: 0,
+                        max_drawdown: json.core?.maxDrawdownPct || 0,
+                        trade_count: json.core?.dayCount || 0,
+                        inception_date: coreHistory[0]?.date || null,
+                        last_data_date: coreHistory[coreHistory.length - 1]?.date || null,
+                        nav_history: coreHistory.map((point: { date: string; nlv: number }) => ({ date: point.date, nav: point.nlv })),
+                        is_placeholder: false,
+                    },
+                    {
+                        strategy: 'turbocore_pro',
+                        name: json.pro?.label || 'TurboCore Pro',
+                        initial: json.pro?.startingBalance || 0,
+                        nav: json.pro?.currentNlv || 0,
+                        total_return: json.pro?.totalReturnPct || 0,
+                        cagr: 0,
+                        max_drawdown: json.pro?.maxDrawdownPct || 0,
+                        trade_count: json.pro?.dayCount || 0,
+                        inception_date: proHistory[0]?.date || null,
+                        last_data_date: proHistory[proHistory.length - 1]?.date || null,
+                        nav_history: proHistory.map((point: { date: string; nlv: number }) => ({ date: point.date, nav: point.nlv })),
+                        is_placeholder: false,
+                    },
+                ];
+                setData({
+                    accounts,
+                    delay_days: json.dataDelayDays || 3,
+                    data_through: accounts.map(account => account.last_data_date).filter(Boolean).sort().pop() || null,
+                });
                 // Trigger count-up animation after initial render
                 setTimeout(() => setAnimated(true), 100);
             }

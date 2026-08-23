@@ -143,7 +143,7 @@ export function TurboCoreSignalCard({
   const isLinked = !!accountData?.accountNumber;
 
   // Capital basis: ALWAYS use virtual balance for allocation (shadowBalance from DB-backed virtual account)
-  // shadowBalance is passed from dashboard which fetches /api/virtual-accounts
+  // Balance is supplied by the account experience when it is available.
   const capitalBasis = shadowBalance || principalSetting || 25000;
 
   // Parse Payload Defaults
@@ -557,7 +557,7 @@ export function TurboCoreSignalCard({
 
 // --- Manual Order Panel -----------------------------------------------------
 
-// Shown when user is NOT linked to Tastytrade.
+// Manual broker-neutral order instructions.
 
 function ManualOrderPanel({
   orders,

@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useCallback, useState, useEffect, ReactNode, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { usePrivy } from '@privy-io/react-auth';
 import { SignalNotification } from '@/components/SignalNotification';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { AUTO_APPROVE_ENABLED } from '@/lib/feature-flags';
@@ -136,13 +135,6 @@ const CHANNELS = [
     'turbobounce'
 ];
 
-// Risk Limits (Hardcoded safeguards for auto-approve)
-const RISK_LIMITS = {
-    LOW: { maxCapital: 1000, minConfidence: 80, maxPositions: 3 },
-    MEDIUM: { maxCapital: 2500, minConfidence: 75, maxPositions: 5 },
-    HIGH: { maxCapital: 5000, minConfidence: 70, maxPositions: 10 },
-};
-
 export function useSignalContext() {
     return useContext(SignalContext);
 }
@@ -165,10 +157,7 @@ export function SignalProvider({ children }: SignalProviderProps) {
     }, []);
 
     const [autoSettings, setAutoSettings] = useState<AutoApproveSettings | null>(null);
-    const [buyingPower, setBuyingPower] = useState<number>(0);
-    const [openPositionCount, setOpenPositionCount] = useState<number>(0);
     const [isAutoApproving, setIsAutoApproving] = useState(false);
-    const prevBuyingPower = useRef<number>(0);
 
     // Track client-side mount
     const fetchSettings = useCallback(async () => {
@@ -184,36 +173,10 @@ export function SignalProvider({ children }: SignalProviderProps) {
         }
     }, []);
 
-    const fetchAccountData = useCallback(async () => {
-        try {
-            // Use Vercel OAuth endpoints (matches dashboard logic)
-            const acctRes = await fetch('/api/tastytrade/account');
-            if (acctRes.ok) {
-                const acctJson = await acctRes.json();
-                const accountNumber = acctJson?.data?.items?.[0]?.account?.['account-number'];
-                if (accountNumber) {
-                    const balanceRes = await fetch(`/api/tastytrade/balance?accountNumber=${accountNumber}`);
-                    if (balanceRes.ok) {
-                        const data = await balanceRes.json();
-                        const bp = parseFloat(data.buyingPower || '0');
-                        setBuyingPower(bp);
-                        setOpenPositionCount(data.positionCount || 0);
-                        console.log(`💰 Account data: BP=$${bp.toFixed(2)}`);
-                        return;
-                    }
-                }
-            }
-            console.warn('Failed to fetch account data from Vercel endpoints');
-        } catch (e) {
-            console.warn('Failed to fetch account data for auto-approve checks', e);
-        }
-    }, []);
-
     useEffect(() => {
         setIsMounted(true);
         fetchSettings();
-        fetchAccountData();
-    }, [fetchSettings, fetchAccountData]);
+    }, [fetchSettings]);
 
     const processedSignalIds = useRef(new Set<string>());
 
@@ -259,62 +222,6 @@ export function SignalProvider({ children }: SignalProviderProps) {
 
         console.log(`🤖 Auto-approve permitted for ${signal.symbol}. Linking brokerage status...`);
 
-        // Check 0: Account must have buying power (Only if connected to a brokerage)
-        // If the user hasn't successfully fetched account data (buyingPower is 0),
-        // we assume they are on a signal-only plan or their account is disconnected.
-        const isBrokerageLinked = buyingPower > 0 || openPositionCount > 0;
-
-        if (isBrokerageLinked) {
-            if (buyingPower <= 0) {
-                console.log(`❌ Auto-approve skipped: No buying power available ($${buyingPower.toFixed(2)})`);
-                return;
-            }
-
-            // Find risk level config if possible
-            let riskLevelConfig = 'MEDIUM';
-            if (autoSettings?.enabled) {
-                let strategyKey = 'diagonal';
-                if (strategy.includes('theta') || strategy.includes('put')) strategyKey = 'theta';
-                else if (strategy.includes('zebra')) strategyKey = 'zebra';
-                else if (strategy.includes('dvo') || strategy.includes('value')) strategyKey = 'dvo';
-                
-                const c = autoSettings[strategyKey] as any;
-                if (c?.riskLevel) riskLevelConfig = c.riskLevel;
-            }
-
-            // Check 1: Risk Limits
-            const limits = RISK_LIMITS[riskLevelConfig as keyof typeof RISK_LIMITS] || RISK_LIMITS.MEDIUM;
-            const confidence = signal.confidence || 0;
-            const capitalReq = signal.capital_required || signal.cost || 0;
-
-            // Wait, TurboCore strategy may bypass gamification confidence checks
-            if (!strategy.includes('turbocore')) {
-                if (confidence < limits.minConfidence) {
-                    console.log(`❌ Auto-approve skipped: Confidence ${confidence}% < ${limits.minConfidence}%`);
-                    return;
-                }
-
-                // Check 2: Capital Requirements
-                if (capitalReq > limits.maxCapital) {
-                    console.log(`❌ Auto-approve skipped: Capital $${capitalReq} > limit $${limits.maxCapital}`);
-                    return;
-                }
-            }
-
-            if (capitalReq > 0 && capitalReq > buyingPower) {
-                console.log(`❌ Auto-approve skipped: Insufficient buying power ($${buyingPower.toFixed(2)} available vs $${capitalReq} needed)`);
-                return;
-            }
-
-            // Check 3: Position Limits
-            if (!strategy.includes('turbocore') && openPositionCount >= limits.maxPositions) {
-                console.log(`❌ Auto-approve skipped: Max positions reached (${openPositionCount} >= ${limits.maxPositions})`);
-                return;
-            }
-        } else {
-            console.log(`ℹ️ Auto-approve executing virtually: No brokerage linked (Signal-only mode)`);
-        }
-
         // ✅ All checks passed — mark as processed and execute
         try {
             processedSignalIds.current.add(signal.id);
@@ -344,8 +251,6 @@ export function SignalProvider({ children }: SignalProviderProps) {
                         ? { ...s, status: 'executed', userExecution: { status: 'executed', orderId: result.orderId || null, executedAt: new Date().toISOString() } }
                         : s
                 ));
-                // Refresh account data (BP changed)
-                fetchAccountData();
             } else {
                 if (result.error && String(result.error).toLowerCase().includes('already executed')) {
                     console.log(`ℹ️ Signal ${signal.id} already executed elsewhere. Marking as executed on UI.`);
@@ -364,7 +269,7 @@ export function SignalProvider({ children }: SignalProviderProps) {
             setIsAutoApproving(false);
         }
 
-    }, [autoSettings, buyingPower, openPositionCount]);
+    }, [autoSettings]);
 
     // We removed the WS connection, so isConnected is now technically always true 
     // for compatibility with downstream components that might check it, 

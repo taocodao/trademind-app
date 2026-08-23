@@ -9,9 +9,37 @@ import {
 import Link from "next/link";
 import { useAccountContext } from "@/components/providers/AccountContext";
 import { STRATEGIES, getStrategy } from "@/lib/strategies";
-import { BROKERS, getBroker } from "@/lib/brokers";
 
 type RiskLevel = 'conservative' | 'moderate' | 'aggressive';
+
+/** Annual prices per plan (display only; source of truth is Stripe). */
+const PLAN_PRICE: Record<string, number> = { basic: 252, leaps: 336 };
+
+function membershipBadge(m?: { status: string; free_month_ends_at: string | null; current_period_end: string | null; cancel_at_period_end: boolean } | null) {
+    if (!m) return null;
+    const fmt = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    switch (m.status) {
+        case 'free_month': {
+            const days = m.free_month_ends_at ? Math.max(0, Math.ceil((new Date(m.free_month_ends_at).getTime() - Date.now()) / 86400000)) : 0;
+            return { text: `Free month - ${days} day${days !== 1 ? 's' : ''} left`, cls: 'bg-purple-500/15 text-purple-300 border-purple-500/30' };
+        }
+        case 'awaiting_payment':
+            return { text: 'Payment due', cls: 'bg-amber-500/15 text-amber-300 border-amber-500/30' };
+        case 'active':
+            return {
+                text: m.cancel_at_period_end && m.current_period_end ? `Ends ${fmt(m.current_period_end)}` : 'Active',
+                cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+            };
+        case 'past_due':
+            return { text: 'Payment failed', cls: 'bg-red-500/15 text-red-300 border-red-500/30' };
+        case 'canceled':
+            return { text: m.current_period_end ? `Canceled - access to ${fmt(m.current_period_end)}` : 'Canceled', cls: 'bg-white/10 text-tm-muted border-white/15' };
+        case 'expired':
+            return { text: 'Expired', cls: 'bg-white/10 text-tm-muted border-white/15' };
+        default:
+            return null;
+    }
+}
 
 interface AccountSummary {
     nlv: number;
@@ -26,7 +54,7 @@ interface AccountSummary {
 }
 
 export default function AccountsPage() {
-    const { ready, authenticated } = usePrivy();
+    const { ready, authenticated, user } = usePrivy();
     const router = useRouter();
     const { accounts, loading, refreshAccounts, setActiveAccountId } = useAccountContext();
 
@@ -40,13 +68,20 @@ export default function AccountsPage() {
     const [name, setName] = useState('');
     const [strategy, setStrategy] = useState(STRATEGIES[0].key);
     const [riskLevel, setRiskLevel] = useState<RiskLevel>('moderate');
-    const [broker, setBroker] = useState(BROKERS[0].key);
     const [principal, setPrincipal] = useState('');
+    const [alertEmail, setAlertEmail] = useState('');
+    const [loginEmail, setLoginEmail] = useState('');
     const [createError, setCreateError] = useState<string | null>(null);
 
     useEffect(() => {
         if (ready && !authenticated) router.push("/");
     }, [ready, authenticated, router]);
+
+    // The Privy login email is the default alert recipient for new accounts.
+    useEffect(() => {
+        const addr = (user?.email?.address as string | undefined) || '';
+        if (addr) setLoginEmail(addr);
+    }, [user]);
 
     // Load a summary per account
     useEffect(() => {
@@ -83,14 +118,17 @@ export default function AccountsPage() {
             const res = await fetch('/api/accounts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: name.trim(), strategy, riskLevel, initialPrincipal: p, broker }),
+                body: JSON.stringify({
+                    name: name.trim(), strategy, riskLevel, initialPrincipal: p,
+                    alertEmail: alertEmail.trim() || undefined,
+                }),
             });
             if (!res.ok) {
                 const d = await res.json();
                 throw new Error(d.error || 'Failed to create account');
             }
             setShowCreate(false);
-            setName(''); setPrincipal(''); setRiskLevel('moderate'); setBroker(BROKERS[0].key);
+            setName(''); setPrincipal(''); setRiskLevel('moderate'); setAlertEmail('');
             await refreshAccounts();
         } catch (e: any) {
             setCreateError(e.message);
@@ -187,11 +225,14 @@ export default function AccountsPage() {
                                             <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-white/5 text-tm-muted border border-white/10 capitalize">
                                                 {a.risk_level}
                                             </span>
-                                            {a.broker && (
-                                                <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                                                    {getBroker(a.broker)?.name || a.broker}
-                                                </span>
-                                            )}
+                                            {(() => {
+                                                const b = membershipBadge(a.membership);
+                                                return b ? (
+                                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold border ${b.cls}`}>
+                                                        {b.text}
+                                                    </span>
+                                                ) : null;
+                                            })()}
                                             {s?.phase && (
                                                 <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold border ${
                                                     s.phase === 'TARGET' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' :
@@ -215,6 +256,26 @@ export default function AccountsPage() {
                                         </button>
                                     </div>
                                 </div>
+
+                                {a.membership && (a.membership.status === 'awaiting_payment' || a.membership.status === 'expired' || a.membership.status === 'past_due') && (
+                                    <button
+                                        onClick={async () => {
+                                            setBusy(true);
+                                            try {
+                                                const res = await fetch('/api/stripe/checkout', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ accountId: a.id }),
+                                                });
+                                                const d = await res.json();
+                                                if (d.url) window.location.href = d.url;
+                                            } finally { setBusy(false); }
+                                        }}
+                                        className="w-full mt-4 py-2.5 rounded-lg font-bold bg-tm-purple hover:bg-tm-purple/90 text-white text-sm transition"
+                                    >
+                                        {a.membership.status === 'past_due' ? 'Update payment' : `Subscribe - $${PLAN_PRICE[a.membership.plan] ?? ''}/yr`}
+                                    </button>
+                                )}
 
                                 {s && (
                                     <button onClick={() => openAccount(a.id)} className="w-full mt-4 flex items-center justify-between">
@@ -284,18 +345,13 @@ export default function AccountsPage() {
                             ))}
                         </div>
 
-                        <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">Brokerage</label>
-                        <div className="grid grid-cols-2 gap-2 mb-4">
-                            {BROKERS.map((b) => (
-                                <button
-                                    key={b.key}
-                                    onClick={() => setBroker(b.key)}
-                                    className={`py-2 rounded-lg text-xs font-bold border transition ${broker === b.key ? 'bg-tm-purple/20 border-tm-purple text-white' : 'bg-white/5 border-white/10 text-tm-muted hover:text-white'}`}
-                                >
-                                    {b.name}
-                                </button>
-                            ))}
-                        </div>
+                        <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">Alert Email</label>
+                        <input
+                            type="email" value={alertEmail} onChange={(e) => setAlertEmail(e.target.value)}
+                            placeholder={loginEmail || 'Defaults to your login email'}
+                            className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-tm-purple mb-1"
+                        />
+                        <p className="text-[10px] text-tm-muted mb-4">Signal emails for this account go here. Leave blank to use your login email.</p>
 
                         <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">Initial Principal ($)</label>
                         <input
@@ -303,6 +359,10 @@ export default function AccountsPage() {
                             placeholder="e.g. 25000"
                             className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white font-mono focus:outline-none focus:border-tm-purple mb-4"
                         />
+
+                        <p className="text-[10px] text-tm-muted mb-3">
+                            Every account starts with a free month (30 days). Subscribe annually before it ends to keep signals running. Each account has its own membership.
+                        </p>
 
                         {createError && <p className="text-red-400 text-xs mb-3">{createError}</p>}
 

@@ -3,6 +3,18 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 
+export interface AccountMembershipInfo {
+    id: number;
+    account_id: number;
+    plan: 'basic' | 'leaps';
+    status: 'free_month' | 'awaiting_payment' | 'active' | 'past_due' | 'canceled' | 'expired';
+    free_month_ends_at: string | null;
+    current_period_end: string | null;
+    cancel_at_period_end: boolean;
+    referred_signup: boolean;
+    pending_bonus_days: number;
+}
+
 export interface Account {
     id: number;
     user_id: string;
@@ -10,10 +22,13 @@ export interface Account {
     strategy: string;
     risk_level: 'conservative' | 'moderate' | 'aggressive';
     broker: string;
+    alert_email: string | null;
+    status: string;
     initial_principal: number;
     cash_balance: number;
     created_at: string;
     updated_at: string;
+    membership?: AccountMembershipInfo | null;
 }
 
 interface AccountContextType {

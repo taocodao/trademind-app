@@ -53,6 +53,15 @@ export async function GET(req: NextRequest) {
         if (!identity) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
         const { userId, email: privyEmail } = identity;
 
+        // Canonical login identity: every authenticated bootstrap records the
+        // Privy email as login_email; per-account alert emails default to it.
+        if (privyEmail) {
+            try {
+                const { upsertLoginEmail } = await import('@/lib/auth-helpers');
+                await upsertLoginEmail(userId, privyEmail);
+            } catch { /* best-effort */ }
+        }
+
         const TRIAL_DAYS = parseInt(process.env.FREE_TRIAL_DAYS || '14', 10);
         const TRIAL_TIER = process.env.FREE_TRIAL_TIER || 'both_bundle';
 

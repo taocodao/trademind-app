@@ -359,7 +359,8 @@ export function PatienceSection() {
                 <div className="tm-patience-cap">{c.cap}</div>
 
                 {/* Consistency line: reconciles the 5.6y window, the 15mo tape
-                    verified subset, and the calculator's 2019 to 2026 rate. */}
+                    verified subset, and the calculator's 36.3% model-priced rate
+                    over the same 2021 to 2026 window. */}
                 <div className="tm-patience-window">{c.window}</div>
             </div>
         </section>

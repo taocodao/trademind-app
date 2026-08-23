@@ -5,18 +5,34 @@ import { useMemo, useState } from 'react';
 /* ─────────────────────────────────────────────────────────────────────────────
    MillionaireCalc, "When could $10,000 make you a millionaire?"
    Ported 1:1 from the static landing page's age tool (public/landing/index.html):
-   same rates, same math, same disclosures, plus the share bar.
-   Rates are LABELED hypothetical figures (7-year model backtest, stress case,
-   QQQ buy & hold), never a promise. Keep every label intact.
+   same math, same disclosures, plus the share bar.
+   Rates are LABELED figures (2021 to 2026 model backtest, QQQ buy & hold
+   long-run average, 3-month T-bill risk-free floor), never a promise.
+   Keep every label intact.
    ───────────────────────────────────────────────────────────────────────────── */
 
+/* Rate config: single source of truth for both tools below.
+   RF_RATE is a live market rate shown with an as-of date. Refresh monthly
+   from FRED DGS3MO (3-month Treasury, coupon-equivalent). Past 120 days the
+   row stops showing a numeric rate rather than a stale figure with a
+   confident date. */
+const RF_RATE = 0.0387;           // FRED DGS3MO value for the as-of date below
+const RF_ASOF = 'Aug 20, 2026';
+const RF_ASOF_MS = Date.parse('2026-08-20T00:00:00Z');
+const RF_STALE_MS = 120 * 24 * 3600 * 1000;
+/* Non-breaking spaces around the middots keep each separator attached to
+   its neighbors so narrow screens never strand a dangling dot. */
+const RF_SUB = (RF_RATE * 100).toFixed(2) + '%/yr\u00A0·\u00A03-month U.S. Treasury bill\u00A0·\u00A0' + RF_ASOF;
+const RF_SUB_STALE = '3-month U.S. Treasury bill\u00A0·\u00A0rate being refreshed';
+
 const RATES = [
-    { label: 'TradeMind backtest', sub: '30.0%/yr · 2019 to 2026 · hypothetical', r: 0.30, color: '#e0a458', dash: '' },
-    { label: 'Half the backtest', sub: '15.0%/yr · stress case', r: 0.15, color: '#5c6577', dash: '6 5' },
-    { label: 'QQQ buy & hold', sub: '13.5%/yr · same window', r: 0.135, color: '#5c8de0', dash: '' },
+    { label: 'TradeMind backtest', sub: '36.3%/yr\u00A0·\u00A02021 to 2026\u00A0·\u00A0hypothetical', r: 0.363, color: '#e0a458', dash: '' },
+    { label: 'QQQ buy & hold', sub: '13.5%/yr\u00A0·\u00A0long-run average', r: 0.135, color: '#5c8de0', dash: '' },
+    { label: 'Risk-free rate', sub: Date.now() - RF_ASOF_MS > RF_STALE_MS ? RF_SUB_STALE : RF_SUB, r: RF_RATE, color: '#5c6577', dash: '6 5' },
 ];
 const AMT = 10000;
 const TARGET = 1000000;
+const LIFE_CAP = 95; // ages past this render as an intentional non-numeric state, never a number
 
 const fmt = (v: number) =>
     v >= 1e6 ? '$' + (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + 'M'
@@ -42,25 +58,24 @@ export function MillionaireCalc() {
     const [advAge, setAdvAge] = useState(35);
     const [advBal, setAdvBal] = useState(30000);
     const [advCon, setAdvCon] = useState(6000);
-    const [logScale, setLogScale] = useState(false);
-
-    const now = new Date();
-    const nowY = now.getFullYear() + (now.getMonth() * 30.4 + now.getDate()) / 365;
+    const [logScale, setLogScale] = useState(true);
 
     /* ── simple tool ── */
     const simple = useMemo(() => RATES.map(s => {
         const t = Math.log(TARGET / AMT) / Math.log(1 + s.r);
         const cross = age + t;
+        const reachable = cross <= LIFE_CAP;
         return {
             ...s,
-            big: cross > 95 ? 'Beyond 95' : 'Age ' + Math.floor(cross),
-            small: cross > 95
-                ? 'not within a reasonable horizon at this rate'
-                : t.toFixed(1) + ' years from now · the year ' + Math.floor(nowY + t),
+            reachable,
+            big: reachable ? 'Age ' + Math.ceil(cross) : 'Not within a lifetime',
+            small: reachable
+                ? t.toFixed(1) + ' years from now · the year ' + (new Date().getFullYear() + Math.ceil(t))
+                : Math.round(t) + ' years at this rate',
         };
-    }), [age, nowY]);
-    const gapYears = Math.round(
-        Math.log(TARGET / AMT) / Math.log(1.135) - Math.log(TARGET / AMT) / Math.log(1.30)
+    }), [age]);
+    const gapYears = Math.ceil(
+        Math.log(TARGET / AMT) / Math.log(1.135) - Math.log(TARGET / AMT) / Math.log(1.363)
     );
 
     /* ── advanced tool ── */
@@ -76,7 +91,7 @@ export function MillionaireCalc() {
         const W = 720, H = 340, PL = 64, PR = 16, PT = 26, PB = 34;
         let maxV = Math.max(...data.flatMap(d => d.series));
         if (maxV < 1) maxV = 1;
-        const minV = Math.max(1, Math.min(advBal, ...data.flatMap(d => d.series)) * 0.9);
+        const minV = Math.max(1000, Math.min(advBal, ...data.flatMap(d => d.series)) * 0.9);
         const x = (i: number) => PL + i * (W - PL - PR) / years;
         let y: (v: number) => number;
         const ticks: number[] = [];
@@ -115,7 +130,7 @@ export function MillionaireCalc() {
             <div className="tm-calc-inner">
                 <div className="tm-kicker">Run your own numbers</div>
                 <h2 className="tm-calc-title">What does patience actually buy you?</h2>
-                <p className="tm-calc-sub">One question, one answer. Type your age and compare three labeled rates: the backtest, a stress case at half that rate, and plain buy and hold.</p>
+                <p className="tm-calc-sub">One question, one answer. Type your age and compare three labeled rates: the backtest, the index, and the risk-free floor.</p>
 
                 <div className="tm-ageinput">
                     <label htmlFor="tm-mAge">Your age</label>
@@ -130,12 +145,12 @@ export function MillionaireCalc() {
                         />
                         <button className="step" aria-label="Increase age" onClick={() => setAge(a => Math.min(70, a + 1))}>+</button>
                     </div>
-                    <div className="tm-ctxline">$10,000 starting balance · target $1,000,000 · three labeled rates</div>
+                    <div className="tm-ctxline">$10,000 starting balance · target $1,000,000 · three labeled rates: a backtest, the index, and the risk-free floor</div>
                 </div>
 
                 <div className="tm-ageresults">
                     {simple.map(s => (
-                        <div className="tm-arow" key={s.label}>
+                        <div className={'tm-arow' + (s.reachable ? '' : ' tm-arow-unreach')} key={s.label}>
                             <div className="aWho">
                                 <span className="dot" style={{ background: s.color }} />
                                 <div>
@@ -144,7 +159,7 @@ export function MillionaireCalc() {
                                 </div>
                             </div>
                             <div className="aRes">
-                                <div className="aAge" style={{ color: s.color }}>{s.big}</div>
+                                <div className={'aAge' + (s.reachable ? '' : ' aNever')} style={s.reachable ? { color: s.color } : undefined}>{s.big}</div>
                                 <div className="aWhen">{s.small}</div>
                             </div>
                         </div>
@@ -152,10 +167,13 @@ export function MillionaireCalc() {
                 </div>
 
                 <div className="tm-gapline">
-                    At these hypothetical rates, the backtest pace reaches $1M about <b>{gapYears} years sooner</b> than buy-and-hold, whatever age you start.
+                    At these labeled rates, the backtest pace reaches $1M about <b>{gapYears} years sooner</b> than buy-and-hold, whatever age you start.
                 </div>
                 <div className="tm-stressnote">
-                    Notice what the stress case does. Half the rate does not mean half the time, it means fifteen more years. That sensitivity is the real lesson of this tool.
+                    The risk-free row is the point. Money that takes no market risk does not get there at all on this balance. Every year of the {gapYears}-year gap above is paid for with drawdown risk: the -17.8% the backtest window took, and the -30.4% the 15-month real-quote window took. That trade is the whole decision.
+                </div>
+                <div className="tm-ctxline" style={{ marginTop: 14, maxWidth: 720, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.6 }}>
+                    Two measurements, both labeled: <b>36.3%</b> is the annualized rate of the 2021 to 2026 model-priced backtest used in this tool, the same record in the table above. A separate 15-month window, verified on real exchange quotes, took a deeper 30.4% drawdown. Neither is a forecast. <a href="#story" style={{ color: '#e0a458' }}>Read the chapters →</a>
                 </div>
 
                 <div className="tm-sharebar">
@@ -180,7 +198,7 @@ export function MillionaireCalc() {
 
                 <div className="tm-calcdisc">
                     <b>Your situation will differ.</b> This tool illustrates one hypothetical profile. Yours, income, tax status, risk tolerance, time horizon, is different, and the results shown may not be relevant to it.<br /><br />
-                    <b>Assumptions.</b> A $10,000 <b>starting balance</b> (an existing balance, not a one-year IRA contribution, which is capped at $7,000 in 2026). Constant annual returns: 30.0% = the strategy's <b>7-year model backtest</b>, 2019 to 2026; 15.0% = an arbitrary stress case at half that rate; 13.5% = QQQ buy-and-hold over the same 7-year window. No additions, taxes, or fees. Real returns vary year to year, the <b>order</b> of gains and losses changes outcomes, sometimes dramatically.<br /><br />
+                    <b>Assumptions.</b> A $10,000 <b>starting balance</b> (an existing balance, not a one-year IRA contribution, which is capped at $7,000 in 2026). Constant annual returns: <b>36.3%</b> = the TradeMind strategy <b>backtest</b>, 2021 to 2026 continuous model-priced series, hypothetical; <b>13.5%</b> = QQQ buy-and-hold, long-run average annual rate; <b>{(RF_RATE * 100).toFixed(2)}%</b> = the risk-free rate, the 3-month U.S. Treasury bill coupon-equivalent yield as of {RF_ASOF}, shown as the no-market-risk floor. The risk-free rate is a real, externally verifiable market rate and changes over time; the other two are historical figures for fixed past windows and are not forecasts. No additions, taxes, or fees. Real returns vary year to year, the <b>order</b> of gains and losses changes outcomes, sometimes dramatically.<br /><br />
                     <b>Risks &amp; limitations.</b> These are hypothetical, backtested figures. They were not achieved by any actual account, do not represent live trading, and do not guarantee future results. Options involve substantial risk, including loss of the entire investment.
                 </div>
 
@@ -237,7 +255,7 @@ export function MillionaireCalc() {
                                     return (
                                         <div className="tm-mile" key={d.label}>
                                             <div className="who"><span className="dot" style={{ background: d.color }} />{d.label}</div>
-                                            <div className="age" style={{ color: d.color }}>{mAge ? '$1M by age ' + mAge : 'No $1M in window'}</div>
+                                            <div className="age" style={{ color: d.color }}>{mAge ? '$1M by age ' + mAge : 'Not on this path'}</div>
                                             <div className="sub2">{d.sub}<br />{fmt(finalV)} by age {adv.endAge} · ≈{fmt(today)} in today's dollars</div>
                                         </div>
                                     );
@@ -246,7 +264,7 @@ export function MillionaireCalc() {
                         </div>
                     </div>
                     <div className="tm-calcdisc">
-                        <b>Assumptions.</b> Constant annual returns: 30.0% = the strategy's <b>7-year model backtest</b>, 2019 to 2026 (separate from the narrated record); 13.5% = QQQ buy-and-hold over the same window; 15.0% = an arbitrary stress case at half the backtest rate. Annual compounding, contributions at year-end, no taxes or fees; “today’s dollars” deflates at 2.5%/yr. Projections stop after 20 years, extrapolating any backtest further is storytelling, not math. Hypothetical, backtested figures, not achieved by any actual account, and no guarantee of future results.
+                        <b>Assumptions.</b> Constant annual returns: 36.3% = the strategy's 2021 to 2026 continuous model-priced <b>backtest</b>, hypothetical, the same record narrated in the chapters; 13.5% = QQQ buy-and-hold, long-run average; {(RF_RATE * 100).toFixed(2)}% = the risk-free rate, the 3-month U.S. Treasury bill coupon-equivalent yield as of {RF_ASOF}. Annual compounding, contributions at year-end, no taxes or fees; “today’s dollars” deflates at 2.5%/yr. Projections stop after 20 years, extrapolating any backtest further is storytelling, not math. Hypothetical, backtested figures, not achieved by any actual account, and no guarantee of future results.
                     </div>
                 </details>
             </div>

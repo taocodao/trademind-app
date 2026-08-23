@@ -441,6 +441,16 @@
 .tm-arow .aRes { text-align: right; flex: none; }
 .tm-arow .aAge { font-family: Georgia, serif; font-weight: 300; font-size: 32px; line-height: 1.05; letter-spacing: -.01em; }
 .tm-arow .aWhen { font-size: 11.5px; color: var(--s-ink3); margin-top: 3px; }
+/* Unreachable rate row: intentionally dimmed and factual, not an error state */
+.tm-arow.tm-arow-unreach { opacity: .72; }
+.tm-arow .aAge.aNever { font-size: 19px; letter-spacing: 0; color: var(--s-ink3); line-height: 1.3; max-width: 9em; margin-left: auto; }
+@media (max-width: 640px) {
+    .tm-arow { flex-direction: column; align-items: stretch; gap: 10px; padding: 14px 16px; }
+    .tm-arow .aRes { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; text-align: left; }
+    .tm-arow .aAge { font-size: 26px; }
+    .tm-arow .aAge.aNever { font-size: 17px; max-width: none; margin-left: 0; }
+    .tm-arow .aWhen { margin-top: 0; text-align: right; }
+}
 .tm-gapline { margin-top: 20px; font-size: 13px; color: var(--s-ink2); }
 .tm-gapline b { color: var(--s-amber); font-weight: 600; }
 .tm-stressnote {

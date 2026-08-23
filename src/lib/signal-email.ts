@@ -1,59 +1,19 @@
 /**
- * Signal Email Notifications via Resend
- * ======================================
- * Sends clean black-and-white execution confirmation emails to users
- * who have email_signal_alerts = true in user_settings.
+ * Signal email notifications via Resend.
  *
- * Order instructions use plain English, e.g.:
- *   "Buy 12 shares of TQQQ at Market Price"
- *   "Sell to Open 2 TQQQ $48.00 Put (exp. Apr 25) at Limit $0.45"
+ * Every order is rendered as a complete broker-neutral instruction. TradeMind
+ * does not connect to or submit orders to a customer's brokerage.
  */
 
 import type { DeltaOrder, OptionsOrder } from '@/lib/per-user-order-generator';
 import type { CloseLeg } from '@/lib/options-exit-scanner';
+import {
+    buildUniversalOrderInstruction,
+    type UniversalOrderInstruction,
+} from '@/lib/universal-order';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const FROM_EMAIL = 'TradeMind Signals <signals@trademind.bot>';
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://trademind.bot';
-
-// Public URL of the annotated broker-ticket guide for an equity order (embedded in the email).
-function brokerGuideUrl(o: DeltaOrder, broker: string): string {
-    return `${BASE_URL}/api/broker-guide?broker=${encodeURIComponent(broker)}&symbol=${encodeURIComponent(o.symbol)}&action=${o.action}&quantity=${o.quantity}`;
-}
-
-// Public URL of the annotated broker-ticket guide for an options order.
-// Parses the OCC symbol (e.g. QQQ_20271217C00770) into the expiry/strike/right
-// params the broker-guide route expects. Returns null if the symbol doesn't parse.
-function optionsGuideUrl(l: OptionsOrder, broker: string): string | null {
-    const m = /^([A-Z.]+)_(\d{4})(\d{2})(\d{2})([CP])(\d+(?:\.\d+)?)$/.exec(l.symbol || '');
-    if (!m) return null;
-    const underlying = m[1];
-    const expiry = `${m[2]}-${m[3]}-${m[4]}`;
-    const right = m[5] === 'P' ? 'put' : 'call';
-    const strike = String(parseFloat(m[6])); // strip OCC leading zeros (00770 -> 770)
-    const a = (l.action || '').toLowerCase();
-    const action = a.startsWith('sell') ? 'sell' : 'buy';
-    const openClose = a.includes('close') ? 'close' : 'open';
-    return `${BASE_URL}/api/broker-guide?broker=${encodeURIComponent(broker)}&symbol=${encodeURIComponent(underlying)}&action=${action}&quantity=${l.quantity}&expiry=${expiry}&strike=${encodeURIComponent(strike)}&right=${right}&openclose=${openClose}`;
-}
-
-// Broker order-entry guide block (image + compliance caption) reused by the
-// equity and options sections. Returns '' when no guide applies (e.g. E*TRADE
-// equity orders, for which we have no ticket image yet).
-function brokerGuideBlock(url: string | null, brokerName: string, symbol: string): string {
-    if (!url) return '';
-    return `
-                    <div style="margin:2px 0 10px">
-                        <p style="margin:0 0 6px;font-size:11px;color:#374151;font-family:monospace">
-                            Enter at ${escHtml(brokerName)} — follow the numbered fields:
-                        </p>
-                        <img src="${url}" alt="${escHtml(brokerName)} order entry guide for ${escHtml(symbol)}"
-                             style="width:100%;max-width:560px;border:1px solid #e5e7eb;border-radius:6px;display:block" />
-                        <p style="margin:4px 0 0;font-size:10px;color:#9ca3af;font-family:monospace">
-                            Review on ${escHtml(brokerName)} and press Preview order yourself. TradeMind never submits orders to your brokerage.
-                        </p>
-                    </div>`;
-}
 
 export interface SignalEmailData {
     strategy: string;
@@ -66,21 +26,19 @@ export interface SignalEmailData {
     skipOptions: boolean;
     skipReason?: string;
     live: boolean;
-    /** Account name, for personalisation. */
+    /** Account name, for personalization and order-entry instructions. */
     accountName?: string;
-    /** The account's brokerage (e.g. 'etrade' | 'fidelity'); drives the order-entry guide. */
-    broker?: string;
     /** ISO timestamp when the signal was generated. */
     signalTimestamp?: string;
 }
 
 /**
  * Send a signal execution email to a user.
- * Non-blocking — errors are logged but do not throw.
+ * Non-blocking: errors are logged but do not throw.
  */
 export async function sendSignalEmail(toEmail: string, data: SignalEmailData): Promise<void> {
     if (!RESEND_API_KEY) {
-        console.warn('[Email] RESEND_API_KEY not configured — skipping email');
+        console.warn('[Email] RESEND_API_KEY not configured - skipping email');
         return;
     }
 
@@ -125,31 +83,31 @@ export interface PhaseTransitionEmailData {
     toPhase: string;
     reason: string;
     nlv: number;
-    phaseCap: number; // new per-position sizing cap (fraction of NLV)
+    phaseCap: number;
 }
 
 /**
  * Send a standalone phase-transition alert email. Non-blocking.
- * Fired when an account's capital-scaling phase changes (promotion, demotion,
- * or emergency demotion), so the user knows their sizing cap has changed.
+ * Fired when an account's capital-scaling phase changes so the user knows
+ * their sizing cap has changed.
  */
 export async function sendPhaseTransitionEmail(toEmail: string, data: PhaseTransitionEmailData): Promise<void> {
     if (!RESEND_API_KEY) {
-        console.warn('[Email] RESEND_API_KEY not configured — skipping phase email');
+        console.warn('[Email] RESEND_API_KEY not configured - skipping phase email');
         return;
     }
 
     const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     const isPromotion = data.reason === 'PROMOTION';
-    const subject = `[TradeMind] ${data.accountName} — Phase ${data.fromPhase} → ${data.toPhase} (${dateStr})`;
+    const subject = `[TradeMind] ${data.accountName} - Phase ${data.fromPhase} to ${data.toPhase} (${dateStr})`;
     const capPct = (data.phaseCap * 100).toFixed(0);
 
     const text = [
-        `TradeMind — Account Phase Transition`,
+        'TradeMind - Account Phase Transition',
         '='.repeat(48),
-        `Account:    ${data.accountName} (${data.strategy} · ${data.riskLevel})`,
-        `Phase:      ${data.fromPhase} → ${data.toPhase}`,
-        `Reason:     ${data.reason}`,
+        `Account: ${data.accountName} (${data.strategy} / ${data.riskLevel})`,
+        `Phase: ${data.fromPhase} to ${data.toPhase}`,
+        `Reason: ${data.reason}`,
         `Total Value: $${data.nlv.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
         '',
         `Your position sizing cap is now ${capPct}% of account value per position.`,
@@ -166,9 +124,9 @@ export async function sendPhaseTransitionEmail(toEmail: string, data: PhaseTrans
         <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#374151;margin:0 0 4px">TradeMind</p>
         <h2 style="margin:0 0 16px;font-size:20px">Account Phase Transition</h2>
         <div style="background:#f9fafb;border:1px solid #e5e7eb;border-left:4px solid ${accent};border-radius:6px;padding:16px 18px;margin:0 0 20px">
-            <p style="margin:0 0 6px;font-size:14px"><strong>${escHtml(data.accountName)}</strong> <span style="color:#6b7280">(${escHtml(data.strategy)} · ${escHtml(data.riskLevel)})</span></p>
-            <p style="margin:0 0 6px;font-size:16px;font-weight:700">${escHtml(data.fromPhase)} &rarr; ${escHtml(data.toPhase)}</p>
-            <p style="margin:0;font-size:13px;color:#374151">${escHtml(data.reason)} · Total value $${data.nlv.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+            <p style="margin:0 0 6px;font-size:14px"><strong>${escHtml(data.accountName)}</strong> <span style="color:#6b7280">(${escHtml(data.strategy)} / ${escHtml(data.riskLevel)})</span></p>
+            <p style="margin:0 0 6px;font-size:16px;font-weight:700">${escHtml(data.fromPhase)} to ${escHtml(data.toPhase)}</p>
+            <p style="margin:0;font-size:13px;color:#374151">${escHtml(data.reason)} / Total value $${data.nlv.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
         </div>
         <p style="font-size:14px;color:#111827;margin:0 0 8px">Your position sizing cap is now <strong>${capPct}% of account value</strong> per position.</p>
         <p style="font-size:13px;color:#6b7280;margin:0 0 20px">${isPromotion
@@ -193,87 +151,52 @@ export async function sendPhaseTransitionEmail(toEmail: string, data: PhaseTrans
     }
 }
 
-// ─── Subject Line ─────────────────────────────────────────────────────────────
+// ─── Signal Email ───────────────────────────────────────────────────────────
 
 function buildSubject(data: SignalEmailData): string {
     const dateStr = new Date().toLocaleDateString('en-US', {
         weekday: 'short', month: 'short', day: 'numeric',
     });
-    const stratUp = data.strategy.toUpperCase();
-    const strategyLabel =
-        stratUp.includes('LEAPS') ? 'QQQ LEAPS'  :
-        stratUp.includes('PRO')   ? 'QQQ Basic'   : 'QQQ Basic';
+    const strategyLabel = strategyLabelFor(data.strategy);
     const hasActivity = data.equityOrders.length > 0 || data.optionsCloses.length > 0 || data.optionsEntries.length > 0;
 
     if (!hasActivity) {
-        return `[TradeMind] ${strategyLabel} — No Changes Today (${dateStr})`;
+        return `[TradeMind] ${strategyLabel} - No Changes Today (${dateStr})`;
     }
 
     const regime = data.regime ? ` | ${data.regime.replace('_', ' ')}` : '';
-    return `[TradeMind] ${strategyLabel} Signal Executed — ${dateStr}${regime}`;
+    return `[TradeMind] ${strategyLabel} Signal Executed - ${dateStr}${regime}`;
 }
-
-// ─── Plain-Text Body ──────────────────────────────────────────────────────────
 
 function buildTextBody(data: SignalEmailData): string {
     const lines: string[] = [];
-    const stratUp = data.strategy.toUpperCase();
-    const strategyLabel =
-        stratUp.includes('LEAPS') ? 'QQQ LEAPS'  :
-        stratUp.includes('PRO')   ? 'QQQ Basic'   : 'QQQ Basic';
+    const strategyLabel = strategyLabelFor(data.strategy);
 
-    lines.push(`TradeMind ${strategyLabel} — Daily Signal`);
+    lines.push(`TradeMind ${strategyLabel} - Daily Signal`);
     lines.push('='.repeat(48));
 
-    if (data.regime) {
-        lines.push(`Regime:     ${data.regime.replace(/_/g, ' ')}`);
-    }
-    if (data.confidence) {
-        lines.push(`Confidence: ${(data.confidence * 100).toFixed(0)}%`);
-    }
-    if (data.rationale) {
-        lines.push(`Rationale:  ${data.rationale}`);
-    }
+    if (data.accountName) lines.push(`Account: ${data.accountName}`);
+    if (data.regime) lines.push(`Regime: ${data.regime.replace(/_/g, ' ')}`);
+    if (data.confidence) lines.push(`Confidence: ${(data.confidence * 100).toFixed(0)}%`);
+    if (data.rationale) lines.push(`Rationale: ${data.rationale}`);
     lines.push('');
 
-    if (data.optionsCloses.length > 0) {
-        lines.push('CLOSING POSITIONS:');
-        for (const leg of data.optionsCloses) {
-            lines.push(`  - ${leg.instruction}`);
-        }
+    appendTextInstructions(lines, 'CLOSING POSITIONS', data.optionsCloses.map((order) => closeInstruction(order, data.accountName)));
+    appendTextInstructions(lines, 'EQUITY REBALANCE', data.equityOrders.map((order) => equityInstruction(order, data.accountName)));
+    appendTextInstructions(lines, 'OPTIONS ORDERS', data.optionsEntries.map((order) => optionInstruction(order, data.accountName)));
+
+    if (data.equityOrders.length === 0) {
+        lines.push('EQUITY REBALANCE: No equity changes required. The portfolio is at its target allocation.');
+        lines.push('');
+    }
+    if (data.optionsEntries.length === 0 && data.skipOptions && data.skipReason) {
+        lines.push(`OPTIONS ORDERS: Skipped. ${data.skipReason}`);
         lines.push('');
     }
 
-    if (data.equityOrders.length > 0) {
-        lines.push('EQUITY REBALANCE:');
-        for (const order of data.equityOrders) {
-            lines.push(`  - ${order.instruction}`);
-        }
-        lines.push('');
-    } else {
-        lines.push('EQUITY REBALANCE:');
-        lines.push('  - No equity changes required — portfolio is at target allocation');
-        lines.push('');
-    }
-
-    if (data.optionsEntries.length > 0) {
-        lines.push('OPTIONS ORDERS:');
-        for (const leg of data.optionsEntries) {
-            lines.push(`  - ${leg.instruction}`);
-        }
-        lines.push('');
-    } else if (data.skipOptions && data.skipReason) {
-        lines.push('OPTIONS ORDERS:');
-        lines.push(`  Skipped: ${data.skipReason}`);
-        lines.push('');
-    }
-
-    lines.push('-'.repeat(48));
-    // Signals-only product model: TradeMind never submits orders to your
-    // brokerage. Every signal updates the TradeMind virtual portfolio; the
-    // user enters the corresponding order themselves in their own broker.
-    lines.push('Execution: Virtual portfolio updated — enter this order in your own broker');
-
+    lines.push('='.repeat(48));
+    lines.push('Virtual execution: Your TradeMind virtual account has been updated.');
+    lines.push('TradeMind never connects to or submits orders to your brokerage.');
     lines.push('');
     lines.push('View your dashboard: https://www.trademind.bot/signals');
     lines.push('Manage notifications: https://www.trademind.bot/settings');
@@ -281,149 +204,37 @@ function buildTextBody(data: SignalEmailData): string {
     return lines.join('\n');
 }
 
-// ─── HTML Body — Clean Black & White ─────────────────────────────────────────
+function appendTextInstructions(lines: string[], heading: string, instructions: UniversalOrderInstruction[]) {
+    if (instructions.length === 0) return;
+    lines.push(`${heading}:`);
+    instructions.forEach((instruction, index) => {
+        if (index > 0) lines.push('');
+        lines.push(instruction.text);
+    });
+    lines.push('');
+}
 
 export function buildHtmlBody(data: SignalEmailData): string {
-    const stratUp = data.strategy.toUpperCase();
-    const strategyLabel =
-        stratUp.includes('LEAPS') ? 'QQQ LEAPS'  :
-        stratUp.includes('PRO')   ? 'QQQ Basic'   : 'QQQ Basic';
-    const brokerKey = (data.broker || 'fidelity').toLowerCase();
-    const brokerName = brokerKey === 'etrade' ? 'E*TRADE' : 'Fidelity';
+    const strategyLabel = strategyLabelFor(data.strategy);
     const dateStr = new Date().toLocaleDateString('en-US', {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     });
-    // Signal generation timestamp (when the strategy fired), distinct from send time.
     const signalTs = data.signalTimestamp ? new Date(data.signalTimestamp) : null;
-    const signalTsStr = signalTs && !isNaN(signalTs.getTime())
+    const signalTsStr = signalTs && !Number.isNaN(signalTs.getTime())
         ? signalTs.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })
         : null;
-
-    // ── LEAPS contract infographic ─────────────────────────────────────────
-    // Parse the first option entry (e.g. QQQ_20271217C00770) into a visual
-    // contract card: underlying, strike, expiry, DTE, contracts, est. debit.
-    const firstOpt = data.optionsEntries[0];
-    let leapsCardHtml = '';
-    if (firstOpt) {
-        const m = /^([A-Z.]+)_(\d{4})(\d{2})(\d{2})([CP])(\d+(?:\.\d+)?)$/.exec(firstOpt.symbol || '');
-        if (m) {
-            const underlying = m[1];
-            const expIso = `${m[2]}-${m[3]}-${m[4]}`;
-            const expDate = new Date(`${expIso}T00:00:00Z`);
-            const expStr = expDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
-            const dte = Math.max(0, Math.round((expDate.getTime() - Date.now()) / 86400000));
-            const strikeNum = parseFloat(m[6]);
-            const right = m[5] === 'C' ? 'CALL' : 'PUT';
-            const qty = firstOpt.quantity;
-            const px = firstOpt.limitPrice ?? 0;
-            const debit = qty * px * 100;
-            const isCredit = firstOpt.priceEffect === 'Credit';
-            const amtLabel = isCredit ? 'est. credit' : 'est. debit';
-            const amtColor = isCredit ? '#34d399' : '#fbbf24';
-            leapsCardHtml = `
-        <div style="margin:0 0 24px 0">
-            <p style="margin:0 0 10px;color:#374151;font-size:11px;font-weight:700;
-                      text-transform:uppercase;letter-spacing:0.07em">LEAPS Contract</p>
-            <div style="background:#0f172a;border-radius:10px;padding:18px 20px;color:#e2e8f0">
-                <table width="100%" cellpadding="0" cellspacing="0"><tr>
-                    <td>
-                        <div style="font-size:11px;color:#94a3b8;letter-spacing:0.05em">${escHtml(underlying)} LEAPS</div>
-                        <div style="font-size:26px;font-weight:800;color:#ffffff;line-height:1.1">$${strikeNum.toFixed(0)} <span style="font-size:15px;font-weight:700;color:#60a5fa">${right}</span></div>
-                    </td>
-                    <td align="right">
-                        <div style="font-size:11px;color:#94a3b8">Expires</div>
-                        <div style="font-size:15px;font-weight:700;color:#ffffff">${escHtml(expStr)}</div>
-                        <div style="font-size:11px;color:#64748b">${dte}d DTE</div>
-                    </td>
-                </tr></table>
-                <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:14px;border-top:1px solid #1e293b;padding-top:12px"><tr>
-                    <td align="center">
-                        <div style="font-size:16px;font-weight:800;color:#ffffff">${qty}</div>
-                        <div style="font-size:10px;color:#94a3b8">contract${qty !== 1 ? 's' : ''}</div>
-                    </td>
-                    <td align="center">
-                        <div style="font-size:16px;font-weight:800;color:#ffffff">$${px.toFixed(2)}</div>
-                        <div style="font-size:10px;color:#94a3b8">per share</div>
-                    </td>
-                    <td align="center">
-                        <div style="font-size:16px;font-weight:800;color:${amtColor}">$${debit.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                        <div style="font-size:10px;color:#94a3b8">${amtLabel}</div>
-                    </td>
-                </tr></table>
-            </div>
-        </div>`;
-        }
-    }
-
-    // Closing positions section
-    const closeLegsHtml = data.optionsCloses.length > 0 ? `
-        <div style="margin:0 0 24px 0">
-            <p style="margin:0 0 10px;color:#374151;font-size:11px;font-weight:700;
-                      text-transform:uppercase;letter-spacing:0.07em">Closing Positions</p>
-            ${data.optionsCloses.map(l => `
-                <div style="background:#f9fafb;border:1px solid #e5e7eb;border-left:3px solid #374151;
-                            padding:10px 14px;margin:4px 0;border-radius:4px;font-family:monospace;
-                            font-size:13px;color:#111827">
-                    ${escHtml(l.instruction)}
-                </div>`).join('')}
-        </div>` : '';
-
-    // Equity rebalance section
-    const equityHtml = `
-        <div style="margin:0 0 24px 0">
-            <p style="margin:0 0 10px;color:#374151;font-size:11px;font-weight:700;
-                      text-transform:uppercase;letter-spacing:0.07em">Equity Rebalance</p>
-            ${data.equityOrders.length > 0
-                ? data.equityOrders.map(o => `
-                    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-left:3px solid ${o.action === 'buy' ? '#111827' : '#6b7280'};
-                                padding:10px 14px;margin:4px 0;border-radius:4px;font-family:monospace;
-                                font-size:13px;color:#111827">
-                        ${escHtml(o.instruction)}
-                    </div>
-                    <div style="margin:2px 0 10px">
-                        <p style="margin:0 0 6px;font-size:11px;color:#374151;font-family:monospace">
-                            Enter at ${escHtml(brokerName)} — follow the numbered fields:
-                        </p>
-                        <img src="${brokerGuideUrl(o, brokerKey)}" alt="${escHtml(brokerName)} order entry guide for ${escHtml(o.symbol)}"
-                             style="width:100%;max-width:560px;border:1px solid #e5e7eb;border-radius:6px;display:block" />
-                        <p style="margin:4px 0 0;font-size:10px;color:#9ca3af;font-family:monospace">
-                            Review on ${escHtml(brokerName)} and press Preview order yourself. TradeMind never submits orders to your brokerage.
-                        </p>
-                    </div>`).join('')
-                : `<div style="background:#f9fafb;border:1px solid #e5e7eb;padding:10px 14px;
-                              border-radius:4px;font-size:13px;color:#6b7280;">
-                        No equity changes required — portfolio is at target allocation
-                   </div>`}
-        </div>`;
-
-    // Options section
-    const optionsHtml = data.optionsEntries.length > 0 ? `
-        <div style="margin:0 0 24px 0">
-            <p style="margin:0 0 10px;color:#374151;font-size:11px;font-weight:700;
-                      text-transform:uppercase;letter-spacing:0.07em">Options Orders</p>
-            ${data.optionsEntries.map(l => `
-                <div style="background:#f9fafb;border:1px solid #e5e7eb;border-left:3px solid #374151;
-                            padding:10px 14px;margin:4px 0;border-radius:4px;font-family:monospace;
-                            font-size:13px;color:#111827">
-                    ${escHtml(l.instruction)}
-                </div>
-                ${brokerGuideBlock(optionsGuideUrl(l, brokerKey), brokerName, l.symbol)}`).join('')}
-        </div>` : data.skipOptions && data.skipReason ? `
-        <div style="margin:0 0 24px 0">
-            <p style="margin:0 0 10px;color:#374151;font-size:11px;font-weight:700;
-                      text-transform:uppercase;letter-spacing:0.07em">Options Orders</p>
-            <div style="background:#f9fafb;border:1px solid #e5e7eb;padding:10px 14px;
-                        border-radius:4px;font-size:13px;color:#6b7280;">
-                Skipped: ${escHtml(data.skipReason || '')}
-            </div>
-        </div>` : '';
-
-    // Execution status. Signals-only product model: never live-executed.
-    const statusHtml = `<div style="background:#f9fafb;border:1px solid #e5e7eb;
-                      border-radius:6px;padding:12px 16px;margin:0 0 8px;
-                      color:#374151;font-size:13px;">
-               <strong>Virtual Execution</strong> — Your TradeMind virtual account has been updated. Enter this order yourself in your own broker.
-           </div>`;
+    const closeLegsHtml = renderInstructionSection('Closing Positions', data.optionsCloses.map((order) => closeInstruction(order, data.accountName)));
+    const equityHtml = data.equityOrders.length > 0
+        ? renderInstructionSection('Equity Rebalance', data.equityOrders.map((order) => equityInstruction(order, data.accountName)))
+        : emptySection('Equity Rebalance', 'No equity changes required. The portfolio is at its target allocation.');
+    const optionsHtml = data.optionsEntries.length > 0
+        ? renderInstructionSection('Options Orders', data.optionsEntries.map((order) => optionInstruction(order, data.accountName)))
+        : data.skipOptions && data.skipReason
+            ? emptySection('Options Orders', `Skipped: ${data.skipReason}`)
+            : '';
+    const statusHtml = `<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px 16px;margin:0 0 8px;color:#374151;font-size:13px">
+        <strong>Virtual Execution</strong> - Your TradeMind virtual account has been updated. TradeMind never connects to or submits orders to your brokerage.
+    </div>`;
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -432,16 +243,10 @@ export function buildHtmlBody(data: SignalEmailData): string {
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>TradeMind Signal</title>
 </head>
-<body style="margin:0;padding:0;background:#f3f4f6;
-             font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif">
-<table width="100%" cellpadding="0" cellspacing="0" border="0"
-       style="background:#f3f4f6;padding:32px 16px">
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f3f4f6;padding:32px 16px">
   <tr><td>
-  <table width="600" cellpadding="0" cellspacing="0" border="0" align="center"
-         style="max-width:600px;background:#ffffff;border:1px solid #e5e7eb;
-                border-radius:8px;overflow:hidden">
-
-    <!-- Header -->
+  <table width="600" cellpadding="0" cellspacing="0" border="0" align="center" style="max-width:600px;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">
     <tr>
       <td style="background:#111827;padding:24px 32px">
         <table width="100%" cellpadding="0" cellspacing="0"><tr>
@@ -450,14 +255,11 @@ export function buildHtmlBody(data: SignalEmailData): string {
             <span style="font-size:12px;color:#9ca3af">${escHtml(strategyLabel)} &middot; Execution Report</span>
           </td>
           <td align="right" style="vertical-align:middle">
-            ${data.regime ? `<span style="background:#374151;color:#f9fafb;padding:5px 14px;
-                         border-radius:20px;font-size:12px;font-weight:600">${escHtml(data.regime)}</span>` : ''}
+            ${data.regime ? `<span style="background:#374151;color:#f9fafb;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600">${escHtml(data.regime)}</span>` : ''}
           </td>
         </tr></table>
       </td>
     </tr>
-
-    <!-- Date bar -->
     <tr>
       <td style="padding:12px 32px;background:#f9fafb;border-bottom:1px solid #e5e7eb">
         <span style="color:#6b7280;font-size:12px">${escHtml(dateStr)}</span>
@@ -466,36 +268,23 @@ export function buildHtmlBody(data: SignalEmailData): string {
         ${data.accountName ? `<span style="margin-left:12px;color:#6b7280;font-size:12px">${escHtml(data.accountName)}</span>` : ''}
       </td>
     </tr>
-
-    <!-- Body -->
     <tr><td style="padding:28px 32px">
-        ${data.rationale ? `<p style="border-left:3px solid #e5e7eb;padding:8px 14px;font-size:13px;
-                  color:#6b7280;margin:0 0 24px;line-height:1.7;font-style:italic">${escHtml(data.rationale)}</p>` : ''}
+        ${data.rationale ? `<p style="border-left:3px solid #e5e7eb;padding:8px 14px;font-size:13px;color:#6b7280;margin:0 0 24px;line-height:1.7;font-style:italic">${escHtml(data.rationale)}</p>` : ''}
         ${closeLegsHtml}
-        ${leapsCardHtml}
         ${equityHtml}
         ${optionsHtml}
         ${statusHtml}
-
-        <!-- CTA -->
         <div style="text-align:center;padding-top:20px">
-          <a href="https://www.trademind.bot/signals"
-             style="display:inline-block;background:#111827;color:#ffffff;
-                    padding:13px 36px;border-radius:6px;text-decoration:none;
-                    font-weight:700;font-size:14px">
+          <a href="https://www.trademind.bot/signals" style="display:inline-block;background:#111827;color:#ffffff;padding:13px 36px;border-radius:6px;text-decoration:none;font-weight:700;font-size:14px">
             View Your Dashboard &rarr;
           </a>
         </div>
     </td></tr>
-
-    <!-- Footer -->
     <tr>
       <td style="padding:18px 32px;border-top:1px solid #e5e7eb;background:#f9fafb;text-align:center">
         <p style="color:#9ca3af;font-size:11px;margin:0 0 4px">TradeMind &middot; Automated Trade Signals</p>
         <p style="color:#9ca3af;font-size:11px;margin:0">
-          <a href="https://www.trademind.bot/settings" style="color:#6b7280;text-decoration:underline">
-            Manage email preferences
-          </a>
+          <a href="https://www.trademind.bot/settings" style="color:#6b7280;text-decoration:underline">Manage email preferences</a>
         </p>
       </td>
     </tr>
@@ -504,6 +293,61 @@ export function buildHtmlBody(data: SignalEmailData): string {
 </table>
 </body>
 </html>`;
+}
+
+function renderInstructionSection(title: string, instructions: UniversalOrderInstruction[]): string {
+    if (instructions.length === 0) return '';
+    return `
+        <div style="margin:0 0 24px 0">
+            <p style="margin:0 0 10px;color:#374151;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em">${escHtml(title)}</p>
+            ${instructions.map((instruction) => instruction.html).join('')}
+        </div>`;
+}
+
+function emptySection(title: string, message: string): string {
+    return `
+        <div style="margin:0 0 24px 0">
+            <p style="margin:0 0 10px;color:#374151;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em">${escHtml(title)}</p>
+            <div style="background:#f9fafb;border:1px solid #e5e7eb;padding:10px 14px;border-radius:4px;font-size:13px;color:#6b7280">${escHtml(message)}</div>
+        </div>`;
+}
+
+function equityInstruction(order: DeltaOrder, accountName?: string): UniversalOrderInstruction {
+    return buildUniversalOrderInstruction({
+        accountName,
+        action: order.action,
+        symbol: order.symbol,
+        quantity: order.quantity,
+        instrumentType: 'Stock/ETF',
+        referencePrice: order.price,
+    });
+}
+
+function optionInstruction(order: OptionsOrder, accountName?: string): UniversalOrderInstruction {
+    return buildUniversalOrderInstruction({
+        accountName,
+        action: order.action,
+        symbol: order.symbol,
+        quantity: order.quantity,
+        instrumentType: order.instrumentType,
+        referencePrice: order.limitPrice,
+        priceEffect: order.priceEffect,
+    });
+}
+
+function closeInstruction(order: CloseLeg, accountName?: string): UniversalOrderInstruction {
+    return buildUniversalOrderInstruction({
+        accountName,
+        action: order.action,
+        symbol: order.symbol,
+        quantity: order.quantity,
+        instrumentType: order.instrumentType,
+    });
+}
+
+function strategyLabelFor(strategy: string): string {
+    const strategyUpper = strategy.toUpperCase();
+    return strategyUpper.includes('LEAPS') ? 'QQQ LEAPS' : 'QQQ Basic';
 }
 
 function escHtml(str: string): string {

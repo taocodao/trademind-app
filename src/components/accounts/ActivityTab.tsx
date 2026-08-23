@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { PlusCircle, Pencil, Trash2, RefreshCw, ArrowUpRight, ArrowDownRight, ArrowDownToLine, ArrowUpFromLine, ExternalLink } from "lucide-react";
-import { BrokerEntryModal } from "./BrokerEntryModal";
-import type { BrokerOrder } from "@/lib/brokers";
+import { OrderInstructionModal } from "./BrokerEntryModal";
+import type { UniversalOrderInput } from "@/lib/universal-order";
 
 type ActivityType = 'buy' | 'sell' | 'deposit' | 'withdraw';
 
@@ -28,14 +28,14 @@ const TYPE_META: Record<ActivityType, { label: string; color: string; Icon: any 
     withdraw: { label: 'Withdraw', color: 'text-orange-400 bg-orange-500/10 border-orange-500/20', Icon: ArrowUpFromLine },
 };
 
-export function ActivityTab({ accountId, broker, onChanged }: { accountId: number; broker?: string; onChanged?: () => void }) {
+export function ActivityTab({ accountId, accountName, onChanged }: { accountId: number; accountName?: string; onChanged?: () => void }) {
     const [activities, setActivities] = useState<Activity[]>([]);
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
 
     // add/edit modal
     const [modal, setModal] = useState<null | { mode: 'add' } | { mode: 'edit'; activity: Activity }>(null);
-    const [brokerOrder, setBrokerOrder] = useState<BrokerOrder | null>(null);
+    const [orderInstruction, setOrderInstruction] = useState<UniversalOrderInput | null>(null);
     const [type, setType] = useState<ActivityType>('buy');
     const [symbol, setSymbol] = useState('');
     const [quantity, setQuantity] = useState('');
@@ -193,9 +193,15 @@ export function ActivityTab({ accountId, broker, onChanged }: { accountId: numbe
                                     <div className="flex items-center gap-1">
                                         {isTradeRow && a.symbol && a.quantity != null && (
                                             <button
-                                                onClick={() => setBrokerOrder({ symbol: a.symbol!, action: a.type as 'buy' | 'sell', quantity: a.quantity!, price: a.price })}
+                                                onClick={() => setOrderInstruction({
+                                                    symbol: a.symbol!,
+                                                    action: a.type,
+                                                    quantity: a.quantity!,
+                                                    referencePrice: a.price,
+                                                    instrumentType: 'Stock/ETF',
+                                                })}
                                                 className="p-1.5 rounded hover:bg-white/10 text-tm-muted hover:text-tm-purple transition"
-                                                title="Enter at Broker"
+                                                title="View order instruction"
                                             >
                                                 <ExternalLink className="w-3.5 h-3.5" />
                                             </button>
@@ -292,9 +298,13 @@ export function ActivityTab({ accountId, broker, onChanged }: { accountId: numbe
                 </div>
             )}
 
-            {/* Enter-at-Broker guided modal */}
-            {brokerOrder && (
-                <BrokerEntryModal order={brokerOrder} accountBroker={broker} onClose={() => setBrokerOrder(null)} />
+            {/* Broker-neutral order instruction */}
+            {orderInstruction && (
+                <OrderInstructionModal
+                    order={orderInstruction}
+                    accountName={accountName}
+                    onClose={() => setOrderInstruction(null)}
+                />
             )}
         </div>
     );

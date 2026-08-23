@@ -15,7 +15,6 @@
 
 import pool from '@/lib/db';
 import {
-    listAccountsByStrategy,
     getAccount,
     saveAccountPnlSnapshot,
     getAccountPositions,
@@ -23,6 +22,7 @@ import {
     initializeAccountTables,
     type Account,
 } from '@/lib/accounts';
+import { listEntitledAccountsByStrategy } from '@/lib/membership';
 import { generateAccountOrders, executeAccountOrders } from '@/lib/account-executor';
 import type { GenericSignal, SignalLeg } from '@/lib/per-user-order-generator';
 import { sendSignalEmail, sendPhaseTransitionEmail } from '@/lib/signal-email';
@@ -71,11 +71,13 @@ export async function fanoutSignal(signalId: string, signalData: SignalData): Pr
     try {
         await initializeAccountTables();
 
-        // 1. Find all accounts subscribed to this strategy
-        const accounts = await listAccountsByStrategy(strategy);
+        // 1. Find all ENTITLED accounts subscribed to this strategy.
+        //    Entitlement is per account (account_memberships): free month
+        //    in-window, active, past_due grace, or canceled-but-paid-through.
+        const accounts = await listEntitledAccountsByStrategy(strategy);
 
         if (accounts.length === 0) {
-            console.log(`[Fanout] No accounts subscribed to strategy ${strategy}`);
+            console.log(`[Fanout] No entitled accounts for strategy ${strategy}`);
             return result;
         }
 
@@ -145,7 +147,7 @@ async function processAccountSignal(account: Account, signalId: string, signalDa
     //    transition for this account (daily HOLD / unchanged rebalance) —
     //    otherwise every daily signal would spam a "nothing to do" email.
     const hasOrders = orders.equityOrders.length > 0 || orders.optionsOrders.length > 0;
-    const email = await getUserEmail(account.user_id);
+    const email = await getAccountAlertEmail(account);
     if (email && (hasOrders || phaseMeta.phaseTransitioned)) {
         // Standalone phase-transition alert (only on a real promotion/demotion,
         // not the initial assignment).
@@ -232,17 +234,29 @@ function selectTier(signalData: SignalData, riskLevel: 'conservative' | 'moderat
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-async function getUserEmail(userId: string): Promise<string | null> {
+/**
+ * Resolve the alert recipient for an account:
+ *   1. accounts.alert_email (per-account override)
+ *   2. user_settings.login_email (Privy login email, the default)
+ *   3. user_settings.email / users.email (legacy fallbacks)
+ * Returns null when the user has turned signal emails off
+ * (email_signal_alerts = false).
+ */
+async function getAccountAlertEmail(account: Account): Promise<string | null> {
     try {
-        // Account user_ids are Privy DIDs ("did:privy:..."). The canonical
-        // email store is user_settings keyed by that DID; the users table is
-        // a legacy artifact (kept as a fallback).
-        const res = await pool.query(`SELECT email FROM user_settings WHERE user_id = $1`, [userId]);
-        if (res.rows[0]?.email) return res.rows[0].email;
-        const legacy = await pool.query(`SELECT email FROM users WHERE id::text = $1`, [userId]);
+        const res = await pool.query(
+            `SELECT login_email, email, email_signal_alerts FROM user_settings WHERE user_id = $1`,
+            [account.user_id]
+        );
+        const row = res.rows[0];
+        if (row && row.email_signal_alerts === false) return null;
+        if (account.alert_email) return account.alert_email;
+        if (row?.login_email) return row.login_email;
+        if (row?.email) return row.email;
+        const legacy = await pool.query(`SELECT email FROM users WHERE id::text = $1`, [account.user_id]);
         return legacy.rows[0]?.email || null;
     } catch (err) {
-        console.warn(`[Fanout] Failed to fetch email for user ${userId}:`, err);
+        console.warn(`[Fanout] Failed to fetch email for user ${account.user_id}:`, err);
         return null;
     }
 }

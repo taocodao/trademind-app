@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAccount, renameAccount, deleteAccount, updateAccountRiskLevel, type RiskLevel } from '@/lib/accounts';
+import { getAccount, renameAccount, deleteAccount, updateAccountRiskLevel, updateAccountAlertEmail, type RiskLevel } from '@/lib/accounts';
 import { getUserId } from '@/lib/auth';
 
 // GET /api/accounts/[id]
@@ -29,6 +29,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         }
         if (body.riskLevel && ['conservative', 'moderate', 'aggressive'].includes(body.riskLevel)) {
             account = (await updateAccountRiskLevel(accountId, userId, body.riskLevel as RiskLevel)) || account;
+        }
+        if (body.alertEmail !== undefined) {
+            const alert = typeof body.alertEmail === 'string' && body.alertEmail.includes('@') ? body.alertEmail.trim() : null;
+            account = (await updateAccountAlertEmail(accountId, userId, alert)) || account;
         }
         return NextResponse.json({ account });
     } catch (err) {

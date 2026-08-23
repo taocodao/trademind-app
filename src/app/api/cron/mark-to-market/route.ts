@@ -57,6 +57,8 @@ export async function POST(req: Request) {
             initial_principal: Number(r.initial_principal),
             cash_balance: Number(r.cash_balance),
             broker: r.broker || 'fidelity',
+            alert_email: r.alert_email ?? null,
+            status: r.status || 'active',
             created_at: r.created_at,
             updated_at: r.updated_at,
         }));

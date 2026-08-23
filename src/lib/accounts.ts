@@ -35,7 +35,12 @@ export interface Account {
     risk_level: RiskLevel;
     initial_principal: number;
     cash_balance: number;
+    /** @deprecated Broker linking was removed Aug 2026. Column kept for back-compat; always 'fidelity'. */
     broker: string;
+    /** Per-account alert recipient. Defaults to the Privy login email at creation. */
+    alert_email: string | null;
+    /** 'active' | 'archived'. Archived accounts keep P&L history but receive no signals. */
+    status: string;
     created_at: string;
     updated_at: string;
 }
@@ -181,14 +186,14 @@ export async function createAccount(
     strategy: string,
     riskLevel: RiskLevel,
     initialPrincipal: number,
-    broker: string = 'fidelity'
+    alertEmail?: string | null
 ): Promise<Account> {
     await initializeAccountTables();
     const res = await query(
-        `INSERT INTO accounts (user_id, name, strategy, risk_level, initial_principal, cash_balance, broker)
+        `INSERT INTO accounts (user_id, name, strategy, risk_level, initial_principal, cash_balance, alert_email)
          VALUES ($1, $2, $3, $4, $5, $5, $6)
          RETURNING *`,
-        [userId, name.trim(), strategy.toUpperCase(), riskLevel, initialPrincipal, broker.toLowerCase()]
+        [userId, name.trim(), strategy.toUpperCase(), riskLevel, initialPrincipal, alertEmail ?? null]
     );
     const acct = rowToAccount(res.rows[0]);
 
@@ -253,6 +258,16 @@ export async function updateAccountRiskLevel(accountId: number, userId: string, 
     return res.rows.length ? rowToAccount(res.rows[0]) : null;
 }
 
+export async function updateAccountAlertEmail(accountId: number, userId: string, alertEmail: string | null): Promise<Account | null> {
+    await initializeAccountTables();
+    const res = await query(
+        `UPDATE accounts SET alert_email = $3, updated_at = NOW() WHERE id = $1 AND user_id = $2 RETURNING *`,
+        [accountId, userId, alertEmail]
+    );
+    return res.rows.length ? rowToAccount(res.rows[0]) : null;
+}
+
+/** @deprecated Broker linking was removed Aug 2026. Kept for back-compat only. */
 export async function updateAccountBroker(accountId: number, userId: string, broker: string): Promise<Account | null> {
     await initializeAccountTables();
     const res = await query(
@@ -621,6 +636,8 @@ function rowToAccount(r: any): Account {
         initial_principal: Number(r.initial_principal),
         cash_balance: Number(r.cash_balance),
         broker: r.broker || 'fidelity',
+        alert_email: r.alert_email ?? null,
+        status: r.status || 'active',
         created_at: r.created_at,
         updated_at: r.updated_at,
     };

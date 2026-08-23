@@ -70,6 +70,17 @@ export async function POST(req: NextRequest) {
             [referrerUserId, user.privyDid, referredCustomerId]
         );
 
+        // Account-based model: record the attribution so the FIRST account
+        // this user creates is flagged as the referred account (no free
+        // month; referee bonus paid in days at first payment). One row per
+        // referred user (UNIQUE(referred_id)).
+        await pool.query(
+            `INSERT INTO referral_events (referrer_id, referred_id, referral_code, status)
+             VALUES ($1, $2, $3, 'attributed')
+             ON CONFLICT (referred_id) DO NOTHING`,
+            [referrerUserId, user.privyDid, code.toUpperCase()]
+        );
+
         // Log the signup event
         const newRef = await pool.query(
             `SELECT id FROM referrals WHERE referred_user_id = $1`,

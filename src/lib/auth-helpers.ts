@@ -8,6 +8,7 @@
  */
 import { cookies } from 'next/headers';
 import type { NextRequest } from 'next/server';
+import { query } from '@/lib/db';
 
 function decodePrivyToken(token: string): string | null {
     try {
@@ -51,4 +52,25 @@ export async function getPrivyUserId(req?: NextRequest): Promise<string | null> 
     }
 
     return null;
+}
+
+/**
+ * Record the email the user logged in with (Privy) as user_settings.login_email.
+ * This is the canonical login identity: per-account alert emails default to it,
+ * and it never gets overwritten with null. Call whenever a request supplies the
+ * authenticated user's email (session bootstrap, settings save).
+ */
+export async function upsertLoginEmail(userId: string, email: string | null | undefined): Promise<void> {
+    if (!email || !email.includes('@')) return;
+    try {
+        await query(`ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS login_email TEXT`).catch(() => {});
+        await query(
+            `INSERT INTO user_settings (user_id, login_email, updated_at)
+             VALUES ($1, $2, NOW())
+             ON CONFLICT (user_id) DO UPDATE SET login_email = $2, updated_at = NOW()`,
+            [userId, email.trim()]
+        );
+    } catch (err) {
+        console.warn('[auth] upsertLoginEmail failed:', err);
+    }
 }

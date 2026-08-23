@@ -39,6 +39,11 @@ export async function PATCH(req: NextRequest) {
                   ON CONFLICT (user_id) DO UPDATE SET email = $1`,
                  [body.email || null, userId]
              );
+             // Canonical login identity: per-account alert emails default to it.
+             if (body.email) {
+                 const { upsertLoginEmail } = await import('@/lib/auth-helpers');
+                 await upsertLoginEmail(userId, body.email);
+             }
         }
 
         if (body.global_auto_approve !== undefined) {

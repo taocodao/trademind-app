@@ -24,12 +24,19 @@ async function getUserId(req: NextRequest): Promise<string | null> {
     }
 }
 
+// Live annual price IDs. Env vars win when set; the literals are the current
+// live prices so checkout keeps working before the Vercel env vars land.
+const LIVE_PRICE_IDS = {
+    qqq_leaps: 'price_1U6Zkv2NdQtWmZJRpVRQBHT3',              // $336/yr
+    turbocore_pro_bundle: 'price_1U6Zkm2NdQtWmZJRJ6pueESx',   // $252/yr
+} as const;
+
 function stripePriceIdForPlan(plan: 'basic' | 'leaps'): string | null {
     const priceKey = priceKeyForPlan(plan);
     const priceId = priceKey === 'qqq_leaps'
         ? process.env.NEXT_PUBLIC_STRIPE_QQQ_LEAPS_ANNUAL_PRICE_ID
         : process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_PRO_BUNDLE_ANNUAL_PRICE_ID;
-    return priceId || null;
+    return priceId || LIVE_PRICE_IDS[priceKey as keyof typeof LIVE_PRICE_IDS] || null;
 }
 
 export async function POST(req: NextRequest) {

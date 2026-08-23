@@ -16,6 +16,7 @@ import {
 } from '@/lib/accounts';
 import { evaluateAccountPhase, type PhaseEvalResult } from '@/lib/account-phase';
 import { computeReserve, deltaCeiling, currentDeltaExposure, CASH_MGMT } from '@/lib/cash-management';
+import { tierMultiplier, leapsMaxContracts } from '@/lib/risk-tiers';
 import type { GenericSignal, SignalLeg, DeltaOrder, OptionsOrder, UserOrders } from '@/lib/per-user-order-generator';
 import type { Account } from '@/lib/accounts';
 
@@ -372,16 +373,25 @@ async function generateAccountOptionOrders(
     const vix = typeof (signal as any).vix === 'number' ? (signal as any).vix : null;
     const reserve = computeReserve(nlv, phaseName, vix);
 
-    const premiumBudget = nlv * Math.min(phaseCap, 0.95);
+    // Size-only risk tiering (Phase 4): scale the deployable budget by the
+    // account's risk level (conservative 0.5x / moderate 1.0x / aggressive
+    // 1.5x). The reserve floor and gross delta ceiling below still apply
+    // after scaling and can clip an aggressive tier back down.
+    const tierMult = tierMultiplier(riskLevel);
+    const premiumBudget = nlv * Math.min(phaseCap, 0.95) * tierMult;
     const reserveBudget = account.cash_balance - reserve.reservePct * nlv;
     const budget = Math.min(premiumBudget, reserveBudget);
     if (budget < price * 100) {
         return {
             orders: [], skip: true,
-            reason: `Reserve floor: deployable budget $${Math.max(0, budget).toFixed(0)} < contract cost $${(price * 100).toFixed(0)} (reserve ${(reserve.reservePct * 100).toFixed(0)}% of NLV, VIX adj ${reserve.vixAdj.toFixed(2)})`,
+            reason: `Reserve floor: deployable budget $${Math.max(0, budget).toFixed(0)} < contract cost $${(price * 100).toFixed(0)} (reserve ${(reserve.reservePct * 100).toFixed(0)}% of NLV, VIX adj ${reserve.vixAdj.toFixed(2)}, tier x${tierMult})`,
         };
     }
     let contracts = Math.floor(budget / (price * 100));
+
+    // Hard per-tier contract cap (conservative 1 / moderate 2 / aggressive 3).
+    const tierCap = leapsMaxContracts(riskLevel);
+    if (contracts > tierCap) contracts = tierCap;
 
     // Gross delta ceiling (per-contract exposure = delta × 100 × spot).
     const spotPrices = await fetchMarketPrices([underlying]);
@@ -398,7 +408,9 @@ async function generateAccountOptionOrders(
     }
 
     if (contracts < 1) {
-        return { orders: [], skip: true, reason: `Contract cost ($${(price * 100).toFixed(0)}) exceeds phase budget ($${budget.toFixed(0)})` };
+        // One core contract is always allowed when the reserve floor passed:
+        // a tier multiplier must never zero out an otherwise-valid entry.
+        contracts = 1;
     }
 
     const sym = optionSymbol(underlying, expiry, 'C', strike);

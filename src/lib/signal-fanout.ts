@@ -23,6 +23,7 @@ import {
     type Account,
 } from '@/lib/accounts';
 import { listEntitledAccountsByStrategy } from '@/lib/membership';
+import { tierMultiplier, scaleAllocation } from '@/lib/risk-tiers';
 import { generateAccountOrders, executeAccountOrders } from '@/lib/account-executor';
 import type { GenericSignal, SignalLeg } from '@/lib/per-user-order-generator';
 import { sendSignalEmail, sendPhaseTransitionEmail } from '@/lib/signal-email';
@@ -199,15 +200,34 @@ function selectTier(signalData: SignalData, riskLevel: 'conservative' | 'moderat
     // (type/action, strike, expiry, exit_px, symbol, tiers) survive tier
     // selection — the options executor needs them to build LEAPS orders.
     if (!tiers || !tiers[riskLevel]) {
-        console.log(`[Fanout] No tiers in signal, using flat allocation for ${riskLevel}`);
+        // App-side size tiering (Phase 4): the backend emits one flat
+        // regime-chosen allocation/contract; we scale SIZE by the account's
+        // risk level here. Contract selection stays regime-driven.
+        const mult = tierMultiplier(riskLevel);
+        let scaledLegs = signalData.legs || [];
+        if (mult !== 1 && scaledLegs.length > 0) {
+            const flat: Record<string, number> = {};
+            for (const leg of scaledLegs) {
+                if (leg.target_pct && leg.target_pct > 0) flat[leg.symbol] = leg.target_pct;
+            }
+            if (Object.keys(flat).length > 0) {
+                const scaled = scaleAllocation(flat, riskLevel);
+                scaledLegs = scaledLegs.map((leg) =>
+                    leg.target_pct && scaled[leg.symbol] !== undefined
+                        ? { ...leg, target_pct: scaled[leg.symbol] }
+                        : leg
+                );
+            }
+        }
+        console.log(`[Fanout] No tiers in signal; app-side ${riskLevel} size tier (x${mult})`);
         return {
             ...(signalData as any),
             id: '',
             strategy: signalData.strategy,
             regime: signalData.regime,
             confidence: signalData.confidence,
-            rationale: signalData.rationale,
-            legs: signalData.legs || [],
+            rationale: mult !== 1 ? `${signalData.rationale || ''} [${riskLevel} size x${mult}]` : signalData.rationale,
+            legs: scaledLegs,
         };
     }
 

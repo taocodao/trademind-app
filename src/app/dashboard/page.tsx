@@ -560,28 +560,6 @@ function DashboardContent() {
                     .then(r => r.json())
                     .then(d => {
                         setMembership(prev => ({ ...prev, ...d, fetched: true }));
-                        // Auto-start the first free trial if not yet started and no Stripe sub
-                        if (
-                            (d.appTrialStatus === 'not_started' || !d.appTrialStatus) &&
-                            d.appTrialAvailable &&
-                            d.tier === 'observer'
-                        ) {
-                            fetch('/api/settings/start-trial', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json', ...authHeader },
-                                body: JSON.stringify({ isSecondTrial: false }),
-                            })
-                                .then(r => r.json())
-                                .then(trialData => {
-                                    if (trialData.success) {
-                                        // Refresh membership with new trial state
-                                        fetch('/api/settings/tier', { headers: authHeader })
-                                            .then(r => r.json())
-                                            .then(d2 => setMembership(prev => ({ ...prev, ...d2, fetched: true })));
-                                    }
-                                })
-                                .catch(e => console.error('Trial auto-start failed:', e));
-                        }
                     })
                     .catch(e => { console.error(e); setMembership(prev => ({ ...prev, fetched: true })); });
             });
@@ -980,103 +958,25 @@ function DashboardContent() {
                         <div className="w-8 h-8 rounded-full border-2 border-tm-purple/30 border-t-tm-purple animate-spin" />
                     </div>
                 ) : (() => {
-                    const trialActive = membership.appTrialStatus === 'active' || membership.appTrialStatus === 'second_trial_active';
-                    const trialExpired = membership.appTrialStatus === 'expired';
-                    const isSubscribed = !['observer', null].includes(membership.tier) || trialActive;
+                    const trialActive = false;
+                    const trialExpired = false;
+                    const isSubscribed = membership.tier !== 'observer';
 
-                    // ── Trial countdown banner ────────────────────────────────
-                    const TrialBanner = trialActive && membership.appTrialEnd ? (() => {
-                        const daysLeft = Math.max(0, Math.ceil((new Date(membership.appTrialEnd).getTime() - Date.now()) / 86400000));
-                        const trialNum = membership.appTrialStatus === 'second_trial_active' ? 2 : 1;
-                        const tierLabel = ({
-                            full_access: 'Full Access',
-                            both_bundle: 'Full Access',
-                            turbocore_pro_bundle: 'QQQ Basic',
-                            qqq_leaps: 'QQQ LEAPS',
-                            turbocore: 'QQQ Basic',
-                        } as Record<string, string>)[(membership as any).appTrialTier] || 'Full Access';
-                        const isWhopTrial = (membership as any).billingSource === 'whop';
-                        return (
-                            <div className="glass-card p-3 flex items-center gap-3 border-tm-purple/30 bg-gradient-to-r from-tm-purple/10 to-blue-500/10">
-                                <div className="w-8 h-8 rounded-full bg-tm-purple/20 flex items-center justify-center shrink-0">
-                                    <span className="text-sm">🎉</span>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-bold text-white">
-                                        {isWhopTrial
-                                            ? `Whop Trial, ${tierLabel} (${membership.trialDaysTotal || 30} days)`
-                                            : `Free Trial #${trialNum}, ${tierLabel}`}
-                                    </p>
-                                    <p className="text-[10px] text-tm-muted">
-                                        {daysLeft > 0 ? t(daysLeft === 1 ? 'dashboard.days_remaining' : 'dashboard.days_remaining_plural', '{{days}} days remaining · No credit card needed yet', { days: daysLeft }) : t('dashboard.expires_today', 'Expires today!')}
-                                    </p>
-                                </div>
-                                <a href="https://www.trademind.bot/#pricing" className="text-[10px] font-bold text-tm-purple hover:underline whitespace-nowrap shrink-0">{t('dashboard.choose_plan', 'Choose a Plan →')}</a>
-                            </div>
-                        );
-                    })() : null;
-
-                    // ── Trial expired but second trial available ───────────────
-                    const SecondTrialCTA = trialExpired && membership.appTrialAvailable ? (
-                        <div className="glass-card p-5 flex flex-col items-center justify-center text-center border-yellow-500/20 bg-yellow-500/5">
-                            <span className="text-2xl mb-2">⏳</span>
-                            <h2 className="text-base font-bold mb-1">{t('dashboard.trial_ended', 'Your Free Trial Has Ended')}</h2>
-                            <p className="text-xs text-tm-muted mb-4 max-w-sm">
-                                {t('dashboard.trial_ended_desc', "Welcome back! As a special offer, you're eligible for one more {{days}}-day free trial, no credit card required.", { days: membership.trialDaysTotal })}
-                            </p>
-                            <div className="flex flex-col gap-2 w-full">
-                                <button
-                                    onClick={async () => {
-                                        const token = await getAccessToken();
-                                        const authHeader: Record<string, string> = token ? { 'Authorization': `Bearer ${token}` } : {};
-                                        const r = await fetch('/api/settings/start-trial', {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json', ...authHeader },
-                                            body: JSON.stringify({ isSecondTrial: true }),
-                                        });
-                                        const data = await r.json();
-                                        if (data.success) {
-                                            const tierRes = await fetch('/api/settings/tier', { headers: authHeader });
-                                            const tierData = await tierRes.json();
-                                            setMembership(prev => ({ ...prev, ...tierData, fetched: true }));
-                                        }
-                                    }}
-                                    className="btn-primary flex items-center gap-2 px-6 py-2.5 w-full justify-center text-sm"
-                                >
-                                    {t('dashboard.claim_second_trial', '🎁 Claim My Second Free Trial')}
-                                </button>
-                                <a href="https://www.trademind.bot/#pricing" className="text-xs text-tm-muted text-center hover:text-white transition-colors">{t('dashboard.subscribe_now', 'Or subscribe now →')}</a>
-                            </div>
-                        </div>
-                    ) : null;
-
-                    // ── Hard paywall: both trials expired & no subscription ────
-                    const HardPaywall = trialExpired && !membership.appTrialAvailable ? (
-                        <div className="glass-card p-6 flex flex-col items-center justify-center text-center mt-4 border-tm-purple/20">
-                            <div className="w-16 h-16 rounded-full bg-tm-purple/10 flex items-center justify-center mb-4 border border-tm-purple/20">
-                                <Target className="w-8 h-8 text-tm-purple" />
-                            </div>
-                            <h2 className="text-xl font-bold mb-2">{t('dashboard.hard_paywall_title', 'Continue with TradeMind')}</h2>
-                            <p className="text-sm text-tm-muted mb-6 max-w-sm">
-                                {t('dashboard.hard_paywall_desc', "You've used your free trials. Subscribe to keep access to AI-powered signals, real-time targets, and portfolio backtests.")}
-                            </p>
-                            <a href="https://www.trademind.bot/#pricing" className="btn-primary flex items-center gap-2 px-6 py-3 w-full justify-center text-sm">
-                                {t('dashboard.view_plans', 'View Subscription Plans')}
-                                <ArrowRight className="w-4 h-4 text-white/50" />
-                            </a>
-                        </div>
-                    ) : null;
+                    // Account memberships replace the legacy user-level trial UI.
+                    const TrialBanner = null;
+                    const SecondTrialCTA = null;
+                    const HardPaywall = null;
 
                     // ── First-time observer with trial not yet started ─────────
                     // (shouldn't normally show, auto-start handles this, but fallback)
-                    const NotStartedCTA = !trialActive && !trialExpired && membership.tier === 'observer' ? (
+                    const NotStartedCTA = !isSubscribed ? (
                         <div className="glass-card p-6 flex flex-col items-center justify-center text-center mt-4 border-tm-purple/20">
                             <div className="w-16 h-16 rounded-full bg-tm-purple/10 flex items-center justify-center mb-4 border border-tm-purple/20">
                                 <Target className="w-8 h-8 text-tm-purple" />
                             </div>
-                            <h2 className="text-xl font-bold mb-2">{t('dashboard.trial_starting', 'Starting Your Free Trial…')}</h2>
-                            <p className="text-sm text-tm-muted mb-4">{t('dashboard.trial_setting_up', 'Hold on one moment while we set up your {{days}}-day free access.', { days: membership.trialDaysTotal })}</p>
-                            <div className="w-6 h-6 rounded-full border-2 border-tm-purple/30 border-t-tm-purple animate-spin" />
+                            <h2 className="text-xl font-bold mb-2">Create an account to get started</h2>
+                            <p className="text-sm text-tm-muted mb-4">Each new account includes a 30 day free month.</p>
+                            <a href="/accounts" className="btn-primary flex items-center gap-2 px-6 py-3 justify-center text-sm">Manage accounts</a>
                         </div>
                     ) : null;
 

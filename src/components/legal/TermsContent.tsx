@@ -19,13 +19,13 @@ export function TermsContent() {
                 <h3>2. Descripción del Servicio</h3>
                 <p>TradeMind@bot es una plataforma de software que ofrece señales de trading generadas algorítmicamente, herramientas de simulación de cartera virtual e integración opcional con la API del bróker. <strong>TradeMind@bot no es un asesor de inversiones registrado, corredor de bolsa ni planificador financiero.</strong></p>
                 <h3>3. Suscripciones y Facturación</h3>
-                <p>Los nuevos suscriptores reciben una prueba gratuita de 14 días. Se requiere un método de pago válido al registrarse. Si no cancelas antes de que finalice el período de prueba, se realizará un cargo automático. Todas las tarifas están en USD y no son reembolsables, salvo lo exigido por la ley.</p>
+                <p>Cada cuenta tiene una membresía anual independiente y recibe sus primeros 30 días sin costo. No se crea una suscripción de Stripe hasta que eliges suscribirte. La renovación anual está activada de forma predeterminada y puede desactivarse para cada cuenta. Todas las tarifas están en USD y no son reembolsables, salvo lo exigido por la ley.</p>
                 <h3>4. Integración con API del Bróker</h3>
                 <p>TradeMind@bot no custodia ni controla tus fondos y no ejecuta operaciones sin tu autorización. Eres el único responsable de todas las operaciones ejecutadas en tu cuenta de corretaje.</p>
                 <h3>5. Sin Asesoramiento de Inversión</h3>
                 <p>Todo el contenido tiene fines únicamente informativos y educativos, y no constituye asesoramiento personalizado de inversión. <strong>El rendimiento pasado no es indicativo de resultados futuros.</strong></p>
                 <h3>6. Programa de Referidos</h3>
-                <p>Los créditos se emiten como saldo en la cuenta de suscripción y no tienen valor en efectivo.</p>
+                <p>Por cada referido exitoso, el referente recibe $100 y el nuevo miembro recibe $50 como días adicionales de suscripción. La recompensa del referente se consolida después de 75 días de actividad del referido. Las recompensas no tienen valor en efectivo.</p>
                 <h3>7. Conducta Prohibida</h3>
                 <p>Aceptas no utilizar el Servicio para fines ilegales, no realizar ingeniería inversa de las señales ni compartir las credenciales de tu cuenta.</p>
                 <h3>8. Propiedad Intelectual</h3>
@@ -57,13 +57,13 @@ export function TermsContent() {
                 <h3>2. 服务描述</h3>
                 <p>TradeMind@bot是一个软件技术平台，提供算法生成的交易信号、虚拟投资组合模拟工具及可选的券商API集成。<strong>TradeMind@bot不是注册投资顾问、经纪交易商或财务规划师。</strong></p>
                 <h3>3. 订阅与账单</h3>
-                <p>新订阅用户享有14天免费试用期。注册时需提供有效的付款方式。若在试用期结束前未取消订阅，将自动扣费。所有费用以美元计价，除法律规定外不予退款。</p>
+                <p>每个账户均有独立的年度会员资格，并享有前30天免费。只有在您选择订阅后才会创建Stripe订阅。年度自动续订默认开启，您可为每个账户单独关闭。所有费用以美元计价，除法律规定外不予退款。</p>
                 <h3>4. 券商API集成</h3>
                 <p>TradeMind@bot不持有、托管或控制您的资金，未经您授权不会执行交易。您须对您券商账户中执行的所有交易独自承担责任。</p>
                 <h3>5. 非投资建议</h3>
                 <p>所有内容仅供参考和教育使用，不构成个性化投资建议。<strong>过去的表现不代表未来的结果。</strong></p>
                 <h3>6. 推荐计划</h3>
-                <p>积分以订阅账户余额形式发放，无现金价值。</p>
+                <p>每次成功推荐，推荐人获得价值100美元的额外订阅天数，新会员获得价值50美元的额外订阅天数。推荐人的奖励会在被推荐人保持活跃75天后生效。奖励无现金价值。</p>
                 <h3>7. 禁止行为</h3>
                 <p>您同意不将本服务用于任何非法目的，不对信号进行逆向工程，也不共享账户凭证。</p>
                 <h3>8. 知识产权</h3>
@@ -95,13 +95,13 @@ export function TermsContent() {
             <h3>2. Description of Service</h3>
             <p>TradeMind@bot is a software technology platform that provides algorithmically generated trading signals, virtual portfolio simulation tools, and optional broker API integration. <strong>TradeMind@bot is not a registered investment advisor, broker-dealer, or financial planner.</strong></p>
             <h3>3. Subscriptions &amp; Billing</h3>
-            <p>New subscribers receive a 14-day free trial. A valid payment method is required at signup. If you do not cancel before the trial ends, you will be automatically charged. All fees are in USD and are non-refundable except as required by law.</p>
+            <p>Each account has its own annual membership and receives its first 30 days free. No Stripe subscription is created until you choose to subscribe. Yearly auto renew is on by default and can be turned off for each account. All fees are in USD and are non-refundable except as required by law.</p>
             <h3>4. Broker API Integration</h3>
             <p>TradeMind@bot does not hold, custody, or control your funds and does not execute trades without your authorization. You are solely responsible for all trades executed in your brokerage account.</p>
             <h3>5. No Investment Advice</h3>
             <p>All content is for informational and educational purposes only. <strong>Past performance is not indicative of future results.</strong> See our full <Link href="/risk-disclosure">Risk Disclosure</Link>.</p>
             <h3>6. Referral Program</h3>
-            <p>Credits are issued in the form of subscription account balance and have no cash value.</p>
+            <p>For each successful referral, the referrer receives $100 and the referred member receives $50 as extra subscription days. The referrer reward vests after the referred membership remains active for 75 days. Rewards have no cash value.</p>
             <h3>7. Prohibited Conduct</h3>
             <p>You agree not to use the Service for any unlawful purpose, reverse-engineer signals, or share account credentials.</p>
             <h3>8. Intellectual Property</h3>

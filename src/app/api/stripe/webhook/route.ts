@@ -1,626 +1,135 @@
-import { NextRequest } from "next/server";
-import Stripe from "stripe";
-import pool from "@/lib/db";
-import { extendReferrerSubscription } from "@/lib/stripe-extend";
-import { resolvePromoCode } from "@/lib/promo-codes";
-import { PRICING } from "@/lib/pricing-config";
-import { sendWhopDM } from "@/lib/whop";
-import { promoteToWhopCommunity, revokeWhopCommunity } from "@/lib/whop-community";
+import { NextRequest } from 'next/server';
+import Stripe from 'stripe';
 import { getStripe } from '@/lib/stripe-server';
+import {
+    getMembershipByAccount,
+    getMembershipByStripeSubscription,
+    type MembershipStatus,
+    updateMembership,
+} from '@/lib/membership';
+import { handleReferralFirstPayment } from '@/lib/referrals';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs'; // Required for raw body access in App Router
-
-// ── Config ─────────────────────────────────────────────────────────────────
-// REFERRAL_FEE: total bilateral credit per referral (default $100)
-// Split in half: $50 at signup, $50 at first charge, both referrer AND referee
-const REFERRAL_FEE = parseInt(process.env.REFERRAL_FEE || '100', 10);
-const REFERRAL_HALF = REFERRAL_FEE / 2;
-const REFERRAL_ANNUAL_BONUS = parseInt(process.env.REFERRAL_ANNUAL_BONUS || '150', 10);
-const REFERRAL_ANNUAL_HALF = REFERRAL_ANNUAL_BONUS / 2;
+export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
     if (!process.env.STRIPE_WEBHOOK_SECRET) {
-        return new Response("Webhook secret not configured", { status: 500 });
+        return new Response('Webhook secret not configured', { status: 500 });
     }
 
-    // Must use req.text(), App Router auto-parses JSON which corrupts Stripe signature
     const rawBody = await req.text();
-    const sig = req.headers.get("stripe-signature");
-
-    if (!sig) {
-        return new Response("Missing stripe-signature header", { status: 400 });
-    }
+    const signature = req.headers.get('stripe-signature');
+    if (!signature) return new Response('Missing stripe-signature header', { status: 400 });
 
     let event: Stripe.Event;
     try {
-        event = getStripe().webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET!);
-    } catch (err: any) {
-        console.error(`Webhook signature verification failed: ${err.message}`);
-        return new Response(`Webhook Error: ${err.message}`, { status: 400 });
+        event = getStripe().webhooks.constructEvent(rawBody, signature, process.env.STRIPE_WEBHOOK_SECRET);
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Invalid webhook signature';
+        console.error('Stripe webhook signature verification failed:', message);
+        return new Response(`Webhook Error: ${message}`, { status: 400 });
     }
 
-    // Process async, always return 200 quickly to prevent Stripe retries
     try {
         await processWebhookEvent(event);
-    } catch (err) {
-        console.error("Webhook processing error:", err);
-        // Return 200 regardless, log separately. Non-200 causes Stripe to retry.
+    } catch (error) {
+        // Stripe retries only on a non-2xx response. Log operational failures for follow-up.
+        console.error('Stripe webhook processing error:', error);
     }
 
-    return new Response("OK", { status: 200 });
+    return new Response('OK', { status: 200 });
 }
 
-async function processWebhookEvent(event: Stripe.Event) {
-    const isLive = event.livemode;
+function unixToIso(value: number | null | undefined): string | null {
+    return value ? new Date(value * 1000).toISOString() : null;
+}
 
+function membershipStatusForStripe(status: Stripe.Subscription.Status): MembershipStatus {
+    if (status === 'past_due') return 'past_due';
+    if (status === 'canceled' || status === 'unpaid') return 'expired';
+    // Bonus-day grants can surface as Stripe "trialing" while retaining paid entitlement.
+    return 'active';
+}
+
+async function processWebhookEvent(event: Stripe.Event): Promise<void> {
     switch (event.type) {
-
-        // ── New subscription created via Checkout ──────────────────────────
-        case "checkout.session.completed": {
+        case 'checkout.session.completed': {
             const session = event.data.object as Stripe.Checkout.Session;
+            const accountId = Number(session.metadata?.account_id);
             const userId = session.metadata?.userId;
-            const customerId = session.customer as string;
-            const subscriptionId = session.subscription as string;
-            const referralCode = session.metadata?.referralCode;
-            const isReferralSignup = session.metadata?.isReferralSignup === "true";
+            const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
+            if (!Number.isInteger(accountId) || accountId <= 0 || !userId || !subscriptionId) return;
 
-            if (!userId || !subscriptionId) break;
-
-            const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
-            const priceId = subscription.items.data[0].price.id;
-            const tier = determineTierFromPrice(priceId);
-            const billingInterval = subscription.items.data[0].price.recurring?.interval ?? "month";
-            const email = session.customer_details?.email || null;
-
-            // ── FAILSAFE: Prevent Orphaned Subscriptions ──
-            const existingUserRes = await pool.query(
-                `SELECT stripe_subscription_id FROM user_settings WHERE user_id = $1`,
-                [userId]
-            );
-            const existingSubscriptionId = existingUserRes.rows[0]?.stripe_subscription_id;
-            
-            if (existingSubscriptionId && existingSubscriptionId !== subscriptionId) {
-                console.log(`⚠️ User ${userId} completed new checkout session but already has subscription ${existingSubscriptionId}. Canceling orphaned subscription.`);
-                try {
-                    await getStripe().subscriptions.cancel(existingSubscriptionId);
-                } catch (cancelErr: any) {
-                    if (cancelErr.code !== 'resource_missing') {
-                        console.error(`Failed to cancel orphaned subscription ${existingSubscriptionId}:`, cancelErr);
-                    }
-                }
+            const membership = await getMembershipByAccount(accountId);
+            if (!membership || membership.user_id !== userId) {
+                console.warn('Stripe checkout could not resolve an owned account membership', { accountId, userId });
+                return;
             }
 
-            const sub = subscription as any;
-            await pool.query(
-                `INSERT INTO user_settings (
-                    user_id, subscription_tier, stripe_customer_id, stripe_subscription_id, 
-                    stripe_price_id, subscription_status, billing_interval, current_period_end, trial_end, livemode, updated_at, email, email_signal_alerts
-                 ) VALUES ($10, $1, $2, $3, $4, $5, $6, to_timestamp($7), $8, $9, NOW(), $11, false)
-                 ON CONFLICT (user_id) DO UPDATE 
-                 SET subscription_tier = EXCLUDED.subscription_tier,
-                     stripe_customer_id = EXCLUDED.stripe_customer_id,
-                     stripe_subscription_id = EXCLUDED.stripe_subscription_id,
-                     stripe_price_id = EXCLUDED.stripe_price_id,
-                     subscription_status = EXCLUDED.subscription_status,
-                     billing_interval = EXCLUDED.billing_interval,
-                     current_period_end = EXCLUDED.current_period_end,
-                     trial_end = EXCLUDED.trial_end,
-                     livemode = EXCLUDED.livemode,
-                     email = COALESCE(user_settings.email, EXCLUDED.email),
-                     updated_at = EXCLUDED.updated_at`,
-                [
-                    tier,
-                    customerId,
-                    subscriptionId,
-                    priceId,
-                    subscription.status,
-                    billingInterval,
-                    sub.current_period_end,
-                    sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
-                    isLive,
-                    userId,
-                    email
-                ]
-            );
-
-            // Record card fingerprint for trial abuse prevention
-            await recordCardFingerprint(userId, customerId);
-
-            // ── Whop Trial Migration Confirmation ──────────────────────────────
-            // If this email came from a Whop trial, mark it as migrated
-            if (email) {
-                await markWhopTrialMigrated(email, tier).catch(e =>
-                    console.warn('[Stripe Webhook] Whop trial migration mark failed (non-fatal):', e)
-                );
+            const subscription = await getStripe().subscriptions.retrieve(subscriptionId) as Stripe.Subscription & {
+                current_period_end?: number;
+            };
+            const metadataPlan = session.metadata?.plan;
+            if (metadataPlan && metadataPlan !== membership.plan) {
+                console.warn('Stripe checkout plan metadata does not match membership plan', { accountId, metadataPlan, membershipPlan: membership.plan });
+                return;
             }
 
-            // ── Whop Community Promotion ────────────────────────────────────────
-            // If user came from Whop trial, promote them to free community tier
-            const whopUserRes = await pool.query(
-                `SELECT whop_user_id FROM user_settings WHERE user_id = $1`,
-                [userId]
-            );
-            const whopUserId = whopUserRes.rows[0]?.whop_user_id;
-            if (whopUserId) {
-                await promoteToWhopCommunity(whopUserId).catch(e =>
-                    console.warn('[Stripe Webhook] Whop community promotion failed (non-fatal):', e)
-                );
+            await updateMembership(accountId, {
+                status: 'active',
+                stripe_subscription_id: subscription.id,
+                current_period_end: unixToIso(subscription.current_period_end),
+                cancel_at_period_end: false,
+                pending_bonus_days: membership.pending_bonus_days > 0 ? 0 : membership.pending_bonus_days,
+            });
+
+            if (membership.referred_signup) {
+                await handleReferralFirstPayment({
+                    referredUserId: membership.user_id,
+                    accountId,
+                    plan: membership.plan,
+                    stripeSubscriptionId: subscription.id,
+                });
             }
-
-            // Store referral relationship if present
-            if (referralCode) {
-                const referrerUserId = await linkReferral(referralCode, userId, customerId);
-
-                // ── Stage 1 (Signup): Extend REFERRER's subscription by REFERRAL_HALF ──────
-                // The referee already received REFERRAL_HALF worth of bonus trial days
-                // baked into their trial_period_days at checkout. Now we credit the referrer.
-                if (referrerUserId && isReferralSignup) {
-                    const refRecord = await pool.query(
-                        `SELECT id FROM referrals WHERE referred_user_id = $1`, [userId]
-                    );
-                    const referralId = refRecord.rows[0]?.id;
-                    if (referralId) {
-                        await extendReferrerSubscription(
-                            referrerUserId,
-                            REFERRAL_HALF,
-                            referralId,
-                            `Referral Stage 1 (signup), friend joined, referrer credited $${REFERRAL_HALF}`
-                        );
-                        await pool.query(
-                            `UPDATE referrals SET signup_bonus_paid = true, updated_at = NOW() WHERE id = $1`,
-                            [referralId]
-                        );
-                        await pool.query(
-                            `INSERT INTO referral_activity (referral_id, event_type, credit_amount, description)
-                             VALUES ($1, 'stage1_referrer', $2, $3)`,
-                            [referralId, REFERRAL_HALF, `Stage 1: Referrer credited $${REFERRAL_HALF} in free days, friend signed up`]
-                        );
-                        console.log(`🎁 Stage 1 (signup): Referrer ${referrerUserId} extended by $${REFERRAL_HALF} worth of days`);
-                    }
-                }
-            }
-
-            console.log(`✅ User ${userId} subscribed to ${tier} (${subscription.status})`);
-            break;
+            return;
         }
 
-        // ── Subscription updated (plan change, trial end, payment issue) ───
-        case "customer.subscription.updated": {
+        case 'customer.subscription.updated': {
+            const subscription = event.data.object as Stripe.Subscription & { current_period_end?: number };
+            const membership = await getMembershipByStripeSubscription(subscription.id);
+            if (!membership) return;
+            await updateMembership(membership.account_id, {
+                status: membershipStatusForStripe(subscription.status),
+                current_period_end: unixToIso(subscription.current_period_end),
+                cancel_at_period_end: subscription.cancel_at_period_end,
+            });
+            return;
+        }
+
+        case 'customer.subscription.deleted': {
             const subscription = event.data.object as Stripe.Subscription;
-            const customerId = subscription.customer as string;
-            const priceId = subscription.items.data[0].price.id;
-            const billingInterval = subscription.items.data[0].price.recurring?.interval ?? "month";
-
-            let tier = "observer";
-            if (["active", "trialing", "past_due"].includes(subscription.status)) {
-                tier = determineTierFromPrice(priceId);
-            }
-
-            const sub2 = subscription as any;
-            await pool.query(
-                `UPDATE user_settings
-                 SET subscription_tier = $1,
-                     stripe_subscription_id = $2,
-                     stripe_price_id = $3,
-                     subscription_status = $4,
-                     billing_interval = $5,
-                     current_period_end = to_timestamp($6),
-                     trial_end = $7,
-                     livemode = $8,
-                     cancel_at_period_end = $10,
-                     cancel_at = $11,
-                     updated_at = NOW()
-                 WHERE stripe_customer_id = $9`,
-                [
-                    tier,
-                    subscription.id,
-                    priceId,
-                    subscription.status,
-                    billingInterval,
-                    sub2.current_period_end,
-                    sub2.trial_end ? new Date(sub2.trial_end * 1000).toISOString() : null,
-                    isLive,
-                    customerId,
-                    subscription.cancel_at_period_end,
-                    subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
-                ]
-            );
-            
-            // Auto-set free_features_limit based on new tier
-            const newFreeLimit = [
-                'full_access', 'turbocore_pro_bundle', 'qqq_leaps',
-                // legacy keys (kept for safety during migration period)
-                'both_bundle', 'turbocore_pro',
-            ].includes(tier) ? 2 : tier === 'turbocore' ? 1 : 0;
-            await pool.query(
-                `UPDATE user_settings SET free_features_limit = $1 WHERE stripe_customer_id = $2`,
-                [newFreeLimit, customerId]
-            );
-
-            console.log(`🔄 Subscription updated for ${customerId}: ${tier} (${subscription.status}, cancel_at_period_end: ${subscription.cancel_at_period_end})`);
-            break;
+            const membership = await getMembershipByStripeSubscription(subscription.id);
+            if (!membership) return;
+            await updateMembership(membership.account_id, {
+                status: 'expired',
+                stripe_subscription_id: null,
+                cancel_at_period_end: false,
+            });
+            return;
         }
 
-        // ── Subscription cancelled ─────────────────────────────────────────
-        case "customer.subscription.deleted": {
-            const subscription = event.data.object as Stripe.Subscription;
-            const customerId = subscription.customer as string;
-
-            await pool.query(
-                `UPDATE user_settings
-                 SET subscription_tier = 'observer',
-                     subscription_status = 'canceled',
-                     cancel_at_period_end = false,
-                     cancel_at = null,
-                     updated_at = NOW()
-                 WHERE stripe_customer_id = $1`,
-                [customerId]
-            );
-
-            // Revoke Whop community access
-            const whopRes = await pool.query(
-                `SELECT whop_user_id FROM user_settings WHERE stripe_customer_id = $1`,
-                [customerId]
-            );
-            const canceledWhopUserId = whopRes.rows[0]?.whop_user_id;
-            if (canceledWhopUserId) {
-                await revokeWhopCommunity(canceledWhopUserId).catch(() => {});
-            }
-
-            // Deactivate all AI feature subscriptions
-            await pool.query(
-                `UPDATE ai_feature_subscriptions SET status = 'canceled', updated_at = NOW()
-                 WHERE user_id = (SELECT user_id FROM user_settings WHERE stripe_customer_id = $1)`,
-                [customerId]
-            );
-            await pool.query(
-                `UPDATE user_settings SET free_features_selected = 0, free_features_limit = 0
-                 WHERE stripe_customer_id = $1`,
-                [customerId]
-            );
-
-            console.log(`❌ Subscription canceled for ${customerId}`);
-            break;
-        }
-
-        // ── Trial ending in 3 days, send reminder email ───────────────────
-        case "customer.subscription.trial_will_end": {
-            const subscription = event.data.object as Stripe.Subscription;
-            const customerId = subscription.customer as string;
-            console.log(`⏰ Trial ending soon for customer ${customerId}`);
-            break;
-        }
-
-        // ── Invoice paid, trigger Stage 2 bilateral referral credits ──────
-        case "invoice.payment_succeeded": {
+        case 'invoice.payment_failed': {
             const invoice = event.data.object as Stripe.Invoice;
-            await handleInvoicePaymentSucceeded(invoice);
-            break;
-        }
-
-        // ── Invoice failed ─────────────────────────────────────────────────
-        case "invoice.payment_failed": {
-            const invoice = event.data.object as Stripe.Invoice;
-            const customerId = invoice.customer as string;
-
-            // Look up user, if they came from Whop, send a payment recovery DM
-            // (NOT a winback DM, this is involuntary churn, different message)
-            const failedUserRes = await pool.query(
-                `SELECT user_id, whop_user_id FROM user_settings WHERE stripe_customer_id = $1`,
-                [customerId]
-            );
-            const failedUser = failedUserRes.rows[0];
-            if (failedUser?.whop_user_id) {
-                await sendWhopDM(
-                    failedUser.whop_user_id,
-                    `⚠️ **Your TradeMind payment didn't go through.**\n\n` +
-                    `Your signals are paused until your payment method is updated.\n\n` +
-                    `→ Fix it now at **trademind.bot/dashboard** → Account → Update Card\n\n` +
-                    `_Takes under 1 minute. Your signal history is preserved._`
-                ).catch(() => {});
-            }
-
-            console.log(`💳 Payment failed for customer ${customerId}${failedUser?.whop_user_id ? ', recovery DM sent' : ''}`);
-            break;
-        }
-
-        // ── 3DS/SCA authentication required ───────────────────────────────
-        case "invoice.payment_action_required": {
-            const invoice = event.data.object as Stripe.Invoice;
-            console.log(`🔐 Payment action required for invoice ${invoice.id}`);
-            break;
-        }
-
-        // ── Invoice finalization failed ────────────────────────────────────
-        case "invoice.finalization_failed": {
-            const invoice = event.data.object as Stripe.Invoice;
-            console.error(`🚨 Invoice finalization failed: ${invoice.id}. Manual intervention required.`);
-            break;
+            const subscriptionId = (invoice as Stripe.Invoice & { subscription?: string | Stripe.Subscription }).subscription;
+            const normalizedId = typeof subscriptionId === 'string' ? subscriptionId : subscriptionId?.id;
+            if (!normalizedId) return;
+            const membership = await getMembershipByStripeSubscription(normalizedId);
+            if (!membership) return;
+            await updateMembership(membership.account_id, { status: 'past_due' });
+            return;
         }
 
         default:
-            break;
+            return;
     }
-}
-
-// ── Stage 2: First real charge, bilateral credit for both parties ─────────
-// 
-// Referral credit model (REFERRAL_FEE env, default $100):
-//   Stage 1 (signup): Referee gets bonus trial days + Referrer gets extension (handled in checkout.session.completed)
-//   Stage 2 (first charge): BOTH get REFERRAL_HALF in free days (extension)
-//   Annual bonus: BOTH get REFERRAL_ANNUAL_HALF in free days
-//
-// All credits applied as subscription extension days (credit_dollars / plan_daily_rate).
-// Cash balance credits are NOT used, only day extensions.
-//
-async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
-    const customerId = invoice.customer as string;
-    const billingReason = invoice.billing_reason;
-    const subscriptionId = (invoice as any).subscription as string;
-
-    // ── Loyalty Credits: issued on every renewal cycle (month 1 to 5) ───────────
-    // billing_reason='subscription_cycle' = renewal after initial subscription_create.
-    // We derive month number from subscription.start_date vs invoice.period_start.
-    // Idempotency key: 'loyalty_month_N_<invoice.id>', UNIQUE on (user_id, source)
-    // prevents double-credit even if Stripe delivers this event twice.
-    if (billingReason === 'subscription_cycle' && subscriptionId) {
-        try {
-            const sub = await getStripe().subscriptions.retrieve(subscriptionId) as any;
-            const startDate: number = sub.start_date;
-            const periodStart: number = (invoice as any).period_start;
-
-            // Month number: 1-indexed (first renewal = month 1)
-            const monthsElapsed = Math.round((periodStart - startDate) / (30 * 24 * 3600));
-            const monthNumber = Math.max(1, monthsElapsed);
-
-            const maxLoyaltyMonths = PRICING.loyalty.totalMonths; // default 5
-            const maxInstallmentMonths = PRICING.creditInstallment.installmentCount; // 4
-
-            // Look up user from customer ID
-            const userRow = await pool.query(
-                `SELECT user_id FROM user_settings WHERE stripe_customer_id = $1`,
-                [customerId]
-            );
-            const userId = userRow.rows[0]?.user_id;
-
-            if (userId) {
-                // ── Loyalty Credits (months 1 to N) ──────────────────────────────
-                if (monthNumber <= maxLoyaltyMonths) {
-                    const loyaltySource = `loyalty_month_${monthNumber}_${invoice.id}`;
-                    const creditCents = PRICING.loyalty.creditCentsPerMonth;
-                    await pool.query(
-                        `INSERT INTO user_credits (user_id, amount, source, expires_at)
-                         VALUES ($1, $2, $3, NOW() + INTERVAL '90 days')
-                         ON CONFLICT (user_id, source) DO NOTHING`,
-                        [userId, creditCents, loyaltySource]
-                    );
-                    console.log(`🎁 Loyalty credit: $${(creditCents/100).toFixed(0)} issued to ${userId} (month ${monthNumber}/${maxLoyaltyMonths})`);
-                }
-
-                // ── Installment Credits ($25 × 4 months = $100 total) ─────────
-                // Issued for the first 4 billing cycles (months 1 to 4) to offset
-                // the post-trial monthly cost. Idempotent: source includes invoice.id.
-                if (monthNumber <= maxInstallmentMonths) {
-                    const installSource = `installment_month_${monthNumber}_${invoice.id}`;
-                    const installCents = PRICING.creditInstallment.creditCentsPerInstallment; // 2500 = $25
-                    await pool.query(
-                        `INSERT INTO user_credits (user_id, amount, source, expires_at)
-                         VALUES ($1, $2, $3, NOW() + INTERVAL '30 days')
-                         ON CONFLICT (user_id, source) DO NOTHING`,
-                        [userId, installCents, installSource]
-                    );
-                    console.log(`💳 Installment credit: $${(installCents/100).toFixed(0)} issued to ${userId} (month ${monthNumber}/${maxInstallmentMonths})`);
-                } else {
-                    console.log(`[Installment] Month ${monthNumber} exceeds 4, no installment credit (customer ${customerId})`);
-                }
-            }
-        } catch (loyaltyErr) {
-            console.error('[Credits] Loyalty/installment issuance failed (non-fatal):', loyaltyErr);
-        }
-    }
-
-    // Find if this customer is a referred user
-    const referralResult = await pool.query(
-        `SELECT r.*, 
-                u.stripe_customer_id as referrer_stripe_id,
-                u.card_fingerprint as referrer_fingerprint,
-                u2.card_fingerprint as referred_fingerprint,
-                u2.created_at as referred_created_at
-         FROM referrals r
-         JOIN user_settings u ON u.user_id = r.referrer_user_id
-         JOIN user_settings u2 ON u2.user_id = r.referred_user_id
-         WHERE r.referred_stripe_customer_id = $1`,
-        [customerId]
-    );
-    if (!referralResult.rows.length) return;
-
-    const ref = referralResult.rows[0];
-    const referrerStripeId = ref.referrer_stripe_id;
-    if (!referrerStripeId) return;
-
-    const isFirstPayment = billingReason === "subscription_create";
-    const isRenewal = billingReason === "subscription_cycle";
-
-    const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
-    const isAnnual = subscription.items.data[0].price.recurring?.interval === "year";
-
-    // ── Fraud Prevention ──────────────────────────────────────────────────
-    if (ref.referrer_fingerprint && ref.referred_fingerprint && ref.referrer_fingerprint === ref.referred_fingerprint) {
-        console.warn(`🚨 Fraud: shared card fingerprint between referrer and referee.`);
-        await pool.query(
-            `INSERT INTO referral_activity (referral_id, event_type, description)
-             VALUES ($1, 'fraud_flagged', 'Reward denied: shared card fingerprint') ON CONFLICT DO NOTHING`,
-            [ref.id]
-        );
-        return;
-    }
-
-    const msSinceSignup = Date.now() - new Date(ref.referred_created_at).getTime();
-    const daysSinceSignup = msSinceSignup / (1000 * 60 * 60 * 24);
-    if ((isFirstPayment || isRenewal) && daysSinceSignup < 7) {
-        console.warn(`🚨 Fraud/Abuse: conversion less than 7 days after signup (${daysSinceSignup.toFixed(1)}d)`);
-        await pool.query(
-            `INSERT INTO referral_activity (referral_id, event_type, description)
-             VALUES ($1, 'fraud_flagged', 'Reward denied: conversion < 7 days after signup') ON CONFLICT DO NOTHING`,
-            [ref.id]
-        );
-        return;
-    }
-
-    // ── Stage 2: First real charge (trial → paid) ─────────────────────────
-    // Triggers when stage1_paid=false at billing_reason=subscription_create.
-    // Stage 1 (signup) was already paid via checkout.session.completed.
-    if (!ref.stage1_paid && (isFirstPayment || isRenewal)) {
-        const creditAmount = isAnnual ? REFERRAL_ANNUAL_HALF : REFERRAL_HALF;
-        const label = isAnnual ? `Annual` : `Monthly`;
-
-        // 1. Extend REFERRER's subscription
-        await extendReferrerSubscription(
-            ref.referrer_user_id,
-            creditAmount,
-            ref.id,
-            `Stage 2 ${label}, friend's card charged, referrer credited $${creditAmount}`
-        );
-        await pool.query(
-            `INSERT INTO referral_activity (referral_id, event_type, credit_amount, description)
-             VALUES ($1, 'stage2_referrer', $2, $3)`,
-            [ref.id, creditAmount, `Stage 2: Referrer credited $${creditAmount} in free days, friend's first charge`]
-        );
-
-        // 2. Extend REFEREE's subscription (bilateral)
-        await extendReferrerSubscription(
-            ref.referred_user_id,
-            creditAmount,
-            ref.id,
-            `Stage 2 ${label}, referee credited $${creditAmount} for completing trial`
-        );
-        await pool.query(
-            `INSERT INTO referral_activity (referral_id, event_type, credit_amount, description)
-             VALUES ($1, 'stage2_referee', $2, $3)`,
-            [ref.id, creditAmount, `Stage 2: Referee credited $${creditAmount} in free days, first charge completed`]
-        );
-
-        await pool.query(
-            `UPDATE referrals SET stage1_paid = true, ${isAnnual ? 'annual_bonus_paid = true,' : ''} updated_at = NOW() WHERE id = $1`,
-            [ref.id]
-        );
-
-        console.log(`💰 Stage 2 (first charge): Both referrer ${ref.referrer_user_id} and referee ${ref.referred_user_id} credited $${creditAmount} each (${label})`);
-    }
-}
-
-// ── Card Fingerprint: Trial Abuse Prevention ───────────────────────────────
-async function recordCardFingerprint(userId: string, stripeCustomerId: string) {
-    try {
-        const paymentMethods = await getStripe().paymentMethods.list({
-            customer: stripeCustomerId,
-            type: "card",
-        });
-        const fingerprint = paymentMethods.data[0]?.card?.fingerprint;
-        if (!fingerprint) return;
-
-        const duplicate = await pool.query(
-            `SELECT user_id FROM user_settings 
-             WHERE card_fingerprint = $1 AND user_id != $2`,
-            [fingerprint, userId]
-        );
-        if (duplicate.rows.length > 0) {
-            console.warn(`⚠️ Duplicate card fingerprint: user ${userId} shares card with ${duplicate.rows[0].user_id}`);
-        }
-
-        await pool.query(
-            `UPDATE user_settings
-             SET has_had_trial = true, card_fingerprint = $1, updated_at = NOW()
-             WHERE user_id = $2`,
-            [fingerprint, userId]
-        );
-    } catch (err) {
-        console.error("Failed to record card fingerprint:", err);
-    }
-}
-
-// ── Referral relationship storage, returns referrerUserId if successfully linked ──
-async function linkReferral(referralCode: string, referredUserId: string, referredCustomerId: string): Promise<string | null> {
-    try {
-        let referrerUserId = await resolvePromoCode(referralCode);
-        if (!referrerUserId) {
-            const check = await pool.query(`SELECT user_id FROM user_settings WHERE user_id = $1`, [referralCode]);
-            referrerUserId = check.rows[0]?.user_id ?? null;
-        }
-        if (!referrerUserId || referrerUserId === referredUserId) return null;
-
-        await pool.query(
-            `INSERT INTO referrals (referrer_user_id, referred_user_id, referred_stripe_customer_id)
-             VALUES ($1, $2, $3)
-             ON CONFLICT (referred_user_id) DO UPDATE 
-             SET referred_stripe_customer_id = COALESCE(referrals.referred_stripe_customer_id, EXCLUDED.referred_stripe_customer_id)`,
-            [referrerUserId, referredUserId, referredCustomerId]
-        );
-        
-        const newRef = await pool.query(`SELECT id FROM referrals WHERE referred_user_id = $1`, [referredUserId]);
-        if (newRef.rows.length) {
-            await pool.query(
-                `INSERT INTO referral_activity (referral_id, event_type, description)
-                 VALUES ($1, 'subscribed', 'Friend started trial, referral linked') ON CONFLICT DO NOTHING`,
-                [newRef.rows[0].id]
-            );
-        }
-        return referrerUserId;
-    } catch (err) {
-        console.error("Failed to link referral:", err);
-        return null;
-    }
-}
-
-// ── Whop Trial Migration Confirmation ─────────────────────────────────────
-// Called when a user who came from a Whop trial completes a Stripe checkout.
-// Marks whop_trials.migrated = true and sends a thank-you Whop DM.
-async function markWhopTrialMigrated(email: string, tier: string): Promise<void> {
-    const result = await pool.query(
-        `UPDATE whop_trials
-         SET migrated = TRUE, migrated_at = NOW(), migrated_tier = $1
-         WHERE email = $2 AND migrated = FALSE
-         RETURNING id, whop_user_id`,
-        [tier, email]
-    );
-
-    if (!result.rows.length) return; // Not a Whop trial, no-op
-
-    const { whop_user_id } = result.rows[0];
-
-    // Send a quick thank-you DM (non-fatal, they may have revoked Whop access)
-    await sendWhopDM(
-        whop_user_id,
-        `✅ **You're all set on trademind.bot.** Welcome to the full platform, signals continue daily. See you there.`
-    ).catch(() => {});
-
-    console.log(`[Stripe Webhook] Whop trial migrated: ${email} → ${tier}`);
-}
-
-// ── Tier mapping from Stripe price ID ────────────────────────────────────────
-function determineTierFromPrice(priceId: string): string {
-    const prices: Record<string, string> = {
-        // New plan keys (primary)
-        [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_PRO_BUNDLE_MONTHLY_PRICE_ID  || '']: 'turbocore_pro_bundle',
-        [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_PRO_BUNDLE_ANNUAL_PRICE_ID   || '']: 'turbocore_pro_bundle',
-        [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_PRO_BUNDLE_BIENNIAL_PRICE_ID || '']: 'turbocore_pro_bundle',
-        [process.env.NEXT_PUBLIC_STRIPE_QQQ_LEAPS_MONTHLY_PRICE_ID             || '']: 'qqq_leaps',
-        [process.env.NEXT_PUBLIC_STRIPE_QQQ_LEAPS_ANNUAL_PRICE_ID              || '']: 'qqq_leaps',
-        [process.env.NEXT_PUBLIC_STRIPE_QQQ_LEAPS_BIENNIAL_PRICE_ID            || '']: 'qqq_leaps',
-        [process.env.NEXT_PUBLIC_STRIPE_FULL_ACCESS_MONTHLY_PRICE_ID            || '']: 'full_access',
-        [process.env.NEXT_PUBLIC_STRIPE_FULL_ACCESS_ANNUAL_PRICE_ID             || '']: 'full_access',
-        [process.env.NEXT_PUBLIC_STRIPE_FULL_ACCESS_BIENNIAL_PRICE_ID           || '']: 'full_access',
-        // Legacy keys, kept during migration so existing subscribers aren't affected
-        [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_MONTHLY_PRICE_ID || '']: 'turbocore',
-        [process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_ANNUAL_PRICE_ID  || '']: 'turbocore',
-        [process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID       || '']: 'turbocore_pro_bundle',
-        [process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID        || '']: 'turbocore_pro_bundle',
-        [process.env.NEXT_PUBLIC_STRIPE_LEAPS_MONTHLY_PRICE_ID     || '']: 'qqq_leaps',
-        [process.env.NEXT_PUBLIC_STRIPE_LEAPS_ANNUAL_PRICE_ID      || '']: 'qqq_leaps',
-        [process.env.NEXT_PUBLIC_STRIPE_BUNDLE_MONTHLY_PRICE_ID    || '']: 'full_access',
-        [process.env.NEXT_PUBLIC_STRIPE_BUNDLE_ANNUAL_PRICE_ID     || '']: 'full_access',
-    };
-    delete prices[''];
-    return prices[priceId] || 'observer';
 }

@@ -8,11 +8,7 @@ export const dynamic = 'force-dynamic';
 
 const FREE_FEATURE_LIMITS: Record<string, number> = {
     'observer': 0,
-    'turbocore': 1,
-    'turbocore_pro': 1,
-    'both_bundle': 2,
-    // Trial tiers mirror their base tier limits
-    'app_trial': 2,  // both_bundle equivalent during trial
+    'full_access': 2,
 };
 
 const VALID_FEATURES = ['screenshot', 'deepdive', 'briefing', 'strategy', 'debrief'];
@@ -63,38 +59,21 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ success: true, method: 'free_entitlement' });
         }
 
-        // Paid, add Stripe subscription item
-        const settingsResult = await query(
-            `SELECT stripe_subscription_id, app_trial_tier, app_trial_started_at, app_trial_2_started_at, app_trial_count FROM user_settings WHERE user_id = $1`,
+        // Paid features attach to an entitled account's paid subscription.
+        const membershipResult = await query(
+            `SELECT stripe_subscription_id
+             FROM account_memberships
+             WHERE user_id = $1
+               AND stripe_subscription_id IS NOT NULL
+               AND status IN ('active', 'past_due')
+             ORDER BY updated_at DESC
+             LIMIT 1`,
             [user.privyDid]
         );
-        const row = settingsResult.rows[0];
-        const subscriptionId = row?.stripe_subscription_id;
-
+        const subscriptionId = membershipResult.rows[0]?.stripe_subscription_id as string | undefined;
         if (!subscriptionId) {
-            // Determine if they are on a free trial
-            const TRIAL_DAYS = parseInt(process.env.FREE_TRIAL_DAYS || '14', 10);
-            const trial2Start = row?.app_trial_2_started_at ? new Date(row.app_trial_2_started_at) : null;
-            const trial1Start = row?.app_trial_started_at ? new Date(row.app_trial_started_at) : null;
-            const activeTrial = trial2Start ?? trial1Start;
-            
-            let isOnTrial = false;
-            if (activeTrial) {
-                const trialEndDate = new Date(activeTrial.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
-                if (new Date() < trialEndDate) {
-                    isOnTrial = true;
-                }
-            }
-
-            if (isOnTrial) {
-                return NextResponse.json({ 
-                    error: 'You are currently on a free trial and have used your free AI picks. To purchase additional add-ons, please wait until your trial period is over to subscribe.',
-                    code: 'TRIAL_ACTIVE_NO_STRIPE'
-                }, { status: 400 });
-            }
-
-            return NextResponse.json({ 
-                error: 'No Stripe subscription found. You must have an active TurboCore or Both Bundle plan to add paid features.',
+            return NextResponse.json({
+                error: 'An active annual account membership is required to add paid features.',
                 code: 'NO_SUBSCRIPTION'
             }, { status: 400 });
         }
@@ -118,13 +97,8 @@ export async function POST(req: NextRequest) {
             subscription = await getStripe().subscriptions.retrieve(subscriptionId);
         } catch (stripeErr: any) {
             if (stripeErr.code === 'resource_missing') {
-                // Stale subscription ID, clear it from DB so user can re-subscribe cleanly
-                await query(
-                    `UPDATE user_settings SET stripe_subscription_id = NULL WHERE user_id = $1`,
-                    [user.privyDid]
-                );
                 return NextResponse.json({
-                    error: 'Your Stripe subscription record is out of sync. Please go to Settings → Subscription and re-subscribe to your plan, then try again.',
+                    error: 'This account subscription record is out of sync. Please manage the account membership and try again.',
                     code: 'SUBSCRIPTION_NOT_FOUND'
                 }, { status: 400 });
             }

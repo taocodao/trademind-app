@@ -44,40 +44,25 @@ export default function SinglePageMarketing() {
         }
     }, [ready, authenticated, router]);
 
-    // ── TikTok / dark social attribution capture + Whop redirect ─────────────────
-    // Store UTM params + referral code in localStorage on first visit.
-    // These survive multi-session paths (user watches TikTok, visits days later, signs up).
-    // Also: if Whop redirects here after checkout (checkout_status=success),
-    // forward to /whop/welcome with all params preserved.
+    // Store referral and campaign attribution for a later account creation.
     useEffect(() => {
         try {
             const params = new URLSearchParams(window.location.search);
-
-            // ── Whop checkout redirect ─────────────────────────────────────────
-            const checkoutStatus = params.get('checkout_status') ?? params.get('status');
-            const receiptId = params.get('receipt_id') ?? params.get('payment_id');
-            if (checkoutStatus === 'success' && receiptId) {
-                router.replace(`/whop/welcome?${params.toString()}`);
-                return;
-            }
-
-            // ── Referral code capture ────────────────────────────────────────────
             const ref = params.get('ref') || params.get('code');
             if (ref && !localStorage.getItem('tm_referralCode')) {
                 localStorage.setItem('tm_referralCode', ref.toUpperCase());
             }
-            // UTM attribution
             const utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content'] as const;
-            utmKeys.forEach(k => {
-                const v = params.get(k);
-                if (v && !localStorage.getItem(`tm_${k}`)) {
-                    localStorage.setItem(`tm_${k}`, v);
+            utmKeys.forEach((key) => {
+                const value = params.get(key);
+                if (value && !localStorage.getItem(`tm_${key}`)) {
+                    localStorage.setItem(`tm_${key}`, value);
                 }
             });
         } catch {
-            // localStorage may be unavailable in certain browsers, fail silently
+            // Storage can be unavailable in some browsers.
         }
-    }, [router]);
+    }, []);
 
     if (!ready || !shouldRender) {
         return (

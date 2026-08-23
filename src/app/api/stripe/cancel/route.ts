@@ -1,110 +1,86 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import pool from '@/lib/db';
+import { getAccount } from '@/lib/accounts';
+import { getMembershipByAccount, updateMembership, type AccountMembership } from '@/lib/membership';
 import { getStripe } from '@/lib/stripe-server';
 
 export const dynamic = 'force-dynamic';
 
 async function getUserId(req: NextRequest): Promise<string | null> {
-    // 1. Cookie-based (primary, works for browser requests)
     const cookieStore = await cookies();
-    const directId = cookieStore.get('privy-user-id')?.value;
-    if (directId) return directId;
-    const privyToken = cookieStore.get('privy-token')?.value;
-    if (privyToken) {
-        try {
-            const payload = JSON.parse(Buffer.from(privyToken.split('.')[1], 'base64').toString());
-            const id = payload.sub || payload.privy_did;
-            if (id) return id;
-        } catch { /* fallthrough */ }
-    }
-    // 2. Bearer token fallback (for programmatic calls)
+    const cookieUserId = cookieStore.get('privy-user-id')?.value;
+    if (cookieUserId) return cookieUserId;
     const authHeader = req.headers.get('Authorization');
-    if (authHeader?.startsWith('Bearer ')) {
-        const token = authHeader.slice(7);
-        try {
-            const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
-            return payload?.sub || payload?.privy_did || null;
-        } catch { return null; }
+    if (!authHeader?.startsWith('Bearer ')) return null;
+    try {
+        const payload = JSON.parse(Buffer.from(authHeader.slice(7).split('.')[1], 'base64url').toString());
+        return payload?.sub || payload?.privy_did || null;
+    } catch {
+        return null;
     }
-    return null;
 }
 
-// POST, cancel subscription
+type OwnedSubscriptionResult = { membership: AccountMembership } | { error: NextResponse };
+
+async function ownedSubscription(req: NextRequest): Promise<OwnedSubscriptionResult> {
+    const userId = await getUserId(req);
+    if (!userId) return { error: NextResponse.json({ error: 'Not authenticated' }, { status: 401 }) };
+    const body = await req.json().catch(() => ({}));
+    const accountId = Number(body.accountId);
+    if (!Number.isInteger(accountId) || accountId <= 0) {
+        return { error: NextResponse.json({ error: 'A valid accountId is required' }, { status: 400 }) };
+    }
+    const account = await getAccount(accountId, userId);
+    if (!account) return { error: NextResponse.json({ error: 'Account not found' }, { status: 404 }) };
+    const membership = await getMembershipByAccount(account.id);
+    if (!membership?.stripe_subscription_id) {
+        return { error: NextResponse.json({ error: 'No Stripe subscription found for this account' }, { status: 404 }) };
+    }
+    return { membership };
+}
+
 export async function POST(req: NextRequest) {
     try {
-        const userId = await getUserId(req);
-        if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-
-        const result = await pool.query(
-            `SELECT stripe_subscription_id, subscription_status FROM user_settings WHERE user_id = $1`,
-            [userId]
-        );
-
-        const subscriptionId = result.rows[0]?.stripe_subscription_id;
-        const status = result.rows[0]?.subscription_status;
-        if (!subscriptionId) {
-            return NextResponse.json({ error: 'No active subscription found.' }, { status: 400 });
-        }
-
-        let subscription: any;
-        if (status === 'trialing') {
-            // Immediate cancel for trial users, no charge ever made
-            subscription = await getStripe().subscriptions.cancel(subscriptionId);
-        } else {
-            // Graceful cancel: revoke at end of billing period
-            subscription = await getStripe().subscriptions.update(subscriptionId, {
-                cancel_at_period_end: true,
-            });
-        }
-
-        const cancelAt = subscription.current_period_end
+        const result = await ownedSubscription(req);
+        if ('error' in result) return result.error;
+        const subscriptionId = result.membership.stripe_subscription_id;
+        if (!subscriptionId) return NextResponse.json({ error: 'No Stripe subscription found for this account' }, { status: 404 });
+        const subscription = await getStripe().subscriptions.update(subscriptionId, {
+            cancel_at_period_end: true,
+        }) as { cancel_at_period_end: boolean; current_period_end?: number; status: string };
+        const currentPeriodEnd = subscription.current_period_end
             ? new Date(subscription.current_period_end * 1000).toISOString()
-            : null;
-
-        // Sync to DB immediately for instant UI refresh
-        await pool.query(
-            `UPDATE user_settings 
-             SET cancel_at_period_end = $2, cancel_at = $3, subscription_status = $4, updated_at = NOW()
-             WHERE user_id = $1`,
-            [userId, subscription.cancel_at_period_end ?? false, cancelAt, subscription.status]
-        );
-
-        console.log(`✅ Subscription cancel scheduled for user ${userId}. Ends: ${cancelAt}`);
-        return NextResponse.json({ success: true, cancelAt, status: subscription.status });
-    } catch (error: any) {
-        console.error('Cancel subscription error:', error);
-        return NextResponse.json({ error: error.message || 'Failed to cancel subscription' }, { status: 500 });
+            : result.membership.current_period_end;
+        await updateMembership(result.membership.account_id, {
+            status: 'canceled',
+            cancel_at_period_end: true,
+            current_period_end: currentPeriodEnd,
+        });
+        return NextResponse.json({ success: true, cancelAt: currentPeriodEnd, status: subscription.status });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Failed to turn off auto renew';
+        console.error('Stripe cancel error:', error);
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }
 
-// PUT, reactivate (undo cancel_at_period_end)
 export async function PUT(req: NextRequest) {
     try {
-        const userId = await getUserId(req);
-        if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-
-        const result = await pool.query(
-            `SELECT stripe_subscription_id FROM user_settings WHERE user_id = $1`,
-            [userId]
-        );
-        const subscriptionId = result.rows[0]?.stripe_subscription_id;
-        if (!subscriptionId) return NextResponse.json({ error: 'No subscription found' }, { status: 404 });
-
+        const result = await ownedSubscription(req);
+        if ('error' in result) return result.error;
+        const subscriptionId = result.membership.stripe_subscription_id;
+        if (!subscriptionId) return NextResponse.json({ error: 'No Stripe subscription found for this account' }, { status: 404 });
         const subscription = await getStripe().subscriptions.update(subscriptionId, {
             cancel_at_period_end: false,
-        }) as any;
-
-        await pool.query(
-            `UPDATE user_settings SET cancel_at_period_end = false, cancel_at = null, updated_at = NOW()
-             WHERE user_id = $1`,
-            [userId]
-        );
-
-        console.log(`✅ Subscription reactivated for user ${userId}`);
+        }) as { status: string };
+        await updateMembership(result.membership.account_id, {
+            status: subscription.status === 'past_due' ? 'past_due' : 'active',
+            cancel_at_period_end: false,
+        });
         return NextResponse.json({ success: true, cancelAtPeriodEnd: false, status: subscription.status });
-    } catch (error: any) {
-        console.error('Reactivate subscription error:', error);
-        return NextResponse.json({ error: error.message || 'Failed to reactivate subscription' }, { status: 500 });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Failed to turn on auto renew';
+        console.error('Stripe reactivate error:', error);
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }

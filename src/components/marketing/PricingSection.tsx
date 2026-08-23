@@ -1,14 +1,14 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Check, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePrivy } from '@privy-io/react-auth';
 import { PRICING } from '@/lib/pricing-config';
 
 export function PricingSection() {
-    const { t, i18n } = useTranslation();
-    const { login, authenticated, getAccessToken } = usePrivy();
+    const { t } = useTranslation();
+    const { login, authenticated } = usePrivy();
     // Annual-only pricing — no interval toggle
-    const [loadingTier, setLoadingTier] = useState<string | null>(null);
+    const [loadingTier] = useState<string | null>(null);
     const [selectedTier, setSelectedTier] = useState<string>('qqq_leaps');
 
     // Two plans, annual-only: QQQ Basic $252/yr, QQQ LEAPS $336/yr.
@@ -24,7 +24,7 @@ export function PricingSection() {
             marketingFrame: `$${PRICING.plans.turbocore_pro_bundle.annualPerMonth}/mo equivalent · 30% off`,
             description: PRICING.plans.turbocore_pro_bundle.description,
             features: PRICING.plans.turbocore_pro_bundle.features as unknown as string[],
-            button: t('pricing.turbocore.btn'),
+            button: t('pricing.turbocore.btn', 'Create QQQ Basic account'),
             popular: false,
             accentColor: '#4f8ef7',
             annualPriceId: process.env.NEXT_PUBLIC_STRIPE_TURBOCORE_PRO_BUNDLE_ANNUAL_PRICE_ID || '',
@@ -39,92 +39,19 @@ export function PricingSection() {
             marketingFrame: `$${PRICING.plans.qqq_leaps.annualPerMonth}/mo equivalent · 30% off`,
             description: PRICING.plans.qqq_leaps.description,
             features: PRICING.plans.qqq_leaps.features as unknown as string[],
-            button: t('pricing.qqq_leaps.btn', 'Get QQQ LEAPS'),
+            button: t('pricing.qqq_leaps.btn', 'Create QQQ LEAPS account'),
             popular: true,
             accentColor: '#7c3aed',
             annualPriceId: process.env.NEXT_PUBLIC_STRIPE_QQQ_LEAPS_ANNUAL_PRICE_ID || '',
         }
     ], [t]);
 
-    useEffect(() => {
-        const storedTierId = typeof window !== 'undefined' ? sessionStorage.getItem('pendingTierUrl') : null;
-        if (authenticated && storedTierId) {
-            // Small delay so Privy fully establishes session before we call the API
-            const timer = setTimeout(() => {
-                const tier = TIERS.find(t => t.id === storedTierId);
-                if (tier) handleSubscribe(tier);
-                sessionStorage.removeItem('pendingTierUrl');
-            }, 400);
-            return () => clearTimeout(timer);
-        }
-    }, [authenticated, TIERS]);
-
-    const handleSubscribe = async (tier: typeof TIERS[0]) => {
-        const priceId = tier.annualPriceId;   // annual-only
-        if (!priceId) {
-            alert('This plan is being configured. Please try again shortly.');
-            return;
-        }
-
+    const handleSubscribe = async () => {
         if (!authenticated) {
-            if (typeof window !== 'undefined') {
-                // Store the actual priceId so dashboard can call checkout directly
-                sessionStorage.setItem('pendingTierUrl', priceId);
-                sessionStorage.setItem('pendingTierAnnual', 'true');
-            }
             login();
             return;
         }
-
-        setLoadingTier(tier.id);
-        try {
-            // Get Privy JWT — works immediately after login without waiting for cookie
-            const token = await getAccessToken();
-
-            // Always verify if user already has an active subscription
-            const tierRes = await fetch('/api/settings/tier', {
-                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-            });
-            const tierData = await tierRes.json();
-
-            // If user is already subscribed, route to billing portal instead of checkout
-            if (tierData.tier && tierData.tier !== 'observer') {
-                const portalRes = await fetch('/api/stripe/portal', { 
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                    },
-                    body: JSON.stringify({ locale: i18n.language }),
-                });
-                const portalData = await portalRes.json();
-                if (portalData.url) {
-                    window.location.href = portalData.url;
-                    return;
-                }
-            }
-
-            // Not subscribed, proceed to fresh checkout session
-            const res = await fetch('/api/stripe/checkout', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-                },
-                body: JSON.stringify({ priceId, isAnnual: true, locale: i18n.language }),
-            });
-            const data = await res.json();
-            if (data.url) {
-                window.location.href = data.url;
-            } else {
-                throw new Error(data.error || 'Checkout failed');
-            }
-        } catch (err) {
-            console.error('Checkout error:', err);
-            alert('Failed to start checkout. Please try again.');
-        } finally {
-            setLoadingTier(null);
-        }
+        window.location.href = '/accounts';
     };
 
     const getCardClasses = (tier: typeof TIERS[0]) => {
@@ -153,7 +80,7 @@ export function PricingSection() {
                     <span className="text-sm font-bold text-white">{t('pricing.annual_only', 'Annual billing only')}</span>
                     <span className="text-[10px] bg-tm-green/20 text-tm-green px-1.5 py-0.5 rounded uppercase tracking-wider">{t('pricing.save_badge', 'SAVE 30%')}</span>
                 </div>
-                <p className="mt-4 text-xs text-tm-purple/80 font-semibold tracking-wider uppercase">{t('pricing.trial_notice', 'All tiers include a 14-Day Free Trial')}</p>
+                <p className="mt-4 text-xs text-tm-purple/80 font-semibold tracking-wider uppercase">{t('pricing.free_month_notice', 'Every new account includes its first month free')}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch max-w-3xl mx-auto">
@@ -208,7 +135,7 @@ export function PricingSection() {
                             </ul>
 
                             <button
-                                onClick={(e) => { e.stopPropagation(); handleSubscribe(tier); }}
+                                onClick={(e) => { e.stopPropagation(); handleSubscribe(); }}
                                 disabled={loadingTier !== null}
                                 className={`w-full py-4 rounded-xl font-bold transition-all disabled:opacity-50 ${
                                     isSelected

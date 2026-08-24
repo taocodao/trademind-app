@@ -73,6 +73,72 @@ async function getOwnedMembership(accountId: number, userId: string): Promise<Ac
 }
 
 /**
+ * Apply part or all of a vested referrer grant to a chosen account. The
+ * event carries a dollar balance (grant_dollars); each application draws
+ * dollars from it, converts them to days at the chosen account's plan rate,
+ * and extends that account's Stripe subscription (or parks the days for its
+ * next checkout). The balance stays claimable until fully applied.
+ */
+export async function applyVestedReferral(
+    userId: string,
+    eventId: string,
+    accountId: number,
+    dollars: number
+): Promise<{ days: number; plan: string; parked: boolean; remainingDollars: number }> {
+    const event = await query(
+        `SELECT id, status, void_reason, grant_dollars, applied_dollars
+         FROM referral_events
+         WHERE id = $1 AND referrer_id = $2`,
+        [eventId, userId]
+    );
+    const row = event.rows[0];
+    if (!row) throw new Error('Referral not found');
+    if (row.status !== 'vested' || row.void_reason) throw new Error('This reward is not available to apply');
+
+    const grant = Number(row.grant_dollars ?? PRICING.referralDays.referrerDollars);
+    const applied = Number(row.applied_dollars ?? 0);
+    const remaining = Math.round((grant - applied) * 100) / 100;
+    if (remaining <= 0) throw new Error('This reward was already fully applied');
+
+    const amount = Math.round(dollars * 100) / 100;
+    if (!Number.isFinite(amount) || amount <= 0) throw new Error('Enter an amount greater than zero');
+    if (amount > remaining) throw new Error(`Only $${remaining} remains on this reward`);
+
+    const membership = await getOwnedMembership(accountId, userId);
+    if (!membership) throw new Error('Account not found');
+
+    const days = daysForDollars(amount, membership.plan);
+    if (days <= 0) throw new Error('That amount converts to less than one day on this plan');
+
+    const parked = !membership.stripe_subscription_id;
+    if (membership.stripe_subscription_id) {
+        await extendStripeSubscription(membership.stripe_subscription_id, days);
+    } else {
+        await updateMembership(membership.account_id, {
+            pending_bonus_days: membership.pending_bonus_days + days,
+        });
+    }
+
+    await query(
+        `INSERT INTO referral_applications (event_id, account_id, dollars, days)
+         VALUES ($1, $2, $3, $4)`,
+        [eventId, accountId, amount, days]
+    );
+    const newRemaining = Math.round((remaining - amount) * 100) / 100;
+    await query(
+        `UPDATE referral_events
+         SET applied_dollars = applied_dollars + $2,
+             referrer_days = referrer_days + $3,
+             referrer_reward_account_id = $4,
+             referrer_applied_at = CASE WHEN applied_dollars + $2 >= COALESCE(grant_dollars, $5) - 0.005 THEN NOW() ELSE referrer_applied_at END
+         WHERE id = $1`,
+        [eventId, amount, days, accountId, grant]
+    );
+    console.log(`[Referral] Applied $${amount} (${days}d) of event ${eventId} to account ${accountId}; $${newRemaining} left (${parked ? 'parked' : 'stripe'})`);
+    return { days, plan: membership.plan, parked, remainingDollars: newRemaining };
+}
+
+/**
  * Resolve the referrer's currently designated reward account. If it is gone,
  * use any of their active memberships. A designated account without a Stripe
  * subscription remains valid, because the vested days can be parked there.
@@ -230,36 +296,21 @@ export async function vestDueReferrals(): Promise<{ vested: number; voided: numb
 
         const previousRewards = await referrerRewardsVestedTrailing12(event.referrer_id);
         const capReached = previousRewards >= PRICING.referralDays.maxReferrerDollarsPerYear / PRICING.referralDays.referrerDollars;
-        const rewardMembership = capReached ? null : await resolveRewardMembership(event.referrer_id);
-        const rewardDays = rewardMembership
-            ? daysForDollars(PRICING.referralDays.referrerDollars, rewardMembership.plan)
-            : 0;
 
-        if (rewardMembership && rewardDays > 0) {
-            if (rewardMembership.stripe_subscription_id) {
-                await extendStripeSubscription(rewardMembership.stripe_subscription_id, rewardDays);
-            } else {
-                await updateMembership(rewardMembership.account_id, {
-                    pending_bonus_days: rewardMembership.pending_bonus_days + rewardDays,
-                });
-            }
-        }
-
-        const reason = capReached ? 'annual_cap' : rewardMembership ? null : 'no_reward_account';
+        // Vesting only marks the grant ready. The referrer chooses which
+        // account receives the days when they apply the reward on /refer, so
+        // no reward account needs to exist (or be designated) up front.
         await query(
             `UPDATE referral_events
              SET status = 'vested',
                  vested_at = NOW(),
-                 referrer_reward_account_id = $2,
-                 referrer_days = $3,
-                 referrer_applied_at = CASE WHEN $3 > 0 THEN NOW() ELSE NULL END,
-                 void_reason = $4
+                 void_reason = $2
              WHERE id = $1 AND status = 'pending'`,
-            [event.id, rewardMembership?.account_id ?? null, rewardDays, reason]
+            [event.id, capReached ? 'annual_cap' : null]
         );
         vested++;
         if (capReached) capped++;
-        console.log(`[Referral] Vested event ${event.id}: ${rewardDays} referrer days${reason ? ` (${reason})` : ''}`);
+        console.log(`[Referral] Vested event ${event.id}: $${PRICING.referralDays.referrerDollars} ready to apply${capReached ? ' (annual_cap)' : ''}`);
     }
 
     return { vested, voided, capped };
@@ -296,7 +347,9 @@ export async function getReferralStats(userId: string) {
         ),
         query(
             `SELECT id, converted_at, status, vests_at, vested_at, referrer_days,
-                    referred_days, referred_plan, void_reason
+                    referred_days, referred_plan, void_reason,
+                    referrer_applied_at, referrer_reward_account_id,
+                    grant_dollars, applied_dollars
              FROM referral_events
              WHERE referrer_id = $1
              ORDER BY COALESCE(converted_at, vested_at) DESC NULLS LAST
@@ -312,12 +365,19 @@ export async function getReferralStats(userId: string) {
     const rewardMembership = rewardAccountId ? await getOwnedMembership(rewardAccountId, userId) : null;
     const code = settingsResult.rows[0]?.referral_code ?? '';
 
+    const claimableCount = eventsResult.rows.filter((r: any) => {
+        if (r.status !== 'vested' || r.void_reason) return false;
+        const remaining = Number(r.grant_dollars ?? PRICING.referralDays.referrerDollars) - Number(r.applied_dollars ?? 0);
+        return remaining > 0.004;
+    }).length;
+
     return {
         code,
         shareLink: code ? `https://trademind.bot/?ref=${code}` : '',
         totalReferrals: Number(totalsResult.rows[0]?.total ?? 0),
         totalEarnedDays: Number(totalsResult.rows[0]?.earned_days ?? 0),
         pendingDays: Number(totalsResult.rows[0]?.pending_days ?? 0),
+        claimableCount,
         recentEvents: eventsResult.rows,
         rewardAccount: rewardMembership ? {
             accountId: rewardMembership.account_id,

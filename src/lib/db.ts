@@ -1114,6 +1114,24 @@ export async function initializeUserTables(): Promise<void> {
         await query(`CREATE INDEX IF NOT EXISTS idx_referral_events_pending ON referral_events (vests_at) WHERE status = 'pending'`).catch(() => {});
         await query(`CREATE INDEX IF NOT EXISTS idx_referral_events_referrer_vested ON referral_events (referrer_id, vested_at) WHERE status = 'vested'`).catch(() => {});
 
+        // Apply-at-vest referral grants (Aug 2026): each vested event carries a
+        // dollar balance; applications draw from it per account and amount.
+        await query(`ALTER TABLE referral_events ADD COLUMN IF NOT EXISTS grant_dollars     NUMERIC(8,2)`).catch(() => {});
+        await query(`ALTER TABLE referral_events ADD COLUMN IF NOT EXISTS applied_dollars   NUMERIC(8,2) NOT NULL DEFAULT 0`).catch(() => {});
+        await query(`UPDATE referral_events SET grant_dollars = 100 WHERE grant_dollars IS NULL AND status IN ('pending','vested')`).catch(() => {});
+        await query(`ALTER TABLE referral_events ALTER COLUMN grant_dollars SET DEFAULT 100`).catch(() => {});
+        await query(`
+            CREATE TABLE IF NOT EXISTS referral_applications (
+                id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                event_id    UUID NOT NULL REFERENCES referral_events(id),
+                account_id  INTEGER NOT NULL REFERENCES accounts(id),
+                dollars     NUMERIC(8,2) NOT NULL,
+                days        INTEGER NOT NULL,
+                created_at  TIMESTAMPTZ DEFAULT NOW()
+            )
+        `).catch(() => {});
+        await query(`CREATE INDEX IF NOT EXISTS idx_referral_applications_event ON referral_applications (event_id)`).catch(() => {});
+
         // ── Trial Conversions ─────────────────────────────────────────────────
         await query(`
             CREATE TABLE IF NOT EXISTS trial_conversions (

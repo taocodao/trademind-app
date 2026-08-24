@@ -128,7 +128,7 @@ export const PRICING = {
     referral: {
         referrerMonths:                 parseInt(process.env.REFERRAL_REFERRER_MONTHS  ?? '8',  10),
         refereeMonths:                  parseInt(process.env.REFERRAL_REFEREE_MONTHS   ?? '4',  10),
-        vestingDays:                    parseInt(process.env.REFERRAL_VESTING_DAYS     ?? '75', 10),
+        vestingDays:                    parseInt(process.env.REFERRAL_VESTING_DAYS     ?? '14', 10),
         maxReferrerMonthsPerYear:       parseInt(process.env.REFERRAL_MAX_MONTHS_YEAR  ?? '12', 10),
         compensationTrackThresholdCents: parseInt(process.env.REFERRAL_COMP_THRESHOLD_CENTS ?? '100000', 10), // $1,000
     },
@@ -145,7 +145,7 @@ export const PRICING = {
     referralDays: {
         referrerDollars:                parseInt(process.env.REFERRAL_REFERRER_DOLLARS ?? '100', 10),
         refereeDollars:                 parseInt(process.env.REFERRAL_REFEREE_DOLLARS  ?? '50',  10),
-        vestingDays:                    parseInt(process.env.REFERRAL_VESTING_DAYS     ?? '75',  10),
+        vestingDays:                    parseInt(process.env.REFERRAL_VESTING_DAYS     ?? '14',  10),
         maxReferrerDollarsPerYear:      parseInt(process.env.REFERRAL_MAX_DOLLARS_YEAR ?? '1200', 10),
         compensationTrackThresholdCents: parseInt(process.env.REFERRAL_COMP_THRESHOLD_CENTS ?? '100000', 10), // $1,000
         // Parked referrer days expire if never applied to a paid subscription.

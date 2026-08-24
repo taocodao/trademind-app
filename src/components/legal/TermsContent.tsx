@@ -25,7 +25,7 @@ export function TermsContent() {
                 <h3>5. Sin Asesoramiento de Inversión</h3>
                 <p>Todo el contenido tiene fines únicamente informativos y educativos, y no constituye asesoramiento personalizado de inversión. <strong>El rendimiento pasado no es indicativo de resultados futuros.</strong></p>
                 <h3>6. Programa de Referidos</h3>
-                <p>Por cada referido exitoso, el referente recibe $100 y el nuevo miembro recibe $50 como días adicionales de suscripción. La recompensa del referente se consolida después de 75 días de actividad del referido. Las recompensas no tienen valor en efectivo.</p>
+                <p>Por cada referido exitoso, el referente recibe $100 y el nuevo miembro recibe $50 como días adicionales de suscripción. La recompensa del referente se consolida después de 14 días de actividad del referido. Las recompensas no tienen valor en efectivo.</p>
                 <h3>7. Conducta Prohibida</h3>
                 <p>Aceptas no utilizar el Servicio para fines ilegales, no realizar ingeniería inversa de las señales ni compartir las credenciales de tu cuenta.</p>
                 <h3>8. Propiedad Intelectual</h3>
@@ -63,7 +63,7 @@ export function TermsContent() {
                 <h3>5. 非投资建议</h3>
                 <p>所有内容仅供参考和教育使用，不构成个性化投资建议。<strong>过去的表现不代表未来的结果。</strong></p>
                 <h3>6. 推荐计划</h3>
-                <p>每次成功推荐，推荐人获得价值100美元的额外订阅天数，新会员获得价值50美元的额外订阅天数。推荐人的奖励会在被推荐人保持活跃75天后生效。奖励无现金价值。</p>
+                <p>每次成功推荐，推荐人获得价值100美元的额外订阅天数，新会员获得价值50美元的额外订阅天数。推荐人的奖励会在被推荐人保持活跃14天后生效。奖励无现金价值。</p>
                 <h3>7. 禁止行为</h3>
                 <p>您同意不将本服务用于任何非法目的，不对信号进行逆向工程，也不共享账户凭证。</p>
                 <h3>8. 知识产权</h3>
@@ -101,7 +101,7 @@ export function TermsContent() {
             <h3>5. No Investment Advice</h3>
             <p>All content is for informational and educational purposes only. <strong>Past performance is not indicative of future results.</strong> See our full <Link href="/risk-disclosure">Risk Disclosure</Link>.</p>
             <h3>6. Referral Program</h3>
-            <p>For each successful referral, the referrer receives $100 and the referred member receives $50 as extra subscription days. The referrer reward vests after the referred membership remains active for 75 days. Rewards have no cash value.</p>
+            <p>For each successful referral, the referrer receives $100 and the referred member receives $50 as extra subscription days. The referrer reward vests after the referred membership remains active for 14 days. Rewards have no cash value.</p>
             <h3>7. Prohibited Conduct</h3>
             <p>You agree not to use the Service for any unlawful purpose, reverse-engineer signals, or share account credentials.</p>
             <h3>8. Intellectual Property</h3>

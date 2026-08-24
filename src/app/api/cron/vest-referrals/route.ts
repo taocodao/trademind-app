@@ -3,7 +3,7 @@
  *
  * Daily job, vests due referrer day grants. A referral conversion starts as
  * 'pending' after the referee's first paid account and pays the referrer only
- * after the referee stays active for 75 days.
+ * after the referee stays active for 14 days.
  *
  *   - Referee churned before vesting means the referrer grant is void
  *   - Referrer rewards are capped at 12 per trailing 12 months

@@ -31,7 +31,7 @@ export function ShareSection({ promoCode, referralLink, userTier, isCreator }: S
 
     return <>
         <div className="space-y-4 rounded-2xl border border-tm-purple/20 bg-gradient-to-br from-tm-purple/10 to-transparent p-5">
-            <div className="flex items-start gap-3"><Gift className="mt-0.5 h-5 w-5 text-purple-300" /><p className="text-sm leading-relaxed text-zinc-300">Your friend receives a $50 day grant at first payment. Your selected reward account receives a $100 day grant after your friend stays active for 75 days.</p></div>
+            <div className="flex items-start gap-3"><Gift className="mt-0.5 h-5 w-5 text-purple-300" /><p className="text-sm leading-relaxed text-zinc-300">Your friend receives a $50 day grant at first payment. Your selected reward account receives a $100 day grant after your friend stays active for 14 days.</p></div>
             <div>
                 <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-tm-muted">Your referral link</p>
                 <div className="flex items-center gap-3"><div className="min-w-0 flex-1 rounded-xl border-2 border-tm-purple/40 bg-tm-bg px-4 py-3"><span className="block truncate font-mono text-sm font-bold text-white">{referralLink}</span></div><button onClick={copyCode} className="flex shrink-0 items-center gap-1.5 rounded-xl border border-tm-purple/30 bg-tm-purple/20 px-3 py-2.5 text-xs font-bold text-tm-purple transition-colors hover:bg-tm-purple/30">{copiedCode ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}{copiedCode ? t('share_earn.copied', 'Copied') : 'Copy link'}</button></div>

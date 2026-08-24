@@ -5,7 +5,7 @@ const REFERRER_DAYS_BASIC = 142;
 const REFERRER_DAYS_LEAPS = 107;
 const REFEREE_DAYS_BASIC = 71;
 const REFEREE_DAYS_LEAPS = 53;
-const VESTING_DAYS = 75;
+const VESTING_DAYS = 14;
 
 export function ReferralPromoSection() {
     return (

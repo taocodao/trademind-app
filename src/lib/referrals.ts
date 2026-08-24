@@ -2,7 +2,7 @@
  * Account-based referral day grants.
  *
  * A referral is attributed at signup, the referee receives its day grant on
- * their first paid account, and the referrer reward vests only after 75 days
+ * their first paid account, and the referrer reward vests only after 14 days
  * of the referee account remaining active.
  */
 

@@ -12,6 +12,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { initializeMembershipTables } from '@/lib/membership';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +41,10 @@ export async function POST(req: NextRequest) {
     if (!secret || bearer !== secret) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Ensure the new membership schema exists before truncating, so a fresh
+    // production database is migrated and reset in one call.
+    await initializeMembershipTables();
 
     const truncated: string[] = [];
     const skipped: string[] = [];

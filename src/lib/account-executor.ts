@@ -236,23 +236,44 @@ interface OptionQuote {
     conId?: number;
 }
 
+/**
+ * Candidate quote-proxy bases, in priority order. A stale env var must not
+ * disable live pricing: every configured base is tried before giving up.
+ */
+const QUOTE_PROXY_BASES: string[] = Array.from(new Set(
+    [
+        process.env.EC2_API_URL,
+        process.env.TASTYTRADE_API_URL,
+        'http://34.203.194.137:8002',
+    ].filter((b): b is string => Boolean(b))
+));
+
 /** Fetch a live option quote (mid price) from the IB-primary 8002 proxy. */
 async function fetchOptionQuote(symbol: string, expiry: string, strike: number, right: 'C' | 'P'): Promise<OptionQuote | null> {
-    try {
-        const base = process.env.EC2_API_URL || process.env.TASTYTRADE_API_URL || 'http://34.203.194.137:8002';
-        const ymd = expiry.replace(/-/g, '');
-        const res = await fetch(
-            `${base}/api/quote/option?symbol=${encodeURIComponent(symbol)}&expiry=${ymd}&strike=${strike}&right=${right}`,
-            { cache: 'no-store' }
-        );
-        if (!res.ok) return null;
-        const q = await res.json();
-        if (typeof q.mid !== 'number' || q.mid <= 0) return null;
-        return { mid: q.mid, bid: q.bid, ask: q.ask, delta: q.delta ?? null, basis: q.basis || 'live', conId: q.conId };
-    } catch (err) {
-        console.warn('[AccountOrderGen] option quote failed:', err);
-        return null;
+    const ymd = expiry.replace(/-/g, '');
+    const path = `/api/quote/option?symbol=${encodeURIComponent(symbol)}&expiry=${ymd}&strike=${strike}&right=${right}`;
+    for (const base of QUOTE_PROXY_BASES) {
+        try {
+            const res = await fetch(`${base}${path}`, {
+                cache: 'no-store',
+                signal: AbortSignal.timeout(8000),
+            });
+            if (!res.ok) {
+                console.warn(`[AccountOrderGen] option quote ${base} returned HTTP ${res.status} for ${symbol} ${ymd} ${strike}${right}`);
+                continue;
+            }
+            const q = await res.json();
+            if (typeof q.mid !== 'number' || q.mid <= 0) {
+                console.warn(`[AccountOrderGen] option quote ${base} returned no usable mid for ${symbol} ${ymd} ${strike}${right}`);
+                continue;
+            }
+            return { mid: q.mid, bid: q.bid, ask: q.ask, delta: q.delta ?? null, basis: q.basis || 'live', conId: q.conId };
+        } catch (err) {
+            console.warn(`[AccountOrderGen] option quote ${base} fetch failed for ${symbol} ${ymd} ${strike}${right}:`, err);
+        }
     }
+    console.warn(`[AccountOrderGen] all quote proxies failed for ${symbol} ${ymd} ${strike}${right}; falling back to signal price`);
+    return null;
 }
 
 /** Build an OCC-style virtual position symbol: QQQ_20280121C00616 */

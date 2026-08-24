@@ -1,6 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { usePrivy } from '@privy-io/react-auth';
+import { withCompensationDisclosure } from '@/lib/compliance';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    MillionaireCalc, "When could $10,000 make you a millionaire?"
@@ -51,6 +53,9 @@ function ageAt(series: number[], target: number, startAge: number): number | nul
 }
 
 const SHARE_TEXT = 'When could $10,000 make you a millionaire? I ran the numbers, every assumption labeled →';
+// Referral variant: the same hook plus the two-sided time offer. Disclosure
+// lands inside the sentence via withCompensationDisclosure at share time.
+const REFERRAL_SHARE_TEXT = 'When could $10,000 make you a millionaire? I ran the numbers on TradeMind. Join with my link and you get about two extra months on your plan.';
 
 export function MillionaireCalc() {
     const [age, setAge] = useState(35);
@@ -125,6 +130,32 @@ export function MillionaireCalc() {
         setTimeout(() => setCopied(false), 1800);
     };
 
+    // Opt-in referral share (Q1 decision: never silent). Only offered to
+    // logged-in members whose referral code resolves; the neutral row above
+    // stays referral-free for everyone.
+    const { authenticated } = usePrivy();
+    const [refLink, setRefLink] = useState<string | null>(null);
+    const [refCopied, setRefCopied] = useState(false);
+
+    useEffect(() => {
+        if (!authenticated) return;
+        fetch('/api/referrals')
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => { if (d?.shareLink) setRefLink(d.shareLink); })
+            .catch(() => {});
+    }, [authenticated]);
+
+    const referralText = withCompensationDisclosure(REFERRAL_SHARE_TEXT);
+
+    const copyReferralLink = async () => {
+        if (!refLink) return;
+        try {
+            await navigator.clipboard.writeText(referralText + ' ' + refLink);
+            setRefCopied(true);
+        } catch { /* clipboard blocked, user copies manually */ }
+        setTimeout(() => setRefCopied(false), 1800);
+    };
+
     return (
         <section className="tm-calc" id="calc">
             <div className="tm-calc-inner">
@@ -195,6 +226,25 @@ export function MillionaireCalc() {
                         <span>{copied ? 'Copied' : 'Copy link'}</span>
                     </button>
                 </div>
+
+                {refLink && (
+                    <div className="tm-sharebar" style={{ marginTop: 10, opacity: 0.95 }}>
+                        <span className="tm-sharelabel">Share as a member, earn time</span>
+                        <a className="tm-shbtn" target="_blank" rel="noopener"
+                            href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(referralText)}&url=${encodeURIComponent(refLink)}`}>
+                            <svg viewBox="0 0 24 24"><path d="M18.9 2H22l-6.8 7.8L23.3 22h-6.3l-4.9-6.4L6.5 22H3.4l7.3-8.3L1 2h6.5l4.4 5.9L18.9 2zm-1.1 18.1h1.7L7.6 3.8H5.7l12.1 16.3z" /></svg>Post
+                        </a>
+                        <a className="tm-shbtn" target="_blank" rel="noopener"
+                            href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(refLink)}`}>
+                            <svg viewBox="0 0 24 24"><path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1s2.48 1.12 2.48 2.5zM.2 8.2h4.6V23H.2V8.2zM8.2 8.2h4.4v2h.1c.6-1.2 2.1-2.4 4.4-2.4 4.7 0 5.6 3.1 5.6 7.1V23h-4.6v-7.1c0-1.7 0-3.9-2.4-3.9s-2.7 1.8-2.7 3.7V23H8.2V8.2z" /></svg>Post
+                        </a>
+                        <button className="tm-shbtn" onClick={copyReferralLink}>
+                            <svg viewBox="0 0 24 24"><path d="M10.6 13.4a1 1 0 0 0 1.4 1.4l4-4a3 3 0 0 0-4.2-4.2l-2.3 2.3a1 1 0 0 0 1.4 1.4l2.3-2.3a1 1 0 0 1 1.4 1.4l-4 4zm2.8-2.8a1 1 0 0 0-1.4-1.4l-4 4a3 3 0 0 0 4.2 4.2l2.3-2.3a1 1 0 0 0-1.4-1.4l-2.3 2.3a1 1 0 0 0-1.4 1.4l4-4z" /></svg>
+                            <span>{refCopied ? 'Copied' : 'Copy referral link'}</span>
+                        </button>
+                        <span className="tm-sharelabel" style={{ textTransform: 'none', letterSpacing: 0, opacity: 0.7 }}>You both get bonus subscription time. Disclosure is included in the text.</span>
+                    </div>
+                )}
 
                 <div className="tm-calcdisc">
                     <b>Your situation will differ.</b> This tool illustrates one hypothetical profile. Yours, income, tax status, risk tolerance, time horizon, is different, and the results shown may not be relevant to it.<br /><br />

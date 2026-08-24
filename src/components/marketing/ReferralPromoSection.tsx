@@ -14,9 +14,9 @@ export function ReferralPromoSection() {
                 <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 rounded-full bg-purple-500/20 blur-[100px]" />
                 <div className="relative mx-auto flex max-w-3xl flex-col items-center">
                     <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-purple-500/30 bg-purple-500/20"><Gift className="h-8 w-8 text-purple-300" /></div>
-                    <h2 className="mb-3 text-3xl font-bold text-white">Refer a friend, earn subscription days</h2>
-                    <p className="max-w-2xl text-zinc-300">Your friend gets the same 30-day free month. When they subscribe, a $50 day grant (about {REFEREE_DAYS_BASIC} days on QQQ Basic or {REFEREE_DAYS_LEAPS} days on QQQ LEAPS) is added to their plan, and your $100 grant starts vesting.</p>
-                    <p className="mt-3 max-w-2xl text-sm text-zinc-400">After your friend stays active for {VESTING_DAYS} days, your selected reward account receives a $100 day grant, about {REFERRER_DAYS_BASIC} days on QQQ Basic or {REFERRER_DAYS_LEAPS} days on QQQ LEAPS.</p>
+                    <h2 className="mb-3 text-3xl font-bold text-white">Give a friend extra time. Earn your own.</h2>
+                    <p className="max-w-2xl text-zinc-300">Your friend starts with the same 30-day free month. When they subscribe, we add about two extra months to their plan, a $50 grant in subscription days ({REFEREE_DAYS_BASIC} days on QQQ Basic or {REFEREE_DAYS_LEAPS} on QQQ LEAPS).</p>
+                    <p className="mt-3 max-w-2xl text-sm text-zinc-400">Once they stay active for {VESTING_DAYS} days, you get a $100 grant in subscription days, about four months ({REFERRER_DAYS_BASIC} days on QQQ Basic or {REFERRER_DAYS_LEAPS} on QQQ LEAPS), to apply to any of your accounts.</p>
 
                     <div className="my-8 grid w-full grid-cols-1 gap-4 text-left md:grid-cols-3">
                         <div className="rounded-xl border border-white/10 bg-white/5 p-5"><Users2 className="mb-3 h-5 w-5 text-purple-300" /><h3 className="text-sm font-bold text-white">Share your link</h3><p className="mt-2 text-xs leading-relaxed text-zinc-400">Choose a reward account, then share your personal link.</p></div>

@@ -12,6 +12,7 @@ import { RecordSection } from '@/components/marketing/RecordSection';
 import { ModelTrustSection } from '@/components/marketing/ModelTrustSection';
 import { PatienceSection } from '@/components/marketing/PatienceSection';
 import { MillionaireCalc } from '@/components/marketing/MillionaireCalc';
+import { ReferredBanner } from '@/components/marketing/ReferredBanner';
 import { LifeSection } from '@/components/marketing/LifeSection';
 import { HeroCtas } from '@/components/marketing/HeroCtas';
 import { useTranslation } from 'react-i18next';
@@ -75,6 +76,9 @@ export default function SinglePageMarketing() {
     return (
         <main className="min-h-screen flex flex-col bg-[#0A0A0F] overflow-x-hidden pt-16">
             <MarketingHeader />
+
+            {/* Referred-visitor acknowledgment: who invited you + what you get */}
+            <ReferredBanner />
 
             {/* Hero flow: slogan headline, extended subhead, capability cards */}
             <CoPilotHero />

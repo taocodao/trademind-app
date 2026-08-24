@@ -12,7 +12,7 @@ import { getStrategy } from "@/lib/strategies";
  * (AccountContext + persisted), so the bottom-nav Positions/Activity follow.
  * Optionally navigates to the selected account's page (used on /account/[id]).
  */
-export function AccountSwitcher({ navigateOnSelect = false, tab }: { navigateOnSelect?: boolean; tab?: 'positions' | 'activity' }) {
+export function AccountSwitcher({ navigateOnSelect = false, tab }: { navigateOnSelect?: boolean; tab?: 'positions' | 'signals' | 'activity' }) {
     const { accounts, activeAccountId, setActiveAccountId } = useAccountContext();
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
@@ -33,7 +33,7 @@ export function AccountSwitcher({ navigateOnSelect = false, tab }: { navigateOnS
         setActiveAccountId(id);
         setOpen(false);
         if (navigateOnSelect) {
-            router.push(`/account/${id}${tab === 'activity' ? '?tab=activity' : ''}`);
+            router.push(`/account/${id}${tab && tab !== 'positions' ? `?tab=${tab}` : ''}`);
         }
     };
 
@@ -89,7 +89,7 @@ export function AccountSwitcher({ navigateOnSelect = false, tab }: { navigateOnS
                         })}
                     </div>
                     <button
-                        onClick={() => { setOpen(false); router.push('/accounts'); }}
+                        onClick={() => { setOpen(false); router.push('/accounts?list=1'); }}
                         className="w-full flex items-center justify-center gap-2 px-4 py-3 text-xs font-bold text-tm-purple hover:bg-white/5 border-t border-white/10 transition"
                     >
                         <PlusCircle className="w-4 h-4" /> Manage Accounts

@@ -1,8 +1,8 @@
 "use client";
 
 import { usePrivy } from "@privy-io/react-auth";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import {
     ArrowLeft, PlusCircle, Wallet, Pencil, Trash2, RefreshCw, ChevronRight,
 } from "lucide-react";
@@ -54,6 +54,14 @@ interface AccountSummary {
 }
 
 export default function AccountsPage() {
+    return (
+        <Suspense fallback={<main className="min-h-screen bg-tm-bg" />}>
+            <AccountsPageInner />
+        </Suspense>
+    );
+}
+
+function AccountsPageInner() {
     const { ready, authenticated, user } = usePrivy();
     const router = useRouter();
     const { accounts, loading, refreshAccounts, setActiveAccountId } = useAccountContext();
@@ -76,6 +84,18 @@ export default function AccountsPage() {
     useEffect(() => {
         if (ready && !authenticated) router.push("/");
     }, [ready, authenticated, router]);
+
+    // Smart-default landing: with exactly one account, open it straight away.
+    // ?list=1 is the escape hatch so the list (and Create Account) stays
+    // reachable from the account workspace back link and Manage Accounts.
+    const searchParams = useSearchParams();
+    const forceList = searchParams?.get('list') === '1';
+    useEffect(() => {
+        if (forceList || loading || !ready || !authenticated) return;
+        if (accounts.length === 1) {
+            router.replace(`/account/${accounts[0].id}`);
+        }
+    }, [forceList, loading, ready, authenticated, accounts, router]);
 
     // The Privy login email is the default alert recipient for new accounts.
     useEffect(() => {

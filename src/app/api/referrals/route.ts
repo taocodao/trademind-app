@@ -22,11 +22,22 @@ export async function GET(req: NextRequest) {
     }
 }
 
-/** Set the owned account that receives vested referrer day grants. */
+/** Save referral preferences: the display name shown to referred visitors. */
 export async function PUT(req: NextRequest) {
     try {
         const user = await getUserFromRequest(req);
-        const { accountId } = await req.json();
+        const body = await req.json();
+
+        if (body.displayName !== undefined) {
+            const displayName = String(body.displayName ?? '').trim().slice(0, 40);
+            await query(
+                `UPDATE user_settings SET referral_display_name = $2, updated_at = NOW() WHERE user_id = $1`,
+                [user.privyDid, displayName || null]
+            );
+            return NextResponse.json({ displayName });
+        }
+
+        const { accountId } = body;
         const parsedAccountId = Number(accountId);
         if (!Number.isInteger(parsedAccountId) || parsedAccountId <= 0) {
             return NextResponse.json({ error: 'A valid accountId is required' }, { status: 400 });

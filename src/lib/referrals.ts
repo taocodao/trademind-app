@@ -337,7 +337,7 @@ export async function getReferrerCompensationTrailing12(userId: string): Promise
 
 export async function getReferralStats(userId: string) {
     const [settingsResult, totalsResult, eventsResult, compensation] = await Promise.all([
-        query(`SELECT referral_code, referral_reward_account_id FROM user_settings WHERE user_id = $1`, [userId]),
+        query(`SELECT referral_code, referral_reward_account_id, referral_display_name FROM user_settings WHERE user_id = $1`, [userId]),
         query(
             `SELECT COUNT(*) AS total,
                     COALESCE(SUM(referrer_days) FILTER (WHERE status = 'vested'), 0) AS earned_days,
@@ -373,6 +373,7 @@ export async function getReferralStats(userId: string) {
 
     return {
         code,
+        displayName: (settingsResult.rows[0]?.referral_display_name ?? '').trim(),
         shareLink: code ? `https://trademind.bot/?ref=${code}` : '',
         totalReferrals: Number(totalsResult.rows[0]?.total ?? 0),
         totalEarnedDays: Number(totalsResult.rows[0]?.earned_days ?? 0),

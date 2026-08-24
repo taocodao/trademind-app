@@ -1028,6 +1028,7 @@ export async function initializeUserTables(): Promise<void> {
         `);
         await query(`CREATE INDEX IF NOT EXISTS idx_user_settings_whop_user ON user_settings(whop_user_id)`);
         await query(`CREATE INDEX IF NOT EXISTS idx_user_settings_referral_code ON user_settings(referral_code)`);
+        await query(`ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS referral_display_name VARCHAR(64)`);
 
         // ── Whop Trial Duration Columns (Bug Fix + 30/60-day trial support) ───
         // whop_trial_ends_at: actual Whop trial expiry written by webhook (fixes identity split bug)

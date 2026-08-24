@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
-import { withCompensationDisclosure } from '@/lib/compliance';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    MillionaireCalc, "When could $10,000 make you a millionaire?"
@@ -53,8 +52,8 @@ function ageAt(series: number[], target: number, startAge: number): number | nul
 }
 
 const SHARE_TEXT = 'When could $10,000 make you a millionaire? I ran the numbers, every assumption labeled →';
-// Referral variant: the same hook plus the two-sided time offer. Disclosure
-// lands inside the sentence via withCompensationDisclosure at share time.
+// Referral variant: the same hook plus the friend's time offer. No disclosure
+// is appended; share text is user-controlled (product decision, Aug 24 2026).
 const REFERRAL_SHARE_TEXT = 'When could $10,000 make you a millionaire? I ran the numbers on TradeMind. Join with my link and you get about two extra months on your plan.';
 
 export function MillionaireCalc() {
@@ -145,7 +144,7 @@ export function MillionaireCalc() {
             .catch(() => {});
     }, [authenticated]);
 
-    const referralText = withCompensationDisclosure(REFERRAL_SHARE_TEXT);
+    const referralText = REFERRAL_SHARE_TEXT;
 
     const copyReferralLink = async () => {
         if (!refLink) return;
@@ -242,7 +241,7 @@ export function MillionaireCalc() {
                             <svg viewBox="0 0 24 24"><path d="M10.6 13.4a1 1 0 0 0 1.4 1.4l4-4a3 3 0 0 0-4.2-4.2l-2.3 2.3a1 1 0 0 0 1.4 1.4l2.3-2.3a1 1 0 0 1 1.4 1.4l-4 4zm2.8-2.8a1 1 0 0 0-1.4-1.4l-4 4a3 3 0 0 0 4.2 4.2l2.3-2.3a1 1 0 0 0-1.4-1.4l-2.3 2.3a1 1 0 0 0-1.4 1.4l4-4z" /></svg>
                             <span>{refCopied ? 'Copied' : 'Copy referral link'}</span>
                         </button>
-                        <span className="tm-sharelabel" style={{ textTransform: 'none', letterSpacing: 0, opacity: 0.7 }}>You both get bonus subscription time. Disclosure is included in the text.</span>
+                        <span className="tm-sharelabel" style={{ textTransform: 'none', letterSpacing: 0, opacity: 0.7 }}>Your friend gets about two extra months when they subscribe.</span>
                     </div>
                 )}
 

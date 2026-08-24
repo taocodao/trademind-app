@@ -26,6 +26,9 @@ export default function ReferPage() {
     const [applyAmount, setApplyAmount] = useState<Record<string, string>>({});
     const [applyingId, setApplyingId] = useState<string | null>(null);
     const [applyMessage, setApplyMessage] = useState<string | null>(null);
+    const [displayName, setDisplayName] = useState('');
+    const [nameSaved, setNameSaved] = useState(false);
+    const [savingName, setSavingName] = useState(false);
 
     const load = useCallback(async () => {
         const [referralResponse, accountsResponse] = await Promise.all([fetch('/api/referrals'), fetch('/api/accounts')]);
@@ -33,6 +36,7 @@ export default function ReferPage() {
         if (!accountsResponse.ok) throw new Error('Unable to load your accounts');
         const [referralData, accountsData] = await Promise.all([referralResponse.json(), accountsResponse.json()]);
         setData(referralData);
+        setDisplayName(referralData.displayName ?? '');
         setAccounts(accountsData.accounts ?? []);
     }, []);
 
@@ -45,6 +49,21 @@ export default function ReferPage() {
             load().catch((err) => setError(err.message)).finally(() => setLoading(false));
         }
     }, [authenticated, load, ready, router]);
+
+    async function saveDisplayName() {
+        setSavingName(true);
+        setNameSaved(false);
+        try {
+            const res = await fetch('/api/referrals', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ displayName }),
+            });
+            if (res.ok) setNameSaved(true);
+        } catch { /* ignore */ } finally {
+            setSavingName(false);
+        }
+    }
 
     async function applyReward(eventId: string) {
         const accountId = applyChoice[eventId];
@@ -105,7 +124,32 @@ export default function ReferPage() {
                 <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-300">Once they stay active for {program?.vestingDays ?? 14} days, you get a $100 grant in subscription days, about four months ({program?.referrerDaysBasic ?? 142} days on QQQ Basic or {program?.referrerDaysLeaps ?? 107} on QQQ LEAPS). Apply any amount of it to any of your accounts, whenever you like.</p>
             </section>
 
-            {data?.code ? <div className="mb-6"><ShareSection promoCode={data.code} referralLink={data.shareLink} userTier="member" isCreator={false} /></div> : null}
+            {data?.code ? <div className="mb-6"><ShareSection promoCode={data.code} referralLink={data.shareLink} userTier="member" isCreator={false} />
+
+                    {/* Display name: what referred visitors see on the landing banner */}
+                    <section className="mb-10 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+                        <h3 className="mb-1 text-sm font-bold text-white">Your display name</h3>
+                        <p className="mb-4 text-xs text-tm-muted">
+                            Shown to friends who open your referral link: "{displayName.trim() || 'Eric'} invited you to TradeMind." Leave blank to use your first name.
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="text"
+                                value={displayName}
+                                maxLength={40}
+                                onChange={(e) => { setDisplayName(e.target.value); setNameSaved(false); }}
+                                placeholder="e.g. Eric H."
+                                className="w-56 rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-tm-purple focus:outline-none"
+                            />
+                            <button
+                                onClick={saveDisplayName}
+                                disabled={savingName}
+                                className="rounded-lg bg-tm-purple px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-purple-500 disabled:opacity-50"
+                            >
+                                {savingName ? 'Saving...' : nameSaved ? 'Saved' : 'Save'}
+                            </button>
+                        </div>
+                    </section></div> : null}
 
             <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="rounded-xl border border-tm-border bg-tm-surface p-5"><Users className="mb-3 h-5 w-5 text-blue-400" /><p className="text-xs uppercase tracking-wide text-tm-muted">Successful referrals</p><p className="mt-1 text-2xl font-black">{data?.totalReferrals ?? 0}</p></div>

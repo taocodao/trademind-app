@@ -12,10 +12,11 @@ export async function GET(req: NextRequest) {
     }
     try {
         const res = await query(
-            `SELECT first_name FROM user_settings WHERE referral_code = $1`,
+            `SELECT COALESCE(NULLIF(TRIM(referral_display_name), ''), NULLIF(TRIM(first_name), '')) AS name
+             FROM user_settings WHERE referral_code = $1`,
             [code]
         );
-        const firstName = (res.rows[0]?.first_name ?? '').trim() || null;
+        const firstName = res.rows[0]?.name ?? null;
         return NextResponse.json({ firstName });
     } catch (err) {
         console.error('[referrals/lookup] failed', err);

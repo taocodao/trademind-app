@@ -256,7 +256,9 @@ async function fetchOptionQuote(symbol: string, expiry: string, strike: number, 
         try {
             const res = await fetch(`${base}${path}`, {
                 cache: 'no-store',
-                signal: AbortSignal.timeout(8000),
+                // The proxy reconnects to IB Gateway per request (~9-12s), so
+                // the timeout must clear that or every quote aborts client-side.
+                signal: AbortSignal.timeout(20000),
             });
             if (!res.ok) {
                 console.warn(`[AccountOrderGen] option quote ${base} returned HTTP ${res.status} for ${symbol} ${ymd} ${strike}${right}`);

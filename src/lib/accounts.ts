@@ -421,7 +421,7 @@ export async function applyActivity(
                 // adds to it with a weighted avg; selling a long reduces it.
                 await client.query(
                     `INSERT INTO account_positions (account_id, symbol, quantity, avg_price, instrument_type, signal_id, updated_at)
-                     VALUES ($1, $2, -$3, $4, $5, $6, NOW())
+                     VALUES ($1, $2, ($3 * -1), $4, $5, $6, NOW())
                      ON CONFLICT (account_id, symbol) DO UPDATE SET
                         quantity  = account_positions.quantity - $3,
                         avg_price = CASE

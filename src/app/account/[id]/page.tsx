@@ -29,6 +29,14 @@ interface AccountData {
     cash_balance: number;
 }
 
+interface MembershipInfo {
+    status: 'free_month' | 'awaiting_payment' | 'active' | 'past_due' | 'canceled' | 'expired';
+    plan: 'BASIC' | 'LEAPS';
+    free_month_ends_at: string | null;
+    current_period_end: string | null;
+    cancel_at_period_end: boolean;
+}
+
 export default function AccountDetailPage() {
     const { ready, authenticated } = usePrivy();
     const router = useRouter();
@@ -41,6 +49,8 @@ export default function AccountDetailPage() {
     const initialTab = tabParam === 'activity' ? 'activity' : tabParam === 'signals' ? 'signals' : 'positions';
     const [tab, setTab] = useState<'positions' | 'signals' | 'activity'>(initialTab);
     const [account, setAccount] = useState<AccountData | null>(null);
+    const [membership, setMembership] = useState<MembershipInfo | null>(null);
+    const [checkoutBusy, setCheckoutBusy] = useState(false);
     const [positions, setPositions] = useState<Position[]>([]);
     const [cash, setCash] = useState(0);
     const [positionsValue, setPositionsValue] = useState(0);
@@ -82,6 +92,27 @@ export default function AccountDetailPage() {
             return () => clearInterval(iv);
         }
     }, [ready, authenticated, accountId, fetchPositions]);
+
+    useEffect(() => {
+        if (!accountId) return;
+        fetch(`/api/accounts/${accountId}/membership`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => { if (d?.membership) setMembership(d.membership); })
+            .catch(() => {});
+    }, [accountId]);
+
+    const startCheckout = async () => {
+        setCheckoutBusy(true);
+        try {
+            const res = await fetch('/api/stripe/checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accountId }),
+            });
+            const d = await res.json();
+            if (d.url) window.location.href = d.url;
+        } finally { setCheckoutBusy(false); }
+    };
 
     if (!ready || !authenticated) {
         return (
@@ -168,6 +199,13 @@ export default function AccountDetailPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Membership status */}
+            {membership && (
+                <div className="px-6 mb-4">
+                    <MembershipBanner membership={membership} busy={checkoutBusy} onSubscribe={startCheckout} />
+                </div>
+            )}
 
             {/* Tabs */}
             <div className="px-6 mb-4">
@@ -343,6 +381,82 @@ function SignalsTab({ accountId }: { accountId: number }) {
                         );
                     })}
                 </div>
+            )}
+        </div>
+    );
+}
+
+function MembershipBanner({ membership, busy, onSubscribe }: { membership: MembershipInfo; busy: boolean; onSubscribe: () => void }) {
+    const fmt = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    const daysLeft = (iso: string) => Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000));
+    const price = membership.plan === 'LEAPS' ? 336 : 252;
+
+    let tone = 'border-white/10 bg-white/[0.03]';
+    let dot = 'bg-tm-muted';
+    let title = '';
+    let detail = '';
+    let cta: string | null = null;
+
+    switch (membership.status) {
+        case 'free_month': {
+            const d = membership.free_month_ends_at ? daysLeft(membership.free_month_ends_at) : 0;
+            tone = 'border-purple-500/30 bg-purple-500/10'; dot = 'bg-purple-400';
+            title = `Free month - ${d} day${d !== 1 ? 's' : ''} left`;
+            detail = `Signals are running. Subscribe before ${membership.free_month_ends_at ? fmt(membership.free_month_ends_at) : 'it ends'} to keep them on.`;
+            cta = `Subscribe - $${price}/yr`;
+            break;
+        }
+        case 'awaiting_payment':
+            tone = 'border-amber-500/30 bg-amber-500/10'; dot = 'bg-amber-400';
+            title = 'Payment due';
+            detail = 'Subscribe to start signal delivery for this account.';
+            cta = `Subscribe - $${price}/yr`;
+            break;
+        case 'active':
+            tone = 'border-emerald-500/30 bg-emerald-500/10'; dot = 'bg-emerald-400';
+            if (membership.cancel_at_period_end && membership.current_period_end) {
+                title = `Active - auto-renew off, ends ${fmt(membership.current_period_end)}`;
+                detail = `${daysLeft(membership.current_period_end)} days of access remaining. Resubscribe any time to continue.`;
+                cta = 'Resubscribe';
+            } else {
+                title = membership.current_period_end ? `Active - renews ${fmt(membership.current_period_end)}` : 'Active';
+                detail = membership.current_period_end ? `${daysLeft(membership.current_period_end)} days until renewal. Signals are running.` : 'Signals are running.';
+            }
+            break;
+        case 'past_due':
+            tone = 'border-tm-red/30 bg-tm-red/10'; dot = 'bg-tm-red';
+            title = 'Payment failed';
+            detail = 'Update your payment method to keep signal delivery on.';
+            cta = 'Update payment';
+            break;
+        case 'canceled':
+            title = membership.current_period_end ? `Canceled - access until ${fmt(membership.current_period_end)}` : 'Canceled';
+            detail = membership.current_period_end ? `${daysLeft(membership.current_period_end)} days of access remaining.` : '';
+            cta = 'Resubscribe';
+            break;
+        case 'expired':
+            tone = 'border-tm-red/30 bg-tm-red/10'; dot = 'bg-tm-red';
+            title = 'Membership expired';
+            detail = 'Signal delivery is paused for this account. Subscribe to resume.';
+            cta = `Subscribe - $${price}/yr`;
+            break;
+    }
+
+    return (
+        <div className={`rounded-xl border p-4 flex items-center gap-3 ${tone}`}>
+            <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
+            <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-white">{title}</p>
+                {detail && <p className="text-[11px] text-tm-muted mt-0.5">{detail}</p>}
+            </div>
+            {cta && (
+                <button
+                    onClick={onSubscribe}
+                    disabled={busy}
+                    className="shrink-0 px-4 py-2 rounded-lg font-bold bg-tm-purple hover:bg-tm-purple/90 text-white text-xs transition disabled:opacity-50"
+                >
+                    {busy ? 'Loading...' : cta}
+                </button>
             )}
         </div>
     );

@@ -29,9 +29,9 @@ export async function GET() {
 }
 
 // POST /api/accounts — create a named account plus its membership.
-// Non-referred signups get a 30-day free month per account; referred signups
-// (unattached referral attribution exists) start as awaiting_payment — the
-// referee bonus is paid in days at first payment instead.
+// Every account starts with the 30-day free month. Referred signups
+// (unattached referral attribution exists) are remembered on the membership;
+// the referee and referrer day grants apply at the referee's first payment.
 export async function POST(req: NextRequest) {
     const userId = await getUserId();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

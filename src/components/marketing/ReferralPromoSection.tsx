@@ -15,7 +15,7 @@ export function ReferralPromoSection() {
                 <div className="relative mx-auto flex max-w-3xl flex-col items-center">
                     <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-purple-500/30 bg-purple-500/20"><Gift className="h-8 w-8 text-purple-300" /></div>
                     <h2 className="mb-3 text-3xl font-bold text-white">Refer a friend, earn subscription days</h2>
-                    <p className="max-w-2xl text-zinc-300">Your friend gets a $50 day grant after their first payment, about {REFEREE_DAYS_BASIC} days on QQQ Basic or {REFEREE_DAYS_LEAPS} days on QQQ LEAPS. Referred friends skip the free month and pay when they subscribe.</p>
+                    <p className="max-w-2xl text-zinc-300">Your friend gets the same 30-day free month. When they subscribe, a $50 day grant (about {REFEREE_DAYS_BASIC} days on QQQ Basic or {REFEREE_DAYS_LEAPS} days on QQQ LEAPS) is added to their plan, and your $100 grant starts vesting.</p>
                     <p className="mt-3 max-w-2xl text-sm text-zinc-400">After your friend stays active for {VESTING_DAYS} days, your selected reward account receives a $100 day grant, about {REFERRER_DAYS_BASIC} days on QQQ Basic or {REFERRER_DAYS_LEAPS} days on QQQ LEAPS.</p>
 
                     <div className="my-8 grid w-full grid-cols-1 gap-4 text-left md:grid-cols-3">

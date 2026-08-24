@@ -85,7 +85,7 @@ export default function ReferPage() {
 
             <section className="mb-6 overflow-hidden rounded-2xl border border-tm-purple/30 bg-gradient-to-br from-tm-purple/15 to-transparent p-6">
                 <div className="mb-4 flex items-center gap-3"><Gift className="h-6 w-6 text-purple-300" /><h2 className="text-xl font-bold">Give days, earn days</h2></div>
-                <p className="max-w-2xl text-sm leading-relaxed text-zinc-300">Your friend receives a $50 day grant after their first payment, about {program?.refereeDaysBasic ?? 71} days on QQQ Basic or {program?.refereeDaysLeaps ?? 53} days on QQQ LEAPS. Referred friends skip the free month and pay when they subscribe.</p>
+                <p className="max-w-2xl text-sm leading-relaxed text-zinc-300">Your friend gets the same 30-day free month. When they subscribe, a $50 day grant (about {program?.refereeDaysBasic ?? 71} days on QQQ Basic or {program?.refereeDaysLeaps ?? 53} days on QQQ LEAPS) is added to their plan, and your $100 grant starts vesting.</p>
                 <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-300">You receive a $100 day grant on your selected reward account after your friend stays active for {program?.vestingDays ?? 75} days, about {program?.referrerDaysBasic ?? 142} days on QQQ Basic or {program?.referrerDaysLeaps ?? 107} days on QQQ LEAPS.</p>
             </section>
 

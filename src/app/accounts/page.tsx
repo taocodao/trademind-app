@@ -27,7 +27,9 @@ function membershipBadge(m?: { status: string; free_month_ends_at: string | null
             return { text: 'Payment due', cls: 'bg-amber-500/15 text-amber-300 border-amber-500/30' };
         case 'active':
             return {
-                text: m.cancel_at_period_end && m.current_period_end ? `Ends ${fmt(m.current_period_end)}` : 'Active',
+                text: m.cancel_at_period_end && m.current_period_end
+                    ? `Ends ${fmt(m.current_period_end)}`
+                    : m.current_period_end ? `Active - renews ${fmt(m.current_period_end)}` : 'Active',
                 cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
             };
         case 'past_due':

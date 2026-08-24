@@ -7,10 +7,10 @@
  * subscription.
  *
  * Lifecycle:
- *   free_month        — 30-day free month from account creation (default for
- *                       non-referred signups). Entitled until free_month_ends_at.
- *   awaiting_payment  — referred signups skip the free month; the account is
- *                       created in this state and becomes entitled on payment.
+ *   free_month        — 30-day free month from account creation (all signups,
+ *                       referred or not). Entitled until free_month_ends_at.
+ *   awaiting_payment  — legacy status (referred signups used to skip the free
+ *                       month); no longer assigned, kept for existing rows.
  *   active            — Stripe subscription paid and current.
  *   past_due          — renewal payment failed; still entitled (grace).
  *   canceled          — canceled; entitled until current_period_end, then
@@ -181,8 +181,10 @@ function rowToMembership(row: any): AccountMembership {
 
 /**
  * Create the membership for a freshly created account.
- * Non-referred: 30-day free month. Referred: awaiting_payment (no free month;
- * the referee bonus is paid in days at first payment instead).
+ * Every account starts with the 30-day free month, referred or not. For
+ * referred signups the attribution (referred_signup + referral_event_id) is
+ * stored here so the referee day grant and the referrer's vesting grant are
+ * applied when the referee makes their first payment.
  */
 export async function createMembershipForAccount(opts: {
     accountId: number;
@@ -193,10 +195,8 @@ export async function createMembershipForAccount(opts: {
 }): Promise<AccountMembership> {
     await initializeMembershipTables();
     const plan = planForStrategy(opts.strategy);
-    const status: MembershipStatus = opts.referredSignup ? 'awaiting_payment' : 'free_month';
-    const freeMonthEnds = opts.referredSignup
-        ? null
-        : new Date(Date.now() + FREE_MONTH_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    const status: MembershipStatus = 'free_month';
+    const freeMonthEnds = new Date(Date.now() + FREE_MONTH_DAYS * 24 * 60 * 60 * 1000).toISOString();
     const res = await query(
         `INSERT INTO account_memberships
             (account_id, user_id, plan, status, free_month_ends_at, referred_signup, referral_event_id)

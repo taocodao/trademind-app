@@ -379,27 +379,76 @@ export async function applyActivity(
     // 2. Position mutation (trades only)
     if ((a.type === 'buy' || a.type === 'sell') && a.symbol && qty != null && qty > 0) {
         if (a.type === 'buy') {
-            await client.query(
-                `INSERT INTO account_positions (account_id, symbol, quantity, avg_price, instrument_type, signal_id, updated_at)
-                 VALUES ($1, $2, $3, $4, $5, $6, NOW())
-                 ON CONFLICT (account_id, symbol) DO UPDATE SET
-                    quantity  = account_positions.quantity + $3,
-                    avg_price = ((account_positions.quantity * account_positions.avg_price) + ($3 * $4)) / (account_positions.quantity + $3),
-                    signal_id = $6,
-                    updated_at = NOW()`,
-                [accountId, a.symbol, qty, price ?? 0, instrumentType, a.signal_id ?? null]
-            );
+            if (instrumentType === 'option') {
+                // Options may be short (negative quantity) via PMCC overlays.
+                // Buying back a short moves quantity toward 0; the weighted
+                // average formula divides by (quantity + $3), which is 0 on an
+                // exact close — keep the prior avg in that case.
+                await client.query(
+                    `INSERT INTO account_positions (account_id, symbol, quantity, avg_price, instrument_type, signal_id, updated_at)
+                     VALUES ($1, $2, $3, $4, $5, $6, NOW())
+                     ON CONFLICT (account_id, symbol) DO UPDATE SET
+                        quantity  = account_positions.quantity + $3,
+                        avg_price = CASE
+                            WHEN account_positions.quantity < 0 THEN account_positions.avg_price
+                            WHEN account_positions.quantity + $3 = 0 THEN account_positions.avg_price
+                            ELSE ((account_positions.quantity * account_positions.avg_price) + ($3 * $4)) / (account_positions.quantity + $3)
+                        END,
+                        signal_id = $6,
+                        updated_at = NOW()`,
+                    [accountId, a.symbol, qty, price ?? 0, instrumentType, a.signal_id ?? null]
+                );
+                await client.query(
+                    `DELETE FROM account_positions WHERE account_id = $1 AND symbol = $2 AND quantity = 0`,
+                    [accountId, a.symbol]
+                );
+            } else {
+                await client.query(
+                    `INSERT INTO account_positions (account_id, symbol, quantity, avg_price, instrument_type, signal_id, updated_at)
+                     VALUES ($1, $2, $3, $4, $5, $6, NOW())
+                     ON CONFLICT (account_id, symbol) DO UPDATE SET
+                        quantity  = account_positions.quantity + $3,
+                        avg_price = ((account_positions.quantity * account_positions.avg_price) + ($3 * $4)) / (account_positions.quantity + $3),
+                        signal_id = $6,
+                        updated_at = NOW()`,
+                    [accountId, a.symbol, qty, price ?? 0, instrumentType, a.signal_id ?? null]
+                );
+            }
         } else {
-            await client.query(
-                `UPDATE account_positions
-                 SET quantity = GREATEST(0, quantity - $3), signal_id = $4, updated_at = NOW()
-                 WHERE account_id = $1 AND symbol = $2`,
-                [accountId, a.symbol, qty, a.signal_id ?? null]
-            );
-            await client.query(
-                `DELETE FROM account_positions WHERE account_id = $1 AND symbol = $2 AND quantity <= 0`,
-                [accountId, a.symbol]
-            );
+            if (instrumentType === 'option') {
+                // Options may go short (negative quantity): a Sell to Open with
+                // no existing row inserts a short; selling against a short
+                // adds to it with a weighted avg; selling a long reduces it.
+                await client.query(
+                    `INSERT INTO account_positions (account_id, symbol, quantity, avg_price, instrument_type, signal_id, updated_at)
+                     VALUES ($1, $2, -$3, $4, $5, $6, NOW())
+                     ON CONFLICT (account_id, symbol) DO UPDATE SET
+                        quantity  = account_positions.quantity - $3,
+                        avg_price = CASE
+                            WHEN account_positions.quantity > 0 THEN account_positions.avg_price
+                            WHEN account_positions.quantity < 0 THEN ((ABS(account_positions.quantity) * account_positions.avg_price) + ($3 * $4)) / (ABS(account_positions.quantity) + $3)
+                            ELSE $4
+                        END,
+                        signal_id = $6,
+                        updated_at = NOW()`,
+                    [accountId, a.symbol, qty, price ?? 0, instrumentType, a.signal_id ?? null]
+                );
+                await client.query(
+                    `DELETE FROM account_positions WHERE account_id = $1 AND symbol = $2 AND quantity = 0`,
+                    [accountId, a.symbol]
+                );
+            } else {
+                await client.query(
+                    `UPDATE account_positions
+                     SET quantity = GREATEST(0, quantity - $3), signal_id = $4, updated_at = NOW()
+                     WHERE account_id = $1 AND symbol = $2`,
+                    [accountId, a.symbol, qty, a.signal_id ?? null]
+                );
+                await client.query(
+                    `DELETE FROM account_positions WHERE account_id = $1 AND symbol = $2 AND quantity <= 0`,
+                    [accountId, a.symbol]
+                );
+            }
         }
     }
 

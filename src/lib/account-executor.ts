@@ -301,8 +301,13 @@ async function generateAccountOptionOrders(
 ): Promise<{ orders: OptionsOrder[]; skip: boolean; reason?: string }> {
     const empty = { orders: [] as OptionsOrder[], skip: false };
 
-    // Only ENTER/EXIT actions produce orders.
+    // Only ENTER/EXIT/PMCC actions produce orders.
     const action = (signal.type || (signal as any).action || '').toUpperCase();
+
+    // ── PMCC overlay: short-call management against an open LEAPS ──────────
+    if (action.startsWith('PMCC_')) {
+        return generateAccountPmccOrders(signal, account, posMap, action);
+    }
 
     // ── EXIT: close any open long LEAPS calls on the underlying ─────────────
     // The EXIT signal may not identify the contract (there is no entry target
@@ -451,4 +456,155 @@ async function generateAccountOptionOrders(
         }],
         skip: false,
     };
+}
+
+// ─── PMCC overlay (short-call management on an open LEAPS) ─────────────────
+
+/** PMCC actions that only buy back the existing short call. */
+const PMCC_CLOSE_ACTIONS = new Set([
+    'PMCC_PROFIT_TAKE_EARLY',
+    'PMCC_PROFIT_TAKE_LATE',
+    'PMCC_GAMMA_MANAGE',
+]);
+
+/** PMCC actions that buy back the existing short and sell a new one. */
+const PMCC_ROLL_ACTIONS = new Set([
+    'PMCC_ROLL_UP_OUT',
+    'PMCC_DEFENSIVE_ROLL',
+    'PMCC_TIER1_ROLL_DOWN',
+]);
+
+/**
+ * Generate PMCC overlay orders for an account. The overlay is always covered
+ * by the account's own open LEAPS calls: PMCC_ENTER sells at most as many
+ * short calls as the account holds long contracts, and only when no short is
+ * already open (one overlay at a time). Close/roll actions buy back whatever
+ * short call the account actually holds — the position ledger is the source
+ * of truth, not the signal. Priced at live mid, falling back to the signal's
+ * limit_price.
+ */
+async function generateAccountPmccOrders(
+    signal: GenericSignal,
+    account: Account,
+    posMap: Record<string, { qty: number; avgPrice: number; instrumentType: string }>,
+    action: string
+): Promise<{ orders: OptionsOrder[]; skip: boolean; reason?: string }> {
+    const underlying = String((signal as any).symbol || 'QQQ').toUpperCase();
+    const callRe = new RegExp(`^${underlying}_\\d{8}C\\d{5}$`);
+    const limitFallback = Number((signal as any).limit_price) || 0;
+
+    const longQty = Object.entries(posMap)
+        .filter(([sym, p]) => p.instrumentType === 'option' && p.qty > 0 && callRe.test(sym))
+        .reduce((s, [, p]) => s + Math.round(p.qty), 0);
+    const shortCalls = Object.entries(posMap)
+        .filter(([sym, p]) => p.instrumentType === 'option' && p.qty < 0 && callRe.test(sym));
+
+    const quoteForSymbol = (sym: string) => {
+        const m = sym.match(/_(\d{4})(\d{2})(\d{2})C(\d{5})$/);
+        if (!m) return Promise.resolve(null);
+        return fetchOptionQuote(underlying, `${m[1]}-${m[2]}-${m[3]}`, parseInt(m[4], 10), 'C');
+    };
+
+    // ── PMCC_ENTER: sell a short call against the open LEAPS ──────────────
+    if (action === 'PMCC_ENTER') {
+        if (longQty < 1) {
+            return { orders: [], skip: true, reason: `No open ${underlying} LEAPS call to overlay` };
+        }
+        if (shortCalls.length > 0) {
+            return { orders: [], skip: true, reason: `Short call already open on ${underlying} — one overlay at a time` };
+        }
+        const strike = Number((signal as any).short_strike);
+        const expiry = String((signal as any).short_expiry || '');
+        if (!strike || !expiry) {
+            return { orders: [], skip: true, reason: 'PMCC signal missing short_strike/short_expiry' };
+        }
+        // Covered ratio: never sell more shorts than long LEAPS held.
+        const contracts = Math.min(Math.max(1, Math.round(Number((signal as any).contracts) || 1)), longQty);
+        const quote = await fetchOptionQuote(underlying, expiry, strike, 'C');
+        const price = quote?.mid ?? limitFallback;
+        if (!price || price <= 0) {
+            return { orders: [], skip: true, reason: 'No live quote or signal limit price for the short call' };
+        }
+        const sym = optionSymbol(underlying, expiry, 'C', strike);
+        const credit = contracts * price * 100;
+        return {
+            orders: [{
+                action: 'Sell to Open',
+                symbol: sym,
+                quantity: contracts,
+                limitPrice: price,
+                instrumentType: 'Equity Option',
+                priceEffect: 'Credit',
+                instruction: `Sell to Open ${contracts} ${underlying} $${strike} Call exp ${expiry} at ~$${price.toFixed(2)} (mid, ${quote?.basis || 'signal limit'}) — credit ~$${credit.toFixed(0)}`,
+            }],
+            skip: false,
+        };
+    }
+
+    // ── Close / roll: buy back the open short call(s) ──────────────────────
+    const isClose = PMCC_CLOSE_ACTIONS.has(action);
+    const isRoll = PMCC_ROLL_ACTIONS.has(action);
+    if (!isClose && !isRoll) {
+        return { orders: [], skip: true, reason: `Unhandled PMCC action ${action}` };
+    }
+    if (shortCalls.length === 0) {
+        return { orders: [], skip: true, reason: `No open ${underlying} short call to close` };
+    }
+
+    const orders: OptionsOrder[] = [];
+    let totalDebit = 0;
+    let closedQty = 0;
+    for (const [sym, pos] of shortCalls) {
+        const qty = Math.round(Math.abs(pos.qty));
+        const quote = await quoteForSymbol(sym);
+        const price = quote?.mid ?? limitFallback;
+        if (!price || price <= 0) {
+            return { orders: [], skip: true, reason: `No live quote or signal limit price to close ${sym}` };
+        }
+        totalDebit += qty * price * 100;
+        closedQty += qty;
+        orders.push({
+            action: 'Buy to Close',
+            symbol: sym,
+            quantity: qty,
+            limitPrice: price,
+            instrumentType: 'Equity Option',
+            priceEffect: 'Debit',
+            instruction: `Buy to Close ${qty} ${sym} at ~$${price.toFixed(2)} (mid, ${quote?.basis || 'signal limit'}) — debit ~$${(qty * price * 100).toFixed(0)}`,
+        });
+    }
+
+    // Roll: sell the replacement short call for the same number of contracts.
+    let totalCredit = 0;
+    if (isRoll) {
+        const newStrike = Number((signal as any).new_strike);
+        const newExpiry = String((signal as any).new_expiry || '');
+        if (!newStrike || !newExpiry) {
+            return { orders: [], skip: true, reason: 'Roll signal missing new_strike/new_expiry' };
+        }
+        const quote = await fetchOptionQuote(underlying, newExpiry, newStrike, 'C');
+        const price = quote?.mid ?? limitFallback;
+        if (!price || price <= 0) {
+            return { orders: [], skip: true, reason: 'No live quote or signal limit price for the new short call' };
+        }
+        const sym = optionSymbol(underlying, newExpiry, 'C', newStrike);
+        totalCredit = closedQty * price * 100;
+        orders.push({
+            action: 'Sell to Open',
+            symbol: sym,
+            quantity: closedQty,
+            limitPrice: price,
+            instrumentType: 'Equity Option',
+            priceEffect: 'Credit',
+            instruction: `Sell to Open ${closedQty} ${underlying} $${newStrike} Call exp ${newExpiry} at ~$${price.toFixed(2)} (mid, ${quote?.basis || 'signal limit'}) — credit ~$${totalCredit.toFixed(0)}`,
+        });
+    }
+
+    // Cash guard: the net buy-back cost must not drive cash negative.
+    const netDebit = totalDebit - totalCredit;
+    if (netDebit > account.cash_balance) {
+        return { orders: [], skip: true, reason: `PMCC buy-back net debit ~$${netDebit.toFixed(0)} exceeds cash $${account.cash_balance.toFixed(0)}` };
+    }
+
+    return { orders, skip: false };
 }

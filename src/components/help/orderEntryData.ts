@@ -224,6 +224,72 @@ export const BROKERS: BrokerInfo[] = [
             { label: 'IBKR: options on IBKR Mobile', url: 'https://www.interactivebrokers.com/campus/trading-lessons/options-on-the-iphone/' },
         ],
     },
+    {
+        key: 'etrade',
+        name: 'E*TRADE',
+        friction: 'moderate',
+        frictionNote:
+            'The PMCC needs Level 3 plus margin, and the application typically asks for about 2 years of experience and around $75k net worth, with a 1 to 3 day review. It does work inside IRAs once approved.',
+        checklist: {
+            leaps: {
+                approval: 'Options Level 2',
+                account: 'Cash or margin',
+                ira: 'Works in an IRA',
+            },
+            pmcc: {
+                approval: 'Options Level 3 (application usually asks about 2 years of experience and roughly $75k net worth; allow 1 to 3 days for review)',
+                account: 'Margin account',
+                ira: 'Works in an IRA once Level 3 is approved',
+            },
+            roll: {
+                approval: 'Options Level 3',
+                account: 'Margin account',
+                ira: 'Works in an IRA once Level 3 is approved',
+            },
+            etf: {
+                approval: 'No options approval needed',
+                account: 'Any account',
+                ira: 'Works in an IRA',
+            },
+        },
+        officialLinks: [
+            { label: 'E*TRADE: how to trade options', url: 'https://us.etrade.com/knowledge/advanced-trading/how-to-trade-options' },
+            { label: 'Power E*TRADE Pro: options tools', url: 'https://us.etrade.com/platforms/power-etrade/pro/how-to/tools?expandFaq=options' },
+        ],
+    },
+    {
+        key: 'webull',
+        name: 'Webull',
+        friction: 'high',
+        frictionNote:
+            'The PMCC needs Level 3 with a margin account, and Webull caps cash accounts and IRAs at Level 2, so the PMCC is structurally impossible in a Webull IRA. Taxable margin accounts only.',
+        checklist: {
+            leaps: {
+                approval: 'Options Level 2',
+                account: 'Cash or margin',
+                ira: 'Works in an IRA',
+            },
+            pmcc: {
+                approval: 'Options Level 3',
+                account: 'Margin account required',
+                ira: 'Not possible: Webull caps IRAs at Level 2, and the PMCC needs Level 3',
+            },
+            roll: {
+                approval: 'Options Level 3',
+                account: 'Margin account required',
+                ira: 'Not possible in an IRA (Level 2 cap)',
+            },
+            etf: {
+                approval: 'No options approval needed',
+                account: 'Any account',
+                ira: 'Works in an IRA',
+            },
+        },
+        officialLinks: [
+            { label: 'Webull: basic options walkthrough', url: 'https://www.webull.com/blog/34-Basic-Options' },
+            { label: 'Webull: guide to options trading', url: 'https://www.webull.com/learn/course/mLcqkc/Guide-to-Options-Trading' },
+        ],
+    },
 ];
 
 export interface FlowStep {
@@ -513,6 +579,115 @@ export const FLOWS: BrokerFlow[] = [
             { title: 'Enter QQQ', detail: 'Search QQQ in the symbol bar, press Enter, and choose the exchange (NASDAQ).', chips: ['QQQ', 'NASDAQ'] },
             { title: 'Set the order', detail: 'Select Buy Order, enter the share quantity from your email, order type Limit, limit price, and time-in-force Day.', chips: ['Buy', '35 shares', 'Limit', '$707.50', 'Day'] },
             { title: 'Submit', detail: 'Click Preview to see post-trade balances, or Submit Order to send. Repeat with Sell Order for SGOV if your email includes it.', chips: ['Preview', 'Submit Order'] },
+        ],
+    },
+
+    // ─── E*TRADE ───────────────────────────────────────────────────────
+    {
+        brokerKey: 'etrade',
+        orderType: 'leaps',
+        platform: 'E*TRADE web (etrade.com)',
+        source: 'https://us.etrade.com/knowledge/advanced-trading/how-to-trade-options',
+        steps: [
+            { title: 'Open the options ticket', detail: 'Log in, click Trading in the top menu, then select Options.', chips: ['Trading', 'Options'] },
+            { title: 'Enter QQQ and the strategy', detail: 'Enter QQQ as the symbol. Under Select a Strategy, choose Call.', chips: ['QQQ', 'Select a Strategy', 'Call'] },
+            { title: 'Set the action', detail: 'E*TRADE labels the action field Order Type on the options ticket. Select Buy Open.', chips: ['Order Type', 'Buy Open'], note: 'E*TRADE uses Buy Open / Sell Open / Buy Close / Sell Close instead of the Buy to Open wording in our emails. They mean the same thing.' },
+            { title: 'Choose expiration and strike', detail: 'Pick the expiration from your signal email (LEAPS are the far-dated January dates), then the strike.', chips: ['Jan 21, 2028', 'Strike 700'] },
+            { title: 'Set quantity and price', detail: 'Enter the contract quantity from your email. Set Price Type to Limit and enter the limit price from the email. Set Duration to Good for Day.', chips: ['Qty 1', 'Limit', '$52.40', 'Good for Day'] },
+            { title: 'Preview and place', detail: 'Click Preview, check the estimated total cost, then Place Order.', chips: ['Preview', 'Place Order'] },
+        ],
+    },
+    {
+        brokerKey: 'etrade',
+        orderType: 'pmcc',
+        platform: 'E*TRADE web (etrade.com)',
+        source: 'https://us.etrade.com/knowledge/advanced-trading/how-to-trade-options',
+        steps: [
+            { title: 'Before you start', detail: 'The PMCC needs Options Level 3 plus a margin account at E*TRADE. The application typically asks for about 2 years of experience and around $75k net worth, with a 1 to 3 day review.', note: 'If the single-leg sell is rejected, build it as a spread in Power E*TRADE instead: open the option chain, click the Bid of the short call and the Ask of your LEAPS to load both legs into one order ticket.' },
+            { title: 'Open the options ticket', detail: 'Click Trading, then Options, and enter QQQ.', chips: ['Trading', 'Options', 'QQQ'] },
+            { title: 'Set strategy and action', detail: 'Under Select a Strategy, choose Call. Under Order Type, select Sell Open.', chips: ['Call', 'Sell Open'] },
+            { title: 'Choose the short call', detail: 'Pick the nearer expiration and higher strike from your signal email.', chips: ['Sep 30, 2026', 'Strike 780'] },
+            { title: 'Set quantity and price', detail: 'Quantity from your email, Price Type Limit, limit price from the email, Duration Good for Day.', chips: ['Qty 1', 'Limit', '$5.40', 'Good for Day'] },
+            { title: 'Preview and place', detail: 'Click Preview, verify the contract and price, then Place Order.', chips: ['Preview', 'Place Order'] },
+        ],
+    },
+    {
+        brokerKey: 'etrade',
+        orderType: 'roll',
+        platform: 'Power E*TRADE',
+        source: 'https://us.etrade.com/platforms/power-etrade/pro/how-to/tools?expandFaq=options',
+        steps: [
+            { title: 'Use the built-in roll tool', detail: 'Power E*TRADE has rolling built in. Open the options trade ticket and use the Positions panel, which lets you add, close, or roll positions directly.', chips: ['Positions panel', 'Roll'] },
+            { title: 'Select your short call', detail: 'In the Positions panel, select the short call you are rolling and choose roll.', chips: ['Short 780 Call', 'Roll'] },
+            { title: 'Pick the new contract', detail: 'Select the new expiration and strike from your signal email. The ticket builds both legs: buy to close the old call, sell to open the new one.', chips: ['Oct 30, 2026', '790 Call'] },
+            { title: 'Set the net price', detail: 'Choose a limit order and enter the net credit from your email.', chips: ['Limit', 'Net credit'] },
+            { title: 'Preview and place', detail: 'Preview the order, verify both legs, then place it.', chips: ['Preview', 'Place Order'] },
+        ],
+    },
+    {
+        brokerKey: 'etrade',
+        orderType: 'etf',
+        platform: 'E*TRADE web (etrade.com)',
+        source: 'https://us.etrade.com/knowledge/advanced-trading/how-to-buy-stocks',
+        steps: [
+            { title: 'Open the stock ticket', detail: 'Click Trading, then select Stocks.', chips: ['Trading', 'Stocks'] },
+            { title: 'Enter the order', detail: 'Symbol QQQ, Action Buy, Quantity from your email, Price Type Limit, limit price from your email, Duration Good for Day.', chips: ['QQQ', 'Buy', '35 shares', 'Limit', '$707.50', 'Good for Day'] },
+            { title: 'Preview and place', detail: 'Click Preview, confirm, then Place Order. Repeat with Sell for SGOV if your email includes it.', chips: ['Preview', 'Place Order'] },
+        ],
+    },
+
+    // ─── Webull ────────────────────────────────────────────────────────
+    {
+        brokerKey: 'webull',
+        orderType: 'leaps',
+        platform: 'Webull app (mobile)',
+        source: 'https://www.webull.com/blog/34-Basic-Options',
+        steps: [
+            { title: 'Find QQQ', detail: 'On the Markets tab, search QQQ in the Explore bar at the top and open it.', chips: ['Markets', 'Explore', 'QQQ'] },
+            { title: 'Open the Option Chain', detail: 'Tap the Options icon at the bottom of the stock page.', chips: ['Options'] },
+            { title: 'Switch to List View', detail: 'Tap the small hexagonal icon at the top right of the chain and select List View. It is much easier to read than the default grid.', chips: ['List View'] },
+            { title: 'Pick the expiration', detail: 'Tap the collapsible expiration bar at the top and choose the date from your signal email. LEAPS are the far-dated January expirations.', chips: ['Jan 21, 2028'] },
+            { title: 'Filter to calls and pick the strike', detail: 'At the bottom left, switch from Both to Calls. Scroll to your strike and tap the contract.', chips: ['Calls', 'Strike 700'] },
+            { title: 'Set the order', detail: 'Tap Trade, choose Limit Order, enter the limit price from your email, and set the number of contracts.', chips: ['Trade', 'Limit Order', '$52.40', 'Qty 1'] },
+            { title: 'Buy and confirm', detail: 'Tap Buy, check the order summary (contracts and price), then tap Confirm.', chips: ['Buy', 'Confirm'] },
+        ],
+    },
+    {
+        brokerKey: 'webull',
+        orderType: 'pmcc',
+        platform: 'Webull app (mobile)',
+        source: 'https://www.webull.hk/en/help/faq/1547-Start-Trading-Options',
+        steps: [
+            { title: 'Before you start', detail: 'The PMCC needs Options Level 3 with a margin account at Webull.', note: 'Webull caps cash accounts and IRAs at Level 2, so the PMCC cannot run in a Webull IRA at all. If your account is an IRA, use Schwab or tastytrade for this strategy instead.' },
+            { title: 'Open the QQQ Option Chain', detail: 'Search QQQ from the Explore bar, tap the Options icon, and switch to List View.', chips: ['QQQ', 'Options', 'List View'] },
+            { title: 'Choose Single Leg', detail: 'At the bottom of the screen, make sure Single Leg is selected (not a strategy template).', chips: ['Single Leg'] },
+            { title: 'Pick the short call', detail: 'Select the nearer expiration from your email, filter to Calls, and tap the strike of the call you are selling.', chips: ['Sep 30, 2026', 'Calls', 'Strike 780'] },
+            { title: 'Set the order', detail: 'Tap Trade, choose Sell, select Limit Order, enter the limit price from your email, and set the contract quantity.', chips: ['Sell', 'Limit Order', '$5.40', 'Qty 1'] },
+            { title: 'Confirm', detail: 'Review the summary and tap Confirm to place the order.', chips: ['Confirm'] },
+        ],
+    },
+    {
+        brokerKey: 'webull',
+        orderType: 'roll',
+        platform: 'Webull app (mobile)',
+        source: 'https://www.webull.com/blog/34-Basic-Options',
+        steps: [
+            { title: 'Rolls are two orders on Webull mobile', detail: 'Webull mobile has no diagonal roll ticket, so close the old short call first, then sell the new one. Place the buy-to-close first so you are never uncovered.' },
+            { title: 'Order 1: buy back the old call', detail: 'Open your Positions, tap the short call, and close it: Buy, Limit Order, at the buyback price from your email.', chips: ['Positions', 'Short 780 Call', 'Buy', 'Limit'] },
+            { title: 'Order 2: sell the new call', detail: 'Open the QQQ Option Chain, pick the new expiration and strike from your email, then Sell with a Limit Order at the new premium from your email.', chips: ['Sell', 'Oct 30, 2026', '790 Call', 'Limit'] },
+            { title: 'Confirm both fills', detail: 'Check that both orders filled. Together they should net the credit quoted in your email.', chips: ['Confirm'] },
+        ],
+    },
+    {
+        brokerKey: 'webull',
+        orderType: 'etf',
+        platform: 'Webull app (mobile)',
+        source: 'https://www.webull.com/blog/34-Basic-Options',
+        steps: [
+            { title: 'Find QQQ', detail: 'Search QQQ in the Explore bar and open the stock page.', chips: ['Explore', 'QQQ'] },
+            { title: 'Open the stock ticket', detail: 'Tap Trade at the bottom left.', chips: ['Trade'] },
+            { title: 'Set the order', detail: 'Choose Buy, select Limit Order, enter the share quantity and limit price from your email.', chips: ['Buy', 'Limit Order', '35 shares', '$707.50'] },
+            { title: 'Confirm', detail: 'Review the summary and tap Confirm. Repeat with Sell for SGOV if your email includes it.', chips: ['Confirm'] },
         ],
     },
 ];

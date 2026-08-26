@@ -26,7 +26,7 @@ export default function EnterOrdersHelpPage() {
                 <p className="text-tm-muted max-w-3xl leading-relaxed mb-2">
                     Every TradeMind email tells you exactly what to place at your own broker: the contract or shares,
                     the action, and the limit price. This guide shows you where each piece goes, step by step, at the
-                    five major brokers our subscribers use.
+                    major retail brokers our subscribers use.
                 </p>
                 <p className="text-tm-muted max-w-3xl leading-relaxed mb-10 text-sm">
                     TradeMind never connects to your brokerage and never places orders for you. You stay in control of
@@ -95,9 +95,10 @@ export default function EnterOrdersHelpPage() {
                             QQQ LEAPS has two kinds of orders. Buying the LEAPS call itself is the lowest options
                             tier everywhere. Selling the short call against it (the PMCC overlay) is where brokers
                             differ most: Schwab approves it at Level 2, tastytrade at its Basic tier with margin,
-                            Fidelity at Tier 2 plus margin, Robinhood at Level 3 with margin, and Interactive Brokers
-                            at Level 4. If you are opening a new account specifically for this strategy, Schwab and
-                            tastytrade have the smoothest approval path, including inside IRAs.
+                            Fidelity at Tier 2 plus margin, E*TRADE and Robinhood at Level 3 with margin, Interactive
+                            Brokers at Level 4, and Webull not at all inside an IRA. If you are opening a new account
+                            specifically for this strategy, Schwab and tastytrade have the smoothest approval path,
+                            including inside IRAs.
                         </p>
                         <p>
                             When a broker&apos;s application asks about experience, answer honestly. Approval levels

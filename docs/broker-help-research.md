@@ -4,7 +4,7 @@ Compiled Aug 25, 2026. Sources: Eric's deep-research PDF (approval levels, PMCC 
 
 ## Launch scope (Judgment A)
 
-Core five: **Schwab (incl. thinkorswim), Fidelity, Robinhood, Interactive Brokers, tastytrade**. Fast-follow: E*TRADE, Webull. Excluded: SoFi, moomoo, Public (thin PMCC documentation). Basis: Cboe Q2 2026 retail options volume ranking (Rule 606) — no precise market-share percentages exist; treat "90% coverage" as unconfirmed.
+Launch coverage (all live in /help/enter-orders): **Schwab (incl. thinkorswim), Fidelity, Robinhood, Interactive Brokers, tastytrade, E*TRADE, Webull**. Excluded: SoFi, moomoo, Public (thin PMCC documentation). Basis: Cboe Q2 2026 retail options volume ranking (Rule 606) — no precise market-share percentages exist; treat "90% coverage" as unconfirmed.
 
 ## Approval levels + PMCC classification (from the research PDF)
 
@@ -26,6 +26,9 @@ Key insight for copy: the identical PMCC needs the second-lowest tier at Schwab 
 - **Robinhood**: PMCC needs a margin account + Level 3; on a cash account the sell-to-open is rejected unless 100 actual shares are held.
 - **Webull IRA**: structurally impossible (Level 2 cap < Level 3 requirement).
 - **All brokers**: options market orders only during regular hours; Robinhood additionally blocks options market orders in the first 15 min after open (9:35 AM ET) and on multi-leg orders.
+
+
+> Update Aug 25, 2026 (later): E*TRADE and Webull flows added to the help section. Sources: us.etrade.com/knowledge/advanced-trading/how-to-trade-options, us.etrade.com/platforms/power-etrade/pro/how-to/tools (Positions panel add/close/roll), webull.com/blog/34-Basic-Options (mobile chain, List View), webull.hk/en/help/faq/1547-Start-Trading-Options (Single Leg selector). E*TRADE labels actions Buy Open / Sell Open; Webull mobile has no diagonal roll ticket (two orders).
 
 ## Verbatim order-entry flows (fetched from official pages Aug 25, 2026)
 

@@ -278,6 +278,10 @@ export function buildHtmlBody(data: SignalEmailData): string {
           <a href="https://www.trademind.bot/signals" style="display:inline-block;background:#111827;color:#ffffff;padding:13px 36px;border-radius:6px;text-decoration:none;font-weight:700;font-size:14px">
             View Your Dashboard &rarr;
           </a>
+          <p style="margin:14px 0 0;font-size:12px;color:#6b7280">
+            Not sure where these orders go at your broker?
+            <a href="https://www.trademind.bot/help/enter-orders" style="color:#111827;text-decoration:underline;font-weight:600">Step-by-step order entry guide</a>
+          </p>
         </div>
     </td></tr>
     <tr>

@@ -169,6 +169,11 @@ export function initializeAccountTables(): Promise<void> {
             // CREATE TABLE IF NOT EXISTS does not add columns to a table that
             // already exists, so add any columns introduced after first deploy.
             await query(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS broker VARCHAR(64) NOT NULL DEFAULT 'fidelity'`);
+            // Signal fill confirmations: member-reported fills re-price the
+            // signal's trade rows; system prices live in fill_details for undo.
+            await query(`ALTER TABLE account_signals ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ`);
+            await query(`ALTER TABLE account_signals ADD COLUMN IF NOT EXISTS fill_details JSONB`);
+            await query(`ALTER TABLE account_signals ADD COLUMN IF NOT EXISTS fill_note TEXT`);
         })().catch((err) => {
             // Reset so a transient failure doesn't permanently disable init.
             _initPromise = null;
@@ -267,7 +272,7 @@ export async function updateAccountAlertEmail(accountId: number, userId: string,
     return res.rows.length ? rowToAccount(res.rows[0]) : null;
 }
 
-/** @deprecated Broker linking was removed Aug 2026. Kept for back-compat only. */
+/** Sets the member's stated broker preference (display + help-guide preselect only; no brokerage connection). */
 export async function updateAccountBroker(accountId: number, userId: string, broker: string): Promise<Account | null> {
     await initializeAccountTables();
     const res = await query(

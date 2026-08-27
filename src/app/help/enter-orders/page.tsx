@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { ArrowLeft, Mail } from 'lucide-react';
 import OrderEntryGuide from '@/components/help/OrderEntryGuide';
 import { LegalFooter } from '@/components/marketing/LegalFooter';
@@ -80,7 +81,9 @@ export default function EnterOrdersHelpPage() {
                     <p className="text-tm-muted text-sm mb-6">
                         The walkthrough plays automatically. Use the arrows to step through at your own pace.
                     </p>
-                    <OrderEntryGuide />
+                    <Suspense fallback={<div className="h-64 rounded-2xl border border-white/10 bg-white/[0.03] animate-pulse" />}>
+                        <OrderEntryGuide />
+                    </Suspense>
                 </section>
 
                 {/* Approval explainer */}

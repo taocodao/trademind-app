@@ -30,6 +30,9 @@ export interface SignalEmailData {
     accountName?: string;
     /** ISO timestamp when the signal was generated. */
     signalTimestamp?: string;
+    /** Account + signal ids, used to deep-link the email to the exact signal card. */
+    accountId?: number;
+    signalId?: string;
 }
 
 /**
@@ -275,12 +278,11 @@ export function buildHtmlBody(data: SignalEmailData): string {
         ${optionsHtml}
         ${statusHtml}
         <div style="text-align:center;padding-top:20px">
-          <a href="https://www.trademind.bot/signals" style="display:inline-block;background:#111827;color:#ffffff;padding:13px 36px;border-radius:6px;text-decoration:none;font-weight:700;font-size:14px">
-            View Your Dashboard &rarr;
+          <a href="${data.accountId && data.signalId ? `https://www.trademind.bot/account/${data.accountId}?tab=signals&signal=${encodeURIComponent(data.signalId)}` : 'https://www.trademind.bot/signals'}" style="display:inline-block;background:#111827;color:#ffffff;padding:13px 36px;border-radius:6px;text-decoration:none;font-weight:700;font-size:14px">
+            View This Signal &rarr;
           </a>
           <p style="margin:14px 0 0;font-size:12px;color:#6b7280">
-            Not sure where these orders go at your broker?
-            <a href="https://www.trademind.bot/help/enter-orders" style="color:#111827;text-decoration:underline;font-weight:600">Step-by-step order entry guide</a>
+            <a href="https://www.trademind.bot/help/enter-orders" style="color:#111827;text-decoration:underline;font-weight:600">How to enter these orders at your broker</a>, step by step for 7 brokers
           </p>
         </div>
     </td></tr>

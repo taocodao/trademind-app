@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { BROKERS, ORDER_TYPES, getBroker, getFlow, type OrderTypeKey } from './orderEntryData';
 import { CheckCircle2, ChevronLeft, ChevronRight, Pause, Play, RotateCcw, AlertTriangle, ExternalLink, ShieldCheck } from 'lucide-react';
 
@@ -13,8 +14,14 @@ const FRICTION_STYLE: Record<string, { label: string; cls: string }> = {
 const STEP_MS = 4200;
 
 export default function OrderEntryGuide() {
-    const [brokerKey, setBrokerKey] = useState('schwab');
-    const [orderType, setOrderType] = useState<OrderTypeKey>('leaps');
+    const searchParams = useSearchParams();
+    // Deep links (signal cards, emails) can preselect broker + order type.
+    const qBroker = searchParams?.get('broker') || '';
+    const qType = searchParams?.get('type') || '';
+    const initialBroker = BROKERS.some((b) => b.key === qBroker) ? qBroker : 'schwab';
+    const initialType: OrderTypeKey = ORDER_TYPES.some((t) => t.key === qType) ? (qType as OrderTypeKey) : 'leaps';
+    const [brokerKey, setBrokerKey] = useState(initialBroker);
+    const [orderType, setOrderType] = useState<OrderTypeKey>(initialType);
     const [stepIdx, setStepIdx] = useState(0);
     const [playing, setPlaying] = useState(true);
     const scrollRef = useRef<HTMLDivElement>(null);

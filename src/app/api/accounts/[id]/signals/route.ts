@@ -24,6 +24,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
             `SELECT a.signal_id,
                     a.status        AS account_status,
                     a.created_at    AS received_at,
+                    a.confirmed_at,
+                    a.fill_details,
+                    a.fill_note,
                     s.strategy,
                     s.symbol,
                     s.status        AS signal_status,
@@ -37,6 +40,33 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
             [accountId]
         );
 
+        // Per-account sized orders for these signals (ledger rows written by
+        // the fan-out) so the cards can show the actual instruction blocks.
+        const signalIds = res.rows.map((r: any) => r.signal_id);
+        const ordersBySignal = new Map<string, any[]>();
+        if (signalIds.length > 0) {
+            const ord = await pool.query(
+                `SELECT id, signal_id, type, symbol, quantity, price, instrument_type, note
+                 FROM account_activities
+                 WHERE account_id = $1 AND signal_id = ANY($2) AND type IN ('buy','sell')
+                 ORDER BY created_at ASC`,
+                [accountId, signalIds]
+            );
+            for (const o of ord.rows) {
+                const list = ordersBySignal.get(o.signal_id) || [];
+                list.push({
+                    activityId: Number(o.id),
+                    type: o.type,
+                    symbol: o.symbol,
+                    quantity: Number(o.quantity),
+                    price: o.price != null ? Number(o.price) : null,
+                    instrumentType: o.instrument_type,
+                    note: o.note,
+                });
+                ordersBySignal.set(o.signal_id, list);
+            }
+        }
+
         const signals = res.rows.map((r) => {
             let data: any = r.data;
             if (typeof data === 'string') {
@@ -47,6 +77,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
                 accountStatus: r.account_status,
                 receivedAt: r.received_at,
                 publishedAt: r.published_at,
+                confirmedAt: r.confirmed_at,
+                fills: r.fill_details ?? null,
+                fillNote: r.fill_note ?? null,
+                orders: ordersBySignal.get(r.signal_id) || [],
                 strategy: r.strategy,
                 symbol: r.symbol,
                 signalStatus: r.signal_status,

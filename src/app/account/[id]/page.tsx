@@ -7,7 +7,10 @@ import { ArrowLeft, RefreshCw, Wallet, WifiOff, LayoutList, Activity as Activity
 import Link from "next/link";
 import { getStrategy } from "@/lib/strategies";
 import { ActivityTab } from "@/components/accounts/ActivityTab";
-import { AccountSwitcher } from "@/components/accounts/AccountSwitcher";
+import { SignalCard, type SignalRow } from "@/components/accounts/SignalCard";
+import { ConsoleNav, type ConsoleTab } from "@/components/console/ConsoleNav";
+import { AccountTab } from "@/components/console/AccountTab";
+import { ReferDashboard } from "@/app/refer/page";
 
 interface Position {
     id: number;
@@ -18,15 +21,17 @@ interface Position {
     marketValue: number;
     unrealizedPnl: number;
     unrealizedPnlPct: number;
+    signal_id?: string | null;
 }
 
 interface AccountData {
     id: number;
     name: string;
     strategy: string;
-    risk_level: string;
+    risk_level: 'conservative' | 'moderate' | 'aggressive';
     initial_principal: number;
     cash_balance: number;
+    broker?: string | null;
 }
 
 interface MembershipInfo {
@@ -44,10 +49,22 @@ export default function AccountDetailPage() {
     const searchParams = useSearchParams();
     const accountId = Number(params?.id);
 
-    // Deep-linkable tab: /account/[id]?tab=activity or ?tab=signals
+    // Deep-linkable tab: /account/[id]?tab=positions|signals|activity|account|refer
+    const VALID_TABS: ConsoleTab[] = ['signals', 'positions', 'activity', 'account', 'refer'];
     const tabParam = searchParams?.get('tab');
-    const initialTab = tabParam === 'activity' ? 'activity' : tabParam === 'signals' ? 'signals' : 'positions';
-    const [tab, setTab] = useState<'positions' | 'signals' | 'activity'>(initialTab);
+    const initialTab: ConsoleTab = (VALID_TABS as string[]).includes(tabParam || '') ? (tabParam as ConsoleTab) : 'positions';
+    const [tab, setTab] = useState<ConsoleTab>(initialTab);
+
+    const selectTab = useCallback((t: ConsoleTab) => {
+        setTab(t);
+        router.replace(`/account/${accountId}?tab=${t}`, { scroll: false });
+    }, [router, accountId]);
+
+    // Keep state in sync when the URL tab param changes (deep links, back nav).
+    useEffect(() => {
+        const t = searchParams?.get('tab');
+        if (t && (VALID_TABS as string[]).includes(t) && t !== tab) setTab(t as ConsoleTab);
+    }, [searchParams, tab]);
     const [account, setAccount] = useState<AccountData | null>(null);
     const [membership, setMembership] = useState<MembershipInfo | null>(null);
     const [checkoutBusy, setCheckoutBusy] = useState(false);
@@ -93,13 +110,15 @@ export default function AccountDetailPage() {
         }
     }, [ready, authenticated, accountId, fetchPositions]);
 
-    useEffect(() => {
+    const fetchMembership = useCallback(() => {
         if (!accountId) return;
         fetch(`/api/accounts/${accountId}/membership`)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => { if (d?.membership) setMembership(d.membership); })
             .catch(() => {});
     }, [accountId]);
+
+    useEffect(() => { fetchMembership(); }, [fetchMembership]);
 
     const startCheckout = async () => {
         setCheckoutBusy(true);
@@ -135,7 +154,7 @@ export default function AccountDetailPage() {
     const realizedSoFar = nlv - (account?.initial_principal ?? 0);
 
     return (
-        <main className="min-h-screen pb-24 max-w-4xl mx-auto w-full border-x border-white/5 bg-tm-bg shadow-2xl relative">
+        <main className="min-h-screen pb-44 max-w-4xl mx-auto w-full border-x border-white/5 bg-tm-bg shadow-2xl relative">
             {/* Header */}
             <header className="px-6 pt-12 pb-2 flex items-center gap-4">
                 <Link href="/accounts?list=1" className="w-10 h-10 rounded-full bg-tm-surface flex items-center justify-center">
@@ -164,7 +183,6 @@ export default function AccountDetailPage() {
                         )}
                     </p>
                 </div>
-                <AccountSwitcher navigateOnSelect tab={tab} />
                 <button onClick={fetchPositions} className="w-10 h-10 rounded-full bg-tm-surface flex items-center justify-center text-tm-muted hover:text-white transition">
                     <RefreshCw className="w-4 h-4" />
                 </button>
@@ -200,52 +218,37 @@ export default function AccountDetailPage() {
                 </div>
             </div>
 
-            {/* Membership status */}
-            {membership && (
-                <div className="px-6 mb-4">
-                    <MembershipBanner membership={membership} busy={checkoutBusy} onSubscribe={startCheckout} />
-                </div>
-            )}
-
-            {/* Tabs */}
-            <div className="px-6 mb-4">
-                <div className="flex gap-2 bg-tm-surface rounded-xl p-1">
-                    <button
-                        onClick={() => setTab('positions')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition ${tab === 'positions' ? 'bg-tm-purple text-white' : 'text-tm-muted hover:text-white'}`}
-                    >
-                        <LayoutList className="w-4 h-4" /> Positions
-                    </button>
-                    <button
-                        onClick={() => setTab('signals')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition ${tab === 'signals' ? 'bg-tm-purple text-white' : 'text-tm-muted hover:text-white'}`}
-                    >
-                        <Zap className="w-4 h-4" /> Signals
-                    </button>
-                    <button
-                        onClick={() => setTab('activity')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition ${tab === 'activity' ? 'bg-tm-purple text-white' : 'text-tm-muted hover:text-white'}`}
-                    >
-                        <ActivityIcon className="w-4 h-4" /> Activity
-                    </button>
-                </div>
-            </div>
 
             {/* Tab content */}
             <div className="px-6">
                 {tab === 'positions' ? (
-                    <PositionsTable positions={positions} loading={loading} strategy={account?.strategy || ''} />
+                    <PositionsTable positions={positions} loading={loading} strategy={account?.strategy || ''} switchToSignal={(sid) => {
+                        setTab('signals');
+                        router.replace(`/account/${accountId}?tab=signals&signal=${encodeURIComponent(sid)}`, { scroll: false });
+                    }} />
                 ) : tab === 'signals' ? (
                     <SignalsTab accountId={accountId} />
-                ) : (
+                ) : tab === 'activity' ? (
                     <ActivityTab accountId={accountId} accountName={account?.name} onChanged={fetchPositions} />
-                )}
+                ) : tab === 'refer' ? (
+                    <ReferDashboard />
+                ) : account ? (
+                    <div className="space-y-4">
+                        {membership && (
+                            <MembershipBanner membership={membership} busy={checkoutBusy} onSubscribe={startCheckout} />
+                        )}
+                        <AccountTab account={account} onChanged={() => { fetchPositions(); fetchMembership(); }} />
+                    </div>
+                ) : null}
             </div>
+
+            {/* Console navigation: bottom tab bar + account pill */}
+            <ConsoleNav tab={tab} onTab={selectTab} />
         </main>
     );
 }
 
-function PositionsTable({ positions, loading, strategy }: { positions: Position[]; loading: boolean; strategy: string }) {
+function PositionsTable({ positions, loading, strategy, switchToSignal }: { positions: Position[]; loading: boolean; strategy: string; switchToSignal: (signalId: string) => void }) {
     const symbolColors: Record<string, string> = {
         QQQ: strategy === 'QQQ_LEAPS' ? 'text-amber-400' : 'text-blue-400',
         QLD: 'text-indigo-400',
@@ -282,6 +285,15 @@ function PositionsTable({ positions, loading, strategy }: { positions: Position[
                                                 <div className="flex items-center gap-2">
                                                     <span className={`font-bold font-mono ${color}`}>{p.symbol}</span>
                                                     <span className="text-[10px] text-tm-muted font-mono bg-white/5 px-1.5 py-0.5 rounded">x{p.quantity}</span>
+                                                    {p.signal_id && (
+                                                        <button
+                                                            onClick={() => switchToSignal(p.signal_id!)}
+                                                            title="From signal"
+                                                            className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-tm-purple/10 text-tm-purple border border-tm-purple/25 hover:bg-tm-purple/20 transition"
+                                                        >
+                                                            signal
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3 text-right font-mono text-sm">${p.currentPrice.toFixed(2)}</td>
@@ -307,46 +319,36 @@ function PositionsTable({ positions, loading, strategy }: { positions: Position[
     );
 }
 
-interface AccountSignalRow {
-    signalId: string;
-    accountStatus: string;
-    receivedAt: string;
-    publishedAt: string | null;
-    strategy: string | null;
-    symbol: string | null;
-    signalStatus: string | null;
-    action: string | null;
-    summary: string | null;
-    regime: string | null;
-}
-
 function SignalsTab({ accountId }: { accountId: number }) {
-    const [rows, setRows] = useState<AccountSignalRow[]>([]);
+    const searchParams = useSearchParams();
+    const highlightId = searchParams?.get('signal');
+    const [rows, setRows] = useState<SignalRow[]>([]);
     const [loadingSignals, setLoadingSignals] = useState(true);
 
-    useEffect(() => {
-        let cancelled = false;
-        (async () => {
-            try {
-                const res = await fetch(`/api/accounts/${accountId}/signals`);
-                if (res.ok && !cancelled) {
-                    const d = await res.json();
-                    setRows(d.signals || []);
-                }
-            } catch (e) {
-                console.error('[account] signals fetch failed', e);
-            } finally {
-                if (!cancelled) setLoadingSignals(false);
+    const load = useCallback(async () => {
+        try {
+            const res = await fetch(`/api/accounts/${accountId}/signals`);
+            if (res.ok) {
+                const d = await res.json();
+                setRows(d.signals || []);
             }
-        })();
-        return () => { cancelled = true; };
+        } catch (e) {
+            console.error('[account] signals fetch failed', e);
+        } finally {
+            setLoadingSignals(false);
+        }
     }, [accountId]);
 
-    const statusColor = (s: string) =>
-        s === 'executed' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-        : s === 'skipped' ? 'bg-white/5 text-tm-muted border-white/10'
-        : s === 'failed' ? 'bg-tm-red/10 text-tm-red border-tm-red/20'
-        : 'bg-white/5 text-tm-muted border-white/10';
+    useEffect(() => { load(); }, [load]);
+
+    // Deep link from signal emails: scroll to and highlight the target card.
+    useEffect(() => {
+        if (!highlightId || rows.length === 0) return;
+        const t = setTimeout(() => {
+            document.getElementById(`signal-${highlightId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 350);
+        return () => clearTimeout(t);
+    }, [highlightId, rows.length]);
 
     return (
         <div>
@@ -360,26 +362,15 @@ function SignalsTab({ accountId }: { accountId: number }) {
                 </div>
             ) : (
                 <div className="space-y-3">
-                    {rows.map((s) => {
-                        const when = s.publishedAt || s.receivedAt;
-                        const dateStr = when ? new Date(when).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
-                        return (
-                            <div key={s.signalId} className="glass-card p-4">
-                                <div className="flex items-center justify-between mb-1">
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-bold text-sm text-white">{s.action || s.summary || 'Signal'}</span>
-                                        {s.symbol && <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-white/5 text-tm-muted border border-white/10">{s.symbol}</span>}
-                                        {s.regime && <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-white/5 text-tm-muted border border-white/10">{s.regime}</span>}
-                                    </div>
-                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold border capitalize ${statusColor(s.accountStatus)}`}>
-                                        {s.accountStatus}
-                                    </span>
-                                </div>
-                                {s.summary && s.action && <p className="text-xs text-tm-muted mb-1">{s.summary}</p>}
-                                <p className="text-[10px] text-tm-muted">{dateStr}</p>
-                            </div>
-                        );
-                    })}
+                    {rows.map((sig) => (
+                        <SignalCard
+                            key={sig.signalId}
+                            signal={sig}
+                            accountId={accountId}
+                            highlighted={highlightId === sig.signalId}
+                            onChanged={load}
+                        />
+                    ))}
                 </div>
             )}
         </div>

@@ -180,6 +180,8 @@ async function processAccountSignal(account: Account, signalId: string, signalDa
             live: false,
             accountName: account.name,
             signalTimestamp: (signalData as any).timestamp || (signalData as any).created_at,
+            accountId: account.id,
+            signalId,
         });
         return true;
     }

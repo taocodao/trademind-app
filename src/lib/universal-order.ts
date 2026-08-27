@@ -93,7 +93,7 @@ function normalizeAction(action: string, isOption: boolean): string {
     return action.trim() || (isOption ? 'Buy to Open' : 'Buy');
 }
 
-function parseOptionContract(symbol: string): OptionContractDetails | null {
+export function parseOptionContract(symbol: string): OptionContractDetails | null {
     const compact = /^([A-Z.]+)_(\d{4})(\d{2})(\d{2})([CP])(\d+(?:\.\d+)?)$/i.exec(symbol);
     if (compact) {
         return {

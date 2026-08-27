@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Clock, Gift, Users } from 'lucide-react';
+import { Clock, Gift, Users } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 import { ShareSection } from '@/components/referral/ShareSection';
@@ -14,7 +14,7 @@ type Account = {
     membership?: { plan: 'basic' | 'leaps'; status: string; pending_bonus_days?: number } | null;
 };
 
-export default function ReferPage() {
+export function ReferDashboard() {
     const { authenticated, ready } = usePrivy();
     const router = useRouter();
     const [data, setData] = useState<any>(null);
@@ -105,18 +105,15 @@ export default function ReferPage() {
     }
 
     if (!ready || loading) {
-        return <div className="flex min-h-screen items-center justify-center bg-tm-bg"><div className="h-8 w-8 animate-spin rounded-full border-4 border-tm-purple border-t-transparent" /></div>;
+        return <div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-4 border-tm-purple border-t-transparent" /></div>;
     }
-    if (error && !data) return <div className="flex min-h-screen items-center justify-center bg-tm-bg px-6 text-red-400">{error}</div>;
+    if (error && !data) return <div className="px-6 py-10 text-center text-red-400">{error}</div>;
 
     const program = data?.program;
 
     return (
-        <main className="mx-auto min-h-screen max-w-4xl bg-tm-bg px-4 pb-24 pt-6 text-white">
-            <header className="mb-8 flex items-center gap-3">
-                <button aria-label="Return to accounts" onClick={() => router.push('/accounts')} className="-ml-2 p-2 text-tm-muted transition-colors hover:text-white"><ArrowLeft className="h-5 w-5" /></button>
-                <h1 className="text-2xl font-bold">Referral dashboard</h1>
-            </header>
+        <main className="mx-auto max-w-4xl pb-6 text-white">
+            <h1 className="mb-8 text-xl font-bold">Referral dashboard</h1>
 
             <section className="mb-6 overflow-hidden rounded-2xl border border-tm-purple/30 bg-gradient-to-br from-tm-purple/15 to-transparent p-6">
                 <div className="mb-4 flex items-center gap-3"><Gift className="h-6 w-6 text-purple-300" /><h2 className="text-xl font-bold">Give a friend extra time. Earn your own.</h2></div>
@@ -249,6 +246,14 @@ export default function ReferPage() {
             </section>
 
             <p className="mt-6 text-center text-xs text-tm-muted">Day grants are subscription benefits, not cash. <Link href="/terms" className="text-tm-purple hover:underline">Terms apply.</Link></p>
+        </main>
+    );
+}
+
+export default function ReferPage() {
+    return (
+        <main className="min-h-screen bg-tm-bg px-4 pb-24 pt-6 text-white">
+            <ReferDashboard />
         </main>
     );
 }

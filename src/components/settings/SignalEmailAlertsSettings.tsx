@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 
 export function SignalEmailAlertsSettings() {
-    const { ready, authenticated, getAccessToken } = usePrivy();
+    const { ready, authenticated, getAccessToken, user } = usePrivy();
     const [emailEnabled, setEmailEnabled] = useState<boolean>(false);
     const [emails, setEmails] = useState<string[]>(['']);
     const [loading, setLoading] = useState(true);
@@ -23,11 +23,14 @@ export function SignalEmailAlertsSettings() {
                 .then(res => res.json())
                 .then(data => {
                     // Now defaults to false per user request
-                    setEmailEnabled(data.emailSignalAlerts === true); 
+                    setEmailEnabled(data.emailSignalAlerts === true);
                     if (data.email) {
                         const parsed = data.email.split(',').map((e: string) => e.trim()).filter(Boolean);
-                        if (parsed.length > 0) setEmails(parsed);
+                        if (parsed.length > 0) { setEmails(parsed); return; }
                     }
+                    // No saved alert emails: default to the login email.
+                    const loginEmail = user?.email?.address;
+                    if (loginEmail) setEmails([loginEmail]);
                 })
                 .catch(() => {})
                 .finally(() => setLoading(false));

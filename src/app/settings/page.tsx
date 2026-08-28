@@ -3,23 +3,17 @@
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { ArrowLeft, Settings, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Settings, AlertTriangle, Mail } from 'lucide-react';
 import Link from 'next/link';
 import { InvestmentPrincipal } from '@/components/dashboard/InvestmentPrincipal';
 import { ShadowLedgerPanel } from '@/components/dashboard/ShadowLedgerPanel';
-import { TQQQAutoApproveSettings } from '@/components/settings/TQQQAutoApproveSettings';
 import { SubscriptionManager } from '@/components/settings/SubscriptionManager';
-import { MyStrategies } from '@/components/settings/MyStrategies';
 import { SignalEmailAlertsSettings } from '@/components/settings/SignalEmailAlertsSettings';
 import { SupportContact } from '@/components/settings/SupportContact';
-import { LoginMethodSection } from '@/components/settings/LoginMethodSection';
-import { StrategyTabs } from '@/components/ui/StrategyTabs';
-import { useStrategyContext } from '@/components/providers/StrategyContext';
 
 export default function SettingsPage() {
     const { ready, authenticated } = usePrivy();
     const router = useRouter();
-    const { activeStrategy, setActiveStrategy, enabledStrategies } = useStrategyContext();
 
     useEffect(() => {
         if (ready && !authenticated) {
@@ -59,17 +53,11 @@ export default function SettingsPage() {
                 {/* Subscription Tier Management, self-contained, fetches its own data */}
                 <SubscriptionManager />
 
-                {/* My Strategies Subscription */}
-                <MyStrategies />
-                
-                {/* Strategy-Specific Settings (Risk profile), Auto-Approve removed under signals-only product model */}
-                <TQQQAutoApproveSettings />
-
                 {/* Email Alerts Setup */}
                 <SignalEmailAlertsSettings />
 
-                {/* Login Method */}
-                <LoginMethodSection />
+                {/* Login email (read-only identity) */}
+                <LoginEmailSection />
 
                 {/* Support & Help */}
                 <SupportContact />
@@ -96,5 +84,24 @@ export default function SettingsPage() {
                 </div>
             </div>
         </main>
+    );
+}
+
+/** Read-only card showing the email used to sign in. */
+function LoginEmailSection() {
+    const { user } = usePrivy();
+    const email = user?.email?.address || null;
+    return (
+        <section className="glass-card p-4">
+            <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-tm-purple/10 flex items-center justify-center flex-shrink-0">
+                    <Mail className="w-5 h-5 text-tm-purple" />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-sm">Login Email</h3>
+                    <p className="text-xs text-tm-muted mt-0.5 truncate">{email || 'Not available'}</p>
+                </div>
+            </div>
+        </section>
     );
 }

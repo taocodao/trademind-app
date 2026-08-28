@@ -58,7 +58,7 @@ export async function confirmSignalFill(
         if (sig.rows[0].confirmed_at) throw new FillError('This signal already has a reported fill. Undo it first to change prices.');
 
         const acts = await client.query(
-            `SELECT id, type, symbol, quantity, price, amount, instrument_type, note
+            `SELECT id, type, symbol, quantity, price, amount, note
              FROM account_activities
              WHERE account_id = $1 AND signal_id = $2 AND source = 'signal' AND type IN ('buy','sell')`,
             [accountId, signalId]
@@ -72,7 +72,7 @@ export async function confirmSignalFill(
             if (!row) throw new FillError('Fill references an order that does not belong to this signal');
             const qty = Number(row.quantity);
             const sysPrice = Number(row.price);
-            const mult = row.instrument_type === 'option' ? 100 : 1;
+            const mult = isOptionSymbol(row.symbol) ? 100 : 1;
             const oldAmount = qty * sysPrice * mult;
             const newAmount = +(qty * f.price * mult).toFixed(2);
             const diff = newAmount - oldAmount;
@@ -145,12 +145,12 @@ export async function clearSignalFillConfirmation(
         let cashDelta = 0;
         for (const f of stored) {
             const cur = await client.query(
-                `SELECT id, quantity, price, instrument_type FROM account_activities WHERE id = $1 AND account_id = $2`,
+                `SELECT id, symbol, quantity, price FROM account_activities WHERE id = $1 AND account_id = $2`,
                 [f.activityId, accountId]
             );
             if (cur.rows.length === 0) continue;
             const row = cur.rows[0];
-            const mult = row.instrument_type === 'option' ? 100 : 1;
+            const mult = isOptionSymbol(row.symbol) ? 100 : 1;
             const qty = Number(row.quantity);
             const oldAmount = qty * Number(row.price) * mult;
             const newAmount = +(qty * f.sysPrice * mult).toFixed(2);
@@ -188,3 +188,10 @@ export async function clearSignalFillConfirmation(
 }
 
 class FillError extends Error {}
+
+/** account_activities has no instrument_type column (only positions carry
+ *  it); option rows are recognized by their OCC-style contract symbol. */
+export function isOptionSymbol(symbol: string | null | undefined): boolean {
+    if (!symbol) return false;
+    return /^[A-Z.]+_\d{8}[CP]\d/.test(symbol) || /^[A-Z.]+_?\d{4}-\d{2}-\d{2}[CP]\d/.test(symbol);
+}

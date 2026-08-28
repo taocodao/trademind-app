@@ -8,8 +8,9 @@ import Link from "next/link";
 import { getStrategy } from "@/lib/strategies";
 import { ActivityTab } from "@/components/accounts/ActivityTab";
 import { SignalCard, type SignalRow } from "@/components/accounts/SignalCard";
-import { ConsoleNav, type ConsoleTab } from "@/components/console/ConsoleNav";
 import { AccountTab } from "@/components/console/AccountTab";
+
+type ConsoleTab = 'signals' | 'positions' | 'activity' | 'account' | 'refer';
 import { ReferDashboard } from "@/app/refer/page";
 
 interface Position {
@@ -154,7 +155,7 @@ export default function AccountDetailPage() {
     const realizedSoFar = nlv - (account?.initial_principal ?? 0);
 
     return (
-        <main className="min-h-screen pb-44 max-w-4xl mx-auto w-full border-x border-white/5 bg-tm-bg shadow-2xl relative">
+        <main className="min-h-screen pb-28 max-w-4xl mx-auto w-full border-x border-white/5 bg-tm-bg shadow-2xl relative">
             {/* Header */}
             <header className="px-6 pt-12 pb-2 flex items-center gap-4">
                 <Link href="/accounts?list=1" className="w-10 h-10 rounded-full bg-tm-surface flex items-center justify-center">
@@ -219,6 +220,29 @@ export default function AccountDetailPage() {
             </div>
 
 
+            {/* In-page tab row (bottom nav covers global navigation) */}
+            <div className="px-6 mb-4 flex gap-1.5 overflow-x-auto no-scrollbar">
+                {([
+                    ['signals', 'Signals'],
+                    ['positions', 'Positions'],
+                    ['activity', 'Activity'],
+                    ['account', 'Account'],
+                    ['refer', 'Refer'],
+                ] as [ConsoleTab, string][]).map(([key, label]) => (
+                    <button
+                        key={key}
+                        onClick={() => selectTab(key)}
+                        className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition border ${
+                            tab === key
+                                ? 'bg-tm-purple text-white border-tm-purple'
+                                : 'text-tm-muted border-white/10 hover:border-white/30 hover:text-white'
+                        }`}
+                    >
+                        {label}
+                    </button>
+                ))}
+            </div>
+
             {/* Tab content */}
             <div className="px-6">
                 {tab === 'positions' ? (
@@ -242,8 +266,6 @@ export default function AccountDetailPage() {
                 ) : null}
             </div>
 
-            {/* Console navigation: bottom tab bar + account pill */}
-            <ConsoleNav tab={tab} onTab={selectTab} />
         </main>
     );
 }

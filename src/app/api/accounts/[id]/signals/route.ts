@@ -46,7 +46,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         const ordersBySignal = new Map<string, any[]>();
         if (signalIds.length > 0) {
             const ord = await pool.query(
-                `SELECT id, signal_id, type, symbol, quantity, price, instrument_type, note
+                `SELECT id, signal_id, type, symbol, quantity, price, note
                  FROM account_activities
                  WHERE account_id = $1 AND signal_id = ANY($2) AND type IN ('buy','sell')
                  ORDER BY created_at ASC`,
@@ -54,13 +54,16 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
             );
             for (const o of ord.rows) {
                 const list = ordersBySignal.get(o.signal_id) || [];
+                // account_activities has no instrument_type column (only
+                // positions carry it) - infer from the OCC-style symbol.
+                const isOption = typeof o.symbol === 'string' && /^[A-Z.]+_?\d{4}-?\d{2}-?\d{2}[CP]\d|^[A-Z.]+_\d{8}[CP]\d/.test(o.symbol);
                 list.push({
                     activityId: Number(o.id),
                     type: o.type,
                     symbol: o.symbol,
                     quantity: Number(o.quantity),
                     price: o.price != null ? Number(o.price) : null,
-                    instrumentType: o.instrument_type,
+                    instrumentType: isOption ? 'option' : 'equity',
                     note: o.note,
                 });
                 ordersBySignal.set(o.signal_id, list);

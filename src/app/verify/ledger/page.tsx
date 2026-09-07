@@ -139,6 +139,8 @@ export default function LedgerPage() {
             }))
         );
 
+        chart.timeScale().fitContent();
+
         chart.subscribeClick((param: MouseEventParams) => {
             if (!param.time || !param.point) {
                 setTip(null);

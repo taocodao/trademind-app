@@ -46,11 +46,11 @@ const EN: VerifyCopy = {
     heroEyebrow: 'Transparency',
     heroTitle: 'Don\u2019t take our word for it. Audit it.',
     heroSub:
-        'Everything behind the V4 record quoted on our landing page: the exact method, every trade, every assumption, and every limitation. We publish what most backtests hide, because a number you cannot check is a number you should not trust.',
+        'Everything behind the QQQ LEAPS record quoted on our landing page: the exact method, every trade, every assumption, and every limitation. We publish what most backtests hide, because a number you cannot check is a number you should not trust.',
     recordTitle: 'The record, in full',
     recordCols: ['Total return', 'CAGR', 'Sharpe', 'Max DD', 'Calmar', 'Final value'],
     recordRows: [
-        { name: 'TradeMind V4 (backtest)', total: '+464.2%', cagr: '36.3%', sharpe: '1.48', maxdd: '-17.8%', calmar: '2.04', final: '$169,249' },
+        { name: 'QQQ LEAPS (backtest)', total: '+464.2%', cagr: '36.3%', sharpe: '1.48', maxdd: '-17.8%', calmar: '2.04', final: '$169,249' },
         { name: 'QQQ buy & hold', total: '+136.4%', cagr: '16.6%', sharpe: '0.80', maxdd: '-35.6%', calmar: '0.47', final: '$70,927' },
     ],
     recordNote:
@@ -96,7 +96,7 @@ const EN: VerifyCopy = {
         },
         {
             h: 'The validator',
-            p: 'The V4 gate was not tuned on this window and then reported on it. We ran combinatorial cross-validation across 21 recombined sub-windows of the same period: V4 beat the unfiltered engine on return and Sharpe in 18 of 21 paths. The live execution stack imports this same configuration and these same gates.',
+            p: 'The QQQ LEAPS gate was not tuned on this window and then reported on it. We ran combinatorial cross-validation across 21 recombined sub-windows of the same period: QQQ LEAPS beat the unfiltered engine on return and Sharpe in 18 of 21 paths. The live execution stack imports this same configuration and these same gates.',
         },
     ],
     gatesTitle: 'When the model refuses to trade',
@@ -105,7 +105,7 @@ const EN: VerifyCopy = {
     gatesRows: [
         'Strong trend: regime is strong bull and ADX reads 16 or higher. Skipped 788 times.',
         'Thin premium: implied volatility is below 0.7 times realized volatility. You would be selling insurance for less than the historical cost of claims. Skipped 149 times.',
-        'Strong trend with thin premium (the V4 rule): ADX above 25 while implied volatility is below realized. Skipped 95 times.',
+        'Strong trend with thin premium (the QQQ LEAPS rule): ADX above 25 while implied volatility is below realized. Skipped 95 times.',
     ],
     gatesCounts: 'Total: 1,032 days the model looked at the overlay and declined it. Saying no is most of the job.',
     limitsTitle: 'What this record cannot tell you',
@@ -130,7 +130,7 @@ const EN: VerifyCopy = {
         },
         {
             h: 'Survivorship of design',
-            p: 'We tried variants before settling on V4, and you are reading about the one that worked. The cross-validation above mitigates this; it does not eliminate it. Treat the number as evidence, not destiny.',
+            p: 'We tried variants before settling on QQQ LEAPS, and you are reading about the one that worked. The cross-validation above mitigates this; it does not eliminate it. Treat the number as evidence, not destiny.',
         },
     ],
     limitsClose:
@@ -171,11 +171,11 @@ const ES: VerifyCopy = {
     heroEyebrow: 'Transparencia',
     heroTitle: 'No te f\u00edes de nuestra palabra. Aud\u00edtalo.',
     heroSub:
-        'Todo lo que hay detr\u00e1s del registro V4 citado en nuestra p\u00e1gina principal: el m\u00e9todo exacto, cada operaci\u00f3n, cada supuesto y cada limitaci\u00f3n. Publicamos lo que la mayor\u00eda de los backtests esconden, porque un n\u00famero que no puedes comprobar es un n\u00famero en el que no deber\u00edas confiar.',
+        'Todo lo que hay detr\u00e1s del registro QQQ LEAPS citado en nuestra p\u00e1gina principal: el m\u00e9todo exacto, cada operaci\u00f3n, cada supuesto y cada limitaci\u00f3n. Publicamos lo que la mayor\u00eda de los backtests esconden, porque un n\u00famero que no puedes comprobar es un n\u00famero en el que no deber\u00edas confiar.',
     recordTitle: 'El registro, completo',
     recordCols: ['Retorno total', 'CAGR', 'Sharpe', 'Max DD', 'Calmar', 'Valor final'],
     recordRows: [
-        { name: 'TradeMind V4 (backtest)', total: '+464.2%', cagr: '36.3%', sharpe: '1.48', maxdd: '-17.8%', calmar: '2.04', final: '$169,249' },
+        { name: 'QQQ LEAPS (backtest)', total: '+464.2%', cagr: '36.3%', sharpe: '1.48', maxdd: '-17.8%', calmar: '2.04', final: '$169,249' },
         { name: 'QQQ comprar y mantener', total: '+136.4%', cagr: '16.6%', sharpe: '0.80', maxdd: '-35.6%', calmar: '0.47', final: '$70,927' },
     ],
     recordNote:
@@ -221,7 +221,7 @@ const ES: VerifyCopy = {
         },
         {
             h: 'El validador',
-            p: 'La regla V4 no se ajust\u00f3 sobre esta ventana para luego reportarla sobre ella. Ejecutamos validaci\u00f3n cruzada combinatoria sobre 21 subventanas recombinadas del mismo per\u00edodo: V4 super\u00f3 al motor sin filtro en retorno y Sharpe en 18 de 21 trayectorias. La infraestructura de ejecuci\u00f3n en vivo importa esta misma configuraci\u00f3n y estas mismas reglas.',
+            p: 'La regla QQQ LEAPS no se ajust\u00f3 sobre esta ventana para luego reportarla sobre ella. Ejecutamos validaci\u00f3n cruzada combinatoria sobre 21 subventanas recombinadas del mismo per\u00edodo: QQQ LEAPS super\u00f3 al motor sin filtro en retorno y Sharpe en 18 de 21 trayectorias. La infraestructura de ejecuci\u00f3n en vivo importa esta misma configuraci\u00f3n y estas mismas reglas.',
         },
     ],
     gatesTitle: 'Cu\u00e1ndo el modelo se niega a operar',
@@ -230,7 +230,7 @@ const ES: VerifyCopy = {
     gatesRows: [
         'Tendencia fuerte: el r\u00e9gimen es alcista fuerte y el ADX marca 16 o m\u00e1s. Omitido 788 veces.',
         'Prima escasa: la volatilidad impl\u00edcita est\u00e1 por debajo de 0.7 veces la volatilidad realizada. Estar\u00edas vendiendo seguros por menos del costo hist\u00f3rico de los siniestros. Omitido 149 veces.',
-        'Tendencia fuerte con prima escasa (la regla V4): ADX por encima de 25 mientras la volatilidad impl\u00edcita est\u00e1 por debajo de la realizada. Omitido 95 veces.',
+        'Tendencia fuerte con prima escasa (la regla QQQ LEAPS): ADX por encima de 25 mientras la volatilidad impl\u00edcita est\u00e1 por debajo de la realizada. Omitido 95 veces.',
     ],
     gatesCounts: 'Total: 1,032 d\u00edas en que el modelo evalu\u00f3 la capa de ingresos y la rechaz\u00f3. Decir que no es la mayor parte del trabajo.',
     limitsTitle: 'Lo que este registro no puede decirte',
@@ -255,7 +255,7 @@ const ES: VerifyCopy = {
         },
         {
             h: 'Supervivencia del dise\u00f1o',
-            p: 'Probamos variantes antes de quedarnos con V4, y est\u00e1s leyendo sobre la que funcion\u00f3. La validaci\u00f3n cruzada de arriba mitiga esto; no lo elimina. Trata el n\u00famero como evidencia, no como destino.',
+            p: 'Probamos variantes antes de quedarnos con QQQ LEAPS, y est\u00e1s leyendo sobre la que funcion\u00f3. La validaci\u00f3n cruzada de arriba mitiga esto; no lo elimina. Trata el n\u00famero como evidencia, no como destino.',
         },
     ],
     limitsClose:
@@ -296,11 +296,11 @@ const ZH: VerifyCopy = {
     heroEyebrow: '\u900f\u660e\u5ea6',
     heroTitle: '\u522b\u542c\u6211\u4eec\u7684\u4e00\u9762\u4e4b\u8bcd\uff0c\u4eb2\u81ea\u5ba1\u8ba1\u3002',
     heroSub:
-        '\u4e3b\u9875\u5f15\u7528\u7684 V4 \u4e1a\u7ee9\u8bb0\u5f55\u80cc\u540e\u7684\u4e00\u5207\uff1a\u7cbe\u786e\u7684\u65b9\u6cd5\u3001\u6bcf\u4e00\u7b14\u4ea4\u6613\u3001\u6bcf\u4e00\u4e2a\u5047\u8bbe\u3001\u6bcf\u4e00\u4e2a\u5c40\u9650\u6027\u3002\u6211\u4eec\u516c\u5f00\u7edd\u5927\u591a\u6570\u56de\u6d4b\u9690\u85cf\u7684\u4e1c\u897f\uff0c\u56e0\u4e3a\u4e00\u4e2a\u4f60\u65e0\u6cd5\u6838\u67e5\u7684\u6570\u5b57\uff0c\u5c31\u662f\u4e00\u4e2a\u4f60\u4e0d\u8be5\u76f8\u4fe1\u7684\u6570\u5b57\u3002',
+        '\u4e3b\u9875\u5f15\u7528\u7684 QQQ LEAPS \u4e1a\u7ee9\u8bb0\u5f55\u80cc\u540e\u7684\u4e00\u5207\uff1a\u7cbe\u786e\u7684\u65b9\u6cd5\u3001\u6bcf\u4e00\u7b14\u4ea4\u6613\u3001\u6bcf\u4e00\u4e2a\u5047\u8bbe\u3001\u6bcf\u4e00\u4e2a\u5c40\u9650\u6027\u3002\u6211\u4eec\u516c\u5f00\u7edd\u5927\u591a\u6570\u56de\u6d4b\u9690\u85cf\u7684\u4e1c\u897f\uff0c\u56e0\u4e3a\u4e00\u4e2a\u4f60\u65e0\u6cd5\u6838\u67e5\u7684\u6570\u5b57\uff0c\u5c31\u662f\u4e00\u4e2a\u4f60\u4e0d\u8be5\u76f8\u4fe1\u7684\u6570\u5b57\u3002',
     recordTitle: '\u5b8c\u6574\u7684\u4e1a\u7ee9\u8bb0\u5f55',
     recordCols: ['\u603b\u56de\u62a5', 'CAGR', 'Sharpe', '\u6700\u5927\u56de\u64a4', 'Calmar', '\u6700\u7ec8\u4ef7\u503c'],
     recordRows: [
-        { name: 'TradeMind V4\uff08\u56de\u6d4b\uff09', total: '+464.2%', cagr: '36.3%', sharpe: '1.48', maxdd: '-17.8%', calmar: '2.04', final: '$169,249' },
+        { name: 'QQQ LEAPS\uff08\u56de\u6d4b\uff09', total: '+464.2%', cagr: '36.3%', sharpe: '1.48', maxdd: '-17.8%', calmar: '2.04', final: '$169,249' },
         { name: 'QQQ \u4e70\u5165\u6301\u6709', total: '+136.4%', cagr: '16.6%', sharpe: '0.80', maxdd: '-35.6%', calmar: '0.47', final: '$70,927' },
     ],
     recordNote:
@@ -346,7 +346,7 @@ const ZH: VerifyCopy = {
         },
         {
             h: '\u9a8c\u8bc1\u5668',
-            p: 'V4 \u89c4\u5219\u5e76\u975e\u5148\u5728\u8fd9\u4e2a\u7a97\u53e3\u4e0a\u8c03\u4f18\u3001\u518d\u5728\u540c\u4e00\u7a97\u53e3\u4e0a\u62a5\u544a\u3002\u6211\u4eec\u5bf9\u540c\u4e00\u65f6\u671f\u7684 21 \u6761\u91cd\u7ec4\u5b50\u7a97\u53e3\u505a\u4e86\u7ec4\u5408\u4ea4\u53c9\u9a8c\u8bc1\uff1a\u5728 21 \u6761\u8def\u5f84\u4e2d\u7684 18 \u6761\u4e0a\uff0cV4 \u7684\u56de\u62a5\u548c Sharpe \u5747\u4f18\u4e8e\u65e0\u8fc7\u6ee4\u7684\u5f15\u64ce\u3002\u5b9e\u76d8\u6267\u884c\u7cfb\u7edf\u5bfc\u5165\u7684\u6b63\u662f\u8fd9\u4efd\u914d\u7f6e\u548c\u8fd9\u4e9b\u89c4\u5219\u3002',
+            p: 'QQQ LEAPS \u89c4\u5219\u5e76\u975e\u5148\u5728\u8fd9\u4e2a\u7a97\u53e3\u4e0a\u8c03\u4f18\u3001\u518d\u5728\u540c\u4e00\u7a97\u53e3\u4e0a\u62a5\u544a\u3002\u6211\u4eec\u5bf9\u540c\u4e00\u65f6\u671f\u7684 21 \u6761\u91cd\u7ec4\u5b50\u7a97\u53e3\u505a\u4e86\u7ec4\u5408\u4ea4\u53c9\u9a8c\u8bc1\uff1a\u5728 21 \u6761\u8def\u5f84\u4e2d\u7684 18 \u6761\u4e0a\uff0cQQQ LEAPS \u7684\u56de\u62a5\u548c Sharpe \u5747\u4f18\u4e8e\u65e0\u8fc7\u6ee4\u7684\u5f15\u64ce\u3002\u5b9e\u76d8\u6267\u884c\u7cfb\u7edf\u5bfc\u5165\u7684\u6b63\u662f\u8fd9\u4efd\u914d\u7f6e\u548c\u8fd9\u4e9b\u89c4\u5219\u3002',
         },
     ],
     gatesTitle: '\u6a21\u578b\u4ec0\u4e48\u65f6\u5019\u62d2\u7edd\u4ea4\u6613',
@@ -355,7 +355,7 @@ const ZH: VerifyCopy = {
     gatesRows: [
         '\u5f3a\u8d8b\u52bf\uff1a\u72b6\u6001\u4e3a\u5f3a\u725b\u4e14 ADX \u8bfb\u6570\u4e3a 16 \u6216\u66f4\u9ad8\u3002\u8df3\u8fc7 788 \u6b21\u3002',
         '\u6743\u5229\u91d1\u8fc7\u8584\uff1a\u9690\u542b\u6ce2\u52a8\u7387\u4f4e\u4e8e\u5b9e\u73b0\u6ce2\u52a8\u7387\u7684 0.7 \u500d\u3002\u8fd9\u76f8\u5f53\u4e8e\u4ee5\u4f4e\u4e8e\u5386\u53f2\u8d54\u4ed8\u6210\u672c\u7684\u4ef7\u683c\u5356\u4fdd\u9669\u3002\u8df3\u8fc7 149 \u6b21\u3002',
-        '\u5f3a\u8d8b\u52bf\u52a0\u6743\u5229\u91d1\u8fc7\u8584\uff08V4 \u89c4\u5219\uff09\uff1aADX \u8d85\u8fc7 25 \u4e14\u9690\u542b\u6ce2\u52a8\u7387\u4f4e\u4e8e\u5b9e\u73b0\u6ce2\u52a8\u7387\u3002\u8df3\u8fc7 95 \u6b21\u3002',
+        '\u5f3a\u8d8b\u52bf\u52a0\u6743\u5229\u91d1\u8fc7\u8584\uff08QQQ LEAPS \u89c4\u5219\uff09\uff1aADX \u8d85\u8fc7 25 \u4e14\u9690\u542b\u6ce2\u52a8\u7387\u4f4e\u4e8e\u5b9e\u73b0\u6ce2\u52a8\u7387\u3002\u8df3\u8fc7 95 \u6b21\u3002',
     ],
     gatesCounts: '\u5408\u8ba1\uff1a\u6a21\u578b\u5728 1,032 \u4e2a\u4ea4\u6613\u65e5\u8bc4\u4f30\u4e86\u6536\u76ca\u589e\u5f3a\u5c42\u5e76\u62d2\u7edd\u4e86\u5b83\u3002\u5b66\u4f1a\u8bf4\u4e0d\uff0c\u624d\u662f\u8fd9\u4efd\u5de5\u4f5c\u7684\u4e3b\u4f53\u3002',
     limitsTitle: '\u8fd9\u4efd\u8bb0\u5f55\u65e0\u6cd5\u544a\u8bc9\u4f60\u7684\u4e8b',
@@ -380,7 +380,7 @@ const ZH: VerifyCopy = {
         },
         {
             h: '\u8bbe\u8ba1\u5e78\u5b58\u8005\u504f\u5dee',
-            p: '\u5728\u5b9a\u5c40 V4 \u4e4b\u524d\uff0c\u6211\u4eec\u8bd5\u8fc7\u591a\u4e2a\u53d8\u4f53\uff0c\u800c\u4f60\u73b0\u5728\u8bfb\u5230\u7684\u662f\u884c\u5f97\u901a\u7684\u90a3\u4e00\u4e2a\u3002\u4e0a\u9762\u7684\u4ea4\u53c9\u9a8c\u8bc1\u51cf\u8f7b\u4e86\u8fd9\u4e2a\u95ee\u9898\uff0c\u4f46\u6ca1\u6709\u6d88\u9664\u5b83\u3002\u8bf7\u628a\u8fd9\u4e2a\u6570\u5b57\u5f53\u4f5c\u8bc1\u636e\uff0c\u800c\u4e0d\u662f\u547d\u8fd0\u3002',
+            p: '\u5728\u5b9a\u5c40 QQQ LEAPS \u4e4b\u524d\uff0c\u6211\u4eec\u8bd5\u8fc7\u591a\u4e2a\u53d8\u4f53\uff0c\u800c\u4f60\u73b0\u5728\u8bfb\u5230\u7684\u662f\u884c\u5f97\u901a\u7684\u90a3\u4e00\u4e2a\u3002\u4e0a\u9762\u7684\u4ea4\u53c9\u9a8c\u8bc1\u51cf\u8f7b\u4e86\u8fd9\u4e2a\u95ee\u9898\uff0c\u4f46\u6ca1\u6709\u6d88\u9664\u5b83\u3002\u8bf7\u628a\u8fd9\u4e2a\u6570\u5b57\u5f53\u4f5c\u8bc1\u636e\uff0c\u800c\u4e0d\u662f\u547d\u8fd0\u3002',
         },
     ],
     limitsClose:

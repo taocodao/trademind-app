@@ -28,6 +28,7 @@ const ROOTS = [
     'src/app/refer/page.tsx',
     'src/app/whop/welcome/page.tsx',
     'src/app/creators/page.tsx',
+    'src/app/verify/page.tsx',
 ];
 
 /** Files whose "dashes" are inside opaque data (audio word timing, SQL, HTML

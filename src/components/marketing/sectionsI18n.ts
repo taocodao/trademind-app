@@ -53,7 +53,7 @@ export interface SectionsCopy {
         v4Name: string; qqqName: string;
         v4: { total: string; cagr: string; sharpe: string; maxdd: string; calmar: string };
         qqq: { total: string; cagr: string; sharpe: string; maxdd: string; calmar: string };
-        footnote: string; callout: string; caption: string;
+        footnote: string; callout: string; verifyIntro: string; verifyLink: string; caption: string;
     };
     // "Built around your life" band. Explicitly disclaims income promises
     // while delivering the freedom framing the owner asked for.
@@ -145,6 +145,8 @@ const EN_SECTIONS: SectionsCopy = {
         qqq: { total: '+136.4%', cagr: '16.6%', sharpe: '0.795', maxdd: '-35.6%', calmar: '0.47' },
         footnote: 'Worst drawdown period: TradeMind, Sep to Oct 2023. QQQ buy & hold, Nov 2021 through Dec 2022.',
         callout: 'Our deepest hole took two months to dig. Buy-and-hold\'s took fourteen.',
+        verifyIntro: 'Every trade, every price, every assumption behind this table is published: the full ledger, the daily equity curve, and the complete methodology with its limitations, in the open.',
+        verifyLink: 'Audit the record yourself →',
         caption: '2021 to 2026 continuous window, 5.6 years, model-priced. Hypothetical backtested performance: not achieved by any actual account, not live trading, and not a prediction. The next drawdown could be deeper. Every entry, exit, and loss in this record is in the ledger below.',
     },
     life: {
@@ -238,6 +240,8 @@ const ES_SECTIONS: SectionsCopy = {
         qqq: { total: '+136.4%', cagr: '16.6%', sharpe: '0.795', maxdd: '-35.6%', calmar: '0.47' },
         footnote: 'Peor período de drawdown: TradeMind, sep a oct 2023. QQQ buy & hold, nov 2021 a dic 2022.',
         callout: 'Nuestro hoyo más profundo tardó dos meses en cavarse. El de buy and hold tardó catorce.',
+        verifyIntro: 'Cada operación, cada precio y cada supuesto detrás de esta tabla está publicado: el libro mayor completo, la curva de capital diaria y la metodología completa con sus limitaciones, a la vista.',
+        verifyLink: 'Audita el registro tú mismo →',
         caption: 'Ventana continua 2021 a 2026, 5,6 años, con precios de modelo. Rendimiento hipotético de backtest: no logrado por ninguna cuenta real, no es trading en vivo y no es una predicción. El próximo drawdown podría ser más profundo. Cada entrada, salida y pérdida de este historial está en el registro de abajo.',
     },
     life: {
@@ -331,6 +335,8 @@ const ZH_SECTIONS: SectionsCopy = {
         qqq: { total: '+136.4%', cagr: '16.6%', sharpe: '0.795', maxdd: '-35.6%', calmar: '0.47' },
         footnote: '最差回撤区间:TradeMind,2023 年 9 月到 10 月。QQQ 买入并持有,2021 年 11 月到 2022 年 12 月。',
         callout: '我们最深的坑,两个月挖成。买入并持有的那个,花了十四个月。',
+        verifyIntro: '这张表背后的每一笔交易、每一个价格、每一个假设都已公开:完整的账本、每日净值曲线,以及包含全部局限性的完整方法论。',
+        verifyLink: '亲自审计这份记录 →',
         caption: '2021 到 2026 连续窗口,5.6 年,模型定价。假设性回测表现:没有任何真实账户实现过,不是实盘交易,也不是预测。下一次回撤可能更深。此记录中的每一次入场、出场和亏损,都记录在下方的账本里。',
     },
     life: {

@@ -1,0 +1,259 @@
+/* /verify page styles. Standalone: declares everything it needs so the
+   page renders identically on direct visits. Accent violet and panel
+   background match the landing story tokens. */
+
+.vf-wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 72px 24px 96px;
+    color: #E5E7F0;
+    font-family: inherit;
+    flex: 1 0 auto;
+    width: 100%;
+}
+
+.vf-eyebrow {
+    font-size: 11px;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: #8B5CF6;
+    font-weight: 600;
+    margin-bottom: 18px;
+}
+
+.vf-h1 {
+    font-size: clamp(30px, 5vw, 44px);
+    font-weight: 750;
+    line-height: 1.12;
+    margin: 0 0 18px;
+    color: #F5F6FA;
+}
+
+.vf-sub {
+    font-size: 17px;
+    line-height: 1.65;
+    color: #B9BED0;
+    max-width: 720px;
+    margin: 0;
+}
+
+.vf-section { margin-top: 72px; }
+
+.vf-h2 {
+    font-size: clamp(22px, 3.4vw, 30px);
+    font-weight: 700;
+    color: #F5F6FA;
+    margin: 0 0 20px;
+    line-height: 1.25;
+}
+
+.vf-h3 {
+    font-size: 17px;
+    font-weight: 650;
+    color: #F5F6FA;
+    margin: 32px 0 12px;
+}
+
+.vf-p {
+    font-size: 15.5px;
+    line-height: 1.7;
+    color: #C3C8D8;
+    margin: 0 0 14px;
+}
+
+.vf-strong { color: #E5E7F0; font-weight: 600; }
+
+.vf-note {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: #9AA3B5;
+    margin: 14px 0 0;
+}
+
+.vf-list { margin: 0 0 14px; padding-left: 20px; }
+.vf-list li {
+    font-size: 15px;
+    line-height: 1.65;
+    color: #C3C8D8;
+    margin-bottom: 8px;
+}
+
+.vf-inline-link { color: #C4B5FD; text-decoration: underline; text-underline-offset: 3px; }
+
+/* Tables */
+.vf-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+.vf-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14.5px;
+    min-width: 640px;
+}
+
+.vf-table th, .vf-table td {
+    padding: 12px 14px;
+    text-align: right;
+    border-bottom: 1px solid rgba(255,255,255,.07);
+    white-space: nowrap;
+}
+
+.vf-table thead th {
+    color: #9AA3B5;
+    font-size: 12px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.vf-table th.vf-namecol, .vf-table th[scope="row"] {
+    text-align: left;
+    color: #E5E7F0;
+    font-weight: 600;
+}
+
+.vf-row-v4 td { color: #C4B5FD; font-variant-numeric: tabular-nums; }
+.vf-row-qqq td { color: #9AA3B5; font-variant-numeric: tabular-nums; }
+
+.vf-audit td { white-space: normal; text-align: left; line-height: 1.55; }
+.vf-audit thead th { text-align: left; }
+.vf-audit td:first-child { color: #E5E7F0; font-weight: 600; }
+
+.vf-verdict { font-weight: 650; font-size: 14px; }
+.vf-verdict-pass { color: #4ADE80; }
+.vf-verdict-warn { color: #e0a458; }
+
+/* Calendar chips */
+.vf-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 4px 0;
+}
+
+.vf-chip {
+    background: #14141f;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 12px;
+    padding: 10px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 86px;
+}
+
+.vf-chip-y { font-size: 12px; color: #9AA3B5; letter-spacing: .08em; }
+.vf-chip-r { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.vf-pos { color: #4ADE80; }
+.vf-neg { color: #F87171; }
+
+/* Disclaimer panel */
+.vf-disclaimer {
+    margin-top: 28px;
+    background: #14141f;
+    border: 1px solid rgba(224,164,88,.35);
+    border-left: 3px solid #e0a458;
+    border-radius: 14px;
+    padding: 20px 22px;
+}
+
+.vf-disclaimer p {
+    font-size: 14px;
+    line-height: 1.65;
+    color: #D8CDB9;
+    margin: 0 0 10px;
+}
+.vf-disclaimer p:last-child { margin-bottom: 0; }
+
+/* Method steps */
+.vf-step {
+    display: flex;
+    gap: 18px;
+    margin: 26px 0;
+}
+
+.vf-step-n {
+    flex: 0 0 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1.5px solid #8B5CF6;
+    color: #C4B5FD;
+    font-weight: 700;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+}
+
+.vf-step-h {
+    font-size: 16.5px;
+    font-weight: 650;
+    color: #F5F6FA;
+    margin: 4px 0 8px;
+}
+
+.vf-gates {
+    margin-top: 36px;
+    background: #14141f;
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 14px;
+    padding: 22px 24px;
+}
+.vf-gates .vf-h3 { margin-top: 0; }
+
+/* Limitations */
+.vf-limit {
+    background: #14141f;
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 14px;
+    padding: 20px 22px;
+    margin: 14px 0;
+}
+.vf-limit .vf-step-h { margin-top: 0; }
+.vf-limit .vf-p { margin-bottom: 0; }
+
+/* Proof kit cards */
+.vf-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+    margin-top: 18px;
+}
+
+.vf-card {
+    display: block;
+    background: #14141f;
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 14px;
+    padding: 18px 20px;
+    text-decoration: none;
+    transition: border-color .18s ease, transform .18s ease;
+}
+
+.vf-card:hover {
+    border-color: #8B5CF6;
+    transform: translateY(-2px);
+}
+
+.vf-card-t { font-size: 15.5px; font-weight: 700; color: #C4B5FD; margin-bottom: 6px; }
+.vf-card-d { font-size: 13.5px; line-height: 1.55; color: #9AA3B5; }
+
+.vf-repo {
+    margin-top: 30px;
+    border-top: 1px solid rgba(255,255,255,.08);
+    padding-top: 24px;
+}
+
+.vf-steps-list { margin: 0; padding-left: 20px; }
+.vf-steps-list li {
+    font-size: 15px;
+    line-height: 1.7;
+    color: #C3C8D8;
+    margin-bottom: 8px;
+}
+
+@media (max-width: 640px) {
+    .vf-wrap { padding: 48px 18px 72px; }
+    .vf-step { gap: 12px; }
+    .vf-table { font-size: 13.5px; }
+}

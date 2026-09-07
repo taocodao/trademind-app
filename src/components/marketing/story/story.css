@@ -686,6 +686,23 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
     max-width: 760px; margin: 12px 0 0;
 }
 
+/* verification handoff: the record table points at the public /verify
+   surface where the method, ledger, and limitations live */
+.tm-record-verify {
+    margin: 22px 0 0; padding: 18px 20px; max-width: 720px;
+    background: var(--s-panel); border: 1px solid var(--s-line);
+    border-left: 3px solid var(--s-violet); border-radius: 14px;
+    display: flex; flex-direction: column; gap: 10px;
+}
+.tm-record-verify p {
+    font-size: 14px; color: var(--s-ink2); line-height: 1.65; margin: 0;
+}
+.tm-record-verify-link {
+    font-size: 14.5px; font-weight: 700; color: var(--s-violet);
+    text-decoration: none; width: fit-content;
+}
+.tm-record-verify-link:hover { text-decoration: underline; }
+
 /* ── metric tooltips (hover / tap / keyboard focus) ── */
 .tm-tip {
     background: none; border: none; padding: 0; margin: 0;

@@ -9,6 +9,7 @@
    in a later design pass. The Max DD column keeps equal visual weight with
    CAGR on purpose. */
 
+import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import { SECTIONS_I18N, SectionLang } from './sectionsI18n';
 
@@ -70,6 +71,10 @@ export function RecordSection() {
 
                 <p className="tm-record-foot">{c.footnote}</p>
                 <p className="tm-record-callout">{c.callout}</p>
+                <div className="tm-record-verify">
+                    <p>{c.verifyIntro}</p>
+                    <Link href="/verify" className="tm-record-verify-link">{c.verifyLink}</Link>
+                </div>
                 <p className="tm-record-cap">{c.caption}</p>
             </div>
         </section>

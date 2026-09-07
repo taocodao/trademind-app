@@ -86,7 +86,7 @@ export default function SinglePageMarketing() {
             {/* Institutional-style discipline band, compact, inside the hero flow */}
             <DisciplineSection />
 
-            {/* The record, in full: QQQ LEAPS backtest vs QQQ buy & hold, tooltip headers */}
+            {/* The record, in full: V4 backtest vs QQQ buy & hold, tooltip headers */}
             <RecordSection />
 
             {/* Built-around-your-life band, directly above the hero CTAs */}

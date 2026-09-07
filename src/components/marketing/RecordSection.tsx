@@ -1,6 +1,6 @@
 'use client';
 
-/* RecordSection — "The record, in full." The V4 model backtest measured
+/* RecordSection — "The record, in full." The QQQ LEAPS backtest measured
    against QQQ buy and hold, inside the hero flow between the discipline band
    and the life band. Every column header is a hover/tap target that explains
    the metric in plain language. The caption under the table is load-bearing

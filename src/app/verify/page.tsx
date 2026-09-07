@@ -2,7 +2,7 @@
 
 /* /verify - the public transparency surface. Publishes the exact method,
    the full ledger, the daily equity curve, the run configuration, and the
-   known limitations behind the V4 backtest record quoted on the landing
+   known limitations behind the QQQ LEAPS backtest record quoted on the landing
    page. Standalone i18n via the header's i18next instance (browser
    detection + the shared EN/ES/ZH switcher), the same mechanism the legal
    pages use. The record numbers in this copy must stay in lockstep with

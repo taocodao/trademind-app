@@ -14,9 +14,11 @@
    de-emphasize, or relocate it in a later design pass. */
 
 import { useTranslation } from 'react-i18next';
+import Link from 'next/link';
 import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import { LegalFooter } from '@/components/marketing/LegalFooter';
 import { VERIFY_COPY, VerifyLang } from '@/components/marketing/verify/verifyCopy';
+import { ARTIFACT_SHA256, HARNESS_COMMIT, HARNESS_TAG } from '@/components/marketing/verify/lineage';
 import './verify.css';
 
 export default function VerifyPage() {
@@ -65,6 +67,35 @@ export default function VerifyPage() {
                         </table>
                     </div>
                     <p className="vf-note">{c.recordNote}</p>
+
+                    {/* Audit-trail drilldowns: one expandable per headline
+                        metric. Native <details> for accessibility; each
+                        carries formula, inputs, and reproduction check. */}
+                    <h3 className="vf-h3">{c.metricDrillTitle}</h3>
+                    <div className="vf-drills">
+                        {c.metricDrills.map((m) => (
+                            <details className="vf-drill" key={m.key}>
+                                <summary className="vf-drill-sum">{m.name}</summary>
+                                <div className="vf-drill-body">
+                                    <p>
+                                        <strong>{c.drillLabels.formula}.</strong> {m.formula}
+                                    </p>
+                                    <p>
+                                        <strong>{c.drillLabels.inputs}.</strong> {m.inputs}
+                                    </p>
+                                    <p>
+                                        <strong>{c.drillLabels.check}.</strong> {m.check}
+                                    </p>
+                                </div>
+                            </details>
+                        ))}
+                    </div>
+
+                    <Link href="/verify/ledger" className="vf-ledger-card">
+                        <span className="vf-ledger-card-t">{c.ledgerLinkTitle}</span>
+                        <span className="vf-ledger-card-d">{c.ledgerLinkDesc}</span>
+                        <span className="vf-ledger-card-a">{'\u2192'}</span>
+                    </Link>
 
                     <h3 className="vf-h3">{c.calendarTitle}</h3>
                     <div className="vf-chips">
@@ -181,6 +212,53 @@ export default function VerifyPage() {
                             ))}
                         </ol>
                         <p className="vf-note">{c.repoNote}</p>
+                    </div>
+
+                    {/* 8. Code and data lineage: pinned commit, tag, inputs,
+                        and published SHA-256 checksums for every artifact. */}
+                    <div className="vf-repo">
+                        <h3 className="vf-h3">{c.lineageTitle}</h3>
+                        <p className="vf-p">{c.lineageIntro}</p>
+                        <dl className="vf-lineage">
+                            <div className="vf-lineage-row">
+                                <dt>{c.lineageLabels.commit}</dt>
+                                <dd>
+                                    <a
+                                        href={`https://github.com/taocodao/trademind-v4-harness/commit/${HARNESS_COMMIT}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                    >
+                                        {HARNESS_COMMIT}
+                                    </a>
+                                </dd>
+                            </div>
+                            <div className="vf-lineage-row">
+                                <dt>{c.lineageLabels.tag}</dt>
+                                <dd>
+                                    <a
+                                        href={`https://github.com/taocodao/trademind-v4-harness/releases/tag/${HARNESS_TAG}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                    >
+                                        {HARNESS_TAG}
+                                    </a>
+                                </dd>
+                            </div>
+                            <div className="vf-lineage-row">
+                                <dt>{c.lineageLabels.data}</dt>
+                                <dd>QQQ 1h/1d, VIX, VIX3M, ^IRX via download_data.py; ml_confidence.csv (SHA-256 in repo)</dd>
+                            </div>
+                        </dl>
+                        <h4 className="vf-h4">{c.lineageLabels.sums}</h4>
+                        <div className="vf-sums">
+                            {ARTIFACT_SHA256.map((a) => (
+                                <div className="vf-sum" key={a.file}>
+                                    <span className="vf-sum-f">{a.file}</span>
+                                    <code className="vf-sum-h">{a.sha256}</code>
+                                </div>
+                            ))}
+                        </div>
+                        <p className="vf-note">{c.lineageNote}</p>
                     </div>
                 </section>
             </div>

@@ -14,6 +14,11 @@ export interface VerifyCopy {
     recordCols: string[];
     recordRows: { name: string; total: string; cagr: string; sharpe: string; maxdd: string; calmar: string; final: string }[];
     recordNote: string;
+    metricDrillTitle: string;
+    drillLabels: { formula: string; inputs: string; check: string };
+    metricDrills: { key: string; name: string; formula: string; inputs: string; check: string }[];
+    ledgerLinkTitle: string;
+    ledgerLinkDesc: string;
     calendarTitle: string;
     calendar: { y: string; r: string }[];
     calendarNote: string;
@@ -40,6 +45,10 @@ export interface VerifyCopy {
     repoTitle: string;
     repoSteps: string[];
     repoNote: string;
+    lineageTitle: string;
+    lineageIntro: string;
+    lineageLabels: { commit: string; tag: string; data: string; sums: string };
+    lineageNote: string;
 }
 
 const EN: VerifyCopy = {
@@ -55,6 +64,47 @@ const EN: VerifyCopy = {
     ],
     recordNote:
         'January 4, 2021 to August 14, 2026, 5.6 continuous years, starting from $30,000. Worst drawdown period: September 5 to October 26, 2023. QQQ buy & hold is measured on the same dates from the same data feed.',
+    metricDrillTitle: 'Audit trail for each headline number',
+    drillLabels: { formula: 'Formula', inputs: 'Inputs', check: 'Check' },
+    metricDrills: [
+        {
+            key: 'total',
+            name: 'Total return: +464.2%',
+            formula: '(Final NAV - Starting NAV) / Starting NAV = (169,249 - 30,000) / 30,000 = 4.6416.',
+            inputs: 'Computed on the 1,410 daily NAV marks in trademind-v4-equity-curve.csv, which includes option mark-to-model, slippage, and commissions on every fill.',
+            check: 'Reproduce: sum the P&L column of the public ledger, add residual option marks, divide by 30,000. The public harness run.py prints the same figure.',
+        },
+        {
+            key: 'cagr',
+            name: 'CAGR: 36.3%',
+            formula: '(Final NAV / Starting NAV) ^ (365.25 / days) - 1, with 2,049 calendar days from 2021-01-04 to 2026-08-14.',
+            inputs: 'Same NAV series as total return. The window is fixed and identical for every visitor.',
+            check: 'Reproduce: (169,249 / 30,000) ^ (365.25 / 2049) - 1 = 0.363. Printed by run.py in the public harness.',
+        },
+        {
+            key: 'sharpe',
+            name: 'Sharpe ratio: 1.475',
+            formula: 'Mean of daily excess returns over the 10-year Treasury proxy, divided by their standard deviation, annualized with sqrt(252).',
+            inputs: 'Daily returns from the equity curve CSV; risk-free proxy from the ^IRX series listed in the run configuration file.',
+            check: 'Reproduce: metrics_v4_canonical.json in the repo contains the identical value from the same inputs.',
+        },
+        {
+            key: 'maxdd',
+            name: 'Max drawdown: -17.8%',
+            formula: 'Largest peak-to-trough decline of the daily NAV series: min over t of (NAV(t) / running-max NAV - 1).',
+            inputs: 'The model-priced daily equity curve. The 15-month real-quote validation tape measured -30.4% over its window; the difference is stated next to this table.',
+            check: 'Reproduce: compute running max of nav in trademind-v4-equity-curve.csv and take the minimum drawdown. Printed by run.py.',
+        },
+        {
+            key: 'calmar',
+            name: 'Calmar ratio: 2.04',
+            formula: 'CAGR divided by the absolute max drawdown: 0.363 / 0.178 = 2.04.',
+            inputs: 'Derived from the two figures above; no separate data.',
+            check: 'Reproduce: divide the two values as shown.',
+        },
+    ],
+    ledgerLinkTitle: 'See every trade, on the chart, in the ledger',
+    ledgerLinkDesc: 'Open the interactive ledger: all 806 fills marked on the QQQ chart, each expandable to pricing inputs, costs, and entry-gate status.',
     calendarTitle: 'Calendar year returns',
     calendar: [
         { y: '2021', r: '+76.0%' },
@@ -165,6 +215,15 @@ const EN: VerifyCopy = {
     ],
     repoNote:
         'One piece stays private: the confidence model behind the entry gate. The repo ships its precomputed walk-forward output as data, so every trade in the ledger still reproduces exactly, while the model internals remain ours. Everything else, the regime classifier, the pricing, the gates, the exits, the costs, is right there for you to read, run, and break.',
+    lineageTitle: 'Code and data lineage',
+    lineageIntro: 'The exact code and data behind every number on this page, pinned so you can verify we have not moved the goalposts.',
+    lineageLabels: {
+        commit: 'Harness commit',
+        tag: 'Release tag',
+        data: 'Input data',
+        sums: 'Artifact checksums (SHA-256)',
+    },
+    lineageNote: 'If any downloaded file hashes differently from what is listed here, assume it has been altered and tell us. The same checksums are committed to the public repo.',
 };
 
 const ES: VerifyCopy = {
@@ -180,6 +239,47 @@ const ES: VerifyCopy = {
     ],
     recordNote:
         'Del 4 de enero de 2021 al 14 de agosto de 2026, 5.6 a\u00f1os continuos, comenzando con $30,000. Peor per\u00edodo de drawdown: del 5 de septiembre al 26 de octubre de 2023. QQQ comprar y mantener se mide en las mismas fechas con la misma fuente de datos.',
+    metricDrillTitle: 'Rastro de auditoria de cada cifra principal',
+    drillLabels: { formula: 'Formula', inputs: 'Insumos', check: 'Comprobacion' },
+    metricDrills: [
+        {
+            key: 'total',
+            name: 'Retorno total: +464.2%',
+            formula: '(NAV final - NAV inicial) / NAV inicial = (169,249 - 30,000) / 30,000 = 4.6416.',
+            inputs: 'Calculado sobre las 1,410 marcas diarias de NAV en trademind-v4-equity-curve.csv, que incluye valuacion de opciones por modelo, deslizamiento y comisiones en cada ejecucion.',
+            check: 'Reproducir: suma la columna P&L del libro publico, agrega las marcas residuales de opciones, divide entre 30,000. El run.py publico imprime la misma cifra.',
+        },
+        {
+            key: 'cagr',
+            name: 'CAGR: 36.3%',
+            formula: '(NAV final / NAV inicial) ^ (365.25 / dias) - 1, con 2,049 dias calendario del 2021-01-04 al 2026-08-14.',
+            inputs: 'La misma serie de NAV que el retorno total. La ventana es fija e identica para cada visitante.',
+            check: 'Reproducir: (169,249 / 30,000) ^ (365.25 / 2049) - 1 = 0.363. Lo imprime run.py en el codigo abierto.',
+        },
+        {
+            key: 'sharpe',
+            name: 'Ratio Sharpe: 1.475',
+            formula: 'Media de retornos diarios en exceso sobre el proxy del Treasury a 10 anos, dividida por su desviacion estandar, anualizada con sqrt(252).',
+            inputs: 'Retornos diarios de la curva de capital; proxy libre de riesgo de la serie ^IRX listada en el archivo de configuracion.',
+            check: 'Reproducir: metrics_v4_canonical.json en el repositorio contiene el valor identico con los mismos insumos.',
+        },
+        {
+            key: 'maxdd',
+            name: 'Caida maxima: -17.8%',
+            formula: 'Mayor descenso pico-valle de la serie diaria de NAV: minimo sobre t de (NAV(t) / maximo acumulado - 1).',
+            inputs: 'La curva de capital diaria con precios de modelo. La validacion de 15 meses con cotizaciones reales midio -30.4% en su ventana; la diferencia se declara junto a esta tabla.',
+            check: 'Reproducir: calcula el maximo acumulado de nav en trademind-v4-equity-curve.csv y toma el drawdown minimo. Lo imprime run.py.',
+        },
+        {
+            key: 'calmar',
+            name: 'Ratio Calmar: 2.04',
+            formula: 'CAGR dividido entre el valor absoluto de la caida maxima: 0.363 / 0.178 = 2.04.',
+            inputs: 'Derivado de las dos cifras anteriores; sin datos adicionales.',
+            check: 'Reproducir: divide los dos valores como se muestra.',
+        },
+    ],
+    ledgerLinkTitle: 'Ve cada operacion, en el grafico, en el libro',
+    ledgerLinkDesc: 'Abre el libro interactivo: las 806 ejecuciones marcadas sobre el grafico de QQQ, cada una expandible con datos de precios, costos y estado de los filtros de entrada.',
     calendarTitle: 'Retornos por a\u00f1o calendario',
     calendar: [
         { y: '2021', r: '+76.0%' },
@@ -290,6 +390,15 @@ const ES: VerifyCopy = {
     ],
     repoNote:
         'Una pieza permanece privada: el modelo de confianza detr\u00e1s de la regla de entrada. El repositorio incluye su salida walk-forward precomputada como datos, as\u00ed que cada operaci\u00f3n del libro mayor se reproduce exactamente, mientras los internos del modelo siguen siendo nuestros. Todo lo dem\u00e1s, el clasificador de r\u00e9gimen, la valoraci\u00f3n, las reglas, las salidas, los costos, est\u00e1 ah\u00ed para que lo leas, lo ejecutes y lo rompas.',
+    lineageTitle: 'Linaje de codigo y datos',
+    lineageIntro: 'El codigo y los datos exactos detras de cada cifra de esta pagina, fijados para que puedas comprobar que no movimos los postes.',
+    lineageLabels: {
+        commit: 'Commit del harness',
+        tag: 'Etiqueta de version',
+        data: 'Datos de entrada',
+        sums: 'Sumas de verificacion (SHA-256)',
+    },
+    lineageNote: 'Si alguno de los archivos descargados produce un hash distinto al listado aqui, asume que fue alterado y avisanos. Las mismas sumas estan publicadas en el repositorio abierto.',
 };
 
 const ZH: VerifyCopy = {
@@ -305,6 +414,47 @@ const ZH: VerifyCopy = {
     ],
     recordNote:
         '2021\u5e741\u67084\u65e5\u81f32026\u5e748\u670814\u65e5\uff0c\u8fde\u7eed5.6\u5e74\uff0c\u521d\u59cb\u8d44\u91d1 $30,000\u3002\u6700\u6df1\u56de\u64a4\u533a\u95f4\uff1a2023\u5e749\u67085\u65e5\u81f310\u670826\u65e5\u3002QQQ \u4e70\u5165\u6301\u6709\u4f7f\u7528\u76f8\u540c\u65e5\u671f\u548c\u76f8\u540c\u6570\u636e\u6e90\u6d4b\u91cf\u3002',
+    metricDrillTitle: '\u6bcf\u4e2a\u6838\u5fc3\u6570\u5b57\u7684\u5ba1\u8ba1\u8ffd\u8e2a',
+    drillLabels: { formula: '\u516c\u5f0f', inputs: '\u8f93\u5165', check: '\u6838\u9a8c' },
+    metricDrills: [
+        {
+            key: 'total',
+            name: '\u603b\u56de\u62a5\uff1a+464.2%',
+            formula: '(\u6700\u7ec8 NAV - \u521d\u59cb NAV) / \u521d\u59cb NAV = (169,249 - 30,000) / 30,000 = 4.6416\u3002',
+            inputs: '\u57fa\u4e8e trademind-v4-equity-curve.csv \u4e2d 1,410 \u4e2a\u65e5\u5ea6 NAV \u8bb0\u5f55\u8ba1\u7b97\uff0c\u5305\u542b\u6bcf\u7b14\u6210\u4ea4\u7684\u671f\u6743\u6a21\u578b\u4f30\u503c\u3001\u6ed1\u70b9\u4e0e\u4f63\u91d1\u3002',
+            check: '\u590d\u73b0\u65b9\u6cd5\uff1a\u5bf9\u516c\u5f00\u8d26\u672c\u7684 P&L \u5217\u6c42\u548c\uff0c\u52a0\u4e0a\u5269\u4f59\u671f\u6743\u4f30\u503c\uff0c\u518d\u9664\u4ee5 30,000\u3002\u5f00\u6e90\u4ee3\u7801\u4e2d\u7684 run.py \u4f1a\u8f93\u51fa\u76f8\u540c\u7ed3\u679c\u3002',
+        },
+        {
+            key: 'cagr',
+            name: 'CAGR\uff1a36.3%',
+            formula: '(\u6700\u7ec8 NAV / \u521d\u59cb NAV) ^ (365.25 / \u5929\u6570) - 1\uff0c\u7a97\u53e3\u4e3a 2021-01-04 \u81f3 2026-08-14\uff0c\u5171 2,049 \u4e2a\u65e5\u5386\u65e5\u3002',
+            inputs: '\u4e0e\u603b\u56de\u62a5\u76f8\u540c\u7684 NAV \u5e8f\u5217\u3002\u7a97\u53e3\u56fa\u5b9a\uff0c\u5bf9\u6240\u6709\u8bbf\u95ee\u8005\u5b8c\u5168\u4e00\u81f4\u3002',
+            check: '\u590d\u73b0\u65b9\u6cd5\uff1a(169,249 / 30,000) ^ (365.25 / 2049) - 1 = 0.363\u3002\u5f00\u6e90\u4ee3\u7801\u4e2d\u7684 run.py \u4f1a\u8f93\u51fa\u8be5\u503c\u3002',
+        },
+        {
+            key: 'sharpe',
+            name: '\u590f\u666e\u6bd4\u7387\uff1a1.475',
+            formula: '\u65e5\u5ea6\u8d85\u989d\u6536\u76ca\uff08\u76f8\u5bf9 10 \u5e74\u671f\u56fd\u503a\u4ee3\u7406\uff09\u7684\u5747\u503c\u9664\u4ee5\u5176\u6807\u51c6\u5dee\uff0c\u518d\u4e58\u4ee5 sqrt(252) \u5e74\u5316\u3002',
+            inputs: '\u65e5\u5ea6\u6536\u76ca\u6765\u81ea\u51c0\u503c\u66f2\u7ebf\uff1b\u65e0\u98ce\u9669\u4ee3\u7406\u4e3a\u914d\u7f6e\u6587\u4ef6\u4e2d\u5217\u51fa\u7684 ^IRX \u5e8f\u5217\u3002',
+            check: '\u590d\u73b0\u65b9\u6cd5\uff1a\u4ed3\u5e93\u4e2d\u7684 metrics_v4_canonical.json \u4ee5\u76f8\u540c\u8f93\u5165\u5f97\u51fa\u76f8\u540c\u6570\u503c\u3002',
+        },
+        {
+            key: 'maxdd',
+            name: '\u6700\u5927\u56de\u64a4\uff1a-17.8%',
+            formula: '\u65e5\u5ea6 NAV \u5e8f\u5217\u7684\u6700\u5927\u5cf0\u8c37\u8dcc\u5e45\uff1a\u5bf9\u6bcf\u4e2a t \u8ba1\u7b97 NAV(t) / \u5386\u53f2\u6700\u9ad8 NAV - 1\uff0c\u53d6\u6700\u5c0f\u503c\u3002',
+            inputs: '\u6a21\u578b\u5b9a\u4ef7\u7684\u65e5\u5ea6\u51c0\u503c\u66f2\u7ebf\u3002\u771f\u5b9e\u62a5\u4ef7\u9a8c\u8bc1\u7a97\u53e3\uff0815 \u4e2a\u6708\uff09\u6d4b\u5f97 -30.4%\uff0c\u5dee\u5f02\u5df2\u5728\u672c\u8868\u683c\u65c1\u8bf4\u660e\u3002',
+            check: '\u590d\u73b0\u65b9\u6cd5\uff1a\u5bf9 trademind-v4-equity-curve.csv \u4e2d\u7684 nav \u6c42\u7d2f\u8ba1\u6700\u5927\u503c\uff0c\u518d\u53d6\u6700\u5c0f\u56de\u64a4\u3002run.py \u4f1a\u8f93\u51fa\u8be5\u503c\u3002',
+        },
+        {
+            key: 'calmar',
+            name: 'Calmar \u6bd4\u7387\uff1a2.04',
+            formula: 'CAGR \u9664\u4ee5\u6700\u5927\u56de\u64a4\u7edd\u5bf9\u503c\uff1a0.363 / 0.178 = 2.04\u3002',
+            inputs: '\u7531\u4e0a\u8ff0\u4e24\u4e2a\u6570\u503c\u6d3e\u751f\uff0c\u65e0\u989d\u5916\u6570\u636e\u3002',
+            check: '\u590d\u73b0\u65b9\u6cd5\uff1a\u6309\u4e0a\u5f0f\u76f4\u63a5\u76f8\u9664\u3002',
+        },
+    ],
+    ledgerLinkTitle: '\u6bcf\u4e00\u7b14\u4ea4\u6613\uff0c\u90fd\u5728\u56fe\u4e0a\uff0c\u90fd\u5728\u8d26\u91cc',
+    ledgerLinkDesc: '\u6253\u5f00\u4ea4\u4e92\u5f0f\u8d26\u672c\uff1a806 \u7b14\u6210\u4ea4\u6807\u6ce8\u5728 QQQ \u56fe\u4e0a\uff0c\u6bcf\u7b14\u53ef\u5c55\u5f00\u67e5\u770b\u5b9a\u4ef7\u8f93\u5165\u3001\u6210\u672c\u4e0e\u5165\u573a\u6805\u95e8\u72b6\u6001\u3002',
     calendarTitle: '\u6309\u65e5\u5386\u5e74\u5ea6\u7684\u56de\u62a5',
     calendar: [
         { y: '2021', r: '+76.0%' },
@@ -415,6 +565,15 @@ const ZH: VerifyCopy = {
     ],
     repoNote:
         '\u53ea\u6709\u4e00\u4e2a\u90e8\u4ef6\u4fdd\u6301\u79c1\u6709\uff1a\u8fdb\u573a\u89c4\u5219\u80cc\u540e\u7684\u7f6e\u4fe1\u5ea6\u6a21\u578b\u3002\u4ed3\u5e93\u4ee5\u6570\u636e\u5f62\u5f0f\u9644\u5e26\u5176\u9884\u8ba1\u7b97\u7684 walk-forward \u8f93\u51fa\uff0c\u56e0\u6b64\u8d26\u672c\u4e2d\u7684\u6bcf\u4e00\u7b14\u4ea4\u6613\u4ecd\u53ef\u7cbe\u786e\u590d\u73b0\uff0c\u800c\u6a21\u578b\u5185\u90e8\u7ec6\u8282\u4ecd\u5c5e\u4e8e\u6211\u4eec\u3002\u5176\u4f59\u4e00\u5207\uff0c\u72b6\u6001\u5206\u7c7b\u5668\u3001\u5b9a\u4ef7\u3001\u89c4\u5219\u3001\u51fa\u573a\u3001\u6210\u672c\uff0c\u90fd\u6446\u5728\u90a3\u91cc\uff0c\u4f9b\u4f60\u9605\u8bfb\u3001\u8fd0\u884c\u548c\u6311\u5254\u3002',
+    lineageTitle: '\u4ee3\u7801\u4e0e\u6570\u636e\u6e90\u6e05',
+    lineageIntro: '\u672c\u9875\u6bcf\u4e2a\u6570\u5b57\u80cc\u540e\u7684\u786e\u5207\u4ee3\u7801\u4e0e\u6570\u636e\uff0c\u5df2\u56fa\u5b9a\u7248\u672c\u4ee5\u4f9b\u6838\u5bf9\uff0c\u786e\u4fdd\u6211\u4eec\u6ca1\u6709\u4e8b\u540e\u52a8\u8fc7\u624b\u811a\u3002',
+    lineageLabels: {
+        commit: '\u5f15\u64ce\u4ee3\u7801\u63d0\u4ea4',
+        tag: '\u7248\u672c\u6807\u7b7e',
+        data: '\u8f93\u5165\u6570\u636e',
+        sums: '\u6587\u4ef6\u6821\u9a8c\u548c\uff08SHA-256\uff09',
+    },
+    lineageNote: '\u5982\u679c\u4efb\u4f55\u4e0b\u8f7d\u6587\u4ef6\u7684\u6821\u9a8c\u548c\u4e0e\u6b64\u5904\u4e0d\u4e00\u81f4\uff0c\u8bf7\u89c6\u4e3a\u6587\u4ef6\u88ab\u7be1\u6539\u5e76\u544a\u77e5\u6211\u4eec\u3002\u76f8\u540c\u6821\u9a8c\u548c\u540c\u65f6\u63d0\u4ea4\u81f3\u5f00\u6e90\u4ed3\u5e93\u3002',
 };
 
 export const VERIFY_COPY: Record<VerifyLang, VerifyCopy> = { en: EN, es: ES, zh: ZH };

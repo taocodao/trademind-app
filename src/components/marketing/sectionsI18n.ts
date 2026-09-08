@@ -12,9 +12,12 @@ export type SectionLang = 'en' | 'es' | 'zh';
 
 export interface SectionsCopy {
     hero: {
+        slogan: string;
         eyebrow: string;
         h1a: string; h1b: string;
         sub: string;
+        ctaPrimary: string; ctaSecondary: string;
+        cards: { numeral: string; label: string; body: string; link?: string }[];
         stats: { big: string; label: string; clarifier: string }[];
         play: string; calcCta: string; micro: string;
         hint: string; hintSilent: string;
@@ -61,16 +64,47 @@ export interface SectionsCopy {
         kicker: string; title: string; p: string; close: string;
     };
     retire: {
-        kicker: string; title: string; p: string; mech: string; illus: string; fine: string; slogan: string; ctaVerify: string; ctaLedger: string;
+        kicker: string; title: string; p: string; mech: string; ctaVerify: string; ctaLedger: string;
+    };
+    rateCalc: {
+        kicker: string; title: string; sub: string;
+        lblAmount: string; lblRate: string; lblYears: string;
+        outLabel: string; disc: string; ctaVerify: string;
     };
 }
 
 const EN_SECTIONS: SectionsCopy = {
     hero: {
+        slogan: 'TradeMind helps you reach your financial milestones',
         eyebrow: 'For the retirement account you already have',
         h1a: 'Your account is on autopilot',
         h1b: 'It is time for a co-pilot to fly it higher',
-        sub: 'TradeMind never touches your account. It hands you the instruments. Every signal comes from a quant model with its reasoning attached, not a hunch. You still fly the plane. We just make sure you can see the whole runway, every session, with no opinion about what it wants to happen.',
+        sub: 'Most of your money is already invested, sitting in an IRA or Roth IRA, growing on autopilot. TradeMind never touches that account. It hands you the instruments: one signal window each trading day, every decision with its reasoning attached, priced and logged before you act. You still fly the plane. We just make sure you can see the whole runway.',
+        ctaPrimary: 'Begin the story',
+        ctaSecondary: 'Read the record',
+        cards: [
+            {
+                numeral: '36.3%',
+                label: 'Backtested CAGR, model-priced, Jan 2021 to Aug 2026',
+                body: 'At 36%, compounding turns $10,000 into roughly $1M in 15 years. That is arithmetic, and it is why the rate matters, and why we publish all 806 fills behind ours. This one is backtested and priced by Black-Scholes, not live quotes: a 15-month real-quote tape drew down -30.4% against the model\'s -17.8%. No rate is guaranteed to persist. See how much the outcome moves when the rate does \u2192',
+                link: 'calculator',
+            },
+            {
+                numeral: '2 legs',
+                label: 'Own the long side, rent out the short side',
+                body: 'Buy a deep in-the-money QQQ LEAPS call, 12 to 24 months out, delta 0.80 to 0.85, as your core position. Then sell 32-day calls against it, delta 0.15 to 0.28, collecting premium the way a swing trader harvests range. The LEAPS is the engine. Everything else is plumbing.',
+            },
+            {
+                numeral: '1 of 7',
+                label: 'Gates a trade must clear, one is a model confidence score',
+                body: 'The confidence model is trained walk-forward, never on the window it is judged in. It does not predict where QQQ goes. It scores whether current conditions resemble those where this setup historically worked, and it holds veto power, not steering power. If it disagrees, nothing happens.',
+            },
+            {
+                numeral: '18 of 21',
+                label: 'Cross-validation paths where the strategy held up',
+                body: 'Position size capped at one third of account, three positions maximum, 5% cash reserve, losers cut at twice the credit received. Tested across 21 recombined sub-windows so the result is not one lucky path. The full ledger, the config, the code, and SHA-256 checksums are public: reproduce it in three commands.',
+            },
+        ],
         stats: [
             {
                 big: 'Every session',
@@ -163,20 +197,54 @@ const EN_SECTIONS: SectionsCopy = {
         title: 'Nearly half of Americans cannot cover a $1,000 emergency. The average 401(k) just hit a record $155,800.',
         p: 'The gap is not savings. It is activation. That retirement balance is yours, it is growing, and it sits inside the one account type built for exactly this kind of patient, long-horizon strategy.',
         mech: 'Buying long-dated calls and selling covered calls against them are permitted in most IRAs and Roth IRAs, subject to your broker\'s approval. Standard employer 401(k) plans usually do not offer options at all. TradeMind works with the IRA you already have, or one you can open in a day.',
-        illus: '$10,000 compounding at a 36% annual rate (the backtested CAGR, rounded down) for 15 years reaches roughly $1,007,126.*',
-        fine: '*Hypothetical illustration based on backtested results, not a projection or promise. Backtested performance has many inherent limitations and is not necessarily indicative of future results. A 36% annual rate sustained for 15 years would exceed nearly all verified long-horizon public track records. Shown for arithmetic illustration only.',
-        slogan: 'TradeMind.Bot helps you reach your next financial milestone sooner.',
         ctaVerify: 'See the full audited record \u2192',
         ctaLedger: 'Browse every trade \u2192',
+    },
+    rateCalc: {
+        kicker: 'Run the arithmetic yourself',
+        title: 'What does a different rate do to the same $10,000?',
+        sub: 'Move the rate. Watch the ending balance. The 36% default is our backtested, model-priced CAGR rounded down.',
+        lblAmount: 'Starting amount',
+        lblRate: 'Annual rate (%)',
+        lblYears: 'Years',
+        outLabel: 'Ending balance',
+        ctaVerify: 'See the full audited record \u2192',
+        disc: 'Compounding math for a rate you choose. The 36% default matches our backtested, model-priced result over one 5.6-year window that included a -9.5% losing year and a near-flat 2025. Sustained 36% CAGR over 15 years would far exceed almost any verified long-horizon public track record. No rate is guaranteed to persist.',
     },
 };
 
 const ES_SECTIONS: SectionsCopy = {
     hero: {
+        slogan: 'TradeMind te ayuda a alcanzar tus metas financieras',
         eyebrow: 'Para la cuenta de retiro que ya tienes',
         h1a: 'Tu cuenta va en piloto automático',
         h1b: 'Es hora de un copiloto que la vuele más alto',
-        sub: 'TradeMind nunca toca tu cuenta. Te entrega los instrumentos. Cada señal proviene de un modelo cuantitativo con su razonamiento adjunto, no de una corazonada. Tú sigues pilotando el avión. Nosotros solo nos aseguramos de que veas toda la pista, en cada sesión, sin opinión sobre lo que quiere que pase.',
+        sub: 'La mayoría de tu dinero ya está invertido, en una cuenta IRA o Roth IRA, creciendo en piloto automático. TradeMind nunca toca esa cuenta. Te entrega los instrumentos: una ventana de señal cada día de mercado, cada decisión con su razonamiento adjunto, con precio y registro antes de que actúes. Tú sigues pilotando el avión. Nosotros solo nos aseguramos de que veas toda la pista.',
+        ctaPrimary: 'Comienza la historia',
+        ctaSecondary: 'Lee el expediente',
+        cards: [
+            {
+                numeral: '36.3%',
+                label: 'CAGR de backtest, con precio de modelo, enero 2021 a agosto 2026',
+                body: 'Al 36%, la capitalización convierte $10,000 en aproximadamente $1M en 15 años. Eso es aritmética, y es por eso que la tasa importa, y por lo que publicamos los 806 llenados que la respaldan. Este es backtested y con precio de Black-Scholes, no cotizaciones reales: una cinta de 15 meses con precios reales bajó -30.4% frente al -17.8% del modelo. Ninguna tasa está garantizada a persistir. Mira cuánto cambia el resultado cuando cambia la tasa \u2192',
+                link: 'calculator',
+            },
+            {
+                numeral: '2 tramos',
+                label: 'Posesión la parte larga, alquiler la parte corta',
+                body: 'Compra una call QQQ LEAPS profundamente in-the-money, de 12 a 24 meses, delta 0.80 a 0.85, como posición central. Luego vende llamadas de 32 días contra ella, delta 0.15 a 0.28, recolectando prima como un swing trader cosecha el rango. El LEAPS es el motor. Todo lo demás es plomería.',
+            },
+            {
+                numeral: '1 de 7',
+                label: 'Puertas que un trade debe cruzar, una es un puntaje de confianza del modelo',
+                body: 'El modelo de confianza se entrena walk-forward, nunca en la ventana en la que se evalúa. No predice a dónde va QQQ. Puntúa si las condiciones actuales se parecen a aquellas donde este setup funcionó históricamente, y tiene poder de veto, no de dirección. Si no está de acuerdo, nada pasa.',
+            },
+            {
+                numeral: '18 de 21',
+                label: 'Rutas de validación cruzada donde la estrategia se mantuvo',
+                body: 'Tamaño de posición limitado a un tercio de la cuenta, tres posiciones máximo, 5% de reserva en efectivo, perdedores cerrados al doble del crédito recibido. Probado en 21 sub-ventanas recombinadas para que el resultado no sea un solo camino afortunado. El libro completo, la config, el código y los checksums SHA-256 son públicos: reprodúcelo en tres comandos.',
+            },
+        ],
         stats: [
             {
                 big: 'Cada sesión',
@@ -269,20 +337,54 @@ const ES_SECTIONS: SectionsCopy = {
         title: 'Casi la mitad de los estadounidenses no puede cubrir una emergencia de $1,000. El 401(k) promedio acaba de alcanzar un récord de $155,800.',
         p: 'La brecha no es el ahorro. Es la activación. Ese saldo de retiro es tuyo, está creciendo, y vive dentro del único tipo de cuenta pensado exactamente para este tipo de estrategia paciente y de largo plazo.',
         mech: 'Comprar calls de largo plazo y vender calls cubiertas contra ellos está permitido en la mayoría de las IRA y Roth IRA, sujeto a la aprobación de tu bróker. Los planes 401(k) de empleador estándar normalmente no ofrecen opciones en absoluto. TradeMind funciona con la IRA que ya tienes, o con una que puedes abrir en un día.',
-        illus: '$10,000 capitalizando a una tasa anual del 36% (el CAGR del backtest, redondeado hacia abajo) durante 15 años llega a aproximadamente $1,007,126.*',
-        fine: '*Ilustración hipotética basada en resultados de backtest, no una proyección ni una promesa. El rendimiento de backtest tiene muchas limitaciones inherentes y no es necesariamente indicativo de resultados futuros. Una tasa anual del 36% sostenida durante 15 años superaría casi todos los registros públicos verificados de largo plazo. Se muestra solo como ilustración aritmética.',
-        slogan: 'TradeMind.Bot te ayuda a alcanzar tu próximo hito financiero antes.',
         ctaVerify: 'Ver el registro auditado completo \u2192',
         ctaLedger: 'Explora cada operación \u2192',
+    },
+    rateCalc: {
+        kicker: 'Haz la aritmética tú mismo',
+        title: '¿Qué hace una tasa distinta con los mismos $10,000?',
+        sub: 'Mueve la tasa. Observa el saldo final. El 36% por defecto es nuestro CAGR de backtest con precio de modelo, redondeado hacia abajo.',
+        lblAmount: 'Monto inicial',
+        lblRate: 'Tasa anual (%)',
+        lblYears: 'Años',
+        outLabel: 'Saldo final',
+        ctaVerify: 'Ver el registro auditado completo \u2192',
+        disc: 'Aritmética de capitalización para una tasa que eliges tú. El 36% por defecto coincide con nuestro resultado de backtest con precio de modelo en una ventana de 5.6 años que incluyó un año perdedor del -9.5% y un 2025 casi plano. Un CAGR sostenido del 36% durante 15 años superaría con mucho casi cualquier registro público verificado de largo plazo. Ninguna tasa está garantizada a persistir.',
     },
 };
 
 const ZH_SECTIONS: SectionsCopy = {
     hero: {
+        slogan: 'TradeMind 帮你更快达成财务里程碑',
         eyebrow: '为你已有的退休账户而建',
         h1a: '你的账户在自动驾驶',
         h1b: '是时候让副驾驶带你飞得更高',
-        sub: 'TradeMind 从不触碰你的账户,而是把仪表交到你手中。每个信号都来自量化模型,并附上它的判断依据,而不是凭感觉。飞机仍由你驾驶,我们只是让你看清整条跑道,每个交易时段如此,对结果不带任何偏好。',
+        sub: '你的大部分资金已经投入,在 IRA 或 Roth IRA 里,以自动驾驶方式增长。TradeMind 从不触碰这个账户。它把仪表交到你手中:每个交易日一个信号窗口,每个决策都附带理由,在你行动前已定价并记录。飞机仍由你驾驶,我们只是让你看清整条跑道。',
+        ctaPrimary: '开始了解',
+        ctaSecondary: '查看记录',
+        cards: [
+            {
+                numeral: '36.3%',
+                label: '回测 CAGR,模型定价,2021年1月至2026年8月',
+                body: '按 36% 的复利,$10,000 在 15 年后约为 $1M。这是算术,也是为什么利率很重要,以及为什么我们公开全部的 806 笔成交记录。这个数字是回测,由 Black-Scholes 定价,不是实时报价:真实的 15 个月报价磁带回撤了 -30.4%,而模型是 -17.8%。没有任何利率能保证持续。看看利率变化时结果会改变多少 \u2192',
+                link: 'calculator',
+            },
+            {
+                numeral: '2 条腿',
+                label: '持有长仓,出租短仓',
+                body: '买入深度实值的 QQQ LEAPS 看涨期权,12 至 24 个月到期,delta 0.80 至 0.85,作为核心仓位。然后对其卖出 32 天看涨期权,delta 0.15 至 0.28,像波段交易者收获区间一样收取权利金。LEAPS 是引擎,其他一切都是管道。',
+            },
+            {
+                numeral: '1 / 7',
+                label: '交易必须通过的门,其中之一是模型信心分数',
+                body: '信心模型采用滚动向前训练,从不在其被评估的窗口内训练。它不预测 QQQ 的走势。它对当前条件是否与历史上此策略有效的条件相似进行评分,拥有否决权而非航向权。如果不同意,什么都不会发生。',
+            },
+            {
+                numeral: '18 / 21',
+                label: '策略在交叉验证路径中保持稳定',
+                body: '头寸规模上限为账户的三分之一,最多三个仓位,5% 现金储备,亏损仓在收到权利金两倍时止损。在 21 个重组子窗口中测试,确保结果不是一条幸运路径。完整账簿、配置、代码和 SHA-256 校验和全部公开:三个命令即可复现。',
+            },
+        ],
         stats: [
             {
                 big: '每个时段',
@@ -375,11 +477,19 @@ const ZH_SECTIONS: SectionsCopy = {
         title: '近一半美国人拿不出 1,000 美元应急,而平均 401(k) 余额刚创下 155,800 美元的纪录。',
         p: '缺口不在储蓄,而在激活。那笔退休账户余额是你的,还在增长,而它所在的账户类型,恰恰最适合这种耐心的长期策略。',
         mech: '在大多数 IRA 和 Roth IRA 中,买入长期看涨期权并备兑卖出看涨期权是允许的,具体以券商批准为准。标准的雇主 401(k) 计划通常完全不提供期权交易。TradeMind 适用于你已有的 IRA,或者当天就能开好的新 IRA。',
-        illus: '1 万美元按 36% 的年化收益率(回测 CAGR 向下取整)复利 15 年,约为 1,007,126 美元。*',
-        fine: '*基于回测结果的假设性示例,并非预测或承诺。回测表现存在诸多固有局限,并不预示未来结果。36% 的年化收益率持续 15 年,将超过几乎所有经核实的长期公开业绩记录。此处仅作算术示例。',
-        slogan: 'TradeMind.Bot 助你更快到达下一个财务里程碑。',
         ctaVerify: '查看完整审计记录 \u2192',
         ctaLedger: '浏览每一笔交易 \u2192',
+    },
+    rateCalc: {
+        kicker: '自己动手算一算',
+        title: '换一个利率,同样的 1 万美元会怎样?',
+        sub: '移动利率,看最终余额。默认的 36% 来自我们回测的模型定价年化收益,向下取整。',
+        lblAmount: '初始金额',
+        lblRate: '年利率 (%)',
+        lblYears: '年数',
+        outLabel: '最终余额',
+        ctaVerify: '查看完整审计记录 \u2192',
+        disc: '这是你选择的利率下的复利算术。默认 36% 对应我们回测的模型定价结果,该 5.6 年窗口包含一个 -9.5% 的亏损年份和近乎持平的 2025 年。若 36% 的年化收益持续 15 年,将远超几乎所有经过验证的长期公开业绩记录。没有任何利率能保证持续。',
     },
 };
 

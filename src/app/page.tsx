@@ -8,6 +8,7 @@ import { LegalFooter } from '@/components/marketing/LegalFooter';
 import { StoryLanding } from '@/components/marketing/story/StoryLanding';
 import { CoPilotHero } from '@/components/marketing/CoPilotHero';
 import { RetirementSection } from '@/components/marketing/RetirementSection';
+import { RateSensitivityCalc } from '@/components/marketing/RateSensitivityCalc';
 import { DisciplineSection } from '@/components/marketing/DisciplineSection';
 import { RecordSection } from '@/components/marketing/RecordSection';
 import { ModelTrustSection } from '@/components/marketing/ModelTrustSection';
@@ -86,6 +87,9 @@ export default function SinglePageMarketing() {
 
             {/* Cash-poor, retirement-rich pain point + slogan + audit links */}
             <RetirementSection />
+
+            {/* v3: rate-sensitivity calculator, Card 1's arrow scrolls here */}
+            <RateSensitivityCalc />
 
             {/* Institutional-style discipline band, compact, inside the hero flow */}
             <DisciplineSection />

@@ -362,3 +362,15 @@
 @media (max-width: 720px) {
     .vf-illus { grid-template-columns: 1fr; }
 }
+
+/* ── back-to-homepage button, prominent, top of page ── */
+.vf-back-row { padding: 18px 0 0; }
+.vf-back-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 1px solid var(--s-line, #232333); border-radius: 999px;
+    color: var(--s-ink2, #BCC6D8); text-decoration: none;
+    font-size: 14px; font-weight: 600; padding: 10px 20px;
+    transition: border-color .15s ease, color .15s ease;
+}
+.vf-back-btn:hover { border-color: #8B5CF6; color: #A78BFA; }
+.vf-back-btn:focus-visible { outline: 2px solid #A78BFA; outline-offset: 2px; }

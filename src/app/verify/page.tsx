@@ -31,6 +31,11 @@ export default function VerifyPage() {
         <main className="min-h-screen flex flex-col bg-[#0A0A0F] overflow-x-hidden pt-16">
             <MarketingHeader />
             <div className="vf-wrap">
+                {/* 0. Back to homepage, prominent per request */}
+                <div className="vf-back-row">
+                    <Link href="/" className="vf-back-btn">{c.backHomeBtn}</Link>
+                </div>
+
                 {/* 1. Hero */}
                 <header className="vf-hero">
                     <div className="vf-eyebrow">{c.heroEyebrow}</div>

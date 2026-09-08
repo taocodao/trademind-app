@@ -342,7 +342,7 @@
 
 /* Retirement illustration module (sits after limitations, before audit) */
 .vf-illus {
-    display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px;
+    display: grid; grid-template-columns: 1.3fr 1.3fr; gap: 28px;
     margin: 6px 0 0; align-items: start;
 }
 .vf-illus-table { width: 100%; }

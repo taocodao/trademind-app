@@ -60,6 +60,9 @@ export interface SectionsCopy {
     life: {
         kicker: string; title: string; p: string; close: string;
     };
+    retire: {
+        kicker: string; title: string; p: string; mech: string; illus: string; fine: string; slogan: string; ctaVerify: string; ctaLedger: string;
+    };
 }
 
 const EN_SECTIONS: SectionsCopy = {
@@ -154,6 +157,17 @@ const EN_SECTIONS: SectionsCopy = {
         title: 'Market exposure that does not become a second job.',
         p: 'You get one email when the model acts, with the order already sized and the reasoning attached. You place it at your own broker, in your own time, and go back to your life. No screens to watch, no positions to babysit, no reason to check your phone at ten on a Tuesday.',
         close: 'We are not promising an income. We are removing the need to sit in front of a screen to have a systematic strategy running.',
+    },
+    retire: {
+        kicker: 'The money is already yours',
+        title: 'Nearly half of Americans cannot cover a $1,000 emergency. The average 401(k) just hit a record $155,800.',
+        p: 'The gap is not savings. It is activation. That retirement balance is yours, it is growing, and it sits inside the one account type built for exactly this kind of patient, long-horizon strategy.',
+        mech: 'Buying long-dated calls and selling covered calls against them are permitted in most IRAs and Roth IRAs, subject to your broker\'s approval. Standard employer 401(k) plans usually do not offer options at all. TradeMind works with the IRA you already have, or one you can open in a day.',
+        illus: '$10,000 compounding at a 36% annual rate (the backtested CAGR, rounded down) for 15 years reaches roughly $1,007,126.*',
+        fine: '*Hypothetical illustration based on backtested results, not a projection or promise. Backtested performance has many inherent limitations and is not necessarily indicative of future results. A 36% annual rate sustained for 15 years would exceed nearly all verified long-horizon public track records. Shown for arithmetic illustration only.',
+        slogan: 'TradeMind.Bot helps you reach your next financial milestone sooner.',
+        ctaVerify: 'See the full audited record \u2192',
+        ctaLedger: 'Browse every trade \u2192',
     },
 };
 
@@ -250,6 +264,17 @@ const ES_SECTIONS: SectionsCopy = {
         p: 'Recibes un correo cuando el modelo actúa, con la orden ya dimensionada y el razonamiento adjunto. La colocas en tu propio bróker, en tu propio tiempo, y vuelves a tu vida. Sin pantallas que vigilar, sin posiciones que cuidar, sin motivo para revisar el teléfono un martes a las diez.',
         close: 'No estamos prometiendo un ingreso. Estamos quitando la necesidad de estar sentado frente a una pantalla para tener una estrategia sistemática funcionando.',
     },
+    retire: {
+        kicker: 'El dinero ya es tuyo',
+        title: 'Casi la mitad de los estadounidenses no puede cubrir una emergencia de $1,000. El 401(k) promedio acaba de alcanzar un récord de $155,800.',
+        p: 'La brecha no es el ahorro. Es la activación. Ese saldo de retiro es tuyo, está creciendo, y vive dentro del único tipo de cuenta pensado exactamente para este tipo de estrategia paciente y de largo plazo.',
+        mech: 'Comprar calls de largo plazo y vender calls cubiertas contra ellos está permitido en la mayoría de las IRA y Roth IRA, sujeto a la aprobación de tu bróker. Los planes 401(k) de empleador estándar normalmente no ofrecen opciones en absoluto. TradeMind funciona con la IRA que ya tienes, o con una que puedes abrir en un día.',
+        illus: '$10,000 capitalizando a una tasa anual del 36% (el CAGR del backtest, redondeado hacia abajo) durante 15 años llega a aproximadamente $1,007,126.*',
+        fine: '*Ilustración hipotética basada en resultados de backtest, no una proyección ni una promesa. El rendimiento de backtest tiene muchas limitaciones inherentes y no es necesariamente indicativo de resultados futuros. Una tasa anual del 36% sostenida durante 15 años superaría casi todos los registros públicos verificados de largo plazo. Se muestra solo como ilustración aritmética.',
+        slogan: 'TradeMind.Bot te ayuda a alcanzar tu próximo hito financiero antes.',
+        ctaVerify: 'Ver el registro auditado completo \u2192',
+        ctaLedger: 'Explora cada operación \u2192',
+    },
 };
 
 const ZH_SECTIONS: SectionsCopy = {
@@ -344,6 +369,17 @@ const ZH_SECTIONS: SectionsCopy = {
         title: '让市场敞口不变成第二份工作。',
         p: '模型出手时你会收到一封邮件,里面已经算好仓位、附上理由。你在自己的券商里、按自己的时间下单,然后回到自己的生活。不用盯屏,不用照看仓位,也没有理由在周二上午十点掏手机看。',
         close: '我们不是在承诺收入。我们只是让你不必坐在屏幕前,也能有一个系统化策略在跑。',
+    },
+    retire: {
+        kicker: '这笔钱本来就是你的',
+        title: '近一半美国人拿不出 1,000 美元应急,而平均 401(k) 余额刚创下 155,800 美元的纪录。',
+        p: '缺口不在储蓄,而在激活。那笔退休账户余额是你的,还在增长,而它所在的账户类型,恰恰最适合这种耐心的长期策略。',
+        mech: '在大多数 IRA 和 Roth IRA 中,买入长期看涨期权并备兑卖出看涨期权是允许的,具体以券商批准为准。标准的雇主 401(k) 计划通常完全不提供期权交易。TradeMind 适用于你已有的 IRA,或者当天就能开好的新 IRA。',
+        illus: '1 万美元按 36% 的年化收益率(回测 CAGR 向下取整)复利 15 年,约为 1,007,126 美元。*',
+        fine: '*基于回测结果的假设性示例,并非预测或承诺。回测表现存在诸多固有局限,并不预示未来结果。36% 的年化收益率持续 15 年,将超过几乎所有经核实的长期公开业绩记录。此处仅作算术示例。',
+        slogan: 'TradeMind.Bot 助你更快到达下一个财务里程碑。',
+        ctaVerify: '查看完整审计记录 \u2192',
+        ctaLedger: '浏览每一笔交易 \u2192',
     },
 };
 

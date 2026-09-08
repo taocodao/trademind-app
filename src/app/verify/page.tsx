@@ -153,6 +153,37 @@ export default function VerifyPage() {
                     <p className="vf-p vf-strong">{c.limitsClose}</p>
                 </section>
 
+                {/* 4b. Retirement-account illustration. Deliberately placed
+                    AFTER limitations so visitors read the sober methodology
+                    first. Illustration is labeled and asterisked; fine print
+                    lives inside this same section, not a distant footer. */}
+                <section className="vf-section">
+                    <h2 className="vf-h2">{c.illusTitle}</h2>
+                    <p className="vf-p">{c.illusLead}</p>
+                    <div className="vf-illus">
+                        <div className="vf-illus-table-wrap">
+                            <table className="vf-table vf-illus-table">
+                                <tbody>
+                                    {c.illusRows.map((r, i) => (
+                                        <tr key={i}>
+                                            <td>{r.y}</td>
+                                            <td className="vf-illus-v">{r.v}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            <p className="vf-note">
+                                <strong>{c.illusVolLabel}.</strong> {c.illusVol}
+                            </p>
+                        </div>
+                        <div className="vf-illus-ira">
+                            <h3 className="vf-step-h">{c.illusIraLabel}</h3>
+                            <p className="vf-p">{c.illusIra}</p>
+                        </div>
+                    </div>
+                    <p className="vf-fine">{c.illusFine}</p>
+                </section>
+
                 {/* 5. Red-flag audit */}
                 <section className="vf-section">
                     <h2 className="vf-h2">{c.auditTitle}</h2>
@@ -260,6 +291,9 @@ export default function VerifyPage() {
                         </div>
                         <p className="vf-note">{c.lineageNote}</p>
                     </div>
+                    <p className="vf-homelink">
+                        <Link href="/" className="vf-inline-link">{c.homeLink}</Link>
+                    </p>
                 </section>
             </div>
             <LegalFooter />

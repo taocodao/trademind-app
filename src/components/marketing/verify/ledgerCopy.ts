@@ -10,6 +10,8 @@ export interface LedgerCopy {
     title: string;
     sub: string;
     modelTagLine: string;
+    banner: string;
+    bannerFine: string;
     chartTitle: string;
     chartNote: string;
     chartLegendQqq: string;
@@ -38,6 +40,7 @@ export interface LedgerCopy {
     detailDisclaimer: string;
     tooltipDisclaimer: string;
     backToVerify: string;
+    backToHome: string;
     kindLeaps: string;
     kindShort: string;
     pass: string;
@@ -55,6 +58,8 @@ const EN: LedgerCopy = {
     title: 'Every trade, on the chart, in the ledger.',
     sub: 'All 806 fills from the published QQQ LEAPS backtest record, plotted at their exact timestamps against real QQQ prices and the model equity curve. Click any marker or row to see the pricing inputs and which entry gates passed at that decision point.',
     modelTagLine: 'All option prices on this page are Black-Scholes model values computed in the backtest, not real market quotes. This is disclosed in the methodology on the verify page.',
+    banner: 'This is the trade-by-trade record behind the $10,000 to $1,007,126 hypothetical illustration on the verify page. Every entry, exit, and gate decision that produced it, model-priced as disclosed there.*',
+    bannerFine: '*Hypothetical illustration based on backtested results; not necessarily indicative of future results.',
     chartTitle: 'The chart audit',
     chartNote: 'QQQ daily candles and the strategy equity curve, January 2021 through August 2026. Violet markers are LEAPS entries and exits; amber markers are covered-call overlays. Click a marker to open that fill in the ledger below.',
     chartLegendQqq: 'QQQ (real daily prices)',
@@ -91,6 +96,7 @@ const EN: LedgerCopy = {
     detailDisclaimer: 'Hypothetical backtested performance; many inherent limitations. Past performance is not necessarily indicative of future results. Option prices shown are model values, not real quotes.',
     tooltipDisclaimer: 'Model-priced, not a real quote. Hypothetical performance; past results are not necessarily indicative of future results.',
     backToVerify: 'Back to methodology',
+    backToHome: 'Back to homepage',
     kindLeaps: 'LEAPS call',
     kindShort: 'Covered call',
     pass: 'passed',
@@ -108,6 +114,8 @@ const ES: LedgerCopy = {
     title: 'Cada operacion, en el grafico, en el libro.',
     sub: 'Las 806 ejecuciones del backtest publicado de QQQ LEAPS, trazadas en sus marcas de tiempo exactas contra precios reales de QQQ y la curva de capital del modelo. Haz clic en cualquier marcador o fila para ver los datos de precios y que filtros de entrada pasaron en esa decision.',
     modelTagLine: 'Todos los precios de opciones en esta pagina son valores del modelo Black-Scholes calculados en el backtest, no cotizaciones reales de mercado. Esto se detalla en la metodologia de la pagina de verificacion.',
+    banner: 'Este es el registro operaci\xf3n por operaci\xf3n detr\xe1s de la ilustraci\xf3n hipot\xe9tica de $10,000 a $1,007,126 en la p\xe1gina de verificaci\xf3n. Cada entrada, salida y decisi\xf3n de las compuertas que la produjo, con precios de modelo como se indica all\xed.*',
+    bannerFine: '*Ilustraci\xf3n hipot\xe9tica basada en resultados de backtest; no necesariamente indicativa de resultados futuros.',
     chartTitle: 'La auditoria visual',
     chartNote: 'Velas diarias de QQQ y la curva de capital de la estrategia, de enero de 2021 a agosto de 2026. Los marcadores violetas son entradas y salidas de LEAPS; los ambar son overlays de covered calls. Haz clic en un marcador para abrir esa ejecucion en el libro.',
     chartLegendQqq: 'QQQ (precios diarios reales)',
@@ -144,6 +152,7 @@ const ES: LedgerCopy = {
     detailDisclaimer: 'Rendimiento hipotetico de backtest; muchas limitaciones inherentes. El rendimiento pasado no es necesariamente indicativo de resultados futuros. Los precios de opciones mostrados son valores del modelo, no cotizaciones reales.',
     tooltipDisclaimer: 'Precio de modelo, no una cotizacion real. Rendimiento hipotetico; los resultados pasados no son necesariamente indicativos de resultados futuros.',
     backToVerify: 'Volver a la metodologia',
+    backToHome: 'Volver a la p\xe1gina principal',
     kindLeaps: 'Call LEAPS',
     kindShort: 'Covered call',
     pass: 'paso',
@@ -161,6 +170,8 @@ const ZH: LedgerCopy = {
     title: '\u6bcf\u4e00\u7b14\u4ea4\u6613\uff0c\u90fd\u5728\u56fe\u4e0a\uff0c\u90fd\u5728\u8d26\u91cc\u3002',
     sub: '\u5df2\u53d1\u5e03 QQQ LEAPS \u56de\u6d4b\u7684\u5168\u90e8 806 \u7b14\u6210\u4ea4\uff0c\u6309\u7cbe\u786e\u65f6\u95f4\u70b9\u6807\u6ce8\u5728\u771f\u5b9e QQQ \u4ef7\u683c\u4e0e\u6a21\u578b\u51c0\u503c\u66f2\u7ebf\u4e0a\u3002\u70b9\u51fb\u4efb\u4f55\u6807\u8bb0\u6216\u884c\uff0c\u67e5\u770b\u8be5\u7b14\u4ea4\u6613\u7684\u5b9a\u4ef7\u8f93\u5165\u4ee5\u53ca\u5f53\u65f6\u54ea\u4e9b\u5165\u573a\u6805\u95e8\u901a\u8fc7\u3002',
     modelTagLine: '\u672c\u9875\u6240\u6709\u671f\u6743\u4ef7\u683c\u5747\u4e3a\u56de\u6d4b\u4e2d\u8ba1\u7b97\u7684 Black-Scholes \u6a21\u578b\u503c\uff0c\u5e76\u975e\u771f\u5b9e\u5e02\u573a\u62a5\u4ef7\u3002\u76f8\u5173\u8bf4\u660e\u89c1\u9a8c\u8bc1\u9875\u7684\u65b9\u6cd5\u8bba\u90e8\u5206\u3002',
+    banner: '\u8fd9\u662f\u9a8c\u8bc1\u9875\u9762\u4e0a 1 \u4e07\u7f8e\u5143\u5230 1,007,126 \u7f8e\u5143\u5047\u8bbe\u6027\u793a\u4f8b\u80cc\u540e\u7684\u9010\u7b14\u4ea4\u6613\u8bb0\u5f55\u3002\u4ea7\u751f\u8be5\u793a\u4f8b\u7684\u6bcf\u4e00\u7b14\u5165\u573a\u3001\u51fa\u573a\u548c\u95e8\u69db\u51b3\u7b56\u90fd\u5728\u8fd9\u91cc,\u4ef7\u683c\u5747\u4e3a\u6a21\u578b\u5b9a\u4ef7,\u5982\u9a8c\u8bc1\u9875\u6240\u8ff0\u3002*',
+    bannerFine: '*\u57fa\u4e8e\u56de\u6d4b\u7ed3\u679c\u7684\u5047\u8bbe\u6027\u793a\u4f8b;\u5e76\u4e0d\u9884\u793a\u672a\u6765\u7ed3\u679c\u3002',
     chartTitle: '\u53ef\u89c6\u5316\u5ba1\u8ba1',
     chartNote: 'QQQ \u65e5 K \u7ebf\u4e0e\u7b56\u7565\u51c0\u503c\u66f2\u7ebf\uff0c2021 \u5e74 1 \u6708\u81f3 2026 \u5e74 8 \u6708\u3002\u7d2b\u8272\u6807\u8bb0\u4e3a LEAPS \u5f00\u5e73\u4ed3\uff1b\u7425\u73c0\u8272\u6807\u8bb0\u4e3a\u8986\u76d6\u5356\u51fa\u3002\u70b9\u51fb\u6807\u8bb0\u5373\u53ef\u5728\u4e0b\u65b9\u8d26\u672c\u4e2d\u6253\u5f00\u8be5\u7b14\u6210\u4ea4\u3002',
     chartLegendQqq: 'QQQ\uff08\u771f\u5b9e\u65e5\u7ebf\u4ef7\u683c\uff09',
@@ -197,6 +208,7 @@ const ZH: LedgerCopy = {
     detailDisclaimer: '\u56de\u6d4b\u4e3a\u5047\u8bbe\u6027\u4e1a\u7ee9\uff0c\u5b58\u5728\u8bf8\u591a\u56fa\u6709\u5c40\u9650\u3002\u8fc7\u5f80\u8868\u73b0\u4e0d\u4e00\u5b9a\u9884\u793a\u672a\u6765\u7ed3\u679c\u3002\u6240\u793a\u671f\u6743\u4ef7\u683c\u4e3a\u6a21\u578b\u503c\uff0c\u975e\u771f\u5b9e\u62a5\u4ef7\u3002',
     tooltipDisclaimer: '\u6a21\u578b\u5b9a\u4ef7\uff0c\u975e\u771f\u5b9e\u62a5\u4ef7\u3002\u5047\u8bbe\u6027\u4e1a\u7ee9\uff1b\u8fc7\u5f80\u8868\u73b0\u4e0d\u4e00\u5b9a\u9884\u793a\u672a\u6765\u7ed3\u679c\u3002',
     backToVerify: '\u8fd4\u56de\u65b9\u6cd5\u8bba',
+    backToHome: '\u8fd4\u56de\u9996\u9875',
     kindLeaps: 'LEAPS \u770b\u6da8',
     kindShort: '\u8986\u76d6\u5356\u51fa',
     pass: '\u901a\u8fc7',

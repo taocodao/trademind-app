@@ -39,6 +39,15 @@ export interface VerifyCopy {
     auditCols: string[];
     auditRows: { check: string; result: string; verdict: string; verdictKind: 'pass' | 'warn' }[];
     auditNote: string;
+    illusTitle: string;
+    illusLead: string;
+    illusRows: { y: string; v: string }[];
+    illusVolLabel: string;
+    illusVol: string;
+    illusIraLabel: string;
+    illusIra: string;
+    illusFine: string;
+    homeLink: string;
     kitTitle: string;
     kitIntro: string;
     kitCards: { title: string; desc: string; href: string }[];
@@ -198,6 +207,20 @@ const EN: VerifyCopy = {
     ],
     auditNote:
         'The last row is the one to sit with. Two adjacent settings of one gate differ by 1.1 points of CAGR because of a single 2026 entry. We publish both numbers and the ledger entry for that trade. Judge accordingly.',
+    illusTitle: 'What this would mean for a $10,000 retirement account*',
+    illusLead: 'No new claims in this box. It is the same backtested CAGR from the table above, compounded forward so the arithmetic is visible.',
+    illusRows: [
+        { y: 'Year 0', v: '$10,000' },
+        { y: 'Year 5', v: '~$46,600' },
+        { y: 'Year 10', v: '~$216,900' },
+        { y: 'Year 15', v: '~$1,007,126' },
+    ],
+    illusVolLabel: 'The path was not smooth',
+    illusVol: 'The same record includes 2022 at -9.5% and a nearly flat 2025 at +5.1%. Compounding at this rate is an average across those years, not a straight line.',
+    illusIraLabel: 'Which accounts can run this',
+    illusIra: 'Buying long-dated calls and selling covered calls against them are permitted in most IRAs and Roth IRAs, subject to broker approval. Standard employer 401(k) plans generally do not support options trading.',
+    illusFine: '*Hypothetical illustration based on backtested results, not a projection or promise. The rate used is 36% per year, the backtested CAGR rounded down. Backtested performance has many inherent limitations and is not necessarily indicative of future results. A 36% rate sustained for 15 years would exceed nearly all verified long-horizon public track records. Shown for arithmetic illustration only.',
+    homeLink: 'New here? Start with the two-minute story on the homepage \u2192',
     kitTitle: 'The proof kit',
     kitIntro: 'Download everything. Check our arithmetic in a spreadsheet, or rerun the whole engine yourself:',
     kitCards: [
@@ -373,6 +396,20 @@ const ES: VerifyCopy = {
     ],
     auditNote:
         'La \u00faltima fila es la que merece reflexi\u00f3n. Dos ajustes adyacentes de una misma regla difieren en 1.1 puntos de CAGR por una sola entrada de 2026. Publicamos ambos n\u00fameros y la entrada del libro mayor de esa operaci\u00f3n. Juzga en consecuencia.',
+    illusTitle: 'Lo que esto significar\u00eda para una cuenta de retiro de $10,000*',
+    illusLead: 'No hay afirmaciones nuevas en este cuadro. Es el mismo CAGR del backtest de la tabla de arriba, capitalizado hacia adelante para que la aritm\u00e9tica sea visible.',
+    illusRows: [
+        { y: 'A\u00f1o 0', v: '$10,000' },
+        { y: 'A\u00f1o 5', v: '~$46,600' },
+        { y: 'A\u00f1o 10', v: '~$216,900' },
+        { y: 'A\u00f1o 15', v: '~$1,007,126' },
+    ],
+    illusVolLabel: 'El camino no fue suave',
+    illusVol: 'El mismo registro incluye 2022 con -9.5% y un 2025 casi plano con +5.1%. Capitalizar a esta tasa es un promedio a trav\u00e9s de esos a\u00f1os, no una l\u00ednea recta.',
+    illusIraLabel: 'Qu\u00e9 cuentas pueden usarlo',
+    illusIra: 'Comprar calls de largo plazo y vender calls cubiertas contra ellos est\u00e1 permitido en la mayor\u00eda de las IRA y Roth IRA, sujeto a la aprobaci\u00f3n del br\u00f3ker. Los planes 401(k) de empleador est\u00e1ndar generalmente no permiten opciones.',
+    illusFine: '*Ilustraci\u00f3n hipot\u00e9tica basada en resultados de backtest, no una proyecci\u00f3n ni una promesa. La tasa usada es 36% anual, el CAGR del backtest redondeado hacia abajo. El rendimiento de backtest tiene muchas limitaciones inherentes y no es necesariamente indicativo de resultados futuros. Una tasa del 36% sostenida 15 a\u00f1os superar\u00eda casi todos los registros p\u00fablicos verificados de largo plazo. Se muestra solo como ilustraci\u00f3n aritm\u00e9tica.',
+    homeLink: '\u00bfNuevo aqu\u00ed? Empieza con la historia de dos minutos en la p\u00e1gina principal \u2192',
     kitTitle: 'El kit de pruebas',
     kitIntro: 'Descarga todo. Revisa nuestra aritm\u00e9tica en una hoja de c\u00e1lculo, o vuelve a ejecutar el motor completo t\u00fa mismo:',
     kitCards: [
@@ -548,6 +585,20 @@ const ZH: VerifyCopy = {
     ],
     auditNote:
         '\u6700\u540e\u4e00\u884c\u503c\u5f97\u7ec6\u60f3\u3002\u540c\u4e00\u4e2a\u9608\u503c\u7684\u4e24\u4e2a\u76f8\u90bb\u8bbe\u5b9a\uff0c\u4ec5\u56e02026\u5e74\u7684\u4e00\u7b14\u8fdb\u573a\u5c31\u76f8\u5dee 1.1 \u4e2a\u767e\u5206\u70b9\u7684 CAGR\u3002\u6211\u4eec\u540c\u65f6\u516c\u5e03\u4e24\u4e2a\u6570\u5b57\uff0c\u4ee5\u53ca\u8be5\u7b14\u4ea4\u6613\u7684\u8d26\u672c\u8bb0\u5f55\u3002\u8bf7\u636e\u6b64\u5224\u65ad\u3002',
+    illusTitle: '\u5bf9\u4e8e\u4e00\u4e2a 1 \u4e07\u7f8e\u5143\u7684\u9000\u4f11\u8d26\u6237,\u8fd9\u610f\u5473\u7740\u4ec0\u4e48*',
+    illusLead: '\u8fd9\u4e2a\u6846\u91cc\u6ca1\u6709\u65b0\u7684\u8bba\u65ad\u3002\u5b83\u53ea\u662f\u628a\u4e0a\u65b9\u8868\u683c\u4e2d\u540c\u4e00\u4e2a\u56de\u6d4b CAGR \u5411\u524d\u590d\u5229,\u8ba9\u7b97\u672f\u6e05\u6670\u53ef\u89c1\u3002',
+    illusRows: [
+        { y: '\u7b2c 0 \u5e74', v: '$10,000' },
+        { y: '\u7b2c 5 \u5e74', v: '~$46,600' },
+        { y: '\u7b2c 10 \u5e74', v: '~$216,900' },
+        { y: '\u7b2c 15 \u5e74', v: '~$1,007,126' },
+    ],
+    illusVolLabel: '\u8fc7\u7a0b\u5e76\u4e0d\u5e73\u5766',
+    illusVol: '\u540c\u4e00\u4efd\u8bb0\u5f55\u4e2d,2022 \u5e74\u4e3a -9.5%,2025 \u5e74\u51e0\u4e4e\u6301\u5e73,\u4e3a +5.1%\u3002\u4ee5\u8be5\u6536\u76ca\u7387\u590d\u5229,\u662f\u8fd9\u4e9b\u5e74\u4efd\u7684\u5e73\u5747\u7ed3\u679c,\u800c\u4e0d\u662f\u4e00\u6761\u76f4\u7ebf\u3002',
+    illusIraLabel: '\u54ea\u4e9b\u8d26\u6237\u53ef\u4ee5\u4f7f\u7528',
+    illusIra: '\u5728\u5927\u591a\u6570 IRA \u548c Roth IRA \u4e2d,\u4e70\u5165\u957f\u671f\u770b\u6da8\u671f\u6743\u5e76\u5907\u5151\u5356\u51fa\u770b\u6da8\u671f\u6743\u662f\u5141\u8bb8\u7684,\u5177\u4f53\u4ee5\u5238\u5546\u6279\u51c6\u4e3a\u51c6\u3002\u6807\u51c6\u7684\u96c7\u4e3b 401(k) \u8ba1\u5212\u4e00\u822c\u4e0d\u652f\u6301\u671f\u6743\u4ea4\u6613\u3002',
+    illusFine: '*\u57fa\u4e8e\u56de\u6d4b\u7ed3\u679c\u7684\u5047\u8bbe\u6027\u793a\u4f8b,\u5e76\u975e\u9884\u6d4b\u6216\u627f\u8bfa\u3002\u6240\u7528\u6536\u76ca\u7387\u4e3a\u6bcf\u5e74 36%,\u5373\u56de\u6d4b CAGR \u5411\u4e0b\u53d6\u6574\u3002\u56de\u6d4b\u8868\u73b0\u5b58\u5728\u8bf8\u591a\u56fa\u6709\u5c40\u9650,\u5e76\u4e0d\u9884\u793a\u672a\u6765\u7ed3\u679c\u300236% \u7684\u6536\u76ca\u7387\u6301\u7eed 15 \u5e74,\u5c06\u8d85\u8fc7\u51e0\u4e4e\u6240\u6709\u7ecf\u6838\u5b9e\u7684\u957f\u671f\u516c\u5f00\u4e1a\u7ee9\u8bb0\u5f55\u3002\u6b64\u5904\u4ec5\u4f5c\u7b97\u672f\u793a\u4f8b\u3002',
+    homeLink: '\u7b2c\u4e00\u6b21\u6765?\u5148\u53bb\u9996\u9875\u770b\u4e24\u5206\u949f\u7684\u6545\u4e8b \u2192',
     kitTitle: '\u9a8c\u8bc1\u5de5\u5177\u5305',
     kitIntro: '\u5168\u90e8\u4e0b\u8f7d\u3002\u5728\u7535\u5b50\u8868\u683c\u91cc\u6838\u5bf9\u6211\u4eec\u7684\u7b97\u672f\uff0c\u6216\u8005\u4eb2\u81ea\u91cd\u65b0\u8fd0\u884c\u6574\u4e2a\u5f15\u64ce\uff1a',
     kitCards: [

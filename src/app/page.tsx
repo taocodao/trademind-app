@@ -7,6 +7,7 @@ import { TrustBadges } from '@/components/marketing/TrustBadges';
 import { LegalFooter } from '@/components/marketing/LegalFooter';
 import { StoryLanding } from '@/components/marketing/story/StoryLanding';
 import { CoPilotHero } from '@/components/marketing/CoPilotHero';
+import { RetirementSection } from '@/components/marketing/RetirementSection';
 import { DisciplineSection } from '@/components/marketing/DisciplineSection';
 import { RecordSection } from '@/components/marketing/RecordSection';
 import { ModelTrustSection } from '@/components/marketing/ModelTrustSection';
@@ -82,6 +83,9 @@ export default function SinglePageMarketing() {
 
             {/* Hero flow: slogan headline, extended subhead, capability cards */}
             <CoPilotHero />
+
+            {/* Cash-poor, retirement-rich pain point + slogan + audit links */}
+            <RetirementSection />
 
             {/* Institutional-style discipline band, compact, inside the hero flow */}
             <DisciplineSection />

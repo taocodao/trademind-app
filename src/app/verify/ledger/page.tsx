@@ -211,6 +211,10 @@ export default function LedgerPage() {
                     <h1 className="ldg-h1">{c.title}</h1>
                     <p className="ldg-sub">{c.sub}</p>
                     <div className="ldg-tagline">{c.modelTagLine}</div>
+                    <p className="ldg-banner">
+                        {c.banner}
+                        <span className="ldg-banner-fine"> {c.bannerFine}</span>
+                    </p>
                 </header>
 
                 {/* Chart audit */}
@@ -309,9 +313,14 @@ export default function LedgerPage() {
                     </div>
                 </section>
 
-                <Link href="/verify" className="ldg-back">
-                    {c.backToVerify}
-                </Link>
+                <div className="ldg-back-row">
+                    <Link href="/verify" className="ldg-back">
+                        {c.backToVerify}
+                    </Link>
+                    <Link href="/" className="ldg-back">
+                        {c.backToHome}
+                    </Link>
+                </div>
             </div>
             <LegalFooter />
         </main>

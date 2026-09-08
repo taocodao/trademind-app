@@ -346,7 +346,8 @@
     margin: 6px 0 0; align-items: start;
 }
 .vf-illus > * { min-width: 0; }
-.vf-illus-table { width: 100%; table-layout: fixed; }
+.vf-illus-table { width: 100%; table-layout: fixed; min-width: 0; }
+.vf-illus-table td:first-child { text-align: left; }
 .vf-illus-v { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: #E5E7F0; }
 .vf-illus-table-wrap .vf-note { margin-top: 10px; }
 .vf-illus-ira {

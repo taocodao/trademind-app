@@ -951,3 +951,9 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
 @media (max-width: 719px) {
     .tm-rc-grid { grid-template-columns: 1fr; }
 }
+
+/* scroll targets must land below the fixed 64px site header, not under it.
+   Applies to #story (Begin the story CTA, hero Play button) and #rate-calc
+   (Card 1 arrow). Without this the ticker caption is hidden by the header. */
+.tm-deck#story { scroll-margin-top: 76px; }
+.tm-ratecalc { scroll-margin-top: 76px; }

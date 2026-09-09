@@ -37,6 +37,7 @@ export function CoPilotHero() {
                 <div className="tm-hero-ctapair">
                     <button className="tm-play tm-cta-hero" onClick={beginStory}>{c.ctaPrimary}</button>
                     <Link href="/verify" className="tm-cta-hero tm-cta-secondary">{c.ctaSecondary}</Link>
+                    <Link href="/verify/ledger" className="tm-cta-hero tm-cta-tertiary">{c.ctaLedger}</Link>
                 </div>
 
                 <div className="tm-herocards">

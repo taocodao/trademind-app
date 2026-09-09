@@ -16,7 +16,7 @@ export interface SectionsCopy {
         eyebrow: string;
         h1a: string; h1b: string;
         sub: string;
-        ctaPrimary: string; ctaSecondary: string; ledgerLink: string;
+        ctaPrimary: string; ctaSecondary: string; ctaLedger: string; ledgerLink: string;
         cards: { numeral: string; label: string; body: string; link?: string }[];
         stats: { big: string; label: string; clarifier: string }[];
         play: string; calcCta: string; micro: string;
@@ -76,10 +76,11 @@ export interface SectionsCopy {
 const EN_SECTIONS: SectionsCopy = {
     hero: {
         slogan: 'TradeMind helps you reach your financial milestones',
-        eyebrow: 'For the retirement account you already have',
+        eyebrow: 'The money is already yours',
         h1a: 'Your account is on autopilot',
         h1b: 'It is time for a co-pilot to fly it higher',
-        sub: 'Most of your money is already invested, sitting in an IRA or Roth IRA, growing on autopilot. TradeMind never touches that account. It hands you the instruments: one signal window each trading day, every decision with its reasoning attached, priced and logged before you act. You still fly the plane. We just make sure you can see the whole runway.',
+        sub: 'Nearly half of Americans cannot cover a $1,000 emergency, yet the average 401(k) just hit a record $155,800. That balance is already yours, growing on autopilot in an IRA or Roth IRA. TradeMind never touches the account. It hands you the instruments: one signal window each trading day, every decision with its reasoning attached, priced and logged before you act. You still fly the plane. We just widen the runway.',
+        ctaLedger: 'Browse every trade \u2192',
         ctaPrimary: 'Begin the story',
         ctaSecondary: 'Read the record',
         ledgerLink: 'Open the ledger \u2192',
@@ -217,12 +218,13 @@ const EN_SECTIONS: SectionsCopy = {
 const ES_SECTIONS: SectionsCopy = {
     hero: {
         slogan: 'TradeMind te ayuda a alcanzar tus metas financieras',
-        eyebrow: 'Para la cuenta de retiro que ya tienes',
+        eyebrow: 'El dinero ya es tuyo',
         h1a: 'Tu cuenta va en piloto automático',
         h1b: 'Es hora de un copiloto que la vuele más alto',
-        sub: 'La mayoría de tu dinero ya está invertido, en una cuenta IRA o Roth IRA, creciendo en piloto automático. TradeMind nunca toca esa cuenta. Te entrega los instrumentos: una ventana de señal cada día de mercado, cada decisión con su razonamiento adjunto, con precio y registro antes de que actúes. Tú sigues pilotando el avión. Nosotros solo nos aseguramos de que veas toda la pista.',
+        sub: 'Casi la mitad de los estadounidenses no puede cubrir una emergencia de $1,000, y sin embargo el 401(k) promedio acaba de alcanzar un récord de $155,800. Ese saldo ya es tuyo, creciendo en piloto automático en una IRA o Roth IRA. TradeMind nunca toca la cuenta. Te entrega los instrumentos: una ventana de señal cada día de mercado, cada decisión con su razonamiento adjunto, con precio y registro antes de que actúes. Tú sigues pilotando el avión. Nosotros solo ensanchamos la pista.',
         ctaPrimary: 'Comienza la historia',
         ctaSecondary: 'Lee el expediente',
+        ctaLedger: 'Explora cada operación \u2192',
         ledgerLink: 'Abre el libro mayor \u2192',
         cards: [
             {
@@ -358,12 +360,13 @@ const ES_SECTIONS: SectionsCopy = {
 const ZH_SECTIONS: SectionsCopy = {
     hero: {
         slogan: 'TradeMind 帮你更快达成财务里程碑',
-        eyebrow: '为你已有的退休账户而建',
+        eyebrow: '这笔钱本来就是你的',
         h1a: '你的账户在自动驾驶',
         h1b: '是时候让副驾驶带你飞得更高',
-        sub: '你的大部分资金已经投入,在 IRA 或 Roth IRA 里,以自动驾驶方式增长。TradeMind 从不触碰这个账户。它把仪表交到你手中:每个交易日一个信号窗口,每个决策都附带理由,在你行动前已定价并记录。飞机仍由你驾驶,我们只是让你看清整条跑道。',
+        sub: '近一半美国人拿不出 1,000 美元应急,而平均 401(k) 余额刚创下 155,800 美元的纪录。这笔钱已经是你的,正在 IRA 或 Roth IRA 里自动增长。TradeMind 从不触碰这个账户。它把仪表交到你手中:每个交易日一个信号窗口,每个决策都附带理由,在你行动前已定价并记录。飞机仍由你驾驶,我们只是把跑道拓宽。',
         ctaPrimary: '开始了解',
         ctaSecondary: '查看记录',
+        ctaLedger: '浏览每一笔交易 \u2192',
         ledgerLink: '打开账本 \u2192',
         cards: [
             {

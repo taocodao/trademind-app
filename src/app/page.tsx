@@ -85,10 +85,8 @@ export default function SinglePageMarketing() {
             {/* Hero flow: slogan headline, extended subhead, capability cards */}
             <CoPilotHero />
 
-            {/* Cash-poor, retirement-rich pain point + slogan + audit links */}
-            <RetirementSection />
-
-            {/* v3: rate-sensitivity calculator, Card 1's arrow scrolls here */}
+            {/* v3: rate-sensitivity calculator, Card 1's arrow scrolls here.
+                The retirement pain-point content merged into the hero itself. */}
             <RateSensitivityCalc />
 
             {/* Institutional-style discipline band, compact, inside the hero flow */}

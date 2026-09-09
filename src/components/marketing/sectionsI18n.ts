@@ -17,7 +17,7 @@ export interface SectionsCopy {
         h1a: string; h1b: string;
         sub: string;
         ctaPrimary: string; ctaSecondary: string; ctaLedger: string; ledgerLink: string;
-        cards: { numeral: string; label: string; body: string; link?: string }[];
+        cards: { numeral: string; numSegs: ({ v: number; dec?: number } | { t: string })[]; label: string; body: string; link?: string }[];
         stats: { big: string; label: string; clarifier: string }[];
         play: string; calcCta: string; micro: string;
         hint: string; hintSilent: string;
@@ -87,22 +87,26 @@ const EN_SECTIONS: SectionsCopy = {
         cards: [
             {
                 numeral: '36.3%',
+                numSegs: [{ v: 36.3, dec: 1 }, { t: '%' }],
                 label: 'Backtested CAGR, model-priced, Jan 2021 to Aug 2026',
                 body: 'At 36%, compounding turns $10,000 into roughly $1M in 15 years. That is arithmetic, and it is why the rate matters, and why we publish all 806 fills behind ours. This one is backtested and priced by Black-Scholes, not live quotes: a 15-month real-quote tape drew down -30.4% against the model\'s -17.8%. No rate is guaranteed to persist. See how much the outcome moves when the rate does \u2192',
                 link: 'calculator',
             },
             {
                 numeral: '2 legs',
+                numSegs: [{ v: 2 }, { t: ' legs' }],
                 label: 'Own the long side, rent out the short side',
                 body: 'Buy a deep in-the-money QQQ LEAPS call, 12 to 24 months out, delta 0.80 to 0.85, as your core position. Then sell 32-day calls against it, delta 0.15 to 0.28, collecting premium the way a swing trader harvests range. The LEAPS is the engine. Everything else is plumbing.',
             },
             {
                 numeral: '1 of 7',
+                numSegs: [{ v: 1 }, { t: ' of ' }, { v: 7 }],
                 label: 'Gates a trade must clear, one is a model confidence score',
                 body: 'The confidence model is trained walk-forward, never on the window it is judged in. It does not predict where QQQ goes. It scores whether current conditions resemble those where this setup historically worked, and it holds veto power, not steering power. If it disagrees, nothing happens.',
             },
             {
                 numeral: '18 of 21',
+                numSegs: [{ v: 18 }, { t: ' of ' }, { v: 21 }],
                 label: 'Cross-validation paths where the strategy held up',
                 body: 'Position size capped at one third of account, three positions maximum, 5% cash reserve, losers cut at twice the credit received. Tested across 21 recombined sub-windows so the result is not one lucky path. The full ledger, the config, the code, and SHA-256 checksums are public: reproduce it in three commands.',
             },
@@ -229,22 +233,26 @@ const ES_SECTIONS: SectionsCopy = {
         cards: [
             {
                 numeral: '36.3%',
+                numSegs: [{ v: 36.3, dec: 1 }, { t: '%' }],
                 label: 'CAGR de backtest, con precio de modelo, enero 2021 a agosto 2026',
                 body: 'Al 36%, la capitalización convierte $10,000 en aproximadamente $1M en 15 años. Eso es aritmética, y es por eso que la tasa importa, y por lo que publicamos los 806 llenados que la respaldan. Este es backtested y con precio de Black-Scholes, no cotizaciones reales: una cinta de 15 meses con precios reales bajó -30.4% frente al -17.8% del modelo. Ninguna tasa está garantizada a persistir. Mira cuánto cambia el resultado cuando cambia la tasa \u2192',
                 link: 'calculator',
             },
             {
                 numeral: '2 tramos',
+                numSegs: [{ v: 2 }, { t: ' tramos' }],
                 label: 'Posesión la parte larga, alquiler la parte corta',
                 body: 'Compra una call QQQ LEAPS profundamente in-the-money, de 12 a 24 meses, delta 0.80 a 0.85, como posición central. Luego vende llamadas de 32 días contra ella, delta 0.15 a 0.28, recolectando prima como un swing trader cosecha el rango. El LEAPS es el motor. Todo lo demás es plomería.',
             },
             {
                 numeral: '1 de 7',
+                numSegs: [{ v: 1 }, { t: ' de ' }, { v: 7 }],
                 label: 'Puertas que un trade debe cruzar, una es un puntaje de confianza del modelo',
                 body: 'El modelo de confianza se entrena walk-forward, nunca en la ventana en la que se evalúa. No predice a dónde va QQQ. Puntúa si las condiciones actuales se parecen a aquellas donde este setup funcionó históricamente, y tiene poder de veto, no de dirección. Si no está de acuerdo, nada pasa.',
             },
             {
                 numeral: '18 de 21',
+                numSegs: [{ v: 18 }, { t: ' de ' }, { v: 21 }],
                 label: 'Rutas de validación cruzada donde la estrategia se mantuvo',
                 body: 'Tamaño de posición limitado a un tercio de la cuenta, tres posiciones máximo, 5% de reserva en efectivo, perdedores cerrados al doble del crédito recibido. Probado en 21 sub-ventanas recombinadas para que el resultado no sea un solo camino afortunado. El libro completo, la config, el código y los checksums SHA-256 son públicos: reprodúcelo en tres comandos.',
             },
@@ -371,22 +379,26 @@ const ZH_SECTIONS: SectionsCopy = {
         cards: [
             {
                 numeral: '36.3%',
+                numSegs: [{ v: 36.3, dec: 1 }, { t: '%' }],
                 label: '回测 CAGR,模型定价,2021年1月至2026年8月',
                 body: '按 36% 的复利,$10,000 在 15 年后约为 $1M。这是算术,也是为什么利率很重要,以及为什么我们公开全部的 806 笔成交记录。这个数字是回测,由 Black-Scholes 定价,不是实时报价:真实的 15 个月报价磁带回撤了 -30.4%,而模型是 -17.8%。没有任何利率能保证持续。看看利率变化时结果会改变多少 \u2192',
                 link: 'calculator',
             },
             {
                 numeral: '2 条腿',
+                numSegs: [{ v: 2 }, { t: ' 条腿' }],
                 label: '持有长仓,出租短仓',
                 body: '买入深度实值的 QQQ LEAPS 看涨期权,12 至 24 个月到期,delta 0.80 至 0.85,作为核心仓位。然后对其卖出 32 天看涨期权,delta 0.15 至 0.28,像波段交易者收获区间一样收取权利金。LEAPS 是引擎,其他一切都是管道。',
             },
             {
                 numeral: '1 / 7',
+                numSegs: [{ v: 1 }, { t: ' / ' }, { v: 7 }],
                 label: '交易必须通过的门,其中之一是模型信心分数',
                 body: '信心模型采用滚动向前训练,从不在其被评估的窗口内训练。它不预测 QQQ 的走势。它对当前条件是否与历史上此策略有效的条件相似进行评分,拥有否决权而非航向权。如果不同意,什么都不会发生。',
             },
             {
                 numeral: '18 / 21',
+                numSegs: [{ v: 18 }, { t: ' / ' }, { v: 21 }],
                 label: '策略在交叉验证路径中保持稳定',
                 body: '头寸规模上限为账户的三分之一,最多三个仓位,5% 现金储备,亏损仓在收到权利金两倍时止损。在 21 个重组子窗口中测试,确保结果不是一条幸运路径。完整账簿、配置、代码和 SHA-256 校验和全部公开:三个命令即可复现。',
             },

@@ -996,3 +996,74 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
     .tm-herocard { padding: 13px 14px 12px; }
     .tm-herocard-numeral { font-size: 22px; }
 }
+
+/* ── v3 animation pass: vivid hero ──
+   Plan: clip-path + opacity reveals only (no translateY on entrance),
+   staggered 50ms card cascade, count-up numerals, quiet hover glow,
+   glass on the primary card only, arrow nudge on the ledger CTA.
+   Everything honors prefers-reduced-motion. */
+
+/* 1. Text block: opacity-only entrance (headline/sub are LCP candidates,
+      kept server-friendly; animation applies post-hydration). */
+@keyframes tm-fade-up {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.tm-slogan { animation: tm-fade-up 400ms cubic-bezier(0.16,1,0.3,1) both; }
+.tm-hero2 .tm-eyebrow { animation: tm-fade-up 400ms cubic-bezier(0.16,1,0.3,1) 90ms both; }
+.tm-hero2 .tm-h1 { animation: tm-fade-up 400ms cubic-bezier(0.16,1,0.3,1) 160ms both; }
+.tm-hero2 .tm-sub { animation: tm-fade-up 400ms cubic-bezier(0.16,1,0.3,1) 240ms both; }
+
+/* 2. CTA row: clip-path masked reveal, staggered 40ms. */
+@keyframes tm-cta-reveal {
+    from { opacity: 0; clip-path: inset(0 100% 0 0); }
+    to { opacity: 1; clip-path: inset(0 0 0 0); }
+}
+.tm-hero-ctapair { animation: none; }
+.tm-hero-ctapair > *:nth-child(1) { animation: tm-cta-reveal 360ms cubic-bezier(0.16,1,0.3,1) 380ms both; }
+.tm-hero-ctapair > *:nth-child(2) { animation: tm-cta-reveal 360ms cubic-bezier(0.16,1,0.3,1) 420ms both; }
+.tm-hero-ctapair > *:nth-child(3) { animation: tm-cta-reveal 360ms cubic-bezier(0.16,1,0.3,1) 460ms both; }
+
+/* 3. Cards: clip-path rise-into-view, staggered 50ms left to right. */
+@keyframes tm-card-reveal {
+    from { clip-path: inset(100% 0 0 0); }
+    to { clip-path: inset(0 0 0 0); }
+}
+.tm-herocard { clip-path: inset(0 0 0 0); }
+.tm-herocard:nth-child(1) { animation: tm-card-reveal 500ms cubic-bezier(0.16,1,0.3,1) 520ms both; }
+.tm-herocard:nth-child(2) { animation: tm-card-reveal 500ms cubic-bezier(0.16,1,0.3,1) 570ms both; }
+.tm-herocard:nth-child(3) { animation: tm-card-reveal 500ms cubic-bezier(0.16,1,0.3,1) 620ms both; }
+.tm-herocard:nth-child(4) { animation: tm-card-reveal 500ms cubic-bezier(0.16,1,0.3,1) 670ms both; }
+
+/* 4. Numerals: pre-sized so the count-up never shifts layout. */
+.tm-herocard-numeral { min-height: 1.1em; font-variant-numeric: tabular-nums; }
+.tm-num { display: inline-block; min-width: 1.8ch; text-align: left; }
+
+/* 5. Hover: quiet border-glow + 1px background lift, NOT cursor:pointer. */
+.tm-herocard { transition: border-color .18s ease, background-color .18s ease; }
+.tm-herocard:hover { background-color: #181826; box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.35); }
+
+/* 6. Glass on the primary (36.3%) card only, restrained. */
+.tm-herocard-primary {
+    background: rgba(20, 20, 31, 0.6);
+    backdrop-filter: blur(10px);
+    box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.22);
+}
+@supports not (backdrop-filter: blur(10px)) {
+    .tm-herocard-primary { background: #191927; }
+}
+
+/* 7. Ledger CTA arrow nudge on hover. */
+.tm-cta-arrow { transition: border-color .15s ease, color .15s ease, padding-right .18s cubic-bezier(0.16,1,0.3,1); }
+.tm-cta-arrow:hover { padding-right: 19px; }
+
+/* reduced-motion: all entrance + counter + hover motion suppressed */
+@media (prefers-reduced-motion: reduce) {
+    .tm-slogan, .tm-hero2 .tm-eyebrow, .tm-hero2 .tm-h1, .tm-hero2 .tm-sub,
+    .tm-hero-ctapair > *, .tm-herocard, .tm-cta-arrow {
+        animation: none !important;
+        transition: none !important;
+        clip-path: inset(0 0 0 0) !important;
+        opacity: 1 !important;
+    }
+}

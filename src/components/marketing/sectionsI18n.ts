@@ -16,7 +16,7 @@ export interface SectionsCopy {
         eyebrow: string;
         h1a: string; h1b: string;
         sub: string;
-        ctaPrimary: string; ctaSecondary: string;
+        ctaPrimary: string; ctaSecondary: string; ledgerLink: string;
         cards: { numeral: string; label: string; body: string; link?: string }[];
         stats: { big: string; label: string; clarifier: string }[];
         play: string; calcCta: string; micro: string;
@@ -82,6 +82,7 @@ const EN_SECTIONS: SectionsCopy = {
         sub: 'Most of your money is already invested, sitting in an IRA or Roth IRA, growing on autopilot. TradeMind never touches that account. It hands you the instruments: one signal window each trading day, every decision with its reasoning attached, priced and logged before you act. You still fly the plane. We just make sure you can see the whole runway.',
         ctaPrimary: 'Begin the story',
         ctaSecondary: 'Read the record',
+        ledgerLink: 'Open the ledger \u2192',
         cards: [
             {
                 numeral: '36.3%',
@@ -222,6 +223,7 @@ const ES_SECTIONS: SectionsCopy = {
         sub: 'La mayoría de tu dinero ya está invertido, en una cuenta IRA o Roth IRA, creciendo en piloto automático. TradeMind nunca toca esa cuenta. Te entrega los instrumentos: una ventana de señal cada día de mercado, cada decisión con su razonamiento adjunto, con precio y registro antes de que actúes. Tú sigues pilotando el avión. Nosotros solo nos aseguramos de que veas toda la pista.',
         ctaPrimary: 'Comienza la historia',
         ctaSecondary: 'Lee el expediente',
+        ledgerLink: 'Abre el libro mayor \u2192',
         cards: [
             {
                 numeral: '36.3%',
@@ -362,6 +364,7 @@ const ZH_SECTIONS: SectionsCopy = {
         sub: '你的大部分资金已经投入,在 IRA 或 Roth IRA 里,以自动驾驶方式增长。TradeMind 从不触碰这个账户。它把仪表交到你手中:每个交易日一个信号窗口,每个决策都附带理由,在你行动前已定价并记录。飞机仍由你驾驶,我们只是让你看清整条跑道。',
         ctaPrimary: '开始了解',
         ctaSecondary: '查看记录',
+        ledgerLink: '打开账本 \u2192',
         cards: [
             {
                 numeral: '36.3%',

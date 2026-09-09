@@ -47,7 +47,8 @@ export function CoPilotHero() {
                             <div className="tm-herocard-body">
                                 {card.link === 'calculator'
                                     ? <button className="tm-herocard-link" onClick={toCalculator}>{card.body}</button>
-                                    : card.body}
+                                    : <>{card.body}{i === 3 ? <> <Link href="/verify/ledger" className="tm-herocard-anchor">{c.ledgerLink}</Link></> : null}</>
+                                }
                             </div>
                         </div>
                     ))}

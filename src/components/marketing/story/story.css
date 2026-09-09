@@ -957,3 +957,8 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
    (Card 1 arrow). Without this the ticker caption is hidden by the header. */
 .tm-deck#story { scroll-margin-top: 76px; }
 .tm-ratecalc { scroll-margin-top: 76px; }
+
+/* inline ledger link inside hero Card 4 */
+.tm-herocard-anchor { color: var(--s-violet); font-weight: 600; text-decoration: none; white-space: nowrap; }
+.tm-herocard-anchor:hover { color: #A78BFA; text-decoration: underline; }
+.tm-herocard-anchor:focus-visible { outline: 2px solid #A78BFA; outline-offset: 2px; }

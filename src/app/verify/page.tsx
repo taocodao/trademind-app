@@ -41,6 +41,9 @@ export default function VerifyPage() {
                     <div className="vf-eyebrow">{c.heroEyebrow}</div>
                     <h1 className="vf-h1">{c.heroTitle}</h1>
                     <p className="vf-sub">{c.heroSub}</p>
+                    <div className="vf-hero-ctas">
+                        <Link href="/verify/ledger" className="vf-cta-ledger">{c.ctaLedger}</Link>
+                    </div>
                 </header>
 
                 {/* 2. The record */}

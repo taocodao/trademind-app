@@ -49,6 +49,7 @@ export interface VerifyCopy {
     illusFine: string;
     homeLink: string;
     backHomeBtn: string;
+    ctaLedger: string;
     kitTitle: string;
     kitIntro: string;
     kitCards: { title: string; desc: string; href: string }[];
@@ -223,6 +224,7 @@ const EN: VerifyCopy = {
     illusFine: '*Hypothetical illustration based on backtested results, not a projection or promise. The rate used is 36% per year, the backtested CAGR rounded down. Backtested performance has many inherent limitations and is not necessarily indicative of future results. A 36% rate sustained for 15 years would exceed nearly all verified long-horizon public track records. Shown for arithmetic illustration only.',
     homeLink: 'New here? Start with the two-minute story on the homepage \u2192',
     backHomeBtn: '\u2190 Back to the homepage',
+    ctaLedger: 'Browse all 806 fills in the ledger \u2192',
     kitTitle: 'The proof kit',
     kitIntro: 'Download everything. Check our arithmetic in a spreadsheet, or rerun the whole engine yourself:',
     kitCards: [
@@ -413,6 +415,7 @@ const ES: VerifyCopy = {
     illusFine: '*Ilustraci\u00f3n hipot\u00e9tica basada en resultados de backtest, no una proyecci\u00f3n ni una promesa. La tasa usada es 36% anual, el CAGR del backtest redondeado hacia abajo. El rendimiento de backtest tiene muchas limitaciones inherentes y no es necesariamente indicativo de resultados futuros. Una tasa del 36% sostenida 15 a\u00f1os superar\u00eda casi todos los registros p\u00fablicos verificados de largo plazo. Se muestra solo como ilustraci\u00f3n aritm\u00e9tica.',
     homeLink: '\u00bfNuevo aqu\u00ed? Empieza con la historia de dos minutos en la p\u00e1gina principal \u2192',
     backHomeBtn: '\u2190 Volver a la p\u00e1gina principal',
+    ctaLedger: 'Explora las 806 operaciones en el libro mayor \u2192',
     kitTitle: 'El kit de pruebas',
     kitIntro: 'Descarga todo. Revisa nuestra aritm\u00e9tica en una hoja de c\u00e1lculo, o vuelve a ejecutar el motor completo t\u00fa mismo:',
     kitCards: [
@@ -603,6 +606,7 @@ const ZH: VerifyCopy = {
     illusFine: '*\u57fa\u4e8e\u56de\u6d4b\u7ed3\u679c\u7684\u5047\u8bbe\u6027\u793a\u4f8b,\u5e76\u975e\u9884\u6d4b\u6216\u627f\u8bfa\u3002\u6240\u7528\u6536\u76ca\u7387\u4e3a\u6bcf\u5e74 36%,\u5373\u56de\u6d4b CAGR \u5411\u4e0b\u53d6\u6574\u3002\u56de\u6d4b\u8868\u73b0\u5b58\u5728\u8bf8\u591a\u56fa\u6709\u5c40\u9650,\u5e76\u4e0d\u9884\u793a\u672a\u6765\u7ed3\u679c\u300236% \u7684\u6536\u76ca\u7387\u6301\u7eed 15 \u5e74,\u5c06\u8d85\u8fc7\u51e0\u4e4e\u6240\u6709\u7ecf\u6838\u5b9e\u7684\u957f\u671f\u516c\u5f00\u4e1a\u7ee9\u8bb0\u5f55\u3002\u6b64\u5904\u4ec5\u4f5c\u7b97\u672f\u793a\u4f8b\u3002',
     homeLink: '\u7b2c\u4e00\u6b21\u6765?\u5148\u53bb\u9996\u9875\u770b\u4e24\u5206\u949f\u7684\u6545\u4e8b \u2192',
     backHomeBtn: '\u2190 \u8fd4\u56de\u9996\u9875',
+    ctaLedger: '\u6d4f\u89c8\u8d26\u672c\u4e2d\u5168\u90e8 806 \u7b14\u4ea4\u6613 \u2192',
     kitTitle: '\u9a8c\u8bc1\u5de5\u5177\u5305',
     kitIntro: '\u5168\u90e8\u4e0b\u8f7d\u3002\u5728\u7535\u5b50\u8868\u683c\u91cc\u6838\u5bf9\u6211\u4eec\u7684\u7b97\u672f\uff0c\u6216\u8005\u4eb2\u81ea\u91cd\u65b0\u8fd0\u884c\u6574\u4e2a\u5f15\u64ce\uff1a',
     kitCards: [

@@ -304,6 +304,14 @@ async function generateAccountOptionOrders(
     // Only ENTER/EXIT/PMCC actions produce orders.
     const action = (signal.type || (signal as any).action || '').toUpperCase();
 
+    // ── SMH weekly put-spread sleeve (part of the QQQ_LEAPS strategy) ─────
+    // The sleeve is a component of the combined QQQ LEAPS portfolio, not a
+    // standalone strategy: it sizes off the same account NLV and draws from
+    // the same cash ledger, exactly like the validated shared-ledger backtest.
+    if (action.startsWith('SMH_')) {
+        return generateAccountSmhSpreadOrders(signal, account, nlv, posMap, action);
+    }
+
     // ── PMCC overlay: short-call management against an open LEAPS ──────────
     if (action.startsWith('PMCC_')) {
         return generateAccountPmccOrders(signal, account, posMap, action);
@@ -417,9 +425,15 @@ async function generateAccountOptionOrders(
     }
     let contracts = Math.floor(budget / (price * 100));
 
-    // Hard per-tier contract cap (conservative 1 / moderate 2 / aggressive 3).
+    // Principal-scaled contract cap (validated 2026-09-11 shared-ledger
+    // backtest): the tier cap is a FLOOR for small accounts; caps scale up
+    // with NLV from a $20k reference so large accounts deploy proportionally
+    // instead of diluting (conservative 1x / moderate 2x / aggressive 3x
+    // per $20k of NLV). The budget and reserve constraints above still bind,
+    // so this only releases capacity the account can actually afford.
     const tierCap = leapsMaxContracts(riskLevel);
-    if (contracts > tierCap) contracts = tierCap;
+    const scaledCap = Math.max(tierCap, Math.round(tierCap * (nlv / 20000)));
+    if (contracts > scaledCap) contracts = scaledCap;
 
     // Gross delta ceiling (per-contract exposure = delta × 100 × spot).
     const spotPrices = await fetchMarketPrices([underlying]);
@@ -456,6 +470,157 @@ async function generateAccountOptionOrders(
         }],
         skip: false,
     };
+}
+
+// ─── SMH weekly put-spread sleeve (QQQ_LEAPS strategy component) ────────────
+//
+// Sizing rules validated in the shared-ledger combined backtest
+// (2021-2026, scale-up-only caps, cash-constrained, ~52-55% CAGR stable
+// $25k-$300k):
+//   * 0.25-delta short put, $30-wide long-put wing, 14 DTE
+//   * collateral $3,000 per spread (width x 100), capped at 30% of NLV
+//   * contract cap scales UP with principal only: 3 base, +3 per $20k NLV
+//     (a $30k account gets 3, a $100k account gets 15); the account's cash
+//     constraint skips entries it cannot afford collateral for
+//   * sells at live mid (limit-at-mid execution policy, per owner)
+
+/** Count collateral already locked by open SMH spreads in the account ledger. */
+function smhOpenSpreadCollateral(
+    posMap: Record<string, { qty: number; avgPrice: number; instrumentType: string }>
+): { count: number; collateral: number } {
+    let count = 0;
+    let collateral = 0;
+    const shortPuts = Object.entries(posMap).filter(
+        ([sym, p]) => p.instrumentType === 'option' && p.qty < 0 && /^SMH_\d{8}P\d{5}$/.test(sym)
+    );
+    for (const [sym, p] of shortPuts) {
+        const m = sym.match(/^SMH_\d{8}P(\d{5})$/);
+        if (!m) continue;
+        const shortStrike = parseInt(m[1], 10);
+        // Find the matching long-put wing (same expiry assumed in symbol pair).
+        const expiry = sym.slice(4, 12);
+        const wing = Object.entries(posMap).find(
+            ([wsym, wp]) =>
+                wp.instrumentType === 'option' && wp.qty > 0 &&
+                /^SMH_\d{8}P\d{5}$/.test(wsym) && wsym.slice(4, 12) === expiry
+        );
+        const width = wing ? shortStrike - parseInt(wing[0].slice(-5), 10) : 30;
+        const n = Math.abs(Math.round(p.qty));
+        count += n;
+        collateral += n * Math.max(width, 1) * 100;
+    }
+    return { count, collateral };
+}
+
+async function generateAccountSmhSpreadOrders(
+    signal: GenericSignal,
+    account: Account,
+    nlv: number,
+    posMap: Record<string, { qty: number; avgPrice: number; instrumentType: string }>,
+    action: string
+): Promise<{ orders: OptionsOrder[]; skip: boolean; reason?: string }> {
+    const underlying = String((signal as any).symbol || 'SMH').toUpperCase();
+    const open = smhOpenSpreadCollateral(posMap);
+
+    if (action === 'SMH_EXIT' || action === 'SMH_CLOSE') {
+        // Close whatever spread legs the account actually holds.
+        if (open.count === 0) {
+            return { orders: [], skip: true, reason: 'No open SMH spread to close' };
+        }
+        const exitOrders: OptionsOrder[] = [];
+        for (const [sym, p] of Object.entries(posMap)) {
+            if (p.instrumentType !== 'option' || !/^SMH_\d{8}P\d{5}$/.test(sym) || p.qty === 0) continue;
+            const m = sym.match(/^SMH_(\d{4})(\d{2})(\d{2})P(\d{5})$/);
+            if (!m) continue;
+            const expiry = `${m[1]}-${m[2]}-${m[3]}`;
+            const strike = parseInt(m[4], 10);
+            const quote = await fetchOptionQuote(underlying, expiry, strike, 'P');
+            const price = quote?.mid ?? Number((signal as any).exit_px) ?? 0;
+            if (!price || price <= 0) continue;
+            const qty = Math.abs(Math.round(p.qty));
+            const isShort = p.qty < 0;
+            exitOrders.push({
+                action: isShort ? 'Buy to Close' : 'Sell to Close',
+                symbol: sym,
+                quantity: qty,
+                limitPrice: price,
+                instrumentType: 'Equity Option',
+                priceEffect: isShort ? 'Debit' : 'Credit',
+                instruction: `${isShort ? 'Buy to Close' : 'Sell to Close'} ${qty} SMH $${strike} Put exp ${expiry} at ~$${price.toFixed(2)} (mid, ${quote?.basis || 'signal'})`,
+            });
+        }
+        if (exitOrders.length === 0) {
+            return { orders: [], skip: true, reason: 'Could not price open SMH legs' };
+        }
+        return { orders: exitOrders, skip: false };
+    }
+
+    if (action !== 'SMH_ENTER') {
+        return { orders: [], skip: true, reason: `No SMH sleeve action (${action || 'none'})` };
+    }
+
+    // Entry guard: one sleeve spread cycle at a time per account.
+    if (open.count > 0) {
+        return { orders: [], skip: true, reason: `SMH sleeve already open (${open.count} spread(s)) - one cycle at a time` };
+    }
+
+    const shortStrike = Number((signal as any).short_strike ?? (signal as any).strike);
+    const longStrike = Number((signal as any).long_strike) || (shortStrike - 30);
+    const expiry = String((signal as any).expiry || '');
+    const width = shortStrike - longStrike;
+    if (!shortStrike || !expiry || width <= 0) {
+        return { orders: [], skip: true, reason: 'SMH signal missing short_strike/expiry' };
+    }
+    const collateralPer = width * 100;
+
+    // Shared-ledger sizing: cap scales up with principal (3 base per $20k),
+    // collateral ceiling 30% of NLV, hard cash constraint with partial sizing.
+    const scaledCap = Math.max(3, Math.round(3 * (nlv / 20000)));
+    const byCollatPct = Math.floor((nlv * 0.30 - open.collateral) / collateralPer);
+    const byCash = Math.floor(account.cash_balance / collateralPer);
+    const contracts = Math.min(scaledCap, byCollatPct, byCash);
+    if (contracts < 1) {
+        return {
+            orders: [], skip: true,
+            reason: `SMH sleeve: insufficient capacity (cap ${scaledCap}, collateral room ${Math.max(0, byCollatPct)}, cash room ${byCash}; collateral/spread $${collateralPer.toFixed(0)})`,
+        };
+    }
+
+    // Price both legs at live mid; net credit = short put minus wing cost.
+    const shortQuote = await fetchOptionQuote(underlying, expiry, shortStrike, 'P');
+    const longQuote = await fetchOptionQuote(underlying, expiry, longStrike, 'P');
+    const shortPx = shortQuote?.mid ?? Number((signal as any).short_px ?? (signal as any).entry_px) ?? 0;
+    const longPx = longQuote?.mid ?? Number((signal as any).long_px) ?? 0;
+    if (!shortPx || shortPx <= 0) {
+        return { orders: [], skip: true, reason: 'No live quote for SMH short put' };
+    }
+    const netCredit = (shortPx - (longPx > 0 ? longPx : 0)) * 100 * contracts;
+
+    const shortSym = optionSymbol(underlying, expiry, 'P', shortStrike);
+    const longSym = optionSymbol(underlying, expiry, 'P', longStrike);
+    const orders: OptionsOrder[] = [
+        {
+            action: 'Sell to Open',
+            symbol: shortSym,
+            quantity: contracts,
+            limitPrice: shortPx,
+            instrumentType: 'Equity Option',
+            priceEffect: 'Credit',
+            instruction: `Sell to Open ${contracts} SMH $${shortStrike} Put exp ${expiry} at ~$${shortPx.toFixed(2)} (mid, ${shortQuote?.basis || 'signal'}) - credit ~$${(shortPx * 100 * contracts).toFixed(0)}`,
+        },
+    ];
+    if (longPx > 0) {
+        orders.push({
+            action: 'Buy to Open',
+            symbol: longSym,
+            quantity: contracts,
+            limitPrice: longPx,
+            instrumentType: 'Equity Option',
+            priceEffect: 'Debit',
+            instruction: `Buy to Open ${contracts} SMH $${longStrike} Put exp ${expiry} at ~$${longPx.toFixed(2)} (mid, ${longQuote?.basis || 'signal'}) - debit ~$${(longPx * 100 * contracts).toFixed(0)} (wing protection)`,
+        });
+    }
+    return { orders, skip: false, reason: `SMH sleeve ${contracts}x $${width}-wide spread, est net credit ~$${netCredit.toFixed(0)}` };
 }
 
 // ─── PMCC overlay (short-call management on an open LEAPS) ─────────────────

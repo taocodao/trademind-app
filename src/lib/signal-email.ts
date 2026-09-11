@@ -157,18 +157,22 @@ export async function sendPhaseTransitionEmail(toEmail: string, data: PhaseTrans
 // ─── Signal Email ───────────────────────────────────────────────────────────
 
 function buildSubject(data: SignalEmailData): string {
-    const dateStr = new Date().toLocaleDateString('en-US', {
-        weekday: 'short', month: 'short', day: 'numeric',
+    // Use the signal's own timestamp when present so the date reflects the
+    // signal, not the moment the email happened to render.
+    const when = data.signalTimestamp ? new Date(data.signalTimestamp) : new Date();
+    const dateStr = when.toLocaleDateString('en-US', {
+        weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
     });
     const strategyLabel = strategyLabelFor(data.strategy);
+    const account = data.accountName ? ` ${data.accountName}` : '';
     const hasActivity = data.equityOrders.length > 0 || data.optionsCloses.length > 0 || data.optionsEntries.length > 0;
 
     if (!hasActivity) {
-        return `[TradeMind] ${strategyLabel} - No Changes Today (${dateStr})`;
+        return `[TradeMind]${account} ${strategyLabel} - No Changes (${dateStr})`;
     }
 
     const regime = data.regime ? ` | ${data.regime.replace('_', ' ')}` : '';
-    return `[TradeMind] ${strategyLabel} Signal Executed - ${dateStr}${regime}`;
+    return `[TradeMind]${account} ${strategyLabel} Signal Executed - ${dateStr}${regime}`;
 }
 
 function buildTextBody(data: SignalEmailData): string {

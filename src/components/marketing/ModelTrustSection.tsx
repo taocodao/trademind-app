@@ -3,7 +3,7 @@
 /* ModelTrustSection — "The Model, Not the Hype". Three cards: the five entry
    gates, the ML confidence score, and the losses being in the ledger. All
    numbers match the deck's own chapters (0.89 ML confidence on the Sept 2
-   entry; −17.8% worst drawdown; the overlay's admitted weakness). */
+   entry; −14.5% worst drawdown; the overlay's admitted weakness). */
 
 import { useTranslation } from 'react-i18next';
 import { SECTIONS_I18N, SectionLang } from './sectionsI18n';

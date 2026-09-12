@@ -27,7 +27,7 @@ const RF_SUB = (RF_RATE * 100).toFixed(2) + '%/yr\u00A0·\u00A03-month U.S. Trea
 const RF_SUB_STALE = '3-month U.S. Treasury bill\u00A0·\u00A0rate being refreshed';
 
 const RATES = [
-    { label: 'TradeMind backtest', sub: '36.3%/yr\u00A0·\u00A02021 to 2026\u00A0·\u00A0hypothetical', r: 0.363, color: '#e0a458', dash: '' },
+    { label: 'TradeMind backtest', sub: '55.1%/yr\u00A0·\u00A02021 to 2026\u00A0·\u00A0hypothetical', r: 0.551, color: '#e0a458', dash: '' },
     { label: 'QQQ buy & hold', sub: '13.5%/yr\u00A0·\u00A0long-run average', r: 0.135, color: '#5c8de0', dash: '' },
     { label: 'Risk-free rate', sub: Date.now() - RF_ASOF_MS > RF_STALE_MS ? RF_SUB_STALE : RF_SUB, r: RF_RATE, color: '#5c6577', dash: '6 5' },
 ];
@@ -200,10 +200,10 @@ export function MillionaireCalc() {
                     At these labeled rates, the backtest pace reaches $1M about <b>{gapYears} years sooner</b> than buy-and-hold, whatever age you start.
                 </div>
                 <div className="tm-stressnote">
-                    The risk-free row is the point. Money that takes no market risk does not get there at all on this balance. Every year of the {gapYears}-year gap above is paid for with drawdown risk: the -17.8% the backtest window took, and the -30.4% the 15-month real-quote window took. That trade is the whole decision.
+                    The risk-free row is the point. Money that takes no market risk does not get there at all on this balance. Every year of the {gapYears}-year gap above is paid for with drawdown risk: the -14.5% the backtest window took, and the -30.4% the 15-month real-quote window took. That trade is the whole decision.
                 </div>
                 <div className="tm-ctxline" style={{ marginTop: 14, maxWidth: 720, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.6 }}>
-                    Two measurements, both labeled: <b>36.3%</b> is the annualized rate of the 2021 to 2026 model-priced backtest used in this tool, the same record in the table above. A separate 15-month window, verified on real exchange quotes, took a deeper 30.4% drawdown. Neither is a forecast. <a href="#story" style={{ color: '#e0a458' }}>Read the chapters →</a>
+                    Two measurements, both labeled: <b>55.1%</b> is the annualized rate of the 2021 to 2026 model-priced backtest used in this tool, the same record in the table above. A separate 15-month window, verified on real exchange quotes, took a deeper 30.4% drawdown. Neither is a forecast. <a href="#story" style={{ color: '#e0a458' }}>Read the chapters →</a>
                 </div>
 
                 <div className="tm-sharebar">
@@ -247,7 +247,7 @@ export function MillionaireCalc() {
 
                 <div className="tm-calcdisc">
                     <b>Your situation will differ.</b> This tool illustrates one hypothetical profile. Yours, income, tax status, risk tolerance, time horizon, is different, and the results shown may not be relevant to it.<br /><br />
-                    <b>Assumptions.</b> A $10,000 <b>starting balance</b> (an existing balance, not a one-year IRA contribution, which is capped at $7,000 in 2026). Constant annual returns: <b>36.3%</b> = the TradeMind strategy <b>backtest</b>, 2021 to 2026 continuous model-priced series, hypothetical; <b>13.5%</b> = QQQ buy-and-hold, long-run average annual rate; <b>{(RF_RATE * 100).toFixed(2)}%</b> = the risk-free rate, the 3-month U.S. Treasury bill coupon-equivalent yield as of {RF_ASOF}, shown as the no-market-risk floor. The risk-free rate is a real, externally verifiable market rate and changes over time; the other two are historical figures for fixed past windows and are not forecasts. No additions, taxes, or fees. Real returns vary year to year, the <b>order</b> of gains and losses changes outcomes, sometimes dramatically.<br /><br />
+                    <b>Assumptions.</b> A $10,000 <b>starting balance</b> (an existing balance, not a one-year IRA contribution, which is capped at $7,000 in 2026). Constant annual returns: <b>55.1%</b> = the TradeMind strategy <b>backtest</b>, 2021 to 2026 continuous model-priced series, hypothetical; <b>13.5%</b> = QQQ buy-and-hold, long-run average annual rate; <b>{(RF_RATE * 100).toFixed(2)}%</b> = the risk-free rate, the 3-month U.S. Treasury bill coupon-equivalent yield as of {RF_ASOF}, shown as the no-market-risk floor. The risk-free rate is a real, externally verifiable market rate and changes over time; the other two are historical figures for fixed past windows and are not forecasts. No additions, taxes, or fees. Real returns vary year to year, the <b>order</b> of gains and losses changes outcomes, sometimes dramatically.<br /><br />
                     <b>Risks &amp; limitations.</b> These are hypothetical, backtested figures. They were not achieved by any actual account, do not represent live trading, and do not guarantee future results. Options involve substantial risk, including loss of the entire investment.
                 </div>
 
@@ -313,7 +313,7 @@ export function MillionaireCalc() {
                         </div>
                     </div>
                     <div className="tm-calcdisc">
-                        <b>Assumptions.</b> Constant annual returns: 36.3% = the strategy's 2021 to 2026 continuous model-priced <b>backtest</b>, hypothetical, the same record narrated in the chapters; 13.5% = QQQ buy-and-hold, long-run average; {(RF_RATE * 100).toFixed(2)}% = the risk-free rate, the 3-month U.S. Treasury bill coupon-equivalent yield as of {RF_ASOF}. Annual compounding, contributions at year-end, no taxes or fees; “today’s dollars” deflates at 2.5%/yr. Projections stop after 20 years, extrapolating any backtest further is storytelling, not math. Hypothetical, backtested figures, not achieved by any actual account, and no guarantee of future results.
+                        <b>Assumptions.</b> Constant annual returns: 55.1% = the strategy's 2021 to 2026 continuous model-priced <b>backtest</b>, hypothetical, the same record narrated in the chapters; 13.5% = QQQ buy-and-hold, long-run average; {(RF_RATE * 100).toFixed(2)}% = the risk-free rate, the 3-month U.S. Treasury bill coupon-equivalent yield as of {RF_ASOF}. Annual compounding, contributions at year-end, no taxes or fees; “today’s dollars” deflates at 2.5%/yr. Projections stop after 20 years, extrapolating any backtest further is storytelling, not math. Hypothetical, backtested figures, not achieved by any actual account, and no guarantee of future results.
                     </div>
                 </details>
             </div>

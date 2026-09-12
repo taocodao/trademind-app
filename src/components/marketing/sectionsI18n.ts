@@ -86,10 +86,10 @@ const EN_SECTIONS: SectionsCopy = {
         ledgerLink: 'Open the ledger \u2192',
         cards: [
             {
-                numeral: '36.3%',
-                numSegs: [{ v: 36.3, dec: 1 }, { t: '%' }],
+                numeral: '55.1%',
+                numSegs: [{ v: 55.1, dec: 1 }, { t: '%' }],
                 label: 'Backtested CAGR, model-priced, Jan 2021 to Aug 2026',
-                body: 'At 36%, compounding turns $10,000 into roughly $1M in 15 years. That is arithmetic, and it is why the rate matters, and why we publish all 806 fills behind ours. This one is backtested and priced by Black-Scholes, not live quotes: a 15-month real-quote tape drew down -30.4% against the model\'s -17.8%. No rate is guaranteed to persist. See how much the outcome moves when the rate does \u2192',
+                body: 'At 55%, $25,000 compounds to roughly $292,669 in 5.6 years. That is arithmetic, and it is why the rate matters, and why we publish all 1,570 fills behind ours. This one is backtested and priced by Black-Scholes, not live quotes: a 15-month real-quote tape drew down -30.4% against the model\'s -14.5%. No rate is guaranteed to persist. See how much the outcome moves when the rate does \u2192',
                 link: 'calculator',
             },
             {
@@ -148,7 +148,7 @@ const EN_SECTIONS: SectionsCopy = {
             },
             {
                 t: 'The losses are in the ledger too',
-                p: 'The overlay chapter admits where selling premium gave back its gains. The drawdown chapter shows the worst drop in full: a 30.4 percent decline that took six weeks to bottom in the 15 month tape verified window, and a milder 17.8 percent low in the 5 year model backtest. Both are in the ledger. Showing you when the model was wrong is the only way you can trust it when it is right.',
+                p: 'The overlay chapter admits where selling premium gave back its gains. The drawdown chapter shows the worst drop in full: a 30.4 percent decline that took six weeks to bottom in the 15 month tape verified window, and a milder 14.5 percent low in the 5 year model backtest. Both are in the ledger. Showing you when the model was wrong is the only way you can trust it when it is right.',
             },
         ],
     },
@@ -158,7 +158,7 @@ const EN_SECTIONS: SectionsCopy = {
         p1: 'A co-pilot does not grab the controls every time there is turbulence. It waits for the moment the instruments agree, then acts decisively.',
         p2: 'In five and a half years the model found eleven entries worth taking, about two a year. It has sat in cash for weeks at a stretch, with zero setups clearing the gates. That is not a malfunction. That is the discipline.',
         cap: 'Eleven entries in five and a half years. Every one of them is in the ledger below.',
-        window: 'This chart covers the 2021 to 2026 tape verified window, 11 real entries. The 36.3 percent in the calculator below is the model-priced backtest over the same window. Same years, two engines, both labeled wherever they appear.',
+        window: 'This chart covers the 2021 to 2026 model backtest window, 1,570 fills across LEAPS entries, short calls, and weekly SMH put spreads. The 55.1 percent in the calculator below is the model-priced backtest over the same window.',
         legendEntry: 'Entry taken',
         legendWait: 'Waiting in cash, no setup cleared the gates',
         yAxis: 'Holding length (months)',
@@ -184,9 +184,9 @@ const EN_SECTIONS: SectionsCopy = {
         },
         v4Name: 'QQQ LEAPS (backtest)',
         qqqName: 'QQQ buy & hold',
-        v4: { total: '+464.2%', cagr: '36.3%', sharpe: '1.475', maxdd: '-17.8%', calmar: '2.04' },
-        qqq: { total: '+136.4%', cagr: '16.6%', sharpe: '0.795', maxdd: '-35.6%', calmar: '0.47' },
-        footnote: 'Worst drawdown period: TradeMind, Sep to Oct 2023. QQQ buy & hold, Nov 2021 through Dec 2022.',
+        v4: { total: '+1,070.7%', cagr: '55.1%', sharpe: '1.83', maxdd: '-14.5%', calmar: '3.79' },
+        qqq: { total: '+136.4%', cagr: '16.6%', sharpe: '0.79', maxdd: '-35.6%', calmar: '0.47' },
+        footnote: 'Worst drawdown period: TradeMind, Oct 2023. QQQ buy & hold, Nov 2021 through Dec 2022.',
         callout: 'Our deepest hole took two months to dig. Buy-and-hold\'s took fourteen.',
         verifyIntro: 'Every trade, every price, every assumption behind this table is published: the full ledger, the daily equity curve, and the complete methodology with its limitations, in the open.',
         verifyLink: 'Audit the record yourself →',
@@ -209,13 +209,13 @@ const EN_SECTIONS: SectionsCopy = {
     rateCalc: {
         kicker: 'Run the arithmetic yourself',
         title: 'What does a different rate do to the same $10,000?',
-        sub: 'Move the rate. Watch the ending balance. The 36% default is our backtested, model-priced CAGR rounded down.',
+        sub: 'Move the rate. Watch the ending balance. The 55% default is our backtested, model-priced CAGR rounded down.',
         lblAmount: 'Starting amount',
         lblRate: 'Annual rate (%)',
         lblYears: 'Years',
         outLabel: 'Ending balance',
         ctaVerify: 'See the full audited record \u2192',
-        disc: 'Compounding math for a rate you choose. The 36% default matches our backtested, model-priced result over one 5.6-year window that included a -9.5% losing year and a near-flat 2025. Sustained 36% CAGR over 15 years would far exceed almost any verified long-horizon public track record. No rate is guaranteed to persist.',
+        disc: 'Compounding math for a rate you choose. The 55% default matches our backtested, model-priced result over one 5.6-year window that included a near-flat 2022 and a -14.5% drawdown in late 2023. Sustained 55% CAGR over 15 years would far exceed almost any verified long-horizon public track record. No rate is guaranteed to persist.',
     },
 };
 

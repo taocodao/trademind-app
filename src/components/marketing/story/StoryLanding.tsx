@@ -48,7 +48,7 @@ const EN = {
         comptitle: 'What patience looked like', compFrom: '$10,000 in January 2021', compAria: 'Growth of ten thousand dollars, strategy versus QQQ buy and hold, January 2021 to August 2026',
         compCap: 'Both engines blended; the final fifteen months are tape-verified. ',
         compCapB: 'Drawdowns are the tuition of compounding, the smaller the hole, the faster you’re back at your peak.',
-        compZone: 'QQQ underwater · ~25 months', compHole: '−17.8% · back at peak in 10 weeks',
+        compZone: 'QQQ underwater · ~25 months', compHole: '−14.5% · back at peak in 4 weeks',
         ch3title: 'Winning often ≠ winning', maptitle: 'Five and a half years, every decision',
         ch4title: 'Autumn 2023, lived day by day', ch5title: 'Us vs. simply buying QQQ',
         ch6title: 'The record being written',
@@ -104,7 +104,7 @@ const EN = {
         cta: 'Start your account',
         winFull: 'Full record', winFullDates: 'Jan 2021 → Aug 2026',
         playLbl: '▶ Play', pauseLbl: '❚❚ Pause', homeLbl: '⌂ Home',
-        ch4from: 'Jan 2021', ch4to: 'Aug 2026 · $169,249',
+        ch4from: 'Jan 2021', ch4to: 'Aug 2026 · $292,669',
         ch4aria: 'Strategy equity curve, January 2021 to August 2026',
     } as Record<string, string>,
     fallback: {
@@ -392,10 +392,10 @@ export function StoryLanding({ onCta, ctaLabel }: StoryLandingProps) {
                                 style={{ strokeDasharray: 1, strokeDashoffset: curveDrawn ? 0 : 1, transition: 'stroke-dashoffset 3.2s ease-out' }} />
                             <path d={cPath(cStrat)} fill="none" stroke="#e0a458" strokeWidth={narrow ? 3 : 2.4} pathLength={1}
                                 style={{ strokeDasharray: 1, strokeDashoffset: curveDrawn ? 0 : 1, transition: 'stroke-dashoffset 3.2s ease-out' }} />
-                            {/* strategy's worst hole: -17.8%, recovered in 10 weeks */}
+                            {/* strategy's worst hole: -14.5%, recovered in 4 weeks */}
                             <circle cx={cX(idxAt('2023-10-26'))} cy={cY(cStrat[idxAt('2023-10-26')])} r={narrow ? 5 : 4} fill="#ef4444" />
                             <text x={cX(idxAt('2023-10-26'))} y={cY(cStrat[idxAt('2023-10-26')]) + (narrow ? 26 : 22)} fill="#E8A0A0" fontSize={cAxis} textAnchor="middle" fontFamily="Inter">{ui.compHole}</text>
-                            <text x={cW - cPR} y={cY(cStrat[NAV.length - 1]) - (narrow ? 12 : 10)} fill="#e0a458" fontSize={narrow ? 17 : 15} fontWeight={700} textAnchor="end" fontFamily="Inter">$56,416</text>
+                            <text x={cW - cPR} y={cY(cStrat[NAV.length - 1]) - (narrow ? 12 : 10)} fill="#e0a458" fontSize={narrow ? 17 : 15} fontWeight={700} textAnchor="end" fontFamily="Inter">$117,067</text>
                             <text x={cW - cPR} y={cY(cQqq[NAV.length - 1]) + (narrow ? 20 : 18)} fill="#9aa3b5" fontSize={narrow ? 16 : 14} textAnchor="end" fontFamily="Inter">$23,636</text>
                         </svg>
                     </div>
@@ -454,9 +454,9 @@ export function StoryLanding({ onCta, ctaLabel }: StoryLandingProps) {
                     <div className="tm-kicker">{slideKicker('ch4')}</div>
                     <div className="tm-ch-title">{ui.ch4title}</div>
                     <div className="tm-figrow">
-                        <div className="tm-fig">$62,103<small>{ui.ch4a}</small></div>
-                        <div className="tm-fig neg">$51,067<small>{ui.ch4b}</small></div>
-                        <div className="tm-fig neg">−17.8%<small>{ui.ch4c}</small></div>
+                        <div className="tm-fig">$71,706<small>{ui.ch4a}</small></div>
+                        <div className="tm-fig neg">$61,682<small>{ui.ch4b}</small></div>
+                        <div className="tm-fig neg">−14.5%<small>{ui.ch4c}</small></div>
                     </div>
                     <div className="tm-curve">
                         <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={ui.ch4aria}>
@@ -466,7 +466,7 @@ export function StoryLanding({ onCta, ctaLabel }: StoryLandingProps) {
                             <path d={curvePath} fill="none" stroke="#e0a458" strokeWidth={narrow ? 3 : 2.2}
                                 className={curveDrawn ? 'tm-curve-path drawn' : 'tm-curve-path'} />
                             <circle cx={cx(NAV.length - 1)} cy={cy(vals[vals.length - 1])} r={narrow ? 6 : 4} fill="#3fb97c" />
-                            <text x={cx(troughI)} y={cy(vals[troughI]) + (narrow ? 30 : 22)} fill="#e05c5c" fontSize={troughFont} fontWeight={600} textAnchor="middle" fontFamily="Inter">−17.8%</text>
+                            <text x={cx(troughI)} y={cy(vals[troughI]) + (narrow ? 30 : 22)} fill="#e05c5c" fontSize={troughFont} fontWeight={600} textAnchor="middle" fontFamily="Inter">−14.5%</text>
                             <text x={P} y={P - (narrow ? 12 : 14)} fill="#8B95A9" fontSize={axisFont} fontFamily="Inter">{ui.ch4from}</text>
                             <text x={W - P} y={P - (narrow ? 12 : 14)} fill="#8B95A9" fontSize={axisFont} textAnchor="end" fontFamily="Inter">{ui.ch4to}</text>
                         </svg>
@@ -479,11 +479,11 @@ export function StoryLanding({ onCta, ctaLabel }: StoryLandingProps) {
                     <div className="tm-kicker">{slideKicker('ch5')}</div>
                     <div className="tm-ch-title">{ui.ch5title}</div>
                     <div className="tm-figrow">
-                        <div className="tm-fig pos">+464.2%<small>{ui.ch5a}</small></div>
+                        <div className="tm-fig pos">+1,070.7%<small>{ui.ch5a}</small></div>
                         <div className="tm-fig">+136.4%<small>{ui.ch5b}</small></div>
                     </div>
                     <div className="tm-figrow">
-                        <div className="tm-fig pos">−17.8%<small>{ui.ch5c}</small></div>
+                        <div className="tm-fig pos">−14.5%<small>{ui.ch5c}</small></div>
                         <div className="tm-fig neg">−35.6%<small>{ui.ch5d}</small></div>
                     </div>
                     <p className="tm-caption">{ui.ch5cap1}<b>{ui.ch5cap2}</b></p>

@@ -51,8 +51,12 @@ export async function GET(request: Request) {
             'SGOV': 100.00
         };
 
+        // OCC-style option symbols (e.g. QQQ_20280121C00760) get no fallback:
+        // a flat $100 default would fabricate option marks worth $10k/contract.
+        // Consumers fall back to the position's own avg_price (cost basis).
+        const isOptionSymbol = (s: string) => /_?\d{6}[CP]\d{5,8}$/.test(s);
         for (const sym of symbols) {
-            if (!(sym in prices)) {
+            if (!(sym in prices) && !isOptionSymbol(sym)) {
                 prices[sym] = fallbacks[sym] || 100.0;
             }
         }

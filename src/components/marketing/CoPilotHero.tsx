@@ -72,7 +72,10 @@ export function CoPilotHero() {
             <div className="tm-hero2-inner">
                 <p role="doc-subtitle" className="tm-slogan">{c.slogan}</p>
                 <div className="tm-eyebrow">{c.eyebrow}</div>
-                <h1 className="tm-h1">{c.h1a}<br /><em>{c.h1b}</em></h1>
+                <h1 className="tm-h1">
+                    <span className="tm-h1-line"><span className="tm-h1-text">{c.h1a}</span></span><br />
+                    <span className="tm-h1-line"><em className="tm-h1-text tm-h1-sweep">{c.h1b}</em></span>
+                </h1>
                 <p className="tm-sub">{c.sub}</p>
 
                 <div className="tm-hero-ctapair">

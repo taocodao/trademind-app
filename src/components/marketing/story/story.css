@@ -906,12 +906,14 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
 
 @media (prefers-reduced-motion: reduce) {
     .tm-slogan, .tm-hero2 .tm-eyebrow, .tm-hero2 .tm-h1, .tm-hero2 .tm-sub,
-    .tm-hero-ctapair, .tm-cta-hero {
+    .tm-hero-ctapair, .tm-cta-hero, .tm-h1-text, .tm-h1-sweep {
         animation: none !important;
         transition: none !important;
         transform: none !important;
+        clip-path: inset(0 0 -0.15em 0) !important;
         opacity: 1 !important;
     }
+    .tm-h1-sweep { background-image: none; -webkit-text-fill-color: currentColor; color: var(--s-violet); }
 }
 
 /* ── v3 rate-sensitivity calculator ── */
@@ -1011,8 +1013,34 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
 }
 .tm-slogan { animation: tm-fade-up 400ms cubic-bezier(0.16,1,0.3,1) both; }
 .tm-hero2 .tm-eyebrow { animation: tm-fade-up 400ms cubic-bezier(0.16,1,0.3,1) 90ms both; }
-.tm-hero2 .tm-h1 { animation: tm-fade-up 400ms cubic-bezier(0.16,1,0.3,1) 160ms both; }
-.tm-hero2 .tm-sub { animation: tm-fade-up 400ms cubic-bezier(0.16,1,0.3,1) 240ms both; }
+/* Headline: two masked lines, each reveals bottom-up like a curtain lift,
+   staggered 220ms; the italic line then catches a one-time light sweep.
+   The h1 itself stays put so LCP/CLS never move. */
+@keyframes tm-h1-reveal {
+    from { opacity: 0; clip-path: inset(0 0 100% 0); transform: translateY(0.35em); }
+    55% { opacity: 1; }
+    to { opacity: 1; clip-path: inset(0 0 -0.15em 0); transform: translateY(0); }
+}
+.tm-hero2 .tm-h1 { animation: none; }
+.tm-h1-line { display: block; overflow: hidden; padding-bottom: 0.12em; margin-bottom: -0.12em; }
+.tm-h1-text { display: inline-block; animation: tm-h1-reveal 640ms cubic-bezier(0.16,1,0.3,1) 140ms both; }
+.tm-h1-line:nth-of-type(2) .tm-h1-text { animation-delay: 360ms; }
+/* One-time diagonal light sweep across the italic line, ~1s after reveal. */
+@keyframes tm-h1-sweep {
+    from { background-position: 130% 0; }
+    to { background-position: -30% 0; }
+}
+.tm-h1-sweep {
+    background-image: linear-gradient(100deg, var(--s-violet) 42%, #d8ccff 50%, var(--s-violet) 58%);
+    background-size: 240% 100%;
+    background-position: 130% 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: tm-h1-reveal 640ms cubic-bezier(0.16,1,0.3,1) 360ms both, tm-h1-sweep 900ms cubic-bezier(0.4,0,0.2,1) 1150ms both;
+}
+.tm-hero2 .tm-sub { animation: tm-fade-up 400ms cubic-bezier(0.16,1,0.3,1) 560ms both; }
 
 /* 2. CTA row: clip-path masked reveal, staggered 40ms. */
 @keyframes tm-cta-reveal {
@@ -1060,10 +1088,11 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
 /* reduced-motion: all entrance + counter + hover motion suppressed */
 @media (prefers-reduced-motion: reduce) {
     .tm-slogan, .tm-hero2 .tm-eyebrow, .tm-hero2 .tm-h1, .tm-hero2 .tm-sub,
-    .tm-hero-ctapair > *, .tm-herocard, .tm-cta-arrow {
+    .tm-hero-ctapair > *, .tm-herocard, .tm-cta-arrow, .tm-h1-text, .tm-h1-sweep {
         animation: none !important;
         transition: none !important;
         clip-path: inset(0 0 0 0) !important;
         opacity: 1 !important;
     }
+    .tm-h1-sweep { background-image: none; -webkit-text-fill-color: currentColor; color: var(--s-violet); }
 }

@@ -39,8 +39,8 @@ export function CoPilotHero() {
 
     /* Headline: word-by-word masked reveal, left to right, re-triggered
        every 30s so the hero stays alive. JS owns the stagger because
-       animation-delay only offsets the first loop iteration. Line 2
-       then catches the light sweep via .tm-h1-sweep. Reduced-motion
+       animation-delay only offsets the first loop iteration. No other
+       animation: the text is static between cycles. Reduced-motion
        never toggles: CSS forces the final visible state. */
     const [cycle, setCycle] = useState(0);
     useEffect(() => {
@@ -91,17 +91,17 @@ export function CoPilotHero() {
                     <span className="tm-h1-line">
                         {wordsA.map((w, i) => (
                             <span key={i} className="tm-wmask">
-                                <span className="tm-w" style={{ animationDelay: `${140 + i * 110}ms` }}>
+                                <span className="tm-w" style={{ animationDelay: `${140 + i * 130}ms` }}>
                                     {w}{i < wordsA.length - 1 ? '\u00A0' : ''}
                                 </span>
                             </span>
                         ))}
                     </span><br />
                     <span className="tm-h1-line">
-                        <em className="tm-h1-sweep">
+                        <em className="tm-h1-line2">
                             {wordsB.map((w, i) => (
                                 <span key={i} className="tm-wmask">
-                                    <span className="tm-w" style={{ animationDelay: `${140 + (wordsA.length + i) * 110}ms` }}>
+                                    <span className="tm-w" style={{ animationDelay: `${140 + (wordsA.length + i) * 130}ms` }}>
                                         {w}{i < wordsB.length - 1 ? '\u00A0' : ''}
                                     </span>
                                 </span>

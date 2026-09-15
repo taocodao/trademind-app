@@ -913,7 +913,6 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
         clip-path: inset(0 0 -0.15em 0) !important;
         opacity: 1 !important;
     }
-    .tm-h1-sweep::after { display: none !important; }
 }
 
 /* ── v3 rate-sensitivity calculator ── */
@@ -969,10 +968,10 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
    Everything, slogan through the four cards, fits one viewport on desktop.
    Achieved by tightening margins/padding and scaling down the two largest
    blocks (h1 and card bodies) rather than removing content. */
-.tm-hero2 { min-height: auto; padding: 44px 24px 36px; }
+.tm-hero2 { min-height: auto; padding: 26px 24px 36px; }
 .tm-slogan { font-size: clamp(1.25rem, 0.8rem + 1.8vw, 1.9rem); margin-bottom: 6px; }
 .tm-hero2 .tm-eyebrow { margin-bottom: 14px; }
-.tm-hero2 .tm-h1 { margin: 10px 0 14px; font-size: clamp(28px, 3.6vw, 46px); }
+.tm-hero2 .tm-h1 { margin: 8px 0 14px; font-size: clamp(26px, 3.3vw, 42px); }
 .tm-hero2 .tm-sub { max-width: 780px; margin: 0 auto; font-size: 15.5px; line-height: 1.6; }
 .tm-hero-ctapair { margin-top: 24px; }
 .tm-cta-tertiary {
@@ -1025,26 +1024,13 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
 }
 .tm-hero2 .tm-h1 { animation: none; }
 .tm-h1-line { display: block; }
-.tm-h1-line:last-of-type { padding-left: 1.6em; }
+.tm-h1-line:last-of-type { padding-left: 0.9em; white-space: nowrap; }
 .tm-wmask { display: inline-block; overflow: hidden; padding-bottom: 0.12em; margin-bottom: -0.12em; }
-.tm-w { display: inline-block; animation: tm-w-in 600ms cubic-bezier(0.16,1,0.3,1) both; }
-/* Light sweep across the italic line, once per cycle after the last word
-   lands (delay 2.3s covers 14 words x 110ms + 600ms reveal). Implemented
-   as a blended light band rather than background-clip:text, which breaks
-   when the words live on separately-composited animated layers. */
-.tm-h1-sweep { position: relative; }
-@keyframes tm-sweep-x {
-    from { left: -30%; opacity: 0; }
-    15% { opacity: 0.9; }
-    85% { opacity: 0.9; }
-    to { left: 105%; opacity: 0; }
-}
-.tm-h1-sweep::after {
-    content: ""; position: absolute; top: -0.1em; bottom: -0.1em; left: -30%; width: 28%;
-    background: linear-gradient(100deg, transparent, rgba(216, 204, 255, 0.6), transparent);
-    filter: blur(7px); transform: skewX(-12deg);
-    mix-blend-mode: screen; pointer-events: none;
-    animation: tm-sweep-x 1100ms cubic-bezier(0.4, 0, 0.2, 1) 2.3s both;
+.tm-w { display: inline-block; animation: tm-w-in 750ms cubic-bezier(0.16,1,0.3,1) both; }
+/* Static italic line 2: slight right indent, no sweep. On narrow screens
+   let it wrap normally so the longer ES/ZH strings never overflow. */
+@media (max-width: 700px) {
+    .tm-h1-line:last-of-type { white-space: normal; padding-left: 0; }
 }
 .tm-hero2 .tm-sub { animation: tm-fade-up 500ms cubic-bezier(0.16,1,0.3,1) 900ms both; }
 
@@ -1100,5 +1086,4 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
         clip-path: inset(0 0 0 0) !important;
         opacity: 1 !important;
     }
-    .tm-h1-sweep::after { display: none !important; }
 }

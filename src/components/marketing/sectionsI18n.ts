@@ -96,7 +96,7 @@ const EN_SECTIONS: SectionsCopy = {
                 numeral: '2 legs',
                 numSegs: [{ v: 2 }, { t: ' legs' }],
                 label: 'Own the long side, rent out the short side',
-                body: 'Buy a long-term QQQ call option, 12 to 24 months out, as your core position. Then sell 32-day calls against it to collect premium. We trade QQQ, the Nasdaq-100 index fund, not individual stocks, because one basket of 100 companies avoids single-stock blowups and its options are among the most heavily traded anywhere, so you get tight pricing and easy exits.',
+                body: 'Buy a long-term QQQ call option, 12 to 24 months out, as your core position. Then sell 32-day calls against it to collect premium. QQQ is one basket of 100 companies: no single-stock blowups, tight pricing, easy exits.',
             },
             {
                 numeral: '1 of 7',
@@ -242,7 +242,7 @@ const ES_SECTIONS: SectionsCopy = {
                 numeral: '2 tramos',
                 numSegs: [{ v: 2 }, { t: ' tramos' }],
                 label: 'Posesión la parte larga, alquiler la parte corta',
-                body: 'Compra una opción call de QQQ a largo plazo, de 12 a 24 meses, como posición central. Luego vende calls de 32 días contra ella para cobrar prima. Operamos QQQ, el fondo índice Nasdaq-100, no acciones individuales, porque una canasta de 100 empresas evita desastres de una sola acción y sus opciones están entre las más negociadas del mundo, con precios ajustados y salidas fáciles.',
+                body: 'Compra una opción call de QQQ a largo plazo, de 12 a 24 meses, como posición central. Luego vende calls de 32 días contra ella para cobrar prima. QQQ es una canasta de 100 empresas: sin riesgo de una sola acción, precios ajustados y salidas fáciles.',
             },
             {
                 numeral: '1 de 7',
@@ -388,7 +388,7 @@ const ZH_SECTIONS: SectionsCopy = {
                 numeral: '2 条腿',
                 numSegs: [{ v: 2 }, { t: ' 条腿' }],
                 label: '持有长仓,出租短仓',
-                body: '买入长期 QQQ 看涨期权,12 至 24 个月到期,作为核心仓位。然后对其卖出 32 天看涨期权以收取权利金。我们交易 QQQ,即纳斯达克 100 指数基金,而非个股,因为 100 家公司的组合可避免单一股票爆雷,其期权也是全球交易最活跃的之一,定价紧、退出易。',
+                body: '买入长期 QQQ 看涨期权,12 至 24 个月到期,作为核心仓位。然后对其卖出 32 天看涨期权收取权利金。QQQ 一篮子 100 家公司:无单一股票爆雷,定价紧、退出易。',
             },
             {
                 numeral: '1 / 7',

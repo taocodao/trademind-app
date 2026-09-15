@@ -10,7 +10,7 @@
    prefers-reduced-motion renders final values immediately. */
 
 import Link from 'next/link';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SECTIONS_I18N, SectionLang } from './sectionsI18n';
 
@@ -36,6 +36,21 @@ export function CoPilotHero() {
     const lang: SectionLang = base === 'es' ? 'es' : base === 'zh' ? 'zh' : 'en';
     const c = SECTIONS_I18N[lang].hero;
     const cardsRef = useRef<HTMLDivElement>(null);
+
+    /* Headline: word-by-word masked reveal, left to right, re-triggered
+       every 30s so the hero stays alive. JS owns the stagger because
+       animation-delay only offsets the first loop iteration. Line 2
+       then catches the light sweep via .tm-h1-sweep. Reduced-motion
+       never toggles: CSS forces the final visible state. */
+    const [cycle, setCycle] = useState(0);
+    useEffect(() => {
+        const id = setInterval(() => setCycle((n) => n + 1), 30000);
+        return () => clearInterval(id);
+    }, []);
+    const { wordsA, wordsB } = useMemo(() => ({
+        wordsA: c.h1a.split(' '),
+        wordsB: c.h1b.split(/\s+/).filter(Boolean),
+    }), [c]);
 
     useEffect(() => {
         const root = cardsRef.current;
@@ -72,9 +87,27 @@ export function CoPilotHero() {
             <div className="tm-hero2-inner">
                 <p role="doc-subtitle" className="tm-slogan">{c.slogan}</p>
                 <div className="tm-eyebrow">{c.eyebrow}</div>
-                <h1 className="tm-h1">
-                    <span className="tm-h1-line"><span className="tm-h1-text">{c.h1a}</span></span><br />
-                    <span className="tm-h1-line"><em className="tm-h1-text tm-h1-sweep">{c.h1b}</em></span>
+                <h1 className="tm-h1" key={`h1-${lang}-${cycle}`}>
+                    <span className="tm-h1-line">
+                        {wordsA.map((w, i) => (
+                            <span key={i} className="tm-wmask">
+                                <span className="tm-w" style={{ animationDelay: `${140 + i * 110}ms` }}>
+                                    {w}{i < wordsA.length - 1 ? '\u00A0' : ''}
+                                </span>
+                            </span>
+                        ))}
+                    </span><br />
+                    <span className="tm-h1-line">
+                        <em className="tm-h1-sweep">
+                            {wordsB.map((w, i) => (
+                                <span key={i} className="tm-wmask">
+                                    <span className="tm-w" style={{ animationDelay: `${140 + (wordsA.length + i) * 110}ms` }}>
+                                        {w}{i < wordsB.length - 1 ? '\u00A0' : ''}
+                                    </span>
+                                </span>
+                            ))}
+                        </em>
+                    </span>
                 </h1>
                 <p className="tm-sub">{c.sub}</p>
 

@@ -876,7 +876,7 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
     font-size: 30px; font-weight: 700; color: var(--s-amber); line-height: 1.1;
 }
 .tm-herocard-label { font-size: 13px; line-height: 1.45; color: var(--s-ink); font-weight: 600; }
-.tm-herocard-body { font-size: 12.5px; line-height: 1.6; color: var(--s-ink2); }
+.tm-herocard-body { font-size: 14px; line-height: 1.6; color: var(--s-ink2); }
 .tm-herocard-link {
     background: none; border: 0; padding: 0; margin: 0; cursor: pointer;
     font: inherit; color: inherit; text-align: left;
@@ -906,14 +906,14 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
 
 @media (prefers-reduced-motion: reduce) {
     .tm-slogan, .tm-hero2 .tm-eyebrow, .tm-hero2 .tm-h1, .tm-hero2 .tm-sub,
-    .tm-hero-ctapair, .tm-cta-hero, .tm-h1-text, .tm-h1-sweep {
+    .tm-hero-ctapair, .tm-cta-hero, .tm-w, .tm-h1-sweep {
         animation: none !important;
         transition: none !important;
         transform: none !important;
         clip-path: inset(0 0 -0.15em 0) !important;
         opacity: 1 !important;
     }
-    .tm-h1-sweep { background-image: none; -webkit-text-fill-color: currentColor; color: var(--s-violet); }
+    .tm-h1-sweep { background-image: none; background-size: auto; -webkit-text-fill-color: currentColor; color: var(--s-violet); }
 }
 
 /* ── v3 rate-sensitivity calculator ── */
@@ -986,7 +986,7 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
 .tm-herocard { padding: 16px 16px 14px; gap: 6px; }
 .tm-herocard-numeral { font-size: 25px; }
 .tm-herocard-label { font-size: 12.5px; }
-.tm-herocard-body { font-size: 11.5px; line-height: 1.55; }
+.tm-herocard-body { font-size: 13px; line-height: 1.55; }
 
 @media (min-width: 1024px) and (max-height: 940px) {
     /* tighter still on short laptops so the cards never clip the fold */
@@ -1013,19 +1013,23 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
 }
 .tm-slogan { animation: tm-fade-up 400ms cubic-bezier(0.16,1,0.3,1) both; }
 .tm-hero2 .tm-eyebrow { animation: tm-fade-up 400ms cubic-bezier(0.16,1,0.3,1) 90ms both; }
-/* Headline: two masked lines, each reveals bottom-up like a curtain lift,
-   staggered 220ms; the italic line then catches a one-time light sweep.
-   The h1 itself stays put so LCP/CLS never move. */
-@keyframes tm-h1-reveal {
-    from { opacity: 0; clip-path: inset(0 0 100% 0); transform: translateY(0.35em); }
+/* Headline: each word reveals bottom-up through an inline mask, staggered
+   110ms strictly left to right across BOTH lines (line 1 leads). Line 2
+   is indented right and then catches the light sweep once all words are
+   in. React re-mounts the h1 every 30s to replay the whole sequence;
+   the h1 wrapper itself never animates so LCP/CLS stay stable. */
+@keyframes tm-w-in {
+    from { opacity: 0; clip-path: inset(0 0 100% 0); transform: translateY(0.4em); }
     55% { opacity: 1; }
     to { opacity: 1; clip-path: inset(0 0 -0.15em 0); transform: translateY(0); }
 }
 .tm-hero2 .tm-h1 { animation: none; }
-.tm-h1-line { display: block; overflow: hidden; padding-bottom: 0.12em; margin-bottom: -0.12em; }
-.tm-h1-text { display: inline-block; animation: tm-h1-reveal 640ms cubic-bezier(0.16,1,0.3,1) 140ms both; }
-.tm-h1-line:nth-of-type(2) .tm-h1-text { animation-delay: 360ms; }
-/* One-time diagonal light sweep across the italic line, ~1s after reveal. */
+.tm-h1-line { display: block; }
+.tm-h1-line:last-of-type { padding-left: 1.6em; }
+.tm-wmask { display: inline-block; overflow: hidden; padding-bottom: 0.12em; margin-bottom: -0.12em; }
+.tm-w { display: inline-block; animation: tm-w-in 600ms cubic-bezier(0.16,1,0.3,1) both; }
+/* Diagonal light sweep across the italic line, fired once per cycle after
+   the last word lands (delay 2.3s covers 14 words x 110ms + 600ms reveal). */
 @keyframes tm-h1-sweep {
     from { background-position: 130% 0; }
     to { background-position: -30% 0; }
@@ -1038,9 +1042,9 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
     background-clip: text;
     -webkit-text-fill-color: transparent;
     color: transparent;
-    animation: tm-h1-reveal 640ms cubic-bezier(0.16,1,0.3,1) 360ms both, tm-h1-sweep 900ms cubic-bezier(0.4,0,0.2,1) 1150ms both;
+    animation: tm-h1-sweep 1100ms cubic-bezier(0.4,0,0.2,1) 2.3s both;
 }
-.tm-hero2 .tm-sub { animation: tm-fade-up 400ms cubic-bezier(0.16,1,0.3,1) 560ms both; }
+.tm-hero2 .tm-sub { animation: tm-fade-up 500ms cubic-bezier(0.16,1,0.3,1) 900ms both; }
 
 /* 2. CTA row: clip-path masked reveal, staggered 40ms. */
 @keyframes tm-cta-reveal {
@@ -1088,11 +1092,11 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
 /* reduced-motion: all entrance + counter + hover motion suppressed */
 @media (prefers-reduced-motion: reduce) {
     .tm-slogan, .tm-hero2 .tm-eyebrow, .tm-hero2 .tm-h1, .tm-hero2 .tm-sub,
-    .tm-hero-ctapair > *, .tm-herocard, .tm-cta-arrow, .tm-h1-text, .tm-h1-sweep {
+    .tm-hero-ctapair > *, .tm-herocard, .tm-cta-arrow, .tm-w, .tm-h1-sweep {
         animation: none !important;
         transition: none !important;
         clip-path: inset(0 0 0 0) !important;
         opacity: 1 !important;
     }
-    .tm-h1-sweep { background-image: none; -webkit-text-fill-color: currentColor; color: var(--s-violet); }
+    .tm-h1-sweep { background-image: none; background-size: auto; -webkit-text-fill-color: currentColor; color: var(--s-violet); }
 }

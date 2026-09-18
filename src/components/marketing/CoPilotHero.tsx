@@ -39,27 +39,32 @@ export function CoPilotHero() {
 
     /* Headline: word-by-word masked reveal, left to right, plays ONCE on
        mount. Every 30s after, a brightness flash walks letter by letter
-       across both lines (class toggle + reflow restarts the CSS
-       animations; inline per-letter delays keep the L2R order). Letters
-       carry a global index across both lines so the flash crosses the
-       line break seamlessly. Reduced-motion forces the static state. */
+       across both lines, driven by JS timers (class toggle + CSS delays
+       proved unreliable for restarts). .tm-lit transitions filter, so
+       each letter eases in and back out. Reduced-motion: no flash. */
     const h1Ref = useRef<HTMLHeadingElement>(null);
     useEffect(() => {
         const el = h1Ref.current;
         if (!el) return;
-        const id = setInterval(() => {
-            el.classList.remove('tm-flash');
-            void el.offsetWidth; // restart the CSS animations
-            el.classList.add('tm-flash');
-        }, 30000);
-        return () => clearInterval(id);
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        let timers: number[] = [];
+        const run = () => {
+            el.querySelectorAll('.tm-l').forEach((l, i) => {
+                timers.push(window.setTimeout(() => {
+                    l.classList.add('tm-lit');
+                    timers.push(window.setTimeout(() => l.classList.remove('tm-lit'), 700));
+                }, i * 60));
+            });
+        };
+        const id = setInterval(run, 30000);
+        return () => { clearInterval(id); timers.forEach(clearTimeout); };
     }, [lang]);
     const lines = useMemo(() => {
-        let wi = 0, li = 0;
+        let wi = 0;
         const mk = (text: string) => text.split(/\s+/).filter(Boolean).map((w) => ({
             w,
             delay: 140 + wi++ * 130,
-            letters: Array.from(w).map(() => li++),
+            letters: Array.from(w),
         }));
         return [mk(c.h1a), mk(c.h1b)];
     }, [c]);
@@ -104,8 +109,8 @@ export function CoPilotHero() {
                         {lines[0].map((word, i) => (
                             <span key={i} className="tm-wmask">
                                 <span className="tm-w" style={{ animationDelay: `${word.delay}ms` }}>
-                                    {word.letters.map((ln, j) => (
-                                        <span key={j} className="tm-l" style={{ animationDelay: `${ln * 60}ms` }}>{word.w[j]}</span>
+                                    {word.letters.map((ch, j) => (
+                                        <span key={j} className="tm-l">{ch}</span>
                                     ))}
                                     {i < lines[0].length - 1 ? '\u00A0' : ''}
                                 </span>
@@ -117,8 +122,8 @@ export function CoPilotHero() {
                             {lines[1].map((word, i) => (
                                 <span key={i} className="tm-wmask">
                                     <span className="tm-w" style={{ animationDelay: `${word.delay}ms` }}>
-                                        {word.letters.map((ln, j) => (
-                                            <span key={j} className="tm-l" style={{ animationDelay: `${ln * 60}ms` }}>{word.w[j]}</span>
+                                        {word.letters.map((ch, j) => (
+                                            <span key={j} className="tm-l">{ch}</span>
                                         ))}
                                         {i < lines[1].length - 1 ? '\u00A0' : ''}
                                     </span>

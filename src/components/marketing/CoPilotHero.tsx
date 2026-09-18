@@ -10,7 +10,7 @@
    prefers-reduced-motion renders final values immediately. */
 
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SECTIONS_I18N, SectionLang } from './sectionsI18n';
 
@@ -37,20 +37,32 @@ export function CoPilotHero() {
     const c = SECTIONS_I18N[lang].hero;
     const cardsRef = useRef<HTMLDivElement>(null);
 
-    /* Headline: word-by-word masked reveal, left to right, re-triggered
-       every 30s so the hero stays alive. JS owns the stagger because
-       animation-delay only offsets the first loop iteration. No other
-       animation: the text is static between cycles. Reduced-motion
-       never toggles: CSS forces the final visible state. */
-    const [cycle, setCycle] = useState(0);
+    /* Headline: word-by-word masked reveal, left to right, plays ONCE on
+       mount. Every 30s after, a brightness flash walks letter by letter
+       across both lines (class toggle + reflow restarts the CSS
+       animations; inline per-letter delays keep the L2R order). Letters
+       carry a global index across both lines so the flash crosses the
+       line break seamlessly. Reduced-motion forces the static state. */
+    const h1Ref = useRef<HTMLHeadingElement>(null);
     useEffect(() => {
-        const id = setInterval(() => setCycle((n) => n + 1), 30000);
+        const el = h1Ref.current;
+        if (!el) return;
+        const id = setInterval(() => {
+            el.classList.remove('tm-flash');
+            void el.offsetWidth; // restart the CSS animations
+            el.classList.add('tm-flash');
+        }, 30000);
         return () => clearInterval(id);
-    }, []);
-    const { wordsA, wordsB } = useMemo(() => ({
-        wordsA: c.h1a.split(' '),
-        wordsB: c.h1b.split(/\s+/).filter(Boolean),
-    }), [c]);
+    }, [lang]);
+    const lines = useMemo(() => {
+        let wi = 0, li = 0;
+        const mk = (text: string) => text.split(/\s+/).filter(Boolean).map((w) => ({
+            w,
+            delay: 140 + wi++ * 130,
+            letters: Array.from(w).map(() => li++),
+        }));
+        return [mk(c.h1a), mk(c.h1b)];
+    }, [c]);
 
     useEffect(() => {
         const root = cardsRef.current;
@@ -87,22 +99,28 @@ export function CoPilotHero() {
             <div className="tm-hero2-inner">
                 <p role="doc-subtitle" className="tm-slogan">{c.slogan}</p>
                 <div className="tm-eyebrow">{c.eyebrow}</div>
-                <h1 className="tm-h1" key={`h1-${lang}-${cycle}`}>
+                <h1 className="tm-h1" ref={h1Ref}>
                     <span className="tm-h1-line">
-                        {wordsA.map((w, i) => (
+                        {lines[0].map((word, i) => (
                             <span key={i} className="tm-wmask">
-                                <span className="tm-w" style={{ animationDelay: `${140 + i * 130}ms` }}>
-                                    {w}{i < wordsA.length - 1 ? '\u00A0' : ''}
+                                <span className="tm-w" style={{ animationDelay: `${word.delay}ms` }}>
+                                    {word.letters.map((ln, j) => (
+                                        <span key={j} className="tm-l" style={{ animationDelay: `${ln * 60}ms` }}>{word.w[j]}</span>
+                                    ))}
+                                    {i < lines[0].length - 1 ? '\u00A0' : ''}
                                 </span>
                             </span>
                         ))}
                     </span><br />
                     <span className="tm-h1-line">
                         <em className="tm-h1-line2">
-                            {wordsB.map((w, i) => (
+                            {lines[1].map((word, i) => (
                                 <span key={i} className="tm-wmask">
-                                    <span className="tm-w" style={{ animationDelay: `${140 + (wordsA.length + i) * 130}ms` }}>
-                                        {w}{i < wordsB.length - 1 ? '\u00A0' : ''}
+                                    <span className="tm-w" style={{ animationDelay: `${word.delay}ms` }}>
+                                        {word.letters.map((ln, j) => (
+                                            <span key={j} className="tm-l" style={{ animationDelay: `${ln * 60}ms` }}>{word.w[j]}</span>
+                                        ))}
+                                        {i < lines[1].length - 1 ? '\u00A0' : ''}
                                     </span>
                                 </span>
                             ))}

@@ -906,7 +906,7 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
 
 @media (prefers-reduced-motion: reduce) {
     .tm-slogan, .tm-hero2 .tm-eyebrow, .tm-hero2 .tm-h1, .tm-hero2 .tm-sub,
-    .tm-hero-ctapair, .tm-cta-hero, .tm-w, .tm-h1-sweep {
+    .tm-hero-ctapair, .tm-cta-hero, .tm-w, .tm-flash .tm-l {
         animation: none !important;
         transition: none !important;
         transform: none !important;
@@ -1024,13 +1024,21 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
 }
 .tm-hero2 .tm-h1 { animation: none; }
 .tm-h1-line { display: block; }
-.tm-h1-line:last-of-type { padding-left: 0.9em; white-space: nowrap; }
+.tm-h1-line:last-of-type { padding-left: 2.1em; white-space: nowrap; }
 .tm-wmask { display: inline-block; overflow: hidden; padding-bottom: 0.12em; margin-bottom: -0.12em; }
 .tm-w { display: inline-block; animation: tm-w-in 750ms cubic-bezier(0.16,1,0.3,1) both; }
+/* Letter flash: brightness pulse walks L2R across both lines every 30s.
+   JS toggles .tm-flash on the h1; inline delays order the letters. */
+@keyframes tm-letter-flash {
+    0%, 100% { filter: brightness(1); }
+    45% { filter: brightness(2.4); }
+}
+.tm-l { display: inline-block; }
+.tm-flash .tm-l { animation: tm-letter-flash 650ms ease-in-out both; }
 /* Static italic line 2: slight right indent, no sweep. On narrow screens
    let it wrap normally so the longer ES/ZH strings never overflow. */
 @media (max-width: 700px) {
-    .tm-h1-line:last-of-type { white-space: normal; padding-left: 0; }
+    .tm-h1-line:last-of-type { white-space: normal; padding-left: 0.9em; }
 }
 .tm-hero2 .tm-sub { animation: tm-fade-up 500ms cubic-bezier(0.16,1,0.3,1) 900ms both; }
 
@@ -1080,7 +1088,7 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
 /* reduced-motion: all entrance + counter + hover motion suppressed */
 @media (prefers-reduced-motion: reduce) {
     .tm-slogan, .tm-hero2 .tm-eyebrow, .tm-hero2 .tm-h1, .tm-hero2 .tm-sub,
-    .tm-hero-ctapair > *, .tm-herocard, .tm-cta-arrow, .tm-w, .tm-h1-sweep {
+    .tm-hero-ctapair > *, .tm-herocard, .tm-cta-arrow, .tm-w, .tm-flash .tm-l {
         animation: none !important;
         transition: none !important;
         clip-path: inset(0 0 0 0) !important;

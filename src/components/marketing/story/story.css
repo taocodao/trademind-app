@@ -1024,17 +1024,22 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
 }
 .tm-hero2 .tm-h1 { animation: none; }
 .tm-h1-line { display: block; }
-.tm-h1-line:last-of-type { padding-left: 2.1em; white-space: nowrap; }
+.tm-h1-line:last-of-type { padding-left: 2.7em; white-space: nowrap; }
 .tm-wmask { display: inline-block; overflow: hidden; padding-bottom: 0.12em; margin-bottom: -0.12em; }
 .tm-w { display: inline-block; animation: tm-w-in 750ms cubic-bezier(0.16,1,0.3,1) both; }
 /* Letter flash: JS toggles .tm-lit per letter (60ms apart, 700ms hold),
-   the transition eases each letter in and back out. */
-.tm-l { display: inline-block; transition: filter 240ms ease-in-out; }
-.tm-l.tm-lit { filter: brightness(2.1); }
+   the transition eases each letter in and back out. Brightness alone is
+   invisible on line 1's near-white text, so a violet glow carries the
+   flash there too. */
+.tm-l { display: inline-block; transition: filter 240ms ease-in-out, text-shadow 240ms ease-in-out; }
+.tm-l.tm-lit {
+    filter: brightness(2.1);
+    text-shadow: 0 0 14px rgba(167, 139, 250, 0.95), 0 0 5px rgba(255, 255, 255, 0.85);
+}
 /* Static italic line 2: slight right indent, no sweep. On narrow screens
    let it wrap normally so the longer ES/ZH strings never overflow. */
 @media (max-width: 700px) {
-    .tm-h1-line:last-of-type { white-space: normal; padding-left: 0.9em; }
+    .tm-h1-line:last-of-type { white-space: normal; padding-left: 1.2em; }
 }
 .tm-hero2 .tm-sub { animation: tm-fade-up 500ms cubic-bezier(0.16,1,0.3,1) 900ms both; }
 

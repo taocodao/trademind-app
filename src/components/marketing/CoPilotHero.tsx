@@ -56,7 +56,7 @@ export function CoPilotHero() {
                 }, i * 60));
             });
         };
-        const id = setInterval(run, 30000);
+        const id = setInterval(run, 20000);
         return () => { clearInterval(id); timers.forEach(clearTimeout); };
     }, [lang]);
     const lines = useMemo(() => {

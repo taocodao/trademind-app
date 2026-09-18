@@ -1028,13 +1028,14 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
 .tm-wmask { display: inline-block; overflow: hidden; padding-bottom: 0.12em; margin-bottom: -0.12em; }
 .tm-w { display: inline-block; animation: tm-w-in 750ms cubic-bezier(0.16,1,0.3,1) both; }
 /* Letter flash: JS toggles .tm-lit per letter (120ms apart, 1s hold), so
-   the glow walks slowly through both lines. Brightness alone is invisible
-   on line 1's near-white text, so lit letters turn violet with a halo. */
+   the glow walks slowly from line 1's first letter to line 2's last.
+   Lit letters turn a saturated violet with a strong violet halo so the
+   pass is unmistakable on line 1's white text. */
 .tm-l { display: inline-block; transition: color 300ms ease-in-out, filter 300ms ease-in-out, text-shadow 300ms ease-in-out; }
 .tm-l.tm-lit {
-    color: #d6c6ff;
-    filter: brightness(1.5);
-    text-shadow: 0 0 18px rgba(167, 139, 250, 1), 0 0 8px rgba(167, 139, 250, 0.9);
+    color: #a78bfa;
+    filter: brightness(1.35);
+    text-shadow: 0 0 22px rgba(139, 92, 246, 1), 0 0 10px rgba(139, 92, 246, 0.9);
 }
 /* Static italic line 2: slight right indent, no sweep. On narrow screens
    let it wrap normally so the longer ES/ZH strings never overflow. */

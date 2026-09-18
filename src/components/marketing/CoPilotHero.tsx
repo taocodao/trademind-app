@@ -52,8 +52,8 @@ export function CoPilotHero() {
             el.querySelectorAll('.tm-l').forEach((l, i) => {
                 timers.push(window.setTimeout(() => {
                     l.classList.add('tm-lit');
-                    timers.push(window.setTimeout(() => l.classList.remove('tm-lit'), 700));
-                }, i * 60));
+                    timers.push(window.setTimeout(() => l.classList.remove('tm-lit'), 1000));
+                }, i * 120));
             });
         };
         const id = setInterval(run, 20000);

@@ -14,10 +14,18 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { resolveAdmin } from '@/lib/admin-gate';
 import { LEAD_COLUMNS, TEMPLATE_SKIPPED_COLUMNS } from '@/lib/leads-columns';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
+
+/** Gate: full server-side verification (token signature + Privy email). */
+async function requireAdmin(req: NextRequest): Promise<NextResponse | null> {
+    const admin = await resolveAdmin(req);
+    if (admin.status === 200) return null;
+    return NextResponse.json({ error: admin.error ?? 'Forbidden' }, { status: admin.status });
+}
 
 const EMAIL_HEADER = 'Email';
 const CONCURRENCY = 8; // stay under the pg pool max (10)
@@ -79,6 +87,9 @@ function notAvailable(v: string): boolean {
 
 export async function POST(req: NextRequest) {
     try {
+        const denied = await requireAdmin(req);
+        if (denied) return denied;
+
         const form = await req.formData();
         const file = form.get('file') as File | null;
         if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -185,9 +196,12 @@ export async function POST(req: NextRequest) {
     }
 }
 
-/** GET /api/leads/import — quick stats for the import page */
-export async function GET() {
+/** GET /api/leads/import — quick stats for the admin import page */
+export async function GET(req: NextRequest) {
     try {
+        const denied = await requireAdmin(req);
+        if (denied) return denied;
+
         await ensureTable();
         const [total, batches] = await Promise.all([
             query(`SELECT COUNT(*)::int AS n FROM leads`),

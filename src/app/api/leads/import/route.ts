@@ -20,10 +20,10 @@ import { LEAD_COLUMNS, TEMPLATE_SKIPPED_COLUMNS } from '@/lib/leads-columns';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-/** Gate: full server-side verification (token signature + Privy email). */
+/** Gate: signature-verified Privy session pinned to the admin account. */
 async function requireAdmin(req: NextRequest): Promise<NextResponse | null> {
     const admin = await resolveAdmin(req);
-    if (admin.status === 200) return null;
+    if (admin.isAdmin) return null;
     return NextResponse.json({ error: admin.error ?? 'Forbidden' }, { status: admin.status });
 }
 

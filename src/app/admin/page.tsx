@@ -99,7 +99,7 @@ function AdminConsole({ email }: { email: string }) {
 
     const fileRef = useRef<HTMLInputElement>(null);
 
-    const [configMissing, setConfigMissing] = useState(false);
+    const [needsProvisioning, setNeedsProvisioning] = useState<string | null>(null);
 
     const loadStats = useCallback(async () => {
         try {
@@ -109,7 +109,11 @@ function AdminConsole({ email }: { email: string }) {
                 setTotal(data.total);
                 setBatches(data.batches ?? []);
             } else if (res.status === 503) {
-                setConfigMissing(true);
+                // Admin account id not pinned yet: show it for one-time setup.
+                const who = await fetch('/api/admin/whoami');
+                const whoData = await who.json();
+                if (whoData.did) setNeedsProvisioning(whoData.did);
+                else setError(data?.error ?? 'Could not load stats');
             } else {
                 setError(data?.error ?? 'Could not load stats');
             }
@@ -178,13 +182,16 @@ function AdminConsole({ email }: { email: string }) {
                     Signed in as {email}. Import lead lists into the database below.
                 </p>
 
-                {configMissing && (
-                    <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-300">
-                        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-                        <span>
-                            Server-side admin verification is not configured yet. Add PRIVY_APP_SECRET
-                            to the Vercel production environment and redeploy, then this console unlocks.
-                        </span>
+                {needsProvisioning && (
+                    <div className="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 p-5 text-sm text-amber-200">
+                        <p className="font-semibold">One-time setup: pin this admin account</p>
+                        <p className="mt-2 text-amber-200/80">
+                            You are signed in with the admin email. Share this account id to finish
+                            setup, then the console unlocks:
+                        </p>
+                        <code className="mt-3 block rounded-lg bg-black/40 px-4 py-2.5 text-xs text-white break-all select-all">
+                            {needsProvisioning}
+                        </code>
                     </div>
                 )}
 

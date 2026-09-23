@@ -1,13 +1,22 @@
 /**
- * Server-side admin gate.
+ * Server-side admin gate, built on the app's existing Privy email login.
  *
- * Only one identity is admin: the Privy account whose email is ADMIN_EMAIL.
- * Verification is fully server-side:
- *   1. The session token's ES256 signature is checked against the app's
- *      public JWKS (no secret needed, proves the DID is genuine).
- *   2. The account's email is fetched from Privy's server API with the app
- *      secret (PRIVY_APP_SECRET env var). Without the secret the gate fails
- *      CLOSED: nobody is admin, because no client-supplied value is trusted.
+ * Security model: signing in as support@trademind.bot requires the passcode
+ * sent to that inbox, so a genuine Privy session for that account can only
+ * belong to someone with mailbox access. The gate pins that account's Privy
+ * DID (stable account id):
+ *
+ *   1. The session token's ES256 signature is verified against the app's
+ *      public JWKS — the DID is cryptographically genuine (no secret).
+ *   2. The DID must equal ADMIN_PRIVY_DID. Nothing client-supplied is
+ *      trusted; there is no claim or binding endpoint.
+ *
+ * Provisioning: sign in at /admin with support@trademind.bot; the page
+ * shows the session's account id once, which is then set as
+ * ADMIN_PRIVY_DID below (or via the ADMIN_PRIVY_DID env var).
+ *
+ * If PRIVY_APP_SECRET is ever configured, the gate instead fetches the
+ * account's email from Privy's server API and compares it to ADMIN_EMAIL.
  */
 import { createPublicKey, verify as cryptoVerify, type KeyObject } from 'crypto';
 import type { NextRequest } from 'next/server';
@@ -15,14 +24,18 @@ import { cookies } from 'next/headers';
 
 export const ADMIN_EMAIL = 'support@trademind.bot';
 
+/** Set after the one-time provisioning step shown on /admin. */
+const ADMIN_PRIVY_DID = process.env.ADMIN_PRIVY_DID ?? '';
+
 const PRIVY_APP_ID =
     process.env.NEXT_PUBLIC_PRIVY_APP_ID && process.env.NEXT_PUBLIC_PRIVY_APP_ID !== 'FILL_IN'
         ? process.env.NEXT_PUBLIC_PRIVY_APP_ID
         : 'cmkkk59s100a0js0dv4k6na8k';
 
 export interface AdminResolution {
-    did: string | null;
-    status: number; // 200 ok, 401 unauthenticated, 403 not admin, 503 not configured
+    did: string | null; // verified session DID (useful for provisioning)
+    isAdmin: boolean;
+    status: number; // 200 ok, 401 unauthenticated, 403 not admin, 503 unprovisioned
     error?: string;
 }
 
@@ -65,7 +78,7 @@ async function verifyTokenDid(token: string): Promise<string | null> {
     }
 }
 
-// ── Email lookup via Privy server API (needs the app secret) ────────────────
+// ── Optional full verification via Privy server API ─────────────────────────
 async function emailForDid(did: string): Promise<string | null> {
     const secret = process.env.PRIVY_APP_SECRET;
     if (!secret) return null;
@@ -87,8 +100,8 @@ async function emailForDid(did: string): Promise<string | null> {
 }
 
 /**
- * Resolves the request to an admin identity, or explains why not.
- * Reads the session from the privy-token cookie or a Bearer header.
+ * Resolves the request's admin status. Reads the session from the
+ * privy-token cookie or a Bearer header. Always fails closed.
  */
 export async function resolveAdmin(req?: NextRequest): Promise<AdminResolution> {
     let token: string | undefined;
@@ -100,22 +113,22 @@ export async function resolveAdmin(req?: NextRequest): Promise<AdminResolution> 
         const authHeader = req.headers.get('Authorization');
         if (authHeader?.startsWith('Bearer ')) token = authHeader.slice(7);
     }
-    if (!token) return { did: null, status: 401, error: 'Not signed in' };
+    if (!token) return { did: null, isAdmin: false, status: 401, error: 'Not signed in' };
 
     const did = await verifyTokenDid(token);
-    if (!did) return { did: null, status: 401, error: 'Invalid session token' };
+    if (!did) return { did: null, isAdmin: false, status: 401, error: 'Invalid session token' };
 
-    if (!process.env.PRIVY_APP_SECRET) {
-        return {
-            did: null,
-            status: 503,
-            error: 'Admin verification is not configured on the server (PRIVY_APP_SECRET missing)',
-        };
+    // Full verification path when the server secret is configured.
+    if (process.env.PRIVY_APP_SECRET) {
+        const email = await emailForDid(did);
+        if (email && email === ADMIN_EMAIL.toLowerCase()) return { did, isAdmin: true, status: 200 };
+        return { did, isAdmin: false, status: 403, error: 'Admin access required' };
     }
-    const email = await emailForDid(did);
-    if (!email) return { did: null, status: 403, error: 'Could not verify account email' };
-    if (email !== ADMIN_EMAIL.toLowerCase()) {
-        return { did: null, status: 403, error: 'Admin access required' };
+
+    // Pinned-DID path: no client input can influence the outcome.
+    if (!ADMIN_PRIVY_DID) {
+        return { did, isAdmin: false, status: 503, error: 'Admin account not provisioned yet' };
     }
-    return { did, status: 200 };
+    if (did === ADMIN_PRIVY_DID) return { did, isAdmin: true, status: 200 };
+    return { did, isAdmin: false, status: 403, error: 'Admin access required' };
 }

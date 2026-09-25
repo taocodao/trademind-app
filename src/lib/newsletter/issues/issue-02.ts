@@ -1,37 +1,47 @@
 export default {
     number: 2,
-    slug: 'qqq-growth-engine-or-concentration-risk',
-    title: 'Is QQQ a growth engine or a concentration risk?',
-    subtitle: 'One basket of 100 companies. Both things are true, and the difference is how you size it.',
-    publishDate: '2026-08-12',
-    readTime: '6 min',
+    slug: 'is-qqq-a-growth-engine-or-a-concentration-risk',
+    title: 'Is QQQ a Growth Engine or a Concentration Risk',
+    subtitle: 'The answer is both, and disciplined investors need to understand both sides at the same time.',
+    publishDate: '2026-08-13',
+    readTime: '7 min',
     tags: ['QQQ Research', 'Risk Management'],
     excerpt:
-        'QQQ gives you the Nasdaq 100 in one line: no single-stock blowups, tight pricing, easy exits. But a third of it can sit in a handful of names. Here is how a system treats that.',
-    deepLinks: ['/newsletter/guides/qqq'],
+        'QQQ can be a powerful growth exposure, but it is not a diversified solution to every market condition.',
+    deepLinks: [
+        { href: '/newsletter/guides/qqq', label: 'Full QQQ strategy overview' },
+        { href: '/newsletter/research/risk-framework', label: 'How TradeMind defines concentration and drawdown risk' },
+    ],
     body: `
-## The Question
+QQQ attracts investors for an obvious reason. It offers concentrated exposure to large companies associated with innovation, software, digital infrastructure, semiconductors, artificial intelligence, cloud computing, and long-duration growth.
 
-QQQ is the default growth vehicle for a generation of investors. Is owning it a strategy, or is it a bet on ten companies wearing a hundred-company costume?
+That concentration has historically produced compelling upside during periods when growth leadership dominates the market. But the same feature that makes QQQ powerful also makes it fragile. It is not a neutral market exposure. It is a tilted exposure to a specific kind of economic and valuation environment.
 
-## Market Regime
+## Why investors like QQQ
 
-The Nasdaq 100 is market-cap weighted, so the biggest winners keep getting bigger inside it. In strong bull runs that is a feature: momentum compounds. In reversals, the same weighting works against you, because the names that led the rally lead the decline. 2022 was the reminder: QQQ fell roughly a third while the broad market fell less.
+- It offers liquid, transparent exposure to growth-oriented companies.
+- It has strong long-term association with technology-driven leadership.
+- It captures a portion of the structural shift toward digital and AI-enabled business models.
+- It can outperform broader indexes when growth sentiment and earnings momentum align.
 
-## Model Lens
+## What many investors underestimate
 
-A systematic approach treats QQQ as an instrument, not an identity. The question is never "do I believe in tech?" It is: what regime are we in, and what exposure does that regime justify? When trend, volatility, and confidence line up, QQQ exposure earns its place. When they do not, the model cuts exposure without a debate.
+QQQ is not broad diversification. It is a concentration decision. It carries equity risk, growth risk, duration sensitivity, valuation risk, and sector crowding risk.
 
-## Strategy Insight
+When rates rise, liquidity tightens, or growth leadership weakens, the same exposure that previously compounded quickly can become significantly more volatile. Investors often think of QQQ as a modern default holding. In practice, it behaves more like a growth engine that requires awareness of regime and exposure size.
 
-For options work, QQQ has practical advantages that matter more than ideology: deep liquidity, tight spreads, strikes every dollar, and a long history to test against. One underlying, well understood, beats five underlyings half understood.
+## Why this matters for TradeMind
 
-## Risk Desk
+TradeMind's research framework starts with market regime because QQQ is highly sensitive to context. The right question is not simply, "Do we like technology?" The better question is, "Does the current regime support this form of concentrated growth exposure, and if so, how much?"
 
-Concentration risk is managed with position sizing and drawdown limits, not with wishful diversification. Our own risk framework caps any single position at one third of the account, caps total positions, and cuts losers mechanically at a defined level.
+That framing changes the investor's role. Instead of emotionally defending a theme, the investor evaluates whether the evidence still supports the exposure.
 
-## Takeaway
+## Three questions before using QQQ in a strategy
 
-QQQ is both a growth engine and a concentration risk, and the market will not tell you which one you are holding today. A system decides with rules instead of feelings. Full breakdown in the QQQ guide.
+- Is trend and breadth supporting leadership or narrowing?
+- Are volatility and rate conditions favorable to long-duration growth?
+- Is the position size consistent with the investor's maximum acceptable drawdown?
+
+QQQ can be a powerful building block. It should not be treated as a substitute for process.
 `,
 } as const;

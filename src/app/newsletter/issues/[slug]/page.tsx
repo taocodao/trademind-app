@@ -12,7 +12,6 @@ import {
     relatedIssues,
     adjacentIssues,
 } from '@/lib/newsletter/issues';
-import { GUIDES, RESEARCH_PAGES } from '@/lib/newsletter/topics';
 import NewsletterShare from '@/components/newsletter/NewsletterShare';
 import { NewsletterFooter, Breadcrumb, OfferBlock } from '@/components/newsletter/NewsletterShell';
 import { IssueCard } from '@/components/newsletter/IssueCard';
@@ -57,16 +56,6 @@ export async function generateMetadata({
         },
         alternates: { canonical: url },
     };
-}
-
-/** Resolve a deep-link path to a human title for the callout box. */
-function deepLinkTitle(href: string): string {
-    const guide = GUIDES.find((g) => g.href === href);
-    if (guide) return guide.title;
-    const research = RESEARCH_PAGES.find((r) => r.href === href);
-    if (research) return research.title;
-    if (href === '/newsletter/start-here') return 'Start Here';
-    return 'Related reading';
 }
 
 /** Split body sections so the offer block sits mid-article. */
@@ -136,10 +125,10 @@ export default async function IssuePage({ params }: { params: Promise<{ slug: st
                     {issue.deepLinks.length > 0 && (
                         <div className="tm-nl-callout">
                             Go deeper:{' '}
-                            {issue.deepLinks.map((href, i) => (
-                                <span key={href}>
+                            {issue.deepLinks.map((d, i) => (
+                                <span key={d.href + i}>
                                     {i > 0 && ' · '}
-                                    <Link href={href} className="tm-nl-link">{deepLinkTitle(href)}</Link>
+                                    <Link href={d.href} className="tm-nl-link">{d.label}</Link>
                                 </span>
                             ))}
                         </div>

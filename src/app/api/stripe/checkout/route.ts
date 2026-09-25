@@ -5,6 +5,7 @@ import pool from '@/lib/db';
 import { getAccount } from '@/lib/accounts';
 import { getMembershipByAccount, planForStrategy, priceKeyForPlan } from '@/lib/membership';
 import { getStripe } from '@/lib/stripe-server';
+import { resolveNewsletterDiscount, applyNewsletterDiscount } from '@/lib/newsletter/checkout';
 
 export const dynamic = 'force-dynamic';
 
@@ -90,6 +91,19 @@ export async function POST(req: NextRequest) {
 
         const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
         const metadata = { userId, account_id: String(account.id), plan };
+
+        // Newsletter subscriber offer: 30% off the first annual invoice when
+        // the account email matches a confirmed subscriber inside the window.
+        const accountEmail = customerResult.rows[0]?.login_email
+            ?? (await pool.query('SELECT login_email FROM user_settings WHERE user_id = $1', [userId])).rows[0]?.login_email
+            ?? null;
+        const nlDiscount = await resolveNewsletterDiscount({
+            accountEmail,
+            providedCode: body.newsletterCode ? String(body.newsletterCode) : null,
+        });
+        if (body.newsletterCode && !nlDiscount.eligible && nlDiscount.error) {
+            return NextResponse.json({ error: nlDiscount.error }, { status: 400 });
+        }
         const sessionPayload: Stripe.Checkout.SessionCreateParams = {
             customer: customerId,
             mode: 'subscription',
@@ -108,6 +122,10 @@ export async function POST(req: NextRequest) {
                 trial_period_days: membership.pending_bonus_days,
                 metadata,
             };
+        }
+
+        if (nlDiscount.eligible && nlDiscount.subscriberId) {
+            await applyNewsletterDiscount(sessionPayload, nlDiscount.subscriberId);
         }
 
         const session = await getStripe().checkout.sessions.create(sessionPayload);

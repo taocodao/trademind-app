@@ -8,18 +8,20 @@ import SignupForm from '@/components/newsletter/SignupForm';
 export const metadata: Metadata = {
     title: '30% Annual Offer - The AI Systematic Investor',
     description:
-        'Offer terms: confirmed subscribers get 30% off their first year of an annual TradeMind subscription, redeemable within 3 months of confirming.',
+        'Offer terms: confirmed subscribers get 30% off their first year of an annual TradeMind subscription, redeemable within 90 days of confirming.',
 };
 
 const TERMS = [
     'Available to confirmed newsletter subscribers only.',
     '30% off the first year of a one-year TradeMind subscription (QQQ Basic or QQQ LEAPS).',
-    'Redeem within 3 months of confirming your email address.',
-    'The discount applies to the same confirmed email address, or its replacement through the change-email flow.',
-    'One redemption per subscriber.',
+    'Redeem within 90 days of your first confirmation. Changing your newsletter email never restarts this window.',
+    'The discount applies to the same confirmed email address, or its replacement through the official change-email flow.',
+    'One redemption per subscriber identity. Plus-address and Gmail-dot variants of an address count as the same identity.',
+    'Already a TradeMind customer? You can still use this offer when buying an additional plan.',
     'Not combinable with other discounts or referral credits.',
     'Renews at the standard annual price after the first year.',
-    'Unsubscribing from the newsletter does not cancel a discount already applied to a subscription.',
+    'Unsubscribing from the newsletter keeps your discount valid until the window ends.',
+    'Refunded purchases do not restore the offer. Chargebacks revoke it.',
 ];
 
 export default function OfferPage() {

@@ -54,7 +54,7 @@ const APPROACH = [
 
 export default function NewsletterHome() {
     const latest = ISSUES_DESC[0];
-    const startHere = [getIssue('process-before-prediction')!, getIssue('what-machine-learning-can-and-cannot-do')!, getIssue('backtest-assumptions-must-survive-scrutiny')!];
+    const startHere = [getIssue('why-most-retail-investors-need-a-process')!, getIssue('what-machine-learning-can-do-for-investors')!, getIssue('backtest-results-only-matter-if-assumptions-survive')!];
     const archivePreview = ISSUES_DESC.slice(0, 6);
 
     return (
@@ -72,7 +72,7 @@ export default function NewsletterHome() {
                     <Link href="/newsletter/issues" className="tm-nl-link">Browse all issues</Link>
                 </p>
                 <p className="tm-nl-offerline">
-                    Confirmed subscribers get 30% off a one-year TradeMind subscription for 3 months after confirming.
+                    Confirmed subscribers get 30% off a one-year TradeMind subscription for 90 days after confirming.
                 </p>
 
                 {/* The problem */}

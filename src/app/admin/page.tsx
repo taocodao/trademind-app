@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import NewsletterTools from '@/components/admin/NewsletterTools';
 import { usePrivy } from '@privy-io/react-auth';
 import Link from 'next/link';
 import {
@@ -315,6 +316,7 @@ function AdminConsole({ email }: { email: string }) {
                         </table>
                     )}
                 </section>
+                <NewsletterTools />
             </div>
         </main>
     );

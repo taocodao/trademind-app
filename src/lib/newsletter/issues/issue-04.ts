@@ -1,37 +1,41 @@
 export default {
     number: 4,
-    slug: 'pmcc-managed-trade-off',
-    title: 'PMCC is not free income, it is a managed trade-off',
-    subtitle: 'Selling calls against your LEAPS can smooth returns and raise your effective entry, or quietly cap your best months.',
-    publishDate: '2026-08-26',
-    readTime: '7 min',
+    slug: 'pmcc-is-not-free-income',
+    title: 'PMCC Is Not Free Income',
+    subtitle: 'The poor man\'s covered call converts part of your upside into premium, but it also introduces new management obligations.',
+    publishDate: '2026-08-27',
+    readTime: '6 min',
     tags: ['PMCC', 'Risk Management'],
     excerpt:
-        'A poor man\'s covered call sells time against a LEAPS position. Done at the wrong moment it truncates winners. Done by rule, it is insurance, not an engine.',
-    deepLinks: ['/newsletter/guides/pmcc'],
+        'The poor man\'s covered call is a managed trade-off, not a shortcut to effortless income.',
+    deepLinks: [
+        { href: '/newsletter/guides/pmcc', label: 'Full PMCC guide' },
+        { href: '/newsletter/research/risk-framework', label: 'Assignment, roll, and structure risk' },
+    ],
     body: `
-## The Question
+The poor man's covered call is one of the most misunderstood options structures in retail investing. It is often marketed as a clever way to collect income while keeping upside exposure. That description is incomplete enough to be dangerous.
 
-Covered calls are sold to retail investors as free money: own the stock, sell a call, collect premium. If that were true, everyone would be rich. What is actually being traded?
+A PMCC is a structured trade-off. The investor uses a long-dated call to create directional exposure, then sells a shorter-dated call against it to collect premium. That premium may help offset cost, but it is not free yield. It comes with capped upside, assignment management, strike risk, and timing risk.
 
-## Market Regime
+## What investors like about PMCC
 
-When you sell a call, you collect a small certain payment now in exchange for giving up upside above the strike. In flat or slowly rising markets, that trade wins quietly, month after month. In a sharp rally, it loses loudly: your stock or LEAPS runs, and your short call gives much of it back.
+- Lower capital outlay than a classic covered call
+- Ability to generate premium
+- Flexible strike and expiration design
+- Potential fit for growth-oriented underlyings such as QQQ
 
-## Model Lens
+## What investors often miss
 
-That is why our PMCC overlay is gated, not habitual. The model sells calls only when volatility, trend, and confidence say upside follow-through is less likely. It is a decision, not a default. When the gate says no, no call is sold, period.
+- The short call can cap upside during strong moves
+- Roll decisions matter
+- Assignment dynamics create operational complexity
+- The long call is still exposed to time and volatility changes
+- Premium does not make the position low-risk
 
-## Strategy Insight
+## Why this matters in TradeMind's framework
 
-Used discipline-first, the short call serves two purposes: it harvests decay while the position waits, and it effectively raises your average entry by returning premium to the account. It is insurance mechanics, not a return driver. The LEAPS position remains the engine.
+TradeMind does not frame PMCC as an income product. It frames PMCC as a conditional overlay inside a broader systematic process. That means the short call is not sold just because premium exists. It is sold when the regime, exposure, and reward trade-off make sense relative to the base thesis.
 
-## Risk Desk
-
-The main PMCC risks are assignment math gone sloppy, rolling too late, and selling calls into strength because the premium looked juicy. Each is a process failure, which is why the overlay has rules for when to sell, when to roll, and when to stand down.
-
-## Takeaway
-
-A PMCC is a trade-off you manage, on purpose, with rules. The day it becomes an autopilot for income is the day it starts capping your recovery. Full structure in the PMCC guide.
+A systematic investor should never sell premium without knowing what is being given up in return.
 `,
 } as const;

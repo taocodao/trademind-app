@@ -42,7 +42,7 @@ export function OfferBlock({ onClickPath }: { onClickPath?: string }) {
         <div className="tm-nl-offerblock">
             <h2 className="tm-nl-h2">Get 30% off a one-year TradeMind subscription</h2>
             <p className="tm-nl-sub" style={{ marginBottom: 18, fontSize: 15 }}>
-                For confirmed newsletter subscribers, for 3 months after confirming.{' '}
+                For confirmed newsletter subscribers, for 90 days after confirming.{' '}
                 <Link href="/newsletter/offer" className="tm-nl-link">Offer terms</Link>
             </p>
             <Link href={onClickPath ?? '/newsletter/offer'} className="tm-nl-btn tm-nl-btn-primary">

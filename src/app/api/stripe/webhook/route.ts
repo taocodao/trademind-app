@@ -91,6 +91,65 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
                     stripeSubscriptionId: subscription.id,
                 });
             }
+
+            // Newsletter discount redemption: payment succeeded with the
+            // NEWSLETTER30 coupon attached by checkout.
+            const nlSubscriberId = session.metadata?.newsletter_subscriber_id;
+            if (nlSubscriberId) {
+                const { markRedeemed } = await import('@/lib/newsletter/db');
+                const { sendRedemptionReceiptEmail } = await import('@/lib/newsletter/email');
+                const { query } = await import('@/lib/db');
+                const redeemed = await markRedeemed(Number(nlSubscriberId), subscription.id, accountId);
+                if (redeemed) {
+                    const sub = await query(
+                        `SELECT email FROM newsletter_subscribers WHERE id = $1`,
+                        [Number(nlSubscriberId)]
+                    );
+                    const to = sub.rows[0]?.email;
+                    if (to) {
+                        const renewal = subscription.current_period_end
+                            ? new Date(subscription.current_period_end * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                            : undefined;
+                        void sendRedemptionReceiptEmail({
+                            to,
+                            planLabel: metadataPlan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Basic',
+                            renewalDate: renewal,
+                        });
+                    }
+                }
+            }
+            return;
+        }
+
+        case 'charge.dispute.created': {
+            // Chargeback: revoke the newsletter discount tied to the order.
+            const dispute = event.data.object as Stripe.Dispute;
+            const chargeId = typeof dispute.charge === 'string' ? dispute.charge : dispute.charge?.id;
+            if (!chargeId) return;
+            try {
+                const charge = await getStripe().charges.retrieve(chargeId);
+                const invoiceRef = (charge as Stripe.Charge & { invoice?: string | Stripe.Invoice }).invoice;
+                const invoiceId = typeof invoiceRef === 'string' ? invoiceRef : invoiceRef?.id;
+                if (!invoiceId) return;
+                const invoice = await getStripe().invoices.retrieve(invoiceId);
+                const subRef = (invoice as Stripe.Invoice & { subscription?: string | Stripe.Subscription }).subscription;
+                const subId = typeof subRef === 'string' ? subRef : subRef?.id;
+                if (!subId) return;
+                const { query } = await import('@/lib/db');
+                const { recordNewsletterEvent } = await import('@/lib/newsletter/db');
+                const res = await query(
+                    `UPDATE newsletter_discounts
+                     SET state = 'revoked', revoked_reason = 'chargeback', updated_at = NOW()
+                     WHERE order_id = $1 AND state = 'redeemed'
+                     RETURNING subscriber_id`,
+                    [subId]
+                );
+                if (res.rows[0]) {
+                    await recordNewsletterEvent('discount_revoked', { reason: 'chargeback', orderId: subId }, res.rows[0].subscriber_id);
+                }
+            } catch (err) {
+                console.error('Newsletter chargeback handling failed:', err);
+            }
             return;
         }
 

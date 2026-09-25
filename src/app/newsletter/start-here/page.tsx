@@ -15,15 +15,15 @@ export const metadata: Metadata = {
 export default function StartHerePage() {
     const reading = [
         {
-            issue: getIssue('process-before-prediction')!,
+            issue: getIssue('why-most-retail-investors-need-a-process')!,
             why: 'The case for a written process before any prediction, indicator, or trade.',
         },
         {
-            issue: getIssue('what-machine-learning-can-and-cannot-do')!,
+            issue: getIssue('what-machine-learning-can-do-for-investors')!,
             why: 'Exactly where the model helps (ranking and vetoes) and where it never goes (starting trades).',
         },
         {
-            issue: getIssue('backtest-assumptions-must-survive-scrutiny')!,
+            issue: getIssue('backtest-results-only-matter-if-assumptions-survive')!,
             why: 'How to read our numbers, and every other backtest you will ever be shown.',
         },
     ];
@@ -76,7 +76,7 @@ export default function StartHerePage() {
                     <h2 className="tm-nl-h2">Get the next issue</h2>
                     <SignupForm source="start-here" />
                     <p className="tm-nl-offerline">
-                        Confirmed subscribers get 30% off a one-year TradeMind subscription for 3 months after confirming.
+                        Confirmed subscribers get 30% off a one-year TradeMind subscription for 90 days after confirming.
                     </p>
                 </section>
 

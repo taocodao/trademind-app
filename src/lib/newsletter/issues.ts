@@ -22,14 +22,14 @@ export interface NewsletterIssue {
     readTime: string;
     tags: Topic[] | string[];
     excerpt: string;
-    deepLinks: string[];
+    deepLinks: { href: string; label: string }[];
     body: string; // markdown
 }
 
 export const ISSUES: NewsletterIssue[] = [i1, i2, i3, i4, i5, i6, i7, i8].map((i) => ({
     ...i,
     tags: [...i.tags],
-    deepLinks: [...i.deepLinks],
+    deepLinks: i.deepLinks.map((d) => ({ ...d })),
 }));
 
 /** Newest first. */

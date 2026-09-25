@@ -1,37 +1,39 @@
 export default {
     number: 8,
-    slug: 'risk-framework-drawdown-exposure-discipline',
-    title: 'Building a risk framework around drawdown, exposure, and discipline',
-    subtitle: 'Returns are what remain after risk is controlled. These are the limits that keep a strategy alive to compound.',
-    publishDate: '2026-09-23',
+    slug: 'building-a-retail-investor-risk-framework',
+    title: 'Building a Retail Investor Risk Framework Around Drawdown, Exposure, and Discipline',
+    subtitle: 'Risk control is not the defensive part of the strategy. It is the structure that allows the strategy to survive.',
+    publishDate: '2026-09-24',
     readTime: '7 min',
     tags: ['Risk Management', 'Systematic Investing'],
     excerpt:
-        'One third of the account per position, three positions max, 5% cash reserve, losers cut at twice the credit received. Simple limits, enforced without negotiation.',
-    deepLinks: ['/newsletter/research/risk-framework'],
+        'Drawdown, exposure, concentration, and discipline matter more than excitement when building an investment framework.',
+    deepLinks: [
+        { href: '/newsletter/research/risk-framework', label: 'Full risk framework' },
+        { href: '/newsletter/research/backtest-validation', label: 'Exposure control and drawdown evidence' },
+    ],
     body: `
-## The Question
+Many investors think about risk only after a position moves against them. That is too late. A real risk framework begins before the position is opened.
 
-Most investors think about returns first and risk second. What happens when you design the system the other way around?
+For self-directed investors, the core question is not just how much upside a strategy may offer. It is how much pain, uncertainty, and capital impairment the investor can tolerate without abandoning the process at the worst possible time.
 
-## Market Regime
+## The four building blocks
 
-Every strategy has a drawdown waiting for it. The only choice is whether you meet it with a plan or with hope. A 30% drawdown needs a 43% gain to recover; a 50% drawdown needs 100%. Risk control is not about avoiding losses. It is about keeping losses small enough that recovery is arithmetic, not a miracle.
+- Maximum acceptable drawdown
+- Maximum exposure per sleeve
+- Concentration limits
+- Rules for scaling, pausing, and reducing exposure
 
-## Model Lens
+## Why this matters for growth and options strategies
 
-The model's job ends at ranking and veto. Risk limits live in a separate layer the model cannot override. That separation is deliberate: a confident model on a bad streak is exactly when limits matter most.
+Strategies built around QQQ, LEAPS, PMCC, and short puts can produce attractive outcomes when aligned with the right regime and properly sized. They can also become fragile when too many correlated exposures are stacked together without a portfolio-level control system.
 
-## Strategy Insight
+That is why risk should be discussed before returns, before optimization, and before promotional language.
 
-The working rules are simple enough to say in one breath: one third of the account per position, three positions at most, 5% of the account always in cash, and every loser cut at twice the credit received. Each rule exists because a specific failure mode taught it.
+## TradeMind framing
 
-## Risk Desk
+TradeMind teaches retail investors to think in terms of exposure budget, not just idea conviction. The newsletter regularly asks: how much of the portfolio is tied to one theme, one regime assumption, or one form of market leadership?
 
-Exposure is also capped across sleeves: QQQ LEAPS, the PMCC overlay, and any semiconductor put positions are counted together, so "diversified" positions that fall together never exceed one budget. When limits are hit, the system reduces, pauses, or stands down, in that order.
-
-## Takeaway
-
-Discipline you can describe in one breath is discipline you can follow on the worst day of the year. The full framework, including reduction rules and exposure caps, is permanent on the risk framework page.
+The investor who can answer that clearly is already in a better position than the investor who only knows the upside scenario.
 `,
 } as const;

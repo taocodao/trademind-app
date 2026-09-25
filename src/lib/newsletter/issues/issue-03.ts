@@ -1,37 +1,47 @@
 export default {
     number: 3,
-    slug: 'what-leaps-add-to-systematic-strategy',
-    title: 'What LEAPS actually add to a systematic strategy',
-    subtitle: 'Long-dated calls are not lottery tickets. Used correctly, they are stock exposure with a fixed cost of being wrong.',
-    publishDate: '2026-08-19',
+    slug: 'what-leaps-actually-add-to-a-systematic-strategy',
+    title: 'What LEAPS Actually Add to a Systematic Strategy',
+    subtitle: 'LEAPS can improve capital efficiency, but only when investors respect the risks they introduce.',
+    publishDate: '2026-08-20',
     readTime: '7 min',
     tags: ['LEAPS', 'Systematic Investing'],
     excerpt:
-        'A LEAPS call with a year or more to run behaves like a leveraged but controlled stock position: defined cost, no margin call, and time for a thesis to work.',
-    deepLinks: ['/newsletter/guides/leaps'],
+        'LEAPS can create capital-efficient exposure, but they also introduce expiration, volatility, liquidity, and sizing risk.',
+    deepLinks: [
+        { href: '/newsletter/guides/leaps', label: 'Full LEAPS guide' },
+        { href: '/newsletter/research/risk-framework', label: 'Options risk and exposure limits' },
+    ],
     body: `
-## The Question
+LEAPS are often introduced to retail investors as a simple way to get more upside with less capital. That description is incomplete. LEAPS do not just create cheaper exposure. They reshape the entire risk profile of the trade.
 
-Why would a systematic strategy bother with options at all, when buying QQQ shares is simpler?
+Used carefully, LEAPS can allow an investor to participate in long-duration upside while preserving capital for other uses. Used casually, they can amplify fragility through expiration risk, volatility sensitivity, poor strike selection, and unrealistic expectations.
 
-## Market Regime
+## What LEAPS improve
 
-Shares tie up capital one-for-one. In a choppy market, that capital sits exposed the whole time. A deep in-the-money LEAPS call, say 0.70 delta or higher with 12 months or more to expiry, moves almost dollar-for-dollar with the stock but costs a fraction of the share price. The difference stays in cash, and cash in a drawdown is optionality.
+- Capital efficiency relative to fully funded stock exposure
+- Defined premium outlay instead of full notional purchase
+- Longer time horizon than short-dated options
+- Flexibility when paired with a structured overlay such as PMCC
 
-## Model Lens
+## What LEAPS do not remove
 
-The model does not buy LEAPS because they are exciting. It buys them when its five conditions agree: momentum, trend, volatility, regime, and confidence. The LEAPS structure simply defines the trade in advance: the most you can lose is the premium, decided before entry.
+- Market direction risk
+- Implied volatility shifts
+- Liquidity and spread risk
+- Expiration and roll timing risk
+- The possibility of premium loss
 
-## Strategy Insight
+## Where investors make mistakes
 
-Three selection rules do most of the work. Delta high enough that the option tracks the stock. Time long enough that decay is slow and a bad month is survivable. Liquidity good enough that entering and exiting does not donate the edge to the spread.
+The most common mistake is buying LEAPS because they feel smarter than buying stock. That is not a framework. It is a narrative. A disciplined investor needs rules for expiration selection, strike selection, exposure sizing, and what conditions justify holding or rolling.
 
-## Risk Desk
+Another mistake is assuming that a long-dated option automatically creates patience. In reality, long duration only helps if the structure still matches the thesis and risk budget.
 
-LEAPS still lose money when the underlying falls. The premium is real money, and a slow grind down bleeds it. That is why entries are gated by the model and exits are mechanical: losers are cut at defined levels instead of nurtured.
+## How TradeMind frames LEAPS
 
-## Takeaway
+TradeMind treats LEAPS as a structural decision inside a broader process. The questions are not only "How much upside do we want?" but also "How much sensitivity can we tolerate?" and "What role is this position playing inside the portfolio?"
 
-LEAPS turn "I am long QQQ" into a trade with known cost, known max loss, and time to be right. The full mechanics, including selection rules, live in the LEAPS guide.
+A systematic investor should know the role of the structure before the market tests it.
 `,
 } as const;

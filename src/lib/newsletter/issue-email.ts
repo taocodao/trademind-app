@@ -166,7 +166,7 @@ export async function renderIssueEmail(
     ].join('\n');
 
     return {
-        subject: `Issue ${issue.number}: ${issue.title}`,
+        subject: issue.emailSubject,
         html,
         text,
         unsubscribeUrl,

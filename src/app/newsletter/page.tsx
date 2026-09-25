@@ -54,7 +54,7 @@ const APPROACH = [
 
 export default function NewsletterHome() {
     const latest = ISSUES_DESC[0];
-    const startHere = [getIssue('why-most-retail-investors-need-a-process')!, getIssue('what-machine-learning-can-do-for-investors')!, getIssue('backtest-results-only-matter-if-assumptions-survive')!];
+    const startHere = [getIssue('why-most-investors-need-a-process')!, getIssue('what-ml-can-and-cannot-do')!, getIssue('backtests-only-matter-if-assumptions-survive')!];
     const archivePreview = ISSUES_DESC.slice(0, 6);
 
     return (

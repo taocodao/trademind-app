@@ -1,40 +1,44 @@
 export default {
     number: 5,
-    slug: 'why-selling-puts-on-smh-is-not-a-hedge',
-    title: 'Why Selling Puts on SMH Is Not a Hedge',
-    subtitle: 'A semiconductor premium sleeve can be useful, but it should not be mislabeled as portfolio protection without evidence.',
+    slug: 'why-smh-puts-are-not-a-hedge',
+    title: 'Why Selling Puts on SMH Is Not the Same as Hedging QQQ',
+    subtitle: 'A semiconductor put sleeve can generate premium, but it should not be casually mistaken for a hedge.',
     publishDate: '2026-09-03',
     readTime: '6 min',
-    tags: ['SMH Put Sleeve', 'Risk Management'],
+    tags: ['SMH', 'Semiconductors', 'Hedging', 'Portfolio Strategy'],
     excerpt:
-        'Selling puts on SMH may create premium and conditional entry, but it does not automatically hedge QQQ exposure.',
+        'A semiconductor put sleeve can generate premium, but it should not be casually mistaken for a hedge.',
+    emailSubject: 'Why selling puts on SMH is not the same as hedging QQQ',
+    previewText: 'Premium and conditional entry are not the same thing as portfolio protection.',
     deepLinks: [
-        { href: '/newsletter/guides/smh-puts', label: 'Semiconductor sleeve guide' },
-        { href: '/newsletter/research/risk-framework', label: 'How QQQ and SMH exposure can overlap' },
+        { href: '/newsletter/guides/smh-puts', label: 'Semiconductor Sleeve Guide' },
     ],
     body: `
-One of the easiest mistakes in strategy design is confusing a second trade with a hedge. Selling puts on SMH may generate premium and create a rules-based way to enter semiconductor exposure, but that does not mean it offsets QQQ risk.
+Selling puts on semiconductor exposure can be a useful strategy sleeve. It can generate premium and create a rules-based way to enter positions. But it should not be casually described as a hedge for QQQ. In many environments, the exposures remain closely linked.
 
-In many market conditions, QQQ and SMH are exposed to overlapping forces: technology leadership, growth expectations, capital spending cycles, rate sensitivity, and sentiment toward innovation-heavy sectors. That overlap means a short put on SMH can add another layer of technology-linked risk rather than reduce it.
-
-## What an SMH put sleeve can do
+## What short puts on SMH can do
 
 - Generate option premium
-- Create a conditional entry framework
-- Add exposure to a high-beta segment of the innovation economy
-- Support a structured rules-based income or entry sleeve
+- Define a conditional entry path
+- Add a separate rules-based sleeve to a broader strategy
 
-## What it does not guarantee
+## What they do not guarantee
 
-- Portfolio diversification
-- Downside protection for QQQ
-- A negative correlation to growth risk
-- A smoother return path in all regimes
+- Lower correlation to tech-led market stress
+- Protection during broad growth drawdowns
+- Automatic diversification
+- Meaningful downside offset under all conditions
 
-## TradeMind framing
+## The portfolio question
 
-TradeMind describes this sleeve as a semiconductor premium sleeve, not a hedge, unless portfolio-level risk contribution analysis proves otherwise. Precision in language matters because retail investors often confuse income generation with risk reduction.
+If QQQ is already the primary growth engine, adding semiconductor short puts may increase thematic concentration rather than reduce it. A true hedge needs to be evaluated by how it changes total portfolio behavior, not how different it sounds on paper.
 
-That confusion is expensive. A strategy can collect premium and still deepen concentration.
-`,
-} as const;
+## Evaluate this sleeve by
+
+- Risk contribution
+- Concentration overlap
+- Assignment scenario
+- Collateral usage
+- Behavior in a sharp tech selloff
+    `.trim(),
+};

@@ -1,47 +1,48 @@
 export default {
     number: 2,
-    slug: 'is-qqq-a-growth-engine-or-a-concentration-risk',
+    slug: 'qqq-growth-engine-or-concentration-risk',
     title: 'Is QQQ a Growth Engine or a Concentration Risk',
-    subtitle: 'The answer is both, and disciplined investors need to understand both sides at the same time.',
+    subtitle: 'QQQ can be a compelling growth vehicle, but concentration is part of the structure and should be treated seriously.',
     publishDate: '2026-08-13',
     readTime: '7 min',
-    tags: ['QQQ Research', 'Risk Management'],
+    tags: ['QQQ', 'Macro Trends', 'Growth Investing', 'Portfolio Strategy'],
     excerpt:
-        'QQQ can be a powerful growth exposure, but it is not a diversified solution to every market condition.',
+        'QQQ can be a compelling growth vehicle, but concentration is part of the structure and should be treated seriously.',
+    emailSubject: 'Is QQQ a growth engine or a concentration risk?',
+    previewText: 'QQQ offers powerful growth exposure, but concentration is part of the deal.',
     deepLinks: [
-        { href: '/newsletter/guides/qqq', label: 'Full QQQ strategy overview' },
-        { href: '/newsletter/research/risk-framework', label: 'How TradeMind defines concentration and drawdown risk' },
+        { href: '/newsletter/guides/qqq', label: 'QQQ Strategy Overview' },
+        { href: '/newsletter/research/risk-framework', label: 'Risk Control Framework' },
     ],
     body: `
-QQQ attracts investors for an obvious reason. It offers concentrated exposure to large companies associated with innovation, software, digital infrastructure, semiconductors, artificial intelligence, cloud computing, and long-duration growth.
+QQQ attracts self-directed investors because it offers concentrated exposure to large growth-oriented companies tied to software, semiconductors, digital infrastructure, and technology-enabled business models. That concentration can be a strength. It can also be the source of painful drawdowns if investors treat it as automatically diversified.
 
-That concentration has historically produced compelling upside during periods when growth leadership dominates the market. But the same feature that makes QQQ powerful also makes it fragile. It is not a neutral market exposure. It is a tilted exposure to a specific kind of economic and valuation environment.
+## Why QQQ is attractive
 
-## Why investors like QQQ
+- It captures major innovation-driven businesses.
+- It has strong long-term growth associations.
+- It is liquid and easy to access.
+- It can serve as a clean core exposure for an active research process.
 
-- It offers liquid, transparent exposure to growth-oriented companies.
-- It has strong long-term association with technology-driven leadership.
-- It captures a portion of the structural shift toward digital and AI-enabled business models.
-- It can outperform broader indexes when growth sentiment and earnings momentum align.
+## Why QQQ needs a risk lens
 
-## What many investors underestimate
+- Technology leadership can reverse for long stretches.
+- Valuation compression can hurt even when business quality remains strong.
+- Index concentration means a few dominant names drive behavior.
+- Investors often underestimate how correlated their other holdings already are to QQQ.
 
-QQQ is not broad diversification. It is a concentration decision. It carries equity risk, growth risk, duration sensitivity, valuation risk, and sector crowding risk.
+## How TradeMind frames it
 
-When rates rise, liquidity tightens, or growth leadership weakens, the same exposure that previously compounded quickly can become significantly more volatile. Investors often think of QQQ as a modern default holding. In practice, it behaves more like a growth engine that requires awareness of regime and exposure size.
+QQQ is not treated as a blind buy. It is treated as the primary growth engine within a broader research framework. The key question is not simply whether QQQ is good. The question is whether current conditions support the amount of QQQ-related exposure being considered.
 
-## Why this matters for TradeMind
+## What to evaluate before adding exposure
 
-TradeMind's research framework starts with market regime because QQQ is highly sensitive to context. The right question is not simply, "Do we like technology?" The better question is, "Does the current regime support this form of concentrated growth exposure, and if so, how much?"
+- Trend persistence
+- Volatility regime
+- Breadth confirmation
+- Interest-rate sensitivity
+- Concentration overlap with other holdings
 
-That framing changes the investor's role. Instead of emotionally defending a theme, the investor evaluates whether the evidence still supports the exposure.
-
-## Three questions before using QQQ in a strategy
-
-- Is trend and breadth supporting leadership or narrowing?
-- Are volatility and rate conditions favorable to long-duration growth?
-- Is the position size consistent with the investor's maximum acceptable drawdown?
-
-QQQ can be a powerful building block. It should not be treated as a substitute for process.
-`,
-} as const;
+When those conditions change, the structure around QQQ may need to change too.
+    `.trim(),
+};

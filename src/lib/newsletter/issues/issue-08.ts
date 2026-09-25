@@ -1,39 +1,43 @@
 export default {
     number: 8,
-    slug: 'building-a-retail-investor-risk-framework',
-    title: 'Building a Retail Investor Risk Framework Around Drawdown, Exposure, and Discipline',
-    subtitle: 'Risk control is not the defensive part of the strategy. It is the structure that allows the strategy to survive.',
+    slug: 'building-a-retail-risk-framework',
+    title: 'Building a Retail Investor Risk Framework',
+    subtitle: 'A durable investing process starts with drawdown, exposure, concentration, and discipline, not excitement.',
     publishDate: '2026-09-24',
     readTime: '7 min',
-    tags: ['Risk Management', 'Systematic Investing'],
+    tags: ['Risk Control', 'Portfolio Strategy', 'Drawdown', 'Macro Trends'],
     excerpt:
-        'Drawdown, exposure, concentration, and discipline matter more than excitement when building an investment framework.',
+        'A durable investing process starts with drawdown, exposure, concentration, and discipline, not excitement.',
+    emailSubject: 'Building a retail investor risk framework',
+    previewText: 'Risk discipline is what turns a market idea into a durable investing process.',
     deepLinks: [
-        { href: '/newsletter/research/risk-framework', label: 'Full risk framework' },
-        { href: '/newsletter/research/backtest-validation', label: 'Exposure control and drawdown evidence' },
+        { href: '/newsletter/research/risk-framework', label: 'Risk Control Framework' },
+        { href: '/newsletter/research/risk-framework#discipline', label: 'Portfolio Discipline Guide' },
     ],
     body: `
-Many investors think about risk only after a position moves against them. That is too late. A real risk framework begins before the position is opened.
+Most investors spend more time thinking about upside than damage control. That imbalance is one reason otherwise reasonable strategies become hard to stick with. A durable process needs a risk framework before it needs a target return.
 
-For self-directed investors, the core question is not just how much upside a strategy may offer. It is how much pain, uncertainty, and capital impairment the investor can tolerate without abandoning the process at the worst possible time.
+## What belongs in a retail risk framework
 
-## The four building blocks
-
-- Maximum acceptable drawdown
-- Maximum exposure per sleeve
+- Maximum tolerated drawdown
+- Position-size rules
 - Concentration limits
-- Rules for scaling, pausing, and reducing exposure
+- Cash and collateral planning
+- Rules for reducing exposure
+- Conditions for re-entry
 
-## Why this matters for growth and options strategies
+## Why this matters for option-based structures
 
-Strategies built around QQQ, LEAPS, PMCC, and short puts can produce attractive outcomes when aligned with the right regime and properly sized. They can also become fragile when too many correlated exposures are stacked together without a portfolio-level control system.
+LEAPS, PMCC, and short puts can all change the shape of risk. That means traditional "I like the stock" reasoning is not enough. Investors need to know how exposure behaves when the market rallies, stalls, or falls hard.
 
-That is why risk should be discussed before returns, before optimization, and before promotional language.
+## Three mistakes to avoid
 
-## TradeMind framing
+- Confusing premium collection with protection
+- Ignoring total portfolio concentration
+- Waiting to define risk only after losses begin
 
-TradeMind teaches retail investors to think in terms of exposure budget, not just idea conviction. The newsletter regularly asks: how much of the portfolio is tied to one theme, one regime assumption, or one form of market leadership?
+## The TradeMind principle
 
-The investor who can answer that clearly is already in a better position than the investor who only knows the upside scenario.
-`,
-} as const;
+Return is what investors hope for. Risk control is what allows them to remain in the process long enough to benefit from it. A systematic framework begins with survival, not excitement.
+    `.trim(),
+};

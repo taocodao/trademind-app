@@ -1,47 +1,46 @@
 export default {
     number: 7,
-    slug: 'backtest-results-only-matter-if-assumptions-survive',
-    title: 'Backtest Results Only Matter If the Assumptions Survive',
-    subtitle: 'A high CAGR is persuasive. A durable methodology is more important.',
+    slug: 'backtests-only-matter-if-assumptions-survive',
+    title: 'Backtests Only Matter If the Assumptions Survive',
+    subtitle: 'Backtest results deserve attention only after assumptions, costs, slippage, and validation have been stress-tested.',
     publishDate: '2026-09-17',
     readTime: '8 min',
-    tags: ['Backtest Audit', 'Risk Management'],
+    tags: ['Backtest Validation', 'Methodology', 'Research Audit'],
     excerpt:
-        'A strong backtest is not a conclusion. It is the start of a harder validation conversation.',
+        'Backtest results deserve attention only after assumptions, costs, slippage, and validation have been stress-tested.',
+    emailSubject: 'Backtests only matter if the assumptions survive',
+    previewText: 'CAGR alone is not enough. Trust begins with assumptions, validation, and transparency.',
     deepLinks: [
-        { href: '/newsletter/research/backtest-validation', label: 'Full backtest validation' },
-        { href: '/newsletter/research/backtest-validation', label: 'Methodology and assumptions' },
+        { href: '/newsletter/research/backtest-validation', label: 'Backtest Validation' },
+        { href: '/newsletter/research/backtest-validation#assumptions', label: 'Methodology and Assumptions' },
     ],
     body: `
-Retail investors are often shown one number first: return. That number can be so compelling that it crowds out every other question. But a backtest is not just an output. It is a chain of assumptions.
+Backtests can be useful research tools, but they are often presented as if a single attractive output proves a strategy is ready for real money. That is backwards. The headline number is the last thing to trust, not the first.
 
-If any part of that chain is weak, the result may be far less meaningful than it appears. This is especially true in options-based strategies, where execution, spread assumptions, roll logic, assignment behavior, and volatility conditions can materially change outcomes.
+## What usually gets missed
 
-## What must be disclosed
-
-- Start and end dates
-- In-sample and out-of-sample boundaries
-- Signal rules
-- Position sizing
-- Option selection rules
-- Commission and slippage assumptions
+- Execution assumptions
+- Bid-ask spreads
+- Rolling logic
 - Assignment handling
-- Cash and collateral treatment
-- Benchmark comparison
+- Position overlap
+- Transaction costs
+- In-sample versus out-of-sample separation
 
-## What investors should ask first
+## The right question
 
-- How sensitive are results to different execution assumptions?
-- Does the result still hold under stress or parameter changes?
-- How much of the outcome depends on a favorable market regime?
-- What happens when the clean assumptions become messy?
+Do the results still hold up after you make the assumptions less flattering and more realistic? If not, the backtest may be a story, not a robust strategy.
 
-## How TradeMind uses backtests
+## Validation checklist
 
-TradeMind uses backtests as research evidence, not marketing bait. A strong methodology page always sits behind the summary result, and the newsletter points readers there instead of repeating long assumption tables in email.
+- Compare against simpler benchmarks
+- Stress slippage assumptions
+- Separate training from evaluation periods
+- Test parameter sensitivity
+- Document every meaningful rule
 
-The job of the newsletter is to educate the reader about what makes the result trustworthy or fragile.
+## How TradeMind uses this
 
-*Hypothetical or simulated performance results have inherent limitations. Past performance, real or simulated, does not guarantee future results.*
-`,
-} as const;
+The goal is not to publish the prettiest number. The goal is to make the research process inspectable so readers understand what the strategy depends on and where it can fail.
+    `.trim(),
+};

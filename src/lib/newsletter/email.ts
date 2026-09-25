@@ -138,7 +138,7 @@ export function sendWelcomeEmail(input: {
             'Start reading: Issue 1, Why most retail investors need a process before another prediction',
         ],
         cta: { label: 'View your offer', url: `${BASE_URL}/upgrade` },
-        secondaryLink: { label: 'Start with Issue 1', url: `${BASE_URL}/newsletter/issues/2026-08-06-why-most-retail-investors-need-a-process` },
+        secondaryLink: { label: 'Start with Issue 1', url: `${BASE_URL}/newsletter/issues/2026-08-06-why-most-investors-need-a-process` },
         note: 'Offer terms: trademind.bot/newsletter/offer. Renews at the standard annual price after the first year.',
     });
 }

@@ -15,15 +15,15 @@ export const metadata: Metadata = {
 export default function StartHerePage() {
     const reading = [
         {
-            issue: getIssue('why-most-retail-investors-need-a-process')!,
+            issue: getIssue('why-most-investors-need-a-process')!,
             why: 'The case for a written process before any prediction, indicator, or trade.',
         },
         {
-            issue: getIssue('what-machine-learning-can-do-for-investors')!,
+            issue: getIssue('what-ml-can-and-cannot-do')!,
             why: 'Exactly where the model helps (ranking and vetoes) and where it never goes (starting trades).',
         },
         {
-            issue: getIssue('backtest-results-only-matter-if-assumptions-survive')!,
+            issue: getIssue('backtests-only-matter-if-assumptions-survive')!,
             why: 'How to read our numbers, and every other backtest you will ever be shown.',
         },
     ];

@@ -24,6 +24,10 @@ export interface NewsletterIssue {
     excerpt: string;
     deepLinks: { href: string; label: string }[];
     body: string; // markdown
+    /** Subject line used when the issue is sent by email. */
+    emailSubject: string;
+    /** Inbox preview snippet shown next to the subject in most clients. */
+    previewText: string;
 }
 
 export const ISSUES: NewsletterIssue[] = [i1, i2, i3, i4, i5, i6, i7, i8].map((i) => ({

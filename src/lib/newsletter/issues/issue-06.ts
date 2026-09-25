@@ -1,42 +1,45 @@
 export default {
     number: 6,
-    slug: 'what-machine-learning-can-do-for-investors',
-    title: 'What Machine Learning Can Do for Investors and What It Cannot',
-    subtitle: 'Machine learning can improve structure and interpretation, but it should not be confused with prediction certainty.',
+    slug: 'what-ml-can-and-cannot-do',
+    title: 'What Machine Learning Can and Cannot Do for Investors',
+    subtitle: 'Machine learning can support better investment research, but it should never be sold as certainty.',
     publishDate: '2026-09-10',
     readTime: '7 min',
-    tags: ['Machine Learning', 'Systematic Investing'],
+    tags: ['Machine Learning', 'Model Risk', 'Investor Education'],
     excerpt:
-        'Machine learning can support classification, ranking, and process discipline, but it should not be sold as certainty.',
+        'Machine learning can support better investment research, but it should never be sold as certainty.',
+    emailSubject: 'What machine learning can and cannot do for investors',
+    previewText: 'ML can improve research discipline, but it should never be sold as certainty.',
     deepLinks: [
-        { href: '/newsletter/research/ml-framework', label: 'TradeMind ML framework' },
-        { href: '/newsletter/research/backtest-validation', label: 'Model limitations and failure cases' },
+        { href: '/newsletter/research/ml-framework', label: 'ML Framework' },
+        { href: '/newsletter/research/ml-framework#limitations', label: 'Model Limitations' },
     ],
     body: `
-Machine learning has become one of the most abused phrases in retail investing. It is often used to imply superior foresight. That is the wrong starting point.
+Machine learning can be useful in investment research, but only when its role is clearly defined. The strongest use cases are classification, ranking, filtering, and regime interpretation. The weakest use case is pretending the model can remove uncertainty from markets.
 
-In a disciplined investment process, machine learning is better understood as a research tool. It can help classify regimes, rank conditions, detect recurring patterns, and support structured interpretation. It can also fail when the underlying assumptions are weak, the data is unstable, or the model is overfit to history.
+## What ML can help with
 
-## What machine learning can support
+- Identifying recurring market conditions
+- Ranking signals or candidates
+- Separating stronger from weaker setups
+- Structuring a repeatable research workflow
 
-- Regime classification
-- Signal ranking
-- Feature interaction analysis
-- Pattern detection across repeated market conditions
-- Consistency in evaluation workflow
+## What ML cannot responsibly promise
 
-## What machine learning cannot honestly promise
+- Consistent outperformance by default
+- Reliable market prediction under all conditions
+- Freedom from drawdowns
+- Certainty about future returns
 
-- Perfect market timing
-- Guaranteed returns
-- Permanent edge without drift
-- Freedom from execution and structure risk
-- Protection from bad assumptions
+## Why interpretation matters
 
-## How TradeMind frames ML
+A model output is not a finished investment decision. It is one layer of evidence that needs to be checked against market structure, options behavior, position sizing, and downside constraints.
 
-TradeMind frames ML as a disciplined assistant to the investment process, not as a replacement for judgment. Each issue explains what the model is detecting, what factors matter most, where uncertainty remains, and how the result changes the evaluation of exposure and risk.
+## A better retail framework
 
-That framing builds trust because it treats the reader like an investor, not like a customer buying certainty.
-`,
-} as const;
+- Use ML to organize evidence
+- Use rules to size and structure exposure
+- Use risk controls to survive error
+- Use review loops to improve over time
+    `.trim(),
+};

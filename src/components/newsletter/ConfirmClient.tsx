@@ -114,7 +114,7 @@ export default function ConfirmClient({ token }: { token: string }) {
                         View your offer
                     </Link>
                     <Link
-                        href="/newsletter/issues/2026-08-06-why-most-retail-investors-need-a-process"
+                        href="/newsletter/issues/2026-08-06-why-most-investors-need-a-process"
                         className="tm-nl-btn tm-nl-btn-ghost"
                         style={{ textDecoration: 'none' }}
                     >

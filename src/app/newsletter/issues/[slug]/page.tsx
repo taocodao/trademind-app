@@ -47,11 +47,13 @@ export async function generateMetadata({
             publishedTime: issue.publishDate,
             authors: ['TradeMind'],
             tags: issue.tags as string[],
+            images: ['/share-card.png'],
         },
         twitter: {
             card: 'summary_large_image',
             title: issue.title,
             description: issue.excerpt,
+            images: ['/share-card.png'],
         },
         alternates: { canonical: url },
     };

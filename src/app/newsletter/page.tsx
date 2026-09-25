@@ -18,6 +18,14 @@ export const metadata: Metadata = {
             'Weekly research on QQQ, LEAPS, PMCC, semiconductor options, and risk control using machine learning and transparent rules.',
         type: 'website',
         url: 'https://trademind.bot/newsletter',
+        images: ['/share-card.png'],
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'The AI Systematic Investor - TradeMind Newsletter',
+        description:
+            'Weekly research on QQQ, LEAPS, PMCC, semiconductor options, and risk control using machine learning and transparent rules.',
+        images: ['/share-card.png'],
     },
 };
 

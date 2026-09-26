@@ -19,7 +19,7 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 //   NEWSLETTER_FROM = "The AI Systematic Investor by TradeMind <newsletter@news.trademind.bot>"
 // which gives marketing its own DKIM identity while tacitly staying branded.
 const NEWSLETTER_FROM =
-    process.env.NEWSLETTER_FROM ?? 'The AI Systematic Investor <signals@trademind.bot>';
+    process.env.NEWSLETTER_FROM ?? 'The AI Systematic Investor by TradeMind <newsletter@news.trademind.bot>';
 const NEWSLETTER_REPLY_TO = process.env.NEWSLETTER_REPLY_TO ?? 'support@trademind.bot';
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://trademind.bot';
 

@@ -142,7 +142,10 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ ok: sent, preview: previewTo });
             }
 
-            const recipients = await issueRecipients();
+            const limit = Number.isInteger(Number(body.limit)) && Number(body.limit) > 0
+                ? Math.floor(Number(body.limit))
+                : undefined;
+            const recipients = await issueRecipients(limit);
             let sent = 0, failed = 0;
             for (const r of recipients) {
                 const ok = await sendIssueEmail(issue, r);

@@ -24,6 +24,7 @@ export default function NewsletterTools() {
     const [stats, setStats] = useState<Record<string, unknown> | null>(null);
     const [issueNumber, setIssueNumber] = useState('');
     const [previewTo, setPreviewTo] = useState('');
+    const [batchLimit, setBatchLimit] = useState('');
 
     useEffect(() => {
         fetch('/api/admin/newsletter?aggregate=1')
@@ -172,12 +173,18 @@ export default function NewsletterTools() {
                         placeholder="Issue #" className="w-24 rounded-lg border border-[#232333] bg-[#0A0A0F] px-3 py-2 text-xs text-white" />
                     <input type="email" value={previewTo} onChange={(e) => setPreviewTo(e.target.value)}
                         placeholder="Preview to (optional email)" className="flex-1 min-w-[180px] rounded-lg border border-[#232333] bg-[#0A0A0F] px-3 py-2 text-xs text-white" />
+                    <input type="number" value={batchLimit} onChange={(e) => setBatchLimit(e.target.value)} min={1}
+                        placeholder="Batch cap (optional)" title="Warm-up cap: send only to the newest N confirmed subscribers"
+                        className="w-36 rounded-lg border border-[#232333] bg-[#0A0A0F] px-3 py-2 text-xs text-white" />
                     <button type="button" disabled={busy || !issueNumber}
                         onClick={() => {
-                            if (!previewTo && !window.confirm(`Send issue ${issueNumber} to ALL confirmed subscribers?`)) return;
+                            const lim = Number(batchLimit);
+                            const limTxt = Number.isInteger(lim) && lim > 0 ? ` to the newest ${lim} confirmed subscribers` : ' to ALL confirmed subscribers';
+                            if (!previewTo && !window.confirm(`Send issue ${issueNumber}${limTxt}?`)) return;
                             act('send-issue', {
                                 issueNumber: Number(issueNumber),
                                 ...(previewTo ? { previewTo } : {}),
+                                ...(Number.isInteger(lim) && lim > 0 ? { limit: lim } : {}),
                                 subscriberId: 1,
                             });
                         }}

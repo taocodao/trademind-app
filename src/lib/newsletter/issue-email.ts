@@ -14,9 +14,13 @@ import { MAILING_ADDRESS } from './email';
 import { maskEmail } from './normalize';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
-// Newsletter issues send from the verified transactional address: the root domain
-// is already DKIM/SPF-verified with established history, which beats a cold new one.
-const NEWSLETTER_FROM = 'The AI Systematic Investor <signals@trademind.bot>';
+// Sender identity. Today: the verified root-domain signals@ address. Once
+// news.trademind.bot verifies in Resend (DNS records at Namecheap), deploy with
+//   NEWSLETTER_FROM = "The AI Systematic Investor by TradeMind <newsletter@news.trademind.bot>"
+// which gives marketing its own DKIM identity while tacitly staying branded.
+const NEWSLETTER_FROM =
+    process.env.NEWSLETTER_FROM ?? 'The AI Systematic Investor <signals@trademind.bot>';
+const NEWSLETTER_REPLY_TO = process.env.NEWSLETTER_REPLY_TO ?? 'support@trademind.bot';
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://trademind.bot';
 
 const RISK_DISCLOSURE =
@@ -196,6 +200,7 @@ export async function sendIssueEmail(
             },
             body: JSON.stringify({
                 from: NEWSLETTER_FROM,
+                reply_to: NEWSLETTER_REPLY_TO,
                 to: sub.email,
                 subject: rendered.subject,
                 html: rendered.html,
@@ -218,14 +223,17 @@ export async function sendIssueEmail(
     }
 }
 
-/** Eligible recipients: confirmed or mid-email-change, not suppressed. */
-export async function issueRecipients(): Promise<SubscriberForEmail[]> {
+/** Eligible recipients: confirmed or mid-email-change, not suppressed.
+ *  `limit` caps the batch for warm-up ramps; newest confirmers go first. */
+export async function issueRecipients(limit?: number): Promise<SubscriberForEmail[]> {
+    const cap = Number.isInteger(limit) && (limit as number) > 0 ? `LIMIT ${Math.floor(limit as number)}` : '';
     const res = await query(
         `SELECT s.id, s.email, s.referral_id, d.state AS discount_state, d.window_end
          FROM newsletter_subscribers s
          LEFT JOIN newsletter_discounts d ON d.subscriber_id = s.id
          WHERE s.status IN ('confirmed', 'email_change_pending')
-           AND NOT EXISTS (SELECT 1 FROM newsletter_suppression sup WHERE sup.email = s.email)`
+           AND NOT EXISTS (SELECT 1 FROM newsletter_suppression sup WHERE sup.email = s.email)
+         ORDER BY s.first_confirmed_at DESC NULLS LAST ${cap}`
     );
     return res.rows;
 }

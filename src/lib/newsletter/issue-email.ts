@@ -8,16 +8,14 @@
  * carrying the original subscriber's referral id, never their identity.
  */
 import { query } from '@/lib/db';
-import { ISSUES, issueUrl, formatDate, type NewsletterIssue } from './issues';
+import { ISSUES, issueUrl, type NewsletterIssue } from './issues';
 import { makeUnsubscribeToken, recordNewsletterEvent } from './db';
 import { MAILING_ADDRESS } from './email';
 import { maskEmail } from './normalize';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
-// Sender identity. Today: the verified root-domain signals@ address. Once
-// news.trademind.bot verifies in Resend (DNS records at Namecheap), deploy with
-//   NEWSLETTER_FROM = "The AI Systematic Investor by TradeMind <newsletter@news.trademind.bot>"
-// which gives marketing its own DKIM identity while tacitly staying branded.
+// Sender identity: marketing mail goes out under the verified news.trademind.bot
+// subdomain (its own DKIM identity) since 2026-09-26 (commit 042b8a4).
 const NEWSLETTER_FROM =
     process.env.NEWSLETTER_FROM ?? 'The AI Systematic Investor by TradeMind <newsletter@news.trademind.bot>';
 const NEWSLETTER_REPLY_TO = process.env.NEWSLETTER_REPLY_TO ?? 'support@trademind.bot';
@@ -65,6 +63,14 @@ interface SubscriberForEmail {
     referral_id: string | null;
     discount_state: string | null;
     window_end: string | null;
+    first_name?: string | null;
+}
+
+/** First token of a lead's First Name, normalized for the greeting. */
+function greetingName(raw: string | null | undefined): string | null {
+    const token = (raw ?? '').trim().split(/\s+/)[0] ?? '';
+    if (!token || token.length > 24) return null;
+    return token.charAt(0).toUpperCase() + token.slice(1).toLowerCase();
 }
 
 function fmtDate(iso: string): string {
@@ -84,17 +90,17 @@ function offerBlock(sub: SubscriberForEmail, daysLeft: number | null): string {
             ? `Your 30% annual offer is active until ${until}.`
             : `Your 30% offer ends on ${until}.`;
         return wrap(`<p style="margin:0;font-size:15px;color:#111827"><strong>${line}</strong></p>
-            <p style="margin:8px 0 0;font-size:13.5px;color:#4b5563">Applied automatically at annual checkout with this email address. <a href="${BASE_URL}/newsletter/offer" style="color:#8B5CF6">Offer terms</a></p>
-            ${btn('Claim 30% off annual plan', `${BASE_URL}/upgrade`)}`);
+            <p style="margin:8px 0 0;font-size:13.5px;color:#4b5563">No verification step: the discount is already attached to the address this newsletter was sent to. Log in at trademind.bot with ${esc(sub.email)} and 30% comes off your first annual term automatically. <a href="${BASE_URL}/newsletter/offer" style="color:#8B5CF6">Offer terms</a></p>
+            ${btn('Claim 30% off annual plan', `${BASE_URL}/upgrade?email=${encodeURIComponent(sub.email)}`)}`);
     }
     if (sub.discount_state === 'redeemed') {
         return wrap(`<p style="margin:0;font-size:15px;color:#111827"><strong>Your subscription is active.</strong></p>
             <p style="margin:8px 0 0;font-size:13.5px;color:#4b5563">Every signal, the full trade ledger, and the verification record are in your account.</p>
             ${btn('Open my TradeMind account', `${BASE_URL}/accounts`)}`);
     }
-    return wrap(`<p style="margin:0;font-size:15px;color:#111827"><strong>TradeMind plans</strong></p>
-        <p style="margin:8px 0 0;font-size:13.5px;color:#4b5563">QQQ Basic and QQQ LEAPS, annual billing, every signal verified in the public ledger.</p>
-        ${btn('Explore TradeMind plans', `${BASE_URL}/upgrade`)}`);
+    return wrap(`<p style="margin:0;font-size:15px;color:#111827"><strong>Every address that received this newsletter carries 30% off a first-year plan.</strong></p>
+        <p style="margin:8px 0 0;font-size:13.5px;color:#4b5563">It is already built in: log in at trademind.bot with ${esc(sub.email)} and the discount applies automatically. QQQ Basic and QQQ LEAPS, annual billing, every signal verified in the public ledger. <a href="${BASE_URL}/newsletter/offer" style="color:#8B5CF6">Offer terms</a></p>
+        ${btn('Claim 30% off annual plan', `${BASE_URL}/upgrade?email=${encodeURIComponent(sub.email)}`)}`);
 }
 
 export interface IssueEmail {
@@ -111,6 +117,9 @@ export async function renderIssueEmail(
 ): Promise<IssueEmail> {
     const canonical = `${BASE_URL}${issueUrl(issue)}`;
     const unsubscribeUrl = `${BASE_URL}/newsletter/unsubscribe?token=${await makeUnsubscribeToken(sub.id)}`;
+    const firstName = greetingName(sub.first_name);
+    const viewUrl = `${canonical}?e=${encodeURIComponent(sub.email)}${sub.referral_id ? `&ref=${encodeURIComponent(sub.referral_id)}` : ''}`;
+    const claimUrl = `${BASE_URL}/upgrade?email=${encodeURIComponent(sub.email)}`;
 
     const daysLeft = sub.window_end
         ? Math.ceil((new Date(sub.window_end).getTime() - Date.now()) / 864e5)
@@ -132,13 +141,14 @@ export async function renderIssueEmail(
 
     const html = `<div style="font-family:Arial,sans-serif;color:#111827;max-width:580px;margin:0 auto">
         <p style="font-size:12.5px;color:#9ca3af;margin:0 0 16px">
-            Trouble reading? <a href="${canonical}" style="color:#8B5CF6">View in browser</a>
+            Trouble reading? <a href="${viewUrl}" style="color:#8B5CF6">View in browser</a>
         </p>
         <p style="font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:#8B5CF6;font-weight:bold;margin:0 0 6px">The AI Systematic Investor &middot; Issue ${issue.number}</p>
         <h1 style="font-size:24px;line-height:1.25;margin:0 0 10px">${esc(issue.title)}</h1>
-        <p style="color:#6b7280;font-size:13px;margin:0 0 20px">${formatDate(issue.publishDate)} &middot; ${esc(issue.readTime)}</p>
+        <p style="color:#6b7280;font-size:13px;margin:0 0 20px">Issue ${issue.number} &middot; ${esc(issue.readTime)}</p>
+        ${firstName ? `<p style="margin:0 0 18px;font-size:15px;color:#111827">Hello ${esc(firstName)},</p>` : ''}
         ${bodyHtml}
-        <p style="margin:20px 0"><a href="${canonical}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:bold">Read the full issue</a></p>
+        <p style="margin:20px 0"><a href="${viewUrl}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:bold">Read the full issue</a></p>
         <p style="font-size:13.5px;color:#6b7280">Go deeper: ${deep}</p>
         ${offerBlock(sub, daysLeft)}
         <p style="font-size:13.5px;color:#6b7280">
@@ -158,15 +168,16 @@ export async function renderIssueEmail(
 
     const text = [
         `The AI Systematic Investor - Issue ${issue.number}: ${issue.title}`,
-        `${formatDate(issue.publishDate)} - ${issue.readTime}`,
+        `Issue ${issue.number} - ${issue.readTime}`,
         '',
+        ...(firstName ? [`Hello ${firstName},`, ''] : []),
         issue.excerpt,
         '',
         `Read the full issue: ${canonical}`,
         '',
         sub.discount_state === 'eligible' && sub.window_end
-            ? `Your 30% annual offer is active until ${fmtDate(sub.window_end)}: ${BASE_URL}/upgrade`
-            : `TradeMind plans: ${BASE_URL}/upgrade`,
+            ? `Your 30% annual offer is active until ${fmtDate(sub.window_end)}. Log in at trademind.bot with this email address and it applies automatically: ${claimUrl}`
+            : `This address already carries 30% off a first-year plan. Log in with it to claim: ${claimUrl}`,
         '',
         RISK_DISCLAIMER,
         `TradeMind, ${MAILING_ADDRESS}`,
@@ -184,7 +195,11 @@ export async function renderIssueEmail(
 
 const RISK_DISCLAIMER = RISK_DISCLOSURE;
 
-/** Send one issue to one subscriber, with one-click unsubscribe headers. */
+/** Send one issue to one subscriber. The per-subscriber unsubscribe link lives in the
+ *  email footer only (Eric's call, 2026-09-26): no List-Unsubscribe header, which means
+ *  Gmail and Yahoo will not render their own one-click unsubscribe button at the top of
+ *  the message. If spam complaints ever climb, restoring these two headers is the first
+ *  lever to pull. */
 export async function sendIssueEmail(
     issue: NewsletterIssue,
     sub: SubscriberForEmail
@@ -205,10 +220,6 @@ export async function sendIssueEmail(
                 subject: rendered.subject,
                 html: rendered.html,
                 text: rendered.text,
-                headers: {
-                    'List-Unsubscribe': `<${rendered.listUnsubscribe}>`,
-                    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-                },
             }),
         });
         if (response.ok) {
@@ -227,15 +238,31 @@ export async function sendIssueEmail(
  *  `limit` caps the batch for warm-up ramps; newest confirmers go first. */
 export async function issueRecipients(limit?: number): Promise<SubscriberForEmail[]> {
     const cap = Number.isInteger(limit) && (limit as number) > 0 ? `LIMIT ${Math.floor(limit as number)}` : '';
-    const res = await query(
-        `SELECT s.id, s.email, s.referral_id, d.state AS discount_state, d.window_end
-         FROM newsletter_subscribers s
-         LEFT JOIN newsletter_discounts d ON d.subscriber_id = s.id
-         WHERE s.status IN ('confirmed', 'email_change_pending')
+    const tail = `WHERE s.status IN ('confirmed', 'email_change_pending')
            AND NOT EXISTS (SELECT 1 FROM newsletter_suppression sup WHERE sup.email = s.email)
-         ORDER BY s.first_confirmed_at DESC NULLS LAST ${cap}`
-    );
-    return res.rows;
+         ORDER BY s.first_confirmed_at DESC NULLS LAST ${cap}`;
+    try {
+        // Prefer the join against the imported leads so the email can greet the
+        // reader by first name. Falls back gracefully where no leads table exists.
+        const res = await query(
+            `SELECT s.id, s.email, s.referral_id, d.state AS discount_state, d.window_end,
+                    l."First Name" AS first_name
+             FROM newsletter_subscribers s
+             LEFT JOIN newsletter_discounts d ON d.subscriber_id = s.id
+             LEFT JOIN leads l ON LOWER(l."Email") = LOWER(s.email)
+             ${tail}`
+        );
+        return res.rows;
+    } catch {
+        const res = await query(
+            `SELECT s.id, s.email, s.referral_id, d.state AS discount_state, d.window_end,
+                    NULL AS first_name
+             FROM newsletter_subscribers s
+             LEFT JOIN newsletter_discounts d ON d.subscriber_id = s.id
+             ${tail}`
+        );
+        return res.rows;
+    }
 }
 
 export function getIssueByNumber(n: number): NewsletterIssue | undefined {

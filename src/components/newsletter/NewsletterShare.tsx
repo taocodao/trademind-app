@@ -1,9 +1,10 @@
 'use client';
 
 /**
- * Newsletter share component (matches the reference layout):
- * preview card on top, primary buttons always visible, More menu with the
- * long tail of platforms. Every shared URL carries ref + utm parameters.
+ * Newsletter share component (2026-09-26 rework).
+ * Two modes: "rail" (always-visible column of labeled buttons, used as the
+ * sticky sidebar on issue pages) and the default in-content section.
+ * Every shared URL carries ref + utm parameters.
  */
 import { useEffect, useRef, useState } from 'react';
 import { trackNewsletter } from './track';
@@ -14,7 +15,10 @@ interface ShareProps {
     /** Canonical path, e.g. /newsletter/issues/2026-09-16-... */
     path: string;
     slug: string;
+    /** Compact is retired in favor of rail; kept so old call sites compile. */
     compact?: boolean;
+    /** Rail mode: always-visible button column for the sticky sidebar. */
+    rail?: boolean;
     subscriberRef?: string;
 }
 
@@ -102,32 +106,62 @@ export default function NewsletterShare(props: ShareProps) {
         setOpen(false);
     };
 
-    const saveBookmark = () => {
-        trackNewsletter('share_clicked', { platform: 'save', slug: props.slug });
-        copyLink();
-    };
-
-    const cls = props.compact ? 'tm-nlshare tm-nlshare-compact' : 'tm-nlshare';
+    // Rail mode: a column of labeled, always-visible buttons.
+    if (props.rail) {
+        return (
+            <div className="tm-nlshare-rail" ref={menuRef}>
+                <button type="button" aria-label="Share this issue" onClick={nativeShare} className="tm-nlshare-btn tm-nlshare-rail-primary">
+                    Share
+                </button>
+                <button type="button" aria-label="Copy link" onClick={copyLink} className="tm-nlshare-btn">
+                    {copied ? 'Copied' : 'Copy link'}
+                </button>
+                <button type="button" aria-label="Share by email" onClick={() => share('email', links.Email)} className="tm-nlshare-btn">Email</button>
+                <button type="button" aria-label="Share on X" onClick={() => share('x', links.X)} className="tm-nlshare-btn">X</button>
+                <button type="button" aria-label="Share on LinkedIn" onClick={() => share('linkedin', links.LinkedIn)} className="tm-nlshare-btn">LinkedIn</button>
+                <button type="button" aria-label="Share on Facebook" onClick={() => share('facebook', links.Facebook)} className="tm-nlshare-btn">Facebook</button>
+                <div className="tm-nlshare-more-wrap">
+                    <button
+                        type="button"
+                        aria-label="More share options"
+                        aria-expanded={open}
+                        onClick={() => setOpen((v) => !v)}
+                        className="tm-nlshare-btn"
+                    >
+                        More
+                    </button>
+                    {open && (
+                        <div className="tm-nlshare-menu tm-nlshare-menu-rail" role="menu">
+                            <button type="button" role="menuitem" aria-label="Share on Bluesky" onClick={() => { share('bluesky', links.Bluesky); setOpen(false); }}>Bluesky</button>
+                            <button type="button" role="menuitem" aria-label="Share on Reddit" onClick={() => { share('reddit', links.Reddit); setOpen(false); }}>Reddit</button>
+                            <button type="button" role="menuitem" aria-label="Share on Pinterest" onClick={() => { share('pinterest', links.Pinterest); setOpen(false); }}>Pinterest</button>
+                            <button type="button" role="menuitem" aria-label="Share on Hacker News" onClick={() => { share('hackernews', links['Hacker News']); setOpen(false); }}>Hacker News</button>
+                            <button type="button" role="menuitem" aria-label="Copy embed code" onClick={copyEmbed}>Embed</button>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className={cls} ref={menuRef}>
-            {!props.compact && (
-                <div className="tm-nlshare-card">
-                    <img src="/logo.png" alt="TradeMind" className="tm-nlshare-logo" />
-                    <div>
-                        <p className="tm-nlshare-name">The AI Systematic Investor</p>
-                        <p className="tm-nlshare-by">by TradeMind</p>
-                        <p className="tm-nlshare-desc">Weekly research on QQQ, LEAPS, PMCC, and risk control with transparent rules.</p>
-                    </div>
+        <div className="tm-nlshare" ref={menuRef}>
+            <div className="tm-nlshare-card">
+                <img src="/logo.png" alt="TradeMind" className="tm-nlshare-logo" />
+                <div>
+                    <p className="tm-nlshare-name">The AI Systematic Investor</p>
+                    <p className="tm-nlshare-by">by TradeMind</p>
+                    <p className="tm-nlshare-desc">Weekly research on QQQ, LEAPS, PMCC, and risk control with transparent rules.</p>
                 </div>
-            )}
+            </div>
             <div className="tm-nlshare-row">
                 <button type="button" aria-label="Copy link" onClick={copyLink} className="tm-nlshare-btn">
                     {copied ? 'Link copied' : 'Copy link'}
                 </button>
                 <button type="button" aria-label="Share on Facebook" onClick={() => share('facebook', links.Facebook)} className="tm-nlshare-btn">Facebook</button>
+                <button type="button" aria-label="Share on X" onClick={() => share('x', links.X)} className="tm-nlshare-btn">X</button>
+                <button type="button" aria-label="Share on LinkedIn" onClick={() => share('linkedin', links.LinkedIn)} className="tm-nlshare-btn">LinkedIn</button>
                 <button type="button" aria-label="Share by email" onClick={() => share('email', links.Email)} className="tm-nlshare-btn">Email</button>
-                <button type="button" aria-label="Save bookmark" onClick={saveBookmark} className="tm-nlshare-btn">Save</button>
                 <div className="tm-nlshare-more-wrap">
                     <button
                         type="button"
@@ -141,8 +175,6 @@ export default function NewsletterShare(props: ShareProps) {
                     {open && (
                         <div className="tm-nlshare-menu" role="menu">
                             <button type="button" role="menuitem" aria-label="Share on Bluesky" onClick={() => { share('bluesky', links.Bluesky); setOpen(false); }}>Bluesky</button>
-                            <button type="button" role="menuitem" aria-label="Share on X" onClick={() => { share('x', links.X); setOpen(false); }}>X</button>
-                            <button type="button" role="menuitem" aria-label="Share on LinkedIn" onClick={() => { share('linkedin', links.LinkedIn); setOpen(false); }}>LinkedIn</button>
                             <button type="button" role="menuitem" aria-label="Share on Reddit" onClick={() => { share('reddit', links.Reddit); setOpen(false); }}>Reddit</button>
                             <button type="button" role="menuitem" aria-label="Share on Pinterest" onClick={() => { share('pinterest', links.Pinterest); setOpen(false); }}>Pinterest</button>
                             <button type="button" role="menuitem" aria-label="Share on Hacker News" onClick={() => { share('hackernews', links['Hacker News']); setOpen(false); }}>Hacker News</button>

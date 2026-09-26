@@ -8,7 +8,6 @@ import {
     ISSUES,
     getIssue,
     issueUrl,
-    formatDate,
     relatedIssues,
     adjacentIssues,
 } from '@/lib/newsletter/issues';
@@ -99,7 +98,7 @@ export default async function IssuePage({ params }: { params: Promise<{ slug: st
                 />
 
                 <p className="tm-nl-meta">
-                    Issue {issue.number} · {formatDate(issue.publishDate)} · {issue.readTime}
+                    Issue {issue.number} · {issue.readTime}
                 </p>
                 <h1 className="tm-nl-h1" style={{ fontSize: 'clamp(26px, 3.6vw, 38px)' }}>
                     {issue.title}
@@ -111,15 +110,19 @@ export default async function IssuePage({ params }: { params: Promise<{ slug: st
                     ))}
                 </span>
 
-                <NewsletterShare
-                    title={issue.title}
-                    summary={issue.excerpt}
-                    path={issueUrl(issue)}
-                    slug={issue.slug}
-                    compact
-                />
+                <div className="tm-nl-issuerow">
+                    <aside className="tm-nl-rail" aria-label="Share this issue">
+                        <NewsletterShare
+                            title={issue.title}
+                            summary={issue.excerpt}
+                            path={issueUrl(issue)}
+                            slug={issue.slug}
+                            rail
+                        />
+                    </aside>
 
-                <article className="tm-nl-article">
+                <div className="tm-nl-issuemain">
+                <article className="tm-nl-article tm-nl-article-rail">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{first}</ReactMarkdown>
 
                     {issue.deepLinks.length > 0 && (
@@ -140,8 +143,8 @@ export default async function IssuePage({ params }: { params: Promise<{ slug: st
                 </article>
 
                 <div style={{ textAlign: 'center', margin: '40px 0' }}>
-                    <Link href="/newsletter/offer" className="tm-nl-btn tm-nl-btn-primary" style={{ textDecoration: 'none' }}>
-                        Start my annual subscription at 30% off
+                    <Link href="/upgrade" className="tm-nl-btn tm-nl-btn-primary" style={{ textDecoration: 'none' }}>
+                        Claim 30% off annual plan
                     </Link>
                 </div>
 
@@ -151,7 +154,8 @@ export default async function IssuePage({ params }: { params: Promise<{ slug: st
                     path={issueUrl(issue)}
                     slug={issue.slug}
                 />
-
+                </div>
+                </div>
                 <div className="tm-nl-prevnext">
                     {prev ? (
                         <Link href={issueUrl(prev)}>Previous: {prev.title}</Link>
@@ -167,7 +171,7 @@ export default async function IssuePage({ params }: { params: Promise<{ slug: st
                         <div className="tm-nl-related">
                             {related.map((r) => (
                                 <Link key={r.slug} href={issueUrl(r)} className="tm-nl-card tm-nl-issuecard">
-                                    <p className="tm-nl-meta">Issue {r.number} · {formatDate(r.publishDate)}</p>
+                                    <p className="tm-nl-meta">Issue {r.number} · {r.readTime}</p>
                                     <h3 className="tm-nl-issue-title" style={{ fontSize: 15 }}>{r.title}</h3>
                                 </Link>
                             ))}

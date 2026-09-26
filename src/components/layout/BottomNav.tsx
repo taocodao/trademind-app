@@ -43,6 +43,9 @@ export function BottomNav() {
 
     if (!mounted || !ready || !authenticated) return null;
     if (pathname.startsWith('/review')) return null;
+    // The bottom action bar belongs to the logged-in console only; it has no
+    // meaning on the public newsletter pages or the admin console.
+    if (pathname.startsWith('/newsletter') || pathname.startsWith('/admin')) return null;
     const publicRoutes = ['/', '/how-it-works', '/results', '/family'];
     if (publicRoutes.includes(pathname) || pathname.startsWith('/c/')) return null;
 

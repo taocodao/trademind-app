@@ -9,7 +9,9 @@ const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://trademind.bot';
 
 const RISK_DISCLOSURE =
     'TradeMind is software for self-directed investors, not investment advice. Options involve risk. Any performance figures are hypothetical or simulated and do not guarantee future results.';
-const COMPANY_FOOTER = 'TradeMind, Queens, New York. You are receiving this because of an action taken at trademind.bot.';
+/** Physical mailing address for CAN-SPAM footers. Set NEWSLETTER_MAILING_ADDRESS in env to the confirmed postal address. */
+export const MAILING_ADDRESS = process.env.NEWSLETTER_MAILING_ADDRESS || 'Queens, New York';
+const COMPANY_FOOTER = `TradeMind, ${MAILING_ADDRESS}. You are receiving this because of an action taken at trademind.bot.`;
 
 function esc(s: string): string {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

@@ -10,6 +10,7 @@
 import { query } from '@/lib/db';
 import { ISSUES, issueUrl, formatDate, type NewsletterIssue } from './issues';
 import { makeUnsubscribeToken, recordNewsletterEvent } from './db';
+import { MAILING_ADDRESS } from './email';
 import { maskEmail } from './normalize';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
@@ -162,6 +163,7 @@ export async function renderIssueEmail(
             : `TradeMind plans: ${BASE_URL}/upgrade`,
         '',
         RISK_DISCLAIMER,
+        `TradeMind, ${MAILING_ADDRESS}`,
         `Unsubscribe: ${unsubscribeUrl}`,
     ].join('\n');
 

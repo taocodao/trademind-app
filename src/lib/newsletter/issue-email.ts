@@ -14,7 +14,9 @@ import { MAILING_ADDRESS } from './email';
 import { maskEmail } from './normalize';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
-const NEWSLETTER_FROM = 'The AI Systematic Investor <newsletter@trademind.bot>';
+// Newsletter issues send from the verified transactional address: the root domain
+// is already DKIM/SPF-verified with established history, which beats a cold new one.
+const NEWSLETTER_FROM = 'The AI Systematic Investor <signals@trademind.bot>';
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://trademind.bot';
 
 const RISK_DISCLOSURE =

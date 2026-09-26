@@ -205,4 +205,26 @@ A: Go to Settings → Subscription Manager → Manage Billing. This will redirec
 
 **Q: I need help with something not covered here**
 A: Email the support team at support@trademind.bot and someone will respond within 24 hours.
+
+---
+
+## 15. The AI Systematic Investor (Newsletter)
+
+- Free weekly newsletter publishing risk-first research on systematic investing: QQQ concentration, LEAPS, poor-man-covered-calls (PMCC), semiconductor put selling, machine learning limits, backtest validation, and building a retail risk framework.
+- Full archive lives at https://trademind.bot/newsletter and each issue has a permanent page at /newsletter/issues/<date>-<slug>.
+- Delivery is by email from The AI Systematic Investor by TradeMind <newsletter@news.trademind.bot>.
+
+### 30% Subscriber Offer
+- Every email address that receives the newsletter can claim 30% off the first year of an annual plan (QQQ Basic or QQQ LEAPS).
+- How to claim: subscribe to the newsletter and confirm your address; then log in at trademind.bot with that same email address and start checkout. The discount applies automatically to the first annual term. There is no separate verification step.
+- The window is 90 days from first confirmation. Changing your newsletter email never restarts the window.
+- Already a TradeMind customer? The offer still applies when buying an additional plan.
+- Not combinable with other discounts or referral credits. Renews at standard price after year one. Unsubscribing from the newsletter keeps the discount until the window ends.
+- Terms: https://trademind.bot/newsletter/offer
+
+### Managing a subscription to the newsletter
+- Unsubscribe: every issue email footer has an Unsubscribe link.
+- Change email: https://trademind.bot/newsletter/change-email (max 2 changes per 90 days).
+- Newsletters are sent roughly weekly; past issues stay readable on the site forever.
+
 `.trim();

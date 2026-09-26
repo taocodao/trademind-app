@@ -1,20 +1,36 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
 import { MessageCircle, X, Send, Loader2, Bot, User, Minimize2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 type Message = { role: 'user' | 'assistant'; content: string };
 
-const STARTER_CHIPS = [
+const APP_CHIPS = [
     'How do TradeMind signals reach my broker?',
     'What is QQQ Basic?',
     'How do I enter a signal at my broker?',
     'How does the shadow ledger work?',
 ];
 
+const NEWSLETTER_CHIPS = [
+    'How does the 30% subscriber offer work?',
+    'What is the newsletter about?',
+    'How much does TradeMind cost?',
+    'How do I unsubscribe or change my email?',
+];
+
 export function SupportChatWidget() {
+    const pathname = usePathname();
+    const onNewsletter = pathname?.startsWith('/newsletter') ?? false;
+    const CHIPS = onNewsletter ? NEWSLETTER_CHIPS : APP_CHIPS;
+    const title = onNewsletter ? 'Newsletter help' : 'TradeMind Support';
+    const intro = onNewsletter
+        ? 'Questions about the newsletter or the 30% subscriber offer? Ask here.'
+        : 'Hi! I can answer questions about TradeMind features, strategies, and settings.';
+
     const [open, setOpen] = useState(false);
     const [input, setInput] = useState('');
     const [messages, setMessages] = useState<Message[]>([]);
@@ -55,6 +71,8 @@ export function SupportChatWidget() {
                     role: 'assistant',
                     content: response.status === 401
                         ? 'Please log in to use the support chat.'
+                        : response.status === 429
+                        ? (err.error || 'Too many messages. Please try again later.')
                         : `Sorry, something went wrong: ${err.error || response.statusText}`,
                 }]);
                 return;
@@ -139,7 +157,7 @@ export function SupportChatWidget() {
                             <Bot className="w-4 h-4 text-white" />
                         </div>
                         <div className="flex-1">
-                            <h3 className="text-sm font-semibold">TradeMind Support</h3>
+                            <h3 className="text-sm font-semibold">{title}</h3>
                             <div className="flex items-center gap-1.5 text-[10px] text-tm-green">
                                 <span className="w-1.5 h-1.5 rounded-full bg-tm-green animate-pulse" />
                                 Online — ask me anything
@@ -161,10 +179,10 @@ export function SupportChatWidget() {
                                     <Bot className="w-7 h-7 text-tm-purple" />
                                 </div>
                                 <p className="text-sm text-tm-muted leading-relaxed max-w-xs">
-                                    Hi! I can answer questions about TradeMind features, strategies, and settings.
+                                    {intro}
                                 </p>
                                 <div className="flex flex-wrap gap-2 justify-center">
-                                    {STARTER_CHIPS.map(chip => (
+                                    {CHIPS.map(chip => (
                                         <button
                                             key={chip}
                                             onClick={() => sendMessage(chip)}

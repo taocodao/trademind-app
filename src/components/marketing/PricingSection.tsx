@@ -97,7 +97,7 @@ export function PricingSection() {
             return;
         }
         if (!authenticated) {
-            login();
+            login(nlEmail.includes('@') ? { prefill: { type: 'email', value: nlEmail } } : {});
             return;
         }
         window.location.href = `/upgrade?plan=${plan}${nlEmail ? `&email=${encodeURIComponent(nlEmail)}` : ''}`;
@@ -292,7 +292,7 @@ export function PricingSection() {
                                             const plan = pendingPlan;
                                             setPendingPlan(null);
                                             setNlModalOpen(false);
-                                            if (!authenticated) login();
+                                            if (!authenticated) login(nlEmail.includes('@') ? { prefill: { type: 'email', value: nlEmail } } : {});
                                             else window.location.href = `/upgrade?plan=${plan}`;
                                         }}
                                         className="mt-3 text-[11px] text-tm-muted underline hover:text-white"
@@ -314,7 +314,7 @@ export function PricingSection() {
                                             const plan = pendingPlan;
                                             setPendingPlan(null);
                                             setNlModalOpen(false);
-                                            if (!authenticated) login();
+                                            if (!authenticated) login({ prefill: { type: 'email', value: nlEmail } });
                                             else window.location.href = `/upgrade?plan=${plan}&email=${encodeURIComponent(nlEmail)}`;
                                         }}
                                         className="w-full rounded-lg bg-tm-purple px-5 py-3 text-sm font-bold text-white hover:bg-tm-purple/90"

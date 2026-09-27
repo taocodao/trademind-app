@@ -61,10 +61,15 @@ function UpgradePageInner() {
                     <h1 className="text-3xl font-bold mb-3">Sign in to continue</h1>
                     <p className="text-sm text-gray-400 mb-8">
                         {planInfo
-                            ? `${planInfo.label} is $${planInfo.price} per year. Log in with the email that gets your signal alerts, then check out.`
+                            ? emailParam
+                                ? `${planInfo.label} is $${planInfo.price} per year. Sign in with ${emailParam}; it is already filled in for you, then check out.`
+                                : `${planInfo.label} is $${planInfo.price} per year. Log in with the email that gets your signal alerts, then check out.`
                             : 'Log in to subscribe or manage a plan.'}
                     </p>
-                    <button onClick={login} className="w-full rounded-xl bg-tm-purple py-3 font-bold hover:bg-tm-purple/80">Sign in</button>
+                    <button
+                        onClick={() => login(emailParam && emailParam.includes('@') ? { prefill: { type: 'email', value: emailParam } } : {})}
+                        className="w-full rounded-xl bg-tm-purple py-3 font-bold hover:bg-tm-purple/80"
+                    >Sign in</button>
                     <a href="/#pricing" className="inline-block mt-5 text-sm text-gray-400 hover:text-white">Back to pricing</a>
                 </section>
             </main>

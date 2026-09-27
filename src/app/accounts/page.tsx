@@ -103,8 +103,15 @@ function AccountsPageInner() {
         if (forceList || loading || !ready || !authenticated) return;
         if (accounts.length === 1) {
             router.replace(`/account/${accounts[0].id}`);
+            return;
         }
-    }, [forceList, loading, ready, authenticated, accounts, router]);
+        // Signed in but nothing here (no subscription yet): route to the
+        // pricing section instead of an empty list. Skip while a fresh
+        // checkout is still provisioning its account.
+        if (accounts.length === 0 && !(checkoutSuccess && provisionWaited < 30)) {
+            router.replace('/#pricing');
+        }
+    }, [forceList, loading, ready, authenticated, accounts, router, checkoutSuccess, provisionWaited]);
 
 
 

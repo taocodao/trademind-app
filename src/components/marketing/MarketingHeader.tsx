@@ -11,7 +11,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import { useTranslation } from 'react-i18next';
-import { Zap } from 'lucide-react';
+import ShareButton from './ShareButton';
 
 export function MarketingHeader() {
     const { login, authenticated } = usePrivy();
@@ -35,19 +35,9 @@ export function MarketingHeader() {
             style={{ background: HEADER_BG, borderBottom: BORDER }}
         >
             <div className="h-full px-6 flex items-center justify-between max-w-7xl mx-auto">
-                {/* Left, Demo tour. Outlined pill on top of a dark hero. */}
-                <Link
-                    href="/demo"
-                    className="tm-mh-btn tm-mh-demo"
-                    style={{
-                        border: `1.5px solid ${ACCENT}`,
-                        color: '#C4B5FD',
-                        background: 'transparent',
-                    }}
-                >
-                    <Zap className="w-4 h-4" style={{ color: ACCENT }} />
-                    <span className="hidden sm:inline">Demo</span>
-                </Link>
+                {/* Left, Share. Outlined pill on top of a dark hero; opens the
+                    share popover with social targets and newsletter capture. */}
+                <ShareButton />
 
                 {/* Center, language selector. Inactive labels lift to #9AA3B5
                     so they read clearly on the hero photo. */}

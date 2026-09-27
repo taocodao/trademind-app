@@ -91,6 +91,7 @@ export default async function IssuePage({ params }: { params: Promise<{ slug: st
             <div className="tm-nl-wrap-narrow">
                 <Breadcrumb
                     items={[
+                        { label: 'TradeMind home', href: '/' },
                         { label: 'Newsletter', href: '/newsletter' },
                         { label: 'All issues', href: '/newsletter/issues' },
                         { label: `Issue ${issue.number}` },

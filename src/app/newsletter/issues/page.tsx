@@ -35,7 +35,7 @@ export default function NewsletterArchive() {
     return (
         <main className="tm-nl">
             <div className="tm-nl-wrap">
-                <Breadcrumb items={[{ label: 'Newsletter', href: '/newsletter' }, { label: 'All issues' }]} />
+                <Breadcrumb items={[{ label: 'TradeMind home', href: '/' }, { label: 'Newsletter', href: '/newsletter' }, { label: 'All issues' }]} />
                 <p className="tm-nl-eyebrow">The AI Systematic Investor</p>
                 <h1 className="tm-nl-h1">Every issue, every rule on the table.</h1>
                 <p className="tm-nl-sub">

@@ -11,11 +11,54 @@ export const dynamic = 'force-dynamic';
  *   POST { action, email | subscriberId, reason?, days? }
  *      resend-confirmation | extend-window | revoke-discount
  *   GET  ?aggregate=1    -> aggregate numbers only (no raw email lists)
+ *   GET  ?directory=1&q=&limit=&offset=
+ *                        -> unified subscriber directory (email is the key,
+ *                           covers signup forms and lead imports) with drip
+ *                           position; optional q filters by email substring
+ *   GET  ?history=<email> -> send history (newsletter_send_log) for one address
  */
 export async function GET(req: NextRequest) {
     const gate = await resolveAdmin(req);
     if (!gate.isAdmin) return NextResponse.json({ error: gate.error ?? 'Forbidden' }, { status: gate.status });
     await ensureNewsletterTables();
+
+    const sp = req.nextUrl.searchParams;
+
+    if (sp.get('directory')) {
+        const { backfillDirectory } = await import('@/lib/newsletter/db');
+        await backfillDirectory();
+        const q = (sp.get('q') ?? '').trim().toLowerCase();
+        const limit = Math.min(200, Math.max(1, Number(sp.get('limit')) || 100));
+        const offset = Math.max(0, Number(sp.get('offset')) || 0);
+        const where = q ? `WHERE d.email LIKE $1` : '';
+        const params: (string | number)[] = q ? [`%${q}%`, limit, offset] : [limit, offset];
+        const rows = await query(
+            `SELECT d.email, d.source, d.first_name, d.next_issue, d.next_issue_at,
+                    d.last_seen_at, d.created_at, s.status AS subscriber_status
+             FROM newsletter_directory d
+             LEFT JOIN newsletter_subscribers s ON s.id = d.subscriber_id
+             ${where}
+             ORDER BY d.created_at DESC
+             LIMIT $${q ? 2 : 1} OFFSET $${q ? 3 : 2}`,
+            params
+        );
+        const total = await query(
+            `SELECT COUNT(*)::int AS n FROM newsletter_directory d ${q ? `WHERE d.email LIKE $1` : ''}`,
+            q ? [`%${q}%`] : []
+        );
+        return NextResponse.json({ directory: rows.rows, total: total.rows[0]?.n ?? 0 });
+    }
+
+    if (sp.get('history')) {
+        const email = sp.get('history')!.trim().toLowerCase();
+        const rows = await query(
+            `SELECT kind, issue_number, issue_slug, ok, created_at
+             FROM newsletter_send_log WHERE email = $1
+             ORDER BY created_at DESC LIMIT 100`,
+            [email]
+        );
+        return NextResponse.json({ email, history: rows.rows });
+    }
 
     const agg = req.nextUrl.searchParams.get('aggregate');
     if (agg) {

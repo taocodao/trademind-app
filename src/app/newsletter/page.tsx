@@ -61,6 +61,9 @@ export default function NewsletterHome() {
         <main className="tm-nl">
             <div className="tm-nl-wrap">
                 {/* Hero */}
+                <p style={{ margin: '0 0 8px' }}>
+                    <Link href="/" className="tm-nl-link">&larr; TradeMind home</Link>
+                </p>
                 <p className="tm-nl-eyebrow">The AI Systematic Investor</p>
                 <h1 className="tm-nl-h1">Replace market opinions with a systematic investment process.</h1>
                 <p className="tm-nl-sub">

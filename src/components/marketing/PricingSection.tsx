@@ -82,14 +82,18 @@ export function PricingSection() {
     const unlockRef = useRef<HTMLDivElement>(null);
     const [pendingPlan, setPendingPlan] = useState<'basic' | 'leaps' | null>(null);
 
-    // At the regular (non-subscriber) price, the Start button first drops the
-    // visitor on the newsletter capture: everyone can claim the 30% subscriber
-    // price, so there is no reason to send anyone to checkout at $360/$480.
-    // A "continue at regular price" escape hatch stays on the capture card.
+    // Popup modal state. At the regular (non-subscriber) price, Start opens
+    // the subscribe popup: enter an email, we subscribe instantly (no confirm
+    // step) and email the first issue right away. A "continue at regular
+    // price" escape hatch stays on the popup.
+    const [nlModalOpen, setNlModalOpen] = useState(false);
+    const [nlModalSent, setNlModalSent] = useState(false);
+
     const handleSubscribe = async (plan: 'basic' | 'leaps') => {
         if (!unlocked) {
             setPendingPlan(plan);
-            unlockRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setNlModalSent(false);
+            setNlModalOpen(true);
             return;
         }
         if (!authenticated) {
@@ -109,19 +113,12 @@ export function PricingSection() {
             const res = await fetch('/api/newsletter/subscribe', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, consent: true, source: 'pricing' }),
+                body: JSON.stringify({ email, consent: true, source: 'pricing', instant: true }),
             });
             const d = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(d.error || 'Subscription failed');
             setUnlocked(true);
-            // Came here from a Start button: keep momentum and continue to
-            // checkout at the subscriber price once the address is captured.
-            if (pendingPlan) {
-                const plan = pendingPlan;
-                setPendingPlan(null);
-                if (!authenticated) login();
-                else window.location.href = `/upgrade?plan=${plan}&email=${encodeURIComponent(email)}`;
-            }
+            setNlModalSent(true);
         } catch (err) {
             setNlError(err instanceof Error ? err.message : 'Subscription failed');
         } finally {
@@ -241,54 +238,100 @@ export function PricingSection() {
                 })}
             </div>
 
-            {/* Newsletter unlock: leave an email, get the 30% subscriber price */}
-            {!unlocked && (
-                <div ref={unlockRef} className="mt-6 max-w-xl mx-auto bg-white/5 border border-tm-purple/30 rounded-2xl p-5 text-center">
-                    <p className="text-sm font-bold text-white mb-1">Subscribers pay 30% less</p>
-                    <p className="text-xs text-tm-muted mb-4">
-                        Enter your email to subscribe to The AI Systematic Investor and the subscriber price
-                        ($252 QQQ Basic, $336 QQQ LEAPS) applies to your first annual term automatically.
-                    </p>
-                    <form onSubmit={handleUnlock} className="flex flex-col sm:flex-row gap-3">
-                        <input
-                            type="email"
-                            required
-                            value={nlEmail}
-                            onChange={(e) => setNlEmail(e.target.value)}
-                            placeholder="you@example.com"
-                            className="flex-1 rounded-lg bg-black/40 border border-white/10 px-4 py-3 text-sm text-white placeholder:text-tm-muted focus:outline-none focus:border-tm-purple"
-                        />
-                        <button
-                            type="submit"
-                            disabled={nlBusy}
-                            className="rounded-lg bg-tm-purple px-5 py-3 text-sm font-bold text-white hover:bg-tm-purple/90 disabled:opacity-60"
-                        >
-                            {nlBusy ? 'Subscribing...' : 'Unlock 30% off'}
-                        </button>
-                    </form>
-                    {nlError && <p className="mt-3 text-xs text-tm-red">{nlError}</p>}
-                    <p className="mt-3 text-[11px] text-tm-muted">
-                        By subscribing you agree to receive the weekly newsletter. Unsubscribe anytime.
-                    </p>
-                    {pendingPlan && (
-                        <button
-                            onClick={() => {
-                                const plan = pendingPlan;
-                                setPendingPlan(null);
-                                if (!authenticated) login();
-                                else window.location.href = `/upgrade?plan=${plan}`;
-                            }}
-                            className="mt-3 text-[11px] text-tm-muted underline hover:text-white"
-                        >
-                            No thanks, continue {pendingPlan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Basic'} at the regular ${pendingPlan === 'leaps' ? 480 : 360} price
-                        </button>
-                    )}
-                </div>
-            )}
             {unlocked && (
                 <p className="mt-6 text-center text-xs text-tm-green font-semibold tracking-wider uppercase">
                     Subscriber price unlocked for {nlEmail || 'your email'}: 30% off your first annual term
                 </p>
+            )}
+
+            {/* Newsletter subscribe popup. Opened by the Start buttons while the
+                regular price is showing. */}
+            {nlModalOpen && (
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-4"
+                    onClick={() => setNlModalOpen(false)}
+                >
+                    <div
+                        ref={unlockRef}
+                        className="w-full max-w-md rounded-2xl border border-tm-purple/40 bg-[#14141f] p-6 text-center shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {!nlModalSent ? (
+                            <>
+                                <p className="text-base font-bold text-white mb-1">Subscribers pay 30% less</p>
+                                <p className="text-xs text-tm-muted mb-4">
+                                    Enter your email to subscribe to The AI Systematic Investor newsletter. The first
+                                    issue arrives right away and the subscriber price ($252 QQQ Basic, $336 QQQ LEAPS)
+                                    applies to your first annual term automatically.
+                                </p>
+                                <form onSubmit={handleUnlock} className="flex flex-col gap-3">
+                                    <input
+                                        type="email"
+                                        required
+                                        autoFocus
+                                        value={nlEmail}
+                                        onChange={(e) => setNlEmail(e.target.value)}
+                                        placeholder="you@example.com"
+                                        className="w-full rounded-lg bg-black/40 border border-white/10 px-4 py-3 text-sm text-white placeholder:text-tm-muted focus:outline-none focus:border-tm-purple"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={nlBusy}
+                                        className="w-full rounded-lg bg-tm-purple px-5 py-3 text-sm font-bold text-white hover:bg-tm-purple/90 disabled:opacity-60"
+                                    >
+                                        {nlBusy ? 'Subscribing...' : 'Subscribe and unlock 30% off'}
+                                    </button>
+                                </form>
+                                {nlError && <p className="mt-3 text-xs text-tm-red">{nlError}</p>}
+                                <p className="mt-3 text-[11px] text-tm-muted">
+                                    By subscribing you agree to receive the newsletter. Unsubscribe anytime.
+                                </p>
+                                {pendingPlan && (
+                                    <button
+                                        onClick={() => {
+                                            const plan = pendingPlan;
+                                            setPendingPlan(null);
+                                            setNlModalOpen(false);
+                                            if (!authenticated) login();
+                                            else window.location.href = `/upgrade?plan=${plan}`;
+                                        }}
+                                        className="mt-3 text-[11px] text-tm-muted underline hover:text-white"
+                                    >
+                                        No thanks, continue {pendingPlan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Basic'} at the regular ${pendingPlan === 'leaps' ? 480 : 360} price
+                                    </button>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-base font-bold text-tm-green mb-1">Check your email</p>
+                                <p className="text-xs text-tm-muted mb-4">
+                                    You are subscribed. The first issue of The AI Systematic Investor is on its way
+                                    to {nlEmail}. Your 30% subscriber price is unlocked.
+                                </p>
+                                {pendingPlan && (
+                                    <button
+                                        onClick={() => {
+                                            const plan = pendingPlan;
+                                            setPendingPlan(null);
+                                            setNlModalOpen(false);
+                                            if (!authenticated) login();
+                                            else window.location.href = `/upgrade?plan=${plan}&email=${encodeURIComponent(nlEmail)}`;
+                                        }}
+                                        className="w-full rounded-lg bg-tm-purple px-5 py-3 text-sm font-bold text-white hover:bg-tm-purple/90"
+                                    >
+                                        Continue with {pendingPlan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Basic'} at the subscriber price
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => setNlModalOpen(false)}
+                                    className="mt-3 text-[11px] text-tm-muted underline hover:text-white"
+                                >
+                                    Close
+                                </button>
+                            </>
+                        )}
+                    </div>
+                </div>
             )}
         </section>
     );

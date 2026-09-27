@@ -134,7 +134,99 @@ export async function ensureNewsletterTables(): Promise<void> {
     await query(`ALTER TABLE newsletter_events ADD COLUMN IF NOT EXISTS subscriber_id BIGINT`);
     await query(`CREATE INDEX IF NOT EXISTS newsletter_events_event_idx ON newsletter_events (event, created_at)`);
 
+    // Unified directory of every newsletter address: signups (32+ sources) and
+    // titled lead imports land here. Email is the key; source notes origin.
+    // next_issue / next_issue_at drive the drip: issue 1 on enrollment,
+    // issues 2-8 every two days, then weekly for later issues.
+    await query(`
+        CREATE TABLE IF NOT EXISTS newsletter_directory (
+            email         TEXT PRIMARY KEY,
+            source        TEXT NOT NULL,           -- 'signup' | 'lead-import' | 'mixed'
+            subscriber_id BIGINT,
+            first_name    TEXT,
+            next_issue    INT,
+            next_issue_at TIMESTAMPTZ,
+            last_seen_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+    `);
+
+    // Log of every newsletter-related email hand-off (confirmation, welcome,
+    // issue, drip). One row per attempted send.
+    await query(`
+        CREATE TABLE IF NOT EXISTS newsletter_send_log (
+            id            BIGSERIAL PRIMARY KEY,
+            email         TEXT NOT NULL,
+            subscriber_id BIGINT,
+            kind          TEXT NOT NULL,           -- confirm | welcome | issue | offer | reminder
+            issue_number  INT,
+            issue_slug    TEXT,
+            ok            BOOLEAN NOT NULL,
+            created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS newsletter_send_log_email_idx ON newsletter_send_log (email, created_at)`);
+    await query(`CREATE INDEX IF NOT EXISTS newsletter_send_log_kind_idx ON newsletter_send_log (kind, created_at)`);
+
     tablesReady = true;
+}
+
+/** Record an attempted newsletter send in the history log. */
+export async function logNewsletterSend(entry: {
+    email: string; subscriberId?: number | null; kind: string;
+    issueNumber?: number | null; issueSlug?: string | null; ok: boolean;
+}): Promise<void> {
+    try {
+        await query(
+            `INSERT INTO newsletter_send_log (email, subscriber_id, kind, issue_number, issue_slug, ok)
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [entry.email, entry.subscriberId ?? null, entry.kind,
+             entry.issueNumber ?? null, entry.issueSlug ?? null, entry.ok]
+        );
+    } catch (err) {
+        console.error('[newsletter send log]', err);
+    }
+}
+
+/** Upsert an address into the unified directory (email is the key). New rows
+ *  are enrolled in the drip at issue 1 immediately. */
+export async function upsertDirectoryEmail(email: string, source: 'signup' | 'lead-import', subscriberId?: number | null, firstName?: string | null): Promise<void> {
+    try {
+        await query(
+            `INSERT INTO newsletter_directory (email, source, subscriber_id, first_name, next_issue, next_issue_at)
+             VALUES ($1, $2, $3, $4, 1, NOW())
+             ON CONFLICT (email) DO UPDATE SET
+                source = CASE WHEN newsletter_directory.source = $2 THEN newsletter_directory.source ELSE 'mixed' END,
+                subscriber_id = COALESCE(EXCLUDED.subscriber_id, newsletter_directory.subscriber_id),
+                first_name = COALESCE(EXCLUDED.first_name, newsletter_directory.first_name),
+                last_seen_at = NOW()`,
+            [email.trim().toLowerCase(), source, subscriberId ?? null, firstName ?? null]
+        );
+    } catch (err) {
+        console.error('[newsletter directory]', err);
+    }
+}
+
+/** Backfill the directory from newsletter_subscribers and leads. Idempotent. */
+export async function backfillDirectory(): Promise<{ fromSubscribers: number; fromLeads: number }> {
+    await ensureNewsletterTables();
+    const a = await query(
+        `INSERT INTO newsletter_directory (email, source, subscriber_id, next_issue, next_issue_at)
+         SELECT email, 'signup', id, 1, NOW() FROM newsletter_subscribers
+         ON CONFLICT (email) DO UPDATE SET subscriber_id = COALESCE(EXCLUDED.subscriber_id, newsletter_directory.subscriber_id)`
+    );
+    let fromLeads = 0;
+    try {
+        const b = await query(
+            `INSERT INTO newsletter_directory (email, source, first_name, next_issue, next_issue_at)
+             SELECT LOWER("Email"), 'lead-import', NULLIF("First Name", ''), 1, NOW() FROM leads WHERE "Email" LIKE '%@%'
+             ON CONFLICT (email) DO UPDATE SET
+                first_name = COALESCE(EXCLUDED.first_name, newsletter_directory.first_name),
+                last_seen_at = NOW()`
+        );
+        fromLeads = b.rowCount ?? 0;
+    } catch { /* leads table absent */ }
+    return { fromSubscribers: a.rowCount ?? 0, fromLeads };
 }
 
 // ---------- types ----------
@@ -301,7 +393,47 @@ export async function signup(ctx: SignupContext & { rawEmail: string }): Promise
     await recordNewsletterEvent('signup_submitted', {
         source: ctx.source ?? 'website', experience: ctx.experience ?? null, ip: ctx.ip ?? null,
     }, subscriberId);
+    await upsertDirectoryEmail(n.email, 'signup', subscriberId);
     return { kind: 'pending-created', subscriberId, email: n.email, confirmToken, changeToken };
+}
+
+/** Instant confirmation (no double opt-in). Used by the pricing-page popup flow:
+ *  the address is subscribed and the discount window starts immediately. */
+export async function confirmInstantly(subscriberId: number): Promise<{
+    email: string; windowEnd: string | null; code: string | null;
+} | null> {
+    await ensureNewsletterTables();
+    const res = await query(
+        `SELECT id, email, status FROM newsletter_subscribers WHERE id = $1`, [subscriberId]
+    );
+    const sub = res.rows[0];
+    if (!sub) return null;
+    const windowEnd = new Date(Date.now() + OFFER_WINDOW_DAYS * 864e5);
+    await query(
+        `UPDATE newsletter_subscribers
+         SET status = 'confirmed',
+             first_confirmed_at = COALESCE(first_confirmed_at, NOW()),
+             confirmed_at = NOW(), updated_at = NOW()
+         WHERE id = $1 AND status IN ('pending', 'expired_pending')`,
+        [sub.id]
+    );
+    await query(
+        `UPDATE newsletter_emails SET confirmed_at = NOW()
+         WHERE subscriber_id = $1 AND email = $2 AND confirmed_at IS NULL`,
+        [sub.id, sub.email]
+    );
+    await query(
+        `UPDATE newsletter_discounts
+         SET state = 'eligible', window_start = COALESCE(window_start, NOW()),
+             window_end = COALESCE(window_end, $2), updated_at = NOW()
+         WHERE subscriber_id = $1 AND state = 'not_started'`,
+        [sub.id, windowEnd.toISOString()]
+    );
+    const d = await query(
+        `SELECT personal_code, window_end FROM newsletter_discounts WHERE subscriber_id = $1`, [sub.id]
+    );
+    await recordNewsletterEvent('subscription_confirmed', { mode: 'instant' }, sub.id);
+    return { email: sub.email, windowEnd: d.rows[0]?.window_end ?? null, code: d.rows[0]?.personal_code ?? null };
 }
 
 // ---------- confirmation ----------

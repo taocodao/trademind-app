@@ -177,6 +177,41 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        const { ensureNewsletterTables } = await import('@/lib/newsletter/db');
+        await ensureNewsletterTables();
+
+        // Mirror every imported lead into the unified newsletter directory so
+        // the drip sequence (issue 1 now, 2-8 every two days, weekly after) can
+        // reach them. Emails not present in the directory yet get enrolled.
+        await query(
+            `INSERT INTO newsletter_directory (email, source, first_name, next_issue, next_issue_at)
+             SELECT LOWER("Email"), 'lead-import', NULLIF("First Name", ''), 1, NOW()
+             FROM leads WHERE import_batch = $1 AND "Email" LIKE '%@%'
+             ON CONFLICT (email) DO UPDATE SET
+                first_name = COALESCE(EXCLUDED.first_name, newsletter_directory.first_name),
+                last_seen_at = NOW()`,
+            [batch]
+        );
+        // Create backing subscriber rows for lead addresses that have none, so
+        // drip sends get per-subscriber unsubscribe tokens like everyone else.
+        const dirRes = await query(
+            `WITH ins AS (
+                 INSERT INTO newsletter_subscribers (email, canonical_email, consent, status, source)
+                 SELECT LOWER("Email"), LOWER("Email"), FALSE, 'confirmed', 'lead-import'
+                 FROM leads WHERE import_batch = $1 AND "Email" LIKE '%@%'
+                 ON CONFLICT (email) DO NOTHING
+                 RETURNING id, email
+             )
+             UPDATE newsletter_directory d
+             SET subscriber_id = s.id
+             FROM newsletter_subscribers s
+             LEFT JOIN ins ON ins.id = s.id
+             WHERE s.email = d.email AND d.subscriber_id IS NULL
+               AND d.email IN (SELECT LOWER("Email") FROM leads WHERE import_batch = $1 AND "Email" LIKE '%@%')
+             RETURNING d.email`,
+            [batch]
+        );
+
         return NextResponse.json({
             batch,
             totalRows: dataRows.length,
@@ -186,6 +221,7 @@ export async function POST(req: NextRequest) {
             columnsImported: active.length,
             columnsSkippedThisFile: skippedHere,
             templateSkippedColumns: TEMPLATE_SKIPPED_COLUMNS,
+            directoryEnrolled: dirRes.rowCount ?? 0,
         });
     } catch (err) {
         console.error('[leads/import POST]', err);

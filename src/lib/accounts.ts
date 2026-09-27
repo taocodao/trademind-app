@@ -272,42 +272,48 @@ export async function updateAccountAlertEmail(accountId: number, userId: string,
     return res.rows.length ? rowToAccount(res.rows[0]) : null;
 }
 
-/**
- * Adjusts the starting principal after auto-provisioning (checkout creates
- * $10k Basic / $25k LEAPS by default; the user can change it afterward).
- * The cash delta rides along so the ledger stays consistent: raising the
- * principal books a deposit activity, lowering it books a withdrawal, but
- * cash never drops below zero.
- */
-export async function updateAccountPrincipal(accountId: number, userId: string, newPrincipal: number): Promise<Account | null> {
+/** Deposit or withdraw virtual cash. Both move cash_balance; a deposit also
+ *  raises initial_principal (new capital in), a withdrawal lowers it
+ *  (capital out) so cumulative return keeps tracking the money you put in.
+ *  Withdrawals are limited by available cash and must leave principal > 0. */
+export async function adjustAccountCash(
+    accountId: number,
+    userId: string,
+    type: 'deposit' | 'withdraw',
+    amount: number
+): Promise<{ account: Account } | { error: string }> {
     await initializeAccountTables();
-    if (!isFinite(newPrincipal) || newPrincipal <= 0) return null;
+    if (!isFinite(amount) || amount <= 0) return { error: 'Amount must be greater than zero' };
     const current = await query(`SELECT initial_principal, cash_balance FROM accounts WHERE id = $1 AND user_id = $2`, [accountId, userId]);
-    if (!current.rows[0]) return null;
-    const oldPrincipal = Number(current.rows[0].initial_principal);
-    const delta = newPrincipal - oldPrincipal;
-    if (delta === 0) return rowToAccount(current.rows[0]) as Account;
+    if (!current.rows[0]) return { error: 'Account not found' };
+    const principal = Number(current.rows[0].initial_principal);
+    const cash = Number(current.rows[0].cash_balance);
+    if (type === 'withdraw') {
+        if (amount > cash + 0.005) return { error: 'Withdrawal exceeds available cash' };
+        if (principal - amount <= 0) return { error: 'Withdrawal cannot reduce starting capital to zero' };
+    }
+    const sign = type === 'deposit' ? 1 : -1;
     const res = await query(
         `UPDATE accounts
-         SET initial_principal = $3,
-             cash_balance = GREATEST(0, cash_balance + $4),
+         SET initial_principal = initial_principal + $3,
+             cash_balance = cash_balance + $3,
              updated_at = NOW()
          WHERE id = $1 AND user_id = $2 RETURNING *`,
-        [accountId, userId, newPrincipal, delta]
+        [accountId, userId, sign * amount]
     );
     if (res.rows.length) {
         await insertActivity(accountId, {
-            type: delta > 0 ? 'deposit' : 'withdraw',
+            type,
             symbol: null,
             quantity: null,
             price: null,
-            amount: Math.abs(delta),
+            amount,
             signal_id: null,
             source: 'manual',
-            note: 'Principal adjustment',
+            note: type === 'deposit' ? 'Cash deposit' : 'Cash withdrawal',
         });
     }
-    return res.rows.length ? rowToAccount(res.rows[0]) : null;
+    return res.rows.length ? { account: rowToAccount(res.rows[0]) } : { error: 'Account not found' };
 }
 
 /** Sets the member's stated broker preference (display + help-guide preselect only; no brokerage connection). */

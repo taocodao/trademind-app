@@ -69,7 +69,8 @@ function AccountsPageInner() {
     const [summaries, setSummaries] = useState<Record<number, AccountSummary>>({});
     const [renameId, setRenameId] = useState<number | null>(null);
     const [renameValue, setRenameValue] = useState('');
-    const [principalValue, setPrincipalValue] = useState('');
+    const [cashAmount, setCashAmount] = useState('');
+    const [cashError, setCashError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
 
     useEffect(() => {
@@ -123,14 +124,31 @@ function AccountsPageInner() {
         setBusy(true);
         try {
             const body: Record<string, unknown> = { name: renameValue.trim() };
-            const p = parseFloat(principalValue);
-            if (isFinite(p) && p > 0) body.initialPrincipal = p;
             await fetch(`/api/accounts/${renameId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
             });
-            setRenameId(null); setRenameValue(''); setPrincipalValue('');
+            setRenameId(null); setRenameValue(''); setCashAmount(''); setCashError(null);
+            await refreshAccounts();
+            window.location.reload();
+        } finally { setBusy(false); }
+    };
+
+    const handleCash = async (action: 'deposit' | 'withdraw') => {
+        if (renameId === null) return;
+        const amount = parseFloat(cashAmount);
+        if (!isFinite(amount) || amount <= 0) { setCashError('Enter an amount greater than zero'); return; }
+        setBusy(true); setCashError(null);
+        try {
+            const res = await fetch(`/api/accounts/${renameId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cashAction: action, cashAmount: amount }),
+            });
+            const data = await res.json();
+            if (!res.ok) { setCashError(data.error || 'Unable to update cash'); return; }
+            setCashAmount('');
             await refreshAccounts();
             window.location.reload();
         } finally { setBusy(false); }
@@ -243,7 +261,7 @@ function AccountsPageInner() {
                                         </p>
                                     </button>
                                     <div className="flex items-center gap-1">
-                                        <button onClick={() => { setRenameId(a.id); setRenameValue(a.name); const s0 = summaries[a.id]; setPrincipalValue(s0 ? String(Math.round(s0.initialPrincipal)) : ''); }} className="p-1.5 rounded hover:bg-white/10 text-tm-muted hover:text-tm-purple transition" title="Edit">
+                                        <button onClick={() => { setRenameId(a.id); setRenameValue(a.name); setCashAmount(''); setCashError(null); }} className="p-1.5 rounded hover:bg-white/10 text-tm-muted hover:text-tm-purple transition" title="Edit">
                                             <Pencil className="w-4 h-4" />
                                         </button>
                                         <button onClick={() => handleDelete(a.id, a.name)} className="p-1.5 rounded hover:bg-white/10 text-tm-muted hover:text-red-400 transition" title="Delete">
@@ -310,16 +328,21 @@ function AccountsPageInner() {
                             className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-tm-purple mb-4"
                             autoFocus
                         />
-                        <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">Starting Capital ($)</label>
+                        <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">Deposit / Withdraw Cash ($)</label>
                         <input
-                            type="number" min="1" step="100" value={principalValue} onChange={(e) => setPrincipalValue(e.target.value)}
-                            placeholder={renameId !== null && summaries[renameId] ? String(Math.round(summaries[renameId].initialPrincipal)) : 'e.g. 10000'}
+                            type="number" min="1" step="100" value={cashAmount} onChange={(e) => setCashAmount(e.target.value)}
+                            placeholder="Amount, e.g. 5000"
                             className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white font-mono focus:outline-none focus:border-tm-purple mb-2"
                         />
-                        <p className="text-[10px] text-tm-muted mb-4">Adjusts the virtual account capital. The cash balance shifts by the difference.</p>
+                        <div className="flex gap-2 mb-1">
+                            <button onClick={() => void handleCash('deposit')} disabled={busy} className="flex-1 py-2.5 rounded-lg font-bold bg-tm-green/20 text-tm-green hover:bg-tm-green/30 transition disabled:opacity-50">Deposit</button>
+                            <button onClick={() => void handleCash('withdraw')} disabled={busy} className="flex-1 py-2.5 rounded-lg font-bold bg-red-500/20 text-red-300 hover:bg-red-500/30 transition disabled:opacity-50">Withdraw</button>
+                        </div>
+                        {cashError && <p className="text-[10px] text-red-400 mb-2">{cashError}</p>}
+                        <p className="text-[10px] text-tm-muted mb-4">Adds or removes virtual cash and adjusts starting capital so your return tracking stays honest.</p>
                         <div className="flex gap-3">
-                            <button onClick={() => { setRenameId(null); setPrincipalValue(''); }} className="flex-1 py-3 rounded-lg font-bold bg-white/5 hover:bg-white/10 transition">Cancel</button>
-                            <button onClick={handleRename} disabled={busy} className="flex-1 py-3 rounded-lg font-bold bg-tm-purple hover:bg-tm-purple/90 text-white transition disabled:opacity-50">Save</button>
+                            <button onClick={() => { setRenameId(null); setCashAmount(''); setCashError(null); }} className="flex-1 py-3 rounded-lg font-bold bg-white/5 hover:bg-white/10 transition">Cancel</button>
+                            <button onClick={handleRename} disabled={busy} className="flex-1 py-3 rounded-lg font-bold bg-tm-purple hover:bg-tm-purple/90 text-white transition disabled:opacity-50">Save Name</button>
                         </div>
                     </div>
                 </div>

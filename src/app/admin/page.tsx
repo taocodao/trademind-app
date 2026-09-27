@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import NewsletterTools from '@/components/admin/NewsletterTools';
 import { usePrivy } from '@privy-io/react-auth';
-import Link from 'next/link';
 import {
     Upload,
     FileSpreadsheet,
@@ -34,9 +33,16 @@ interface BatchRow {
 }
 
 export default function AdminPage() {
-    const { ready, authenticated, user } = usePrivy();
+    const { ready, authenticated, user, login, logout } = usePrivy();
     const email = user?.email?.address?.trim().toLowerCase() ?? null;
     const isAdmin = !!email && email === ADMIN_EMAIL;
+
+    const switchToAdmin = async () => {
+        // Switching to the admin login: end the current session first, then
+        // open the Privy modal so the admin email can be entered fresh.
+        if (authenticated) await logout();
+        login({ prefill: { type: 'email', value: ADMIN_EMAIL } });
+    };
 
     if (!ready) {
         return (
@@ -55,12 +61,12 @@ export default function AdminPage() {
                     <p className="mt-2 text-sm text-[#8B95A9]">
                         This area is restricted. Sign in with the admin account to continue.
                     </p>
-                    <Link
-                        href="/signin"
+                    <button
+                        onClick={() => login({ prefill: { type: 'email', value: ADMIN_EMAIL } })}
                         className="mt-6 inline-block rounded-lg bg-[#8B5CF6] px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90"
                     >
-                        Sign in
-                    </Link>
+                        Sign in as admin
+                    </button>
                 </div>
             </main>
         );
@@ -76,6 +82,12 @@ export default function AdminPage() {
                         This area is only available to {ADMIN_EMAIL}.
                         {email ? ` You are signed in as ${email}.` : ''}
                     </p>
+                    <button
+                        onClick={() => void switchToAdmin()}
+                        className="mt-6 inline-block rounded-lg bg-[#8B5CF6] px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+                    >
+                        Sign out and log in as admin
+                    </button>
                 </div>
             </main>
         );

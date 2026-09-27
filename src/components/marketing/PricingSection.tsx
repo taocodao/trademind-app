@@ -154,7 +154,7 @@ export function PricingSection() {
                 </p>
 
                 <div className="mt-5 inline-flex items-center gap-3 bg-tm-green/10 px-5 py-2.5 rounded-full border border-tm-green/30 mx-auto">
-                    <span className="text-sm font-bold text-tm-green">First month free: cancel within your first month and the payment is refunded in full</span>
+                    <span className="text-sm font-bold text-tm-green">First month free: no charge until day 30, turn off auto renew any time</span>
                 </div>
                 <p className="mt-3 text-xs text-tm-purple/80 font-semibold tracking-wider uppercase">
                     {t('pricing.annual_only', 'Annual billing only')} · card charged at checkout

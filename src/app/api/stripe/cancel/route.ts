@@ -54,21 +54,37 @@ export async function POST(req: NextRequest) {
         const subscriptionId = result.membership.stripe_subscription_id;
         if (!subscriptionId) return NextResponse.json({ error: 'No Stripe subscription found for this account' }, { status: 404 });
 
-        // First-month-free trial terms (Sep 2026): the card is charged at
-        // checkout; cancelling within the first 30 days of the subscription
-        // refunds the initial payment in full and ends access immediately.
+        // First month is a real Stripe trial: nothing is charged until day
+        // 30. Turning auto renew OFF during the trial never cuts access early:
+        // the subscription ends at the trial end and no charge ever happens.
+        // After the first charge, cancelling within 31 days of that charge
+        // refunds it in full and ends access immediately; later cancellations
+        // just stop the next renewal.
         const stripe = getStripe();
         const full = await stripe.subscriptions.retrieve(subscriptionId, { expand: ['latest_invoice'] });
-        const createdSec = (full as { created?: number }).created ?? 0;
-        const withinFirstMonth = createdSec > 0 && (Date.now() / 1000 - createdSec) <= 31 * 24 * 60 * 60;
 
-        if (withinFirstMonth) {
-            const invoice = (full as { latest_invoice?: unknown }).latest_invoice;
-            const invoiceObj = invoice && typeof invoice === 'object' ? invoice as { id?: string; payment_intent?: unknown; status?: string } : null;
-            const piRef = invoiceObj?.payment_intent;
+        if (full.status === 'trialing') {
+            const trialEnd = (full as { trial_end?: number }).trial_end;
+            const accessUntil = trialEnd ? new Date(trialEnd * 1000).toISOString() : result.membership.free_month_ends_at;
+            await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: true });
+            await updateMembership(result.membership.account_id, {
+                status: 'canceled',
+                cancel_at_period_end: true,
+                current_period_end: accessUntil,
+            });
+            return NextResponse.json({ success: true, cancelAt: accessUntil, status: 'trialing_canceled' });
+        }
+
+        const invoice = (full as { latest_invoice?: unknown }).latest_invoice;
+        const invoiceObj = invoice && typeof invoice === 'object' ? invoice as { id?: string; payment_intent?: unknown; status?: string; status_transitions?: { paid_at?: number }; created?: number } : null;
+        const paidAt = invoiceObj?.status_transitions?.paid_at ?? invoiceObj?.created ?? 0;
+        const withinRefundWindow = paidAt > 0 && (Date.now() / 1000 - paidAt) <= 31 * 24 * 60 * 60;
+
+        if (withinRefundWindow && invoiceObj?.status === 'paid') {
+            const piRef = invoiceObj.payment_intent;
             const paymentIntentId = typeof piRef === 'string' ? piRef : (piRef as { id?: string } | null)?.id;
             let refunded = false;
-            if (paymentIntentId && invoiceObj?.status === 'paid') {
+            if (paymentIntentId) {
                 try {
                     await stripe.refunds.create({ payment_intent: paymentIntentId });
                     refunded = true;

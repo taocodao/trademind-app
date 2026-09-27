@@ -38,6 +38,11 @@ async function getUserId(req: NextRequest): Promise<string | null> {
 // live prices so checkout keeps working before the Vercel env vars land.
 // These ARE the newsletter subscriber prices ($252 Basic / $336 LEAPS); the
 // regular list prices ($360 / $480) are display anchors only.
+// The first month is a real Stripe trial inside the subscription: the card
+// is collected at checkout but charged after 30 days, so one subscription
+// covers 13 months (1 free + 12 paid).
+const FREE_TRIAL_DAYS = 30;
+
 const LIVE_PRICE_IDS = {
     qqq_leaps: 'price_1U6Zkv2NdQtWmZJRpVRQBHT3',              // $336/yr
     turbocore_pro_bundle: 'price_1U6Zkm2NdQtWmZJRJ6pueESx',   // $252/yr
@@ -168,14 +173,14 @@ export async function POST(req: NextRequest) {
             const membership = await getMembershipByAccount(accountId);
             if (membership && membership.pending_bonus_days > 0) {
                 sessionPayload.subscription_data = {
-                    trial_period_days: membership.pending_bonus_days,
+                    trial_period_days: FREE_TRIAL_DAYS + membership.pending_bonus_days,
                     metadata,
                 };
             } else {
-                sessionPayload.subscription_data = { metadata };
+                sessionPayload.subscription_data = { trial_period_days: FREE_TRIAL_DAYS, metadata };
             }
         } else {
-            sessionPayload.subscription_data = { metadata };
+            sessionPayload.subscription_data = { trial_period_days: FREE_TRIAL_DAYS, metadata };
         }
 
         // The charged price already IS the newsletter subscriber price, so no

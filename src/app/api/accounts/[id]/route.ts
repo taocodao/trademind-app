@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAccount, renameAccount, deleteAccount, updateAccountRiskLevel, updateAccountAlertEmail, updateAccountBroker, type RiskLevel } from '@/lib/accounts';
+import { getAccount, renameAccount, deleteAccount, updateAccountRiskLevel, updateAccountAlertEmail, updateAccountBroker, updateAccountPrincipal, type RiskLevel } from '@/lib/accounts';
 import { getUserId } from '@/lib/auth';
 
 // GET /api/accounts/[id]
@@ -33,6 +33,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         const VALID_BROKERS = ['schwab', 'tastytrade', 'fidelity', 'robinhood', 'ibkr', 'etrade', 'webull'];
         if (typeof body.broker === 'string' && VALID_BROKERS.includes(body.broker)) {
             account = (await updateAccountBroker(accountId, userId, body.broker)) || account;
+        }
+        if (body.initialPrincipal !== undefined) {
+            const p = Number(body.initialPrincipal);
+            if (isFinite(p) && p > 0) {
+                account = (await updateAccountPrincipal(accountId, userId, p)) || account;
+            }
         }
         if (body.alertEmail !== undefined) {
             const alert = typeof body.alertEmail === 'string' && body.alertEmail.includes('@') ? body.alertEmail.trim() : null;

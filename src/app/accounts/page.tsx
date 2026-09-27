@@ -4,13 +4,11 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import {
-    ArrowLeft, PlusCircle, Wallet, Pencil, Trash2, RefreshCw, ChevronRight,
+    ArrowLeft, Wallet, Pencil, Trash2, RefreshCw, ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 import { useAccountContext } from "@/components/providers/AccountContext";
-import { STRATEGIES, getStrategy } from "@/lib/strategies";
-
-type RiskLevel = 'conservative' | 'moderate' | 'aggressive';
+import { getStrategy } from "@/lib/strategies";
 
 /** Annual prices per plan (display only; source of truth is Stripe). */
 const PLAN_PRICE: Record<string, number> = { basic: 252, leaps: 336 };
@@ -69,19 +67,10 @@ function AccountsPageInner() {
     const { accounts, loading, refreshAccounts, setActiveAccountId } = useAccountContext();
 
     const [summaries, setSummaries] = useState<Record<number, AccountSummary>>({});
-    const [showCreate, setShowCreate] = useState(false);
     const [renameId, setRenameId] = useState<number | null>(null);
     const [renameValue, setRenameValue] = useState('');
+    const [principalValue, setPrincipalValue] = useState('');
     const [busy, setBusy] = useState(false);
-
-    // create form
-    const [name, setName] = useState('');
-    const [strategy, setStrategy] = useState(STRATEGIES[0].key);
-    const [riskLevel, setRiskLevel] = useState<RiskLevel>('moderate');
-    const [principal, setPrincipal] = useState('');
-    const [alertEmail, setAlertEmail] = useState('');
-    const [loginEmail, setLoginEmail] = useState('');
-    const [createError, setCreateError] = useState<string | null>(null);
 
     useEffect(() => {
         if (ready && !authenticated) router.push("/");
@@ -99,11 +88,7 @@ function AccountsPageInner() {
         }
     }, [forceList, loading, ready, authenticated, accounts, router]);
 
-    // The Privy login email is the default alert recipient for new accounts.
-    useEffect(() => {
-        const addr = (user?.email?.address as string | undefined) || '';
-        if (addr) setLoginEmail(addr);
-    }, [user]);
+
 
     // Load a summary per account
     useEffect(() => {
@@ -130,46 +115,24 @@ function AccountsPageInner() {
         return () => { cancelled = true; };
     }, [accounts]);
 
-    const handleCreate = async () => {
-        setCreateError(null);
-        const p = parseFloat(principal);
-        if (!name.trim()) { setCreateError('Give the account a name'); return; }
-        if (!isFinite(p) || p <= 0) { setCreateError('Enter a valid initial principal'); return; }
-        setBusy(true);
-        try {
-            const res = await fetch('/api/accounts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: name.trim(), strategy, riskLevel, initialPrincipal: p,
-                    alertEmail: alertEmail.trim() || undefined,
-                }),
-            });
-            if (!res.ok) {
-                const d = await res.json();
-                throw new Error(d.error || 'Failed to create account');
-            }
-            setShowCreate(false);
-            setName(''); setPrincipal(''); setRiskLevel('moderate'); setAlertEmail('');
-            await refreshAccounts();
-        } catch (e: any) {
-            setCreateError(e.message);
-        } finally {
-            setBusy(false);
-        }
-    };
+    // Accounts are created automatically at checkout (one QQQ Basic and/or one
+    // QQQ LEAPS per login). To add a plan, subscribe from the pricing section.
 
     const handleRename = async () => {
         if (renameId === null || !renameValue.trim()) return;
         setBusy(true);
         try {
+            const body: Record<string, unknown> = { name: renameValue.trim() };
+            const p = parseFloat(principalValue);
+            if (isFinite(p) && p > 0) body.initialPrincipal = p;
             await fetch(`/api/accounts/${renameId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: renameValue.trim() }),
+                body: JSON.stringify(body),
             });
-            setRenameId(null); setRenameValue('');
+            setRenameId(null); setRenameValue(''); setPrincipalValue('');
             await refreshAccounts();
+            window.location.reload();
         } finally { setBusy(false); }
     };
 
@@ -211,13 +174,23 @@ function AccountsPageInner() {
                 </button>
             </header>
 
-            <div className="px-6 mb-4">
-                <button
-                    onClick={() => setShowCreate(true)}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold bg-tm-purple hover:bg-tm-purple/90 text-white transition"
-                >
-                    <PlusCircle className="w-4 h-4" /> Create Account
-                </button>
+            <div className="px-6 mb-4 grid grid-cols-2 gap-3">
+                {!accounts.some((a) => a.membership?.plan === 'basic') && (
+                    <Link
+                        href="/upgrade?plan=basic"
+                        className="flex items-center justify-center gap-2 py-3 rounded-xl font-bold border border-[#4f8ef7]/50 text-white transition hover:bg-[#4f8ef7]/10"
+                    >
+                        Start QQQ Basic - $252/yr
+                    </Link>
+                )}
+                {!accounts.some((a) => a.membership?.plan === 'leaps') && (
+                    <Link
+                        href="/upgrade?plan=leaps"
+                        className="flex items-center justify-center gap-2 py-3 rounded-xl font-bold bg-tm-purple hover:bg-tm-purple/90 text-white transition"
+                    >
+                        Start QQQ LEAPS - $336/yr
+                    </Link>
+                )}
             </div>
 
             {/* Account list */}
@@ -227,7 +200,7 @@ function AccountsPageInner() {
                 ) : accounts.length === 0 ? (
                     <div className="glass-card p-8 text-center">
                         <Wallet className="w-8 h-8 text-tm-muted mx-auto mb-3" />
-                        <p className="text-sm text-tm-muted">No accounts yet. Create one to start tracking a strategy.</p>
+                        <p className="text-sm text-tm-muted">No accounts yet. Subscribe to a plan above and your virtual account is created automatically.</p>
                     </div>
                 ) : (
                     accounts.map((a) => {
@@ -270,7 +243,7 @@ function AccountsPageInner() {
                                         </p>
                                     </button>
                                     <div className="flex items-center gap-1">
-                                        <button onClick={() => { setRenameId(a.id); setRenameValue(a.name); }} className="p-1.5 rounded hover:bg-white/10 text-tm-muted hover:text-tm-purple transition" title="Rename">
+                                        <button onClick={() => { setRenameId(a.id); setRenameValue(a.name); const s0 = summaries[a.id]; setPrincipalValue(s0 ? String(Math.round(s0.initialPrincipal)) : ''); }} className="p-1.5 rounded hover:bg-white/10 text-tm-muted hover:text-tm-purple transition" title="Edit">
                                             <Pencil className="w-4 h-4" />
                                         </button>
                                         <button onClick={() => handleDelete(a.id, a.name)} className="p-1.5 rounded hover:bg-white/10 text-tm-muted hover:text-red-400 transition" title="Delete">
@@ -326,93 +299,26 @@ function AccountsPageInner() {
                 )}
             </div>
 
-            {/* Create modal */}
-            {showCreate && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-                    <div className="bg-[#111] border border-white/10 p-6 rounded-2xl w-full max-w-sm">
-                        <h3 className="text-lg font-bold mb-1">Create Account</h3>
-                        <p className="text-xs text-tm-muted mb-5">A named virtual account that tracks one strategy at a chosen risk level.</p>
-
-                        <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">Account Name</label>
-                        <input
-                            type="text" value={name} onChange={(e) => setName(e.target.value)}
-                            placeholder="e.g. My Pro Account"
-                            className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-tm-purple mb-4"
-                            autoFocus
-                        />
-
-                        <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">Strategy</label>
-                        <div className="grid grid-cols-3 gap-2 mb-4">
-                            {STRATEGIES.map((s) => (
-                                <button
-                                    key={s.key}
-                                    onClick={() => setStrategy(s.key)}
-                                    className={`py-2 rounded-lg text-xs font-bold border transition ${strategy === s.key ? 'bg-tm-purple/20 border-tm-purple text-white' : 'bg-white/5 border-white/10 text-tm-muted hover:text-white'}`}
-                                >
-                                    {s.shortLabel}
-                                </button>
-                            ))}
-                        </div>
-
-                        <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">Risk Level</label>
-                        <div className="grid grid-cols-3 gap-2 mb-4">
-                            {(['conservative', 'moderate', 'aggressive'] as RiskLevel[]).map((r) => (
-                                <button
-                                    key={r}
-                                    onClick={() => setRiskLevel(r)}
-                                    className={`py-2 rounded-lg text-xs font-bold border capitalize transition ${riskLevel === r ? 'bg-tm-purple/20 border-tm-purple text-white' : 'bg-white/5 border-white/10 text-tm-muted hover:text-white'}`}
-                                >
-                                    {r}
-                                </button>
-                            ))}
-                        </div>
-
-                        <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">Alert Email</label>
-                        <input
-                            type="email" value={alertEmail} onChange={(e) => setAlertEmail(e.target.value)}
-                            placeholder={loginEmail || 'Defaults to your login email'}
-                            className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-tm-purple mb-1"
-                        />
-                        <p className="text-[10px] text-tm-muted mb-4">Signal emails for this account go here. Leave blank to use your login email.</p>
-
-                        <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">Initial Principal ($)</label>
-                        <input
-                            type="number" min="1" step="100" value={principal} onChange={(e) => setPrincipal(e.target.value)}
-                            placeholder="e.g. 25000"
-                            className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white font-mono focus:outline-none focus:border-tm-purple mb-4"
-                        />
-
-                        <p className="text-[10px] text-tm-muted mb-3">
-                            Every account starts with a free month (30 days). Subscribe annually before it ends to keep signals running. Each account has its own membership.
-                        </p>
-
-                        {createError && <p className="text-red-400 text-xs mb-3">{createError}</p>}
-
-                        <div className="flex gap-3">
-                            <button onClick={() => setShowCreate(false)} className="flex-1 py-3 rounded-lg font-bold bg-white/5 hover:bg-white/10 transition">Cancel</button>
-                            <button
-                                onClick={handleCreate} disabled={busy}
-                                className="flex-1 py-3 rounded-lg font-bold bg-tm-purple hover:bg-tm-purple/90 text-white transition disabled:opacity-50 flex items-center justify-center"
-                            >
-                                {busy ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Create'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {/* Rename modal */}
             {renameId !== null && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
                     <div className="bg-[#111] border border-white/10 p-6 rounded-2xl w-full max-w-sm">
-                        <h3 className="text-lg font-bold mb-4">Rename Account</h3>
+                        <h3 className="text-lg font-bold mb-4">Edit Account</h3>
+                        <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">Name</label>
                         <input
                             type="text" value={renameValue} onChange={(e) => setRenameValue(e.target.value)}
                             className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-tm-purple mb-4"
                             autoFocus
                         />
+                        <label className="text-[10px] text-tm-muted uppercase font-bold tracking-wider mb-1 block">Starting Capital ($)</label>
+                        <input
+                            type="number" min="1" step="100" value={principalValue} onChange={(e) => setPrincipalValue(e.target.value)}
+                            placeholder={renameId !== null && summaries[renameId] ? String(Math.round(summaries[renameId].initialPrincipal)) : 'e.g. 10000'}
+                            className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white font-mono focus:outline-none focus:border-tm-purple mb-2"
+                        />
+                        <p className="text-[10px] text-tm-muted mb-4">Adjusts the virtual account capital. The cash balance shifts by the difference.</p>
                         <div className="flex gap-3">
-                            <button onClick={() => setRenameId(null)} className="flex-1 py-3 rounded-lg font-bold bg-white/5 hover:bg-white/10 transition">Cancel</button>
+                            <button onClick={() => { setRenameId(null); setPrincipalValue(''); }} className="flex-1 py-3 rounded-lg font-bold bg-white/5 hover:bg-white/10 transition">Cancel</button>
                             <button onClick={handleRename} disabled={busy} className="flex-1 py-3 rounded-lg font-bold bg-tm-purple hover:bg-tm-purple/90 text-white transition disabled:opacity-50">Save</button>
                         </div>
                     </div>

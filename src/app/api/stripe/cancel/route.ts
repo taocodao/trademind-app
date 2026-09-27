@@ -45,7 +45,40 @@ export async function POST(req: NextRequest) {
         if ('error' in result) return result.error;
         const subscriptionId = result.membership.stripe_subscription_id;
         if (!subscriptionId) return NextResponse.json({ error: 'No Stripe subscription found for this account' }, { status: 404 });
-        const subscription = await getStripe().subscriptions.update(subscriptionId, {
+
+        // First-month-free trial terms (Sep 2026): the card is charged at
+        // checkout; cancelling within the first 30 days of the subscription
+        // refunds the initial payment in full and ends access immediately.
+        const stripe = getStripe();
+        const full = await stripe.subscriptions.retrieve(subscriptionId, { expand: ['latest_invoice'] });
+        const createdSec = (full as { created?: number }).created ?? 0;
+        const withinFirstMonth = createdSec > 0 && (Date.now() / 1000 - createdSec) <= 31 * 24 * 60 * 60;
+
+        if (withinFirstMonth) {
+            const invoice = (full as { latest_invoice?: unknown }).latest_invoice;
+            const invoiceObj = invoice && typeof invoice === 'object' ? invoice as { id?: string; payment_intent?: unknown; status?: string } : null;
+            const piRef = invoiceObj?.payment_intent;
+            const paymentIntentId = typeof piRef === 'string' ? piRef : (piRef as { id?: string } | null)?.id;
+            let refunded = false;
+            if (paymentIntentId && invoiceObj?.status === 'paid') {
+                try {
+                    await stripe.refunds.create({ payment_intent: paymentIntentId });
+                    refunded = true;
+                } catch (refundError) {
+                    console.error('Stripe first-month refund failed:', refundError);
+                }
+            }
+            await stripe.subscriptions.cancel(subscriptionId);
+            await updateMembership(result.membership.account_id, {
+                status: 'expired',
+                stripe_subscription_id: null,
+                cancel_at_period_end: false,
+                current_period_end: new Date().toISOString(),
+            });
+            return NextResponse.json({ success: true, refunded, status: 'canceled' });
+        }
+
+        const subscription = await stripe.subscriptions.update(subscriptionId, {
             cancel_at_period_end: true,
         }) as { cancel_at_period_end: boolean; current_period_end?: number; status: string };
         const currentPeriodEnd = subscription.current_period_end

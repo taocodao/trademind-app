@@ -10,7 +10,7 @@ const PLANS = [
     badge: null,
     color: '#94A3B8',
     features: [
-      'Daily TurboCore regime signal (3 PM ET)',
+      'Daily TurboCore regime signal (3:30 PM ET)',
       'QQQ / QLD / TQQQ / SGOV allocations',
       'Morning brief each trading day',
       'Live Discord + Whop chatbot (!signal, !regime)',

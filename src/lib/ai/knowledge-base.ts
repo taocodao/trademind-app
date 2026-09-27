@@ -31,15 +31,16 @@ Key highlights:
 ### QQQ Basic (ETF Strategy)
 - **Type**: ETF rotation signals — allocates between QQQ, QLD, TQQQ, and SGOV (T-bills)
 - **Goal**: Participate in Nasdaq-100 upside while rotating defensively to control drawdowns
-- **Signal timing**: One rebalance signal per trading day at 3:00 PM ET; most days no change is needed
-- **Virtual starting balance**: $25,000 default (user-adjustable)
+- **Signal timing**: One rebalance signal per trading day, processed at 3:30 PM ET and delivered by email with exact order instructions; most days no change is needed
+- **Virtual starting balance**: $10,000 default (user-adjustable after the account is created)
 - **Best for**: Any investor — no options approval required, works in IRAs
 
 ### QQQ LEAPS (Options Strategy)
 - **Type**: Long-dated QQQ call options (LEAPS) with an optional covered-call (PMCC) overlay
 - **Goal**: Rare, gated entries into leveraged long exposure, then harvest option premium while holding
-- **Signal timing**: Evaluated hourly; entries are rare by design (a few per year) — sitting in cash is a normal state
-- **Virtual starting balance**: user-set
+- **Signal timing**: Evaluated hourly; the daily instruction email is processed at 3:30 PM ET. Entries are rare by design (a few per year) — sitting in cash is a normal state
+- **Virtual starting balance**: $25,000 default (user-adjustable after the account is created)
+- **Note**: Requires options approval (long calls) at your broker
 - **Best for**: Users with options approval at their broker who are comfortable with contract-level position sizing
 
 ### Full Access Bundle
@@ -53,9 +54,13 @@ Key highlights:
 | Tier | Access | Price |
 |------|--------|-------|
 | Observer | Free, read-only, no signals | $0 |
-| QQQ Basic | ETF rotation signals | See pricing page |
-| QQQ LEAPS | LEAPS options signals | See pricing page |
-| Full Access | Both strategies | See pricing page |
+| QQQ Basic | ETF rotation signals | $360/yr regular, $252/yr with the newsletter offer |
+| QQQ LEAPS | LEAPS options signals | $480/yr regular, $336/yr with the newsletter offer |
+
+### Trial terms (September 2026)
+- Payment is processed at checkout: the card is charged the full annual amount immediately.
+- The first month is the free trial: cancel within the first month and the payment is refunded in full.
+- New accounts are created automatically after checkout with default balances ($10,000 QQQ Basic, $25,000 QQQ LEAPS); users adjust them afterward. One QQQ Basic and/or one QQQ LEAPS account per login.
 
 - Observer users can see the app but cannot execute or receive signals
 - Paid subscribers can use all features including virtual trading and AI Copilot
@@ -79,7 +84,7 @@ TradeMind provides a paper trading system called the **Shadow Ledger**. It simul
 
 TradeMind never connects to or submits orders to any brokerage. The flow is:
 
-1. A signal is generated once per strategy (e.g., the daily 3 PM ET QQQ Basic rebalance)
+1. A signal is generated once per strategy (e.g., the daily 3:30 PM ET QQQ Basic rebalance)
 2. The app simulates the signal against the user's virtual account using live market mid-prices, producing exact order instructions sized to that account's positions and cash
 3. The user receives the order instructions by email (and in the app)
 4. The user reviews the orders, adjusts them if they wish, and enters them manually in their own brokerage account (Fidelity, E*TRADE, IBKR, Schwab, etc.)
@@ -192,7 +197,7 @@ A: Make sure you are logged in. Settings are saved to the database on every chan
 A: The app syncs settings when you switch browser tabs (focus events). Click on the other window to bring it into focus and it should update.
 
 **Q: Why don't I see any signals?**
-A: QQQ Basic generates one rebalance signal at 3:00 PM ET on trading days (most days it says HOLD — no action needed). QQQ LEAPS entries are rare by design — the strategy can sit in cash for weeks or months waiting for its entry conditions. No signal usually means the strategy is correctly waiting.
+A: QQQ Basic generates one rebalance signal at 3:30 PM ET on trading days (most days it says HOLD — no action needed). QQQ LEAPS entries are rare by design — the strategy can sit in cash for weeks or months waiting for its entry conditions. No signal usually means the strategy is correctly waiting.
 
 **Q: What is the difference between QQQ Basic and QQQ LEAPS?**
 A: QQQ Basic rotates between ETFs (QQQ/QLD/TQQQ/SGOV) and requires no options approval — it works in any account including IRAs, with one decision per day at most. QQQ LEAPS buys long-dated QQQ call options on rare, gated entry signals and sells covered calls while holding — it requires options approval at your broker and involves contract-level position sizing.

@@ -19,7 +19,7 @@ const TERMS = [
     'One redemption per subscriber identity. Plus-address and Gmail-dot variants of an address count as the same identity.',
     'Already a TradeMind customer? You can still use this offer when buying an additional plan.',
     'Not combinable with other discounts or referral credits.',
-    'Renews at the standard annual price after the first year.',
+    'Renews at the same subscriber price each year.',
     'Unsubscribing from the newsletter keeps your discount valid until the window ends.',
     'Refunded purchases do not restore the offer. Chargebacks revoke it.',
 ];
@@ -64,9 +64,10 @@ export default function OfferPage() {
                 <section className="tm-nl-section">
                     <h2 className="tm-nl-h2">How redemption works</h2>
                     <p className="tm-nl-sub" style={{ marginBottom: 0 }}>
-                        After confirming, use the same email address when you create your TradeMind account or
-                        start checkout. The 30% discount is applied to the first annual term automatically for
-                        eligible addresses. Questions: <a href="mailto:support@trademind.bot" className="tm-nl-link">support@trademind.bot</a>.
+                        After confirming, use the same email address when you log in and start checkout. The
+                        30% subscriber price applies automatically for eligible addresses, and your virtual
+                        account is created automatically when payment completes.
+                        Questions: <a href="mailto:support@trademind.bot" className="tm-nl-link">support@trademind.bot</a>.
                     </p>
                 </section>
 

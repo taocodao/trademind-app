@@ -49,7 +49,7 @@ export function OfferBlock({ onClickPath }: { onClickPath?: string }) {
                 automatically.{' '}
                 <Link href="/newsletter/offer" className="tm-nl-link">Offer terms</Link>
             </p>
-            <Link href={onClickPath ?? '/upgrade'} className="tm-nl-btn tm-nl-btn-primary">
+            <Link href={onClickPath ?? '/#pricing'} className="tm-nl-btn tm-nl-btn-primary">
                 Claim 30% off annual plan
             </Link>
         </div>

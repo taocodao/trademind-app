@@ -5,9 +5,19 @@
  * updates the pricing page, /upgrade page, and checkout simultaneously.
  *
  * Plans — ANNUAL-ONLY (since Aug 2026):
- *   turbocore_pro_bundle — QQQ Basic   $252/yr  (= $30/mo × 12 × 0.70)
- *   qqq_leaps            — QQQ LEAPS   $336/yr  (= $40/mo × 12 × 0.70)
+ *   turbocore_pro_bundle — QQQ Basic   $252/yr charged  (anchor: $360 regular)
+ *   qqq_leaps            — QQQ LEAPS   $336/yr charged  (anchor: $480 regular)
  *   full_access          — internal tier (trials, grants) — NOT sold
+ *
+ * List price vs charged price (Sep 2026): `regularAnnual` is the anchor shown
+ * on the pricing page by default. `annual` is the subscriber price actually
+ * charged; it equals 30% off the anchor. Anyone can unlock the subscriber
+ * price by leaving an email on the pricing page, so the Stripe prices ARE
+ * the $252/$336 annual amounts and no coupon is applied at checkout.
+ *
+ * Trial (Sep 2026): there is no unpaid free month for new accounts. The card
+ * is charged at checkout; cancelling within the first month refunds the
+ * payment in full (handled in /api/stripe/cancel).
  *
  * `monthly` is the REFERENCE monthly rate (marketing anchor + legacy math).
  * `annualPerMonth` is the EFFECTIVE monthly rate (annual / 12) — use it for
@@ -28,16 +38,16 @@ export const PRICING = {
             label: 'QQQ Basic',
             description: 'QQQ Basic ML Signal + IV-Switching Composite Options Strategy',
             monthly: 30,            // reference rate — not sold monthly
-            annual: 252,
+            regularAnnual: 360,     // anchor price shown before the newsletter offer
+            annual: 252,            // price actually charged (30% off the anchor)
             annualPerMonth: 21,
             annualSavingsPct: 30,
             features: [
-                'QQQ Basic ML Signal (daily at 3 PM ET)',
-                'SMA200 Regime Gate',
-                'IV-Switching Composite (CSP / ZEBRA / CCS)',
-                'Crash Hedge Mode (SQQQ)',
-                'Virtual Shadow Portfolio',
-                'Pre-Market Brief',
+                'QQQ Basic signal processed at 3:30 PM ET each trading day',
+                'Email order instructions you enter at your own broker',
+                'Virtual account mirrors every signal order',
+                'No options approval needed at your broker',
+                'SMA200 Regime Gate + Crash Hedge Mode',
                 'Signal History',
             ],
         },
@@ -46,15 +56,16 @@ export const PRICING = {
             label: 'QQQ LEAPS',
             description: 'ML-Powered QQQ Long-Term Equity Anticipation Securities',
             monthly: 40,            // reference rate — not sold monthly
-            annual: 336,
+            regularAnnual: 480,     // anchor price shown before the newsletter offer
+            annual: 336,            // price actually charged (30% off the anchor)
             annualPerMonth: 28,
             annualSavingsPct: 30,
             features: [
-                'Daily ML LEAPS Signal (ENTER / EXIT / HOLD)',
-                'QQQ LEAPS Call Selection (0.70+ delta, 12-month)',
+                'QQQ LEAPS signal processed at 3:30 PM ET each trading day',
+                'Email order instructions you enter at your own broker',
+                'Virtual account mirrors every signal order',
+                'Requires options approval at your broker',
                 'Regime Detection (BULL_STRONG / BULL / CHOPPY / BEAR)',
-                'Virtual LEAPS Position Tracking',
-                'Manual Order Instructions',
                 'Signal History',
             ],
         },

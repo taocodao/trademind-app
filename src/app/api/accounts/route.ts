@@ -28,11 +28,20 @@ export async function GET() {
     }
 }
 
-// POST /api/accounts — create a named account plus its membership.
-// Every account starts with the 30-day free month. Referred signups
-// (unattached referral attribution exists) are remembered on the membership;
-// the referee and referrer day grants apply at the referee's first payment.
-export async function POST(req: NextRequest) {
+// POST /api/accounts — DISABLED (Sep 2026). Accounts are created
+// automatically by the Stripe checkout webhook after payment completes: one
+// QQQ Basic and/or one QQQ LEAPS per login, with default principal
+// ($10,000 Basic / $25,000 LEAPS) adjustable afterward. Manual creation is
+// closed so there is no path to an unpaid account.
+export async function POST(_req: NextRequest) {
+    return NextResponse.json(
+        { error: 'Accounts are created automatically when you subscribe. Pick a plan on the pricing page to start.' },
+        { status: 403 }
+    );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function legacyCreateAccount(req: NextRequest) {
     const userId = await getUserId();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     try {

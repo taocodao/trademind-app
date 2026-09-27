@@ -14,7 +14,7 @@ export function PromoFooter() {
               <span className="font-semibold text-[#F8FAFC]">TradeMind</span>
             </div>
             <p className="text-[#94A3B8] text-sm leading-relaxed max-w-sm">
-              AI-powered trade signal platform for Nasdaq ETF strategies. TurboCore delivers daily regime signals at 3 PM ET.
+              AI-powered trade signal platform for Nasdaq ETF strategies. TurboCore delivers daily regime signals at 3:30 PM ET.
             </p>
             <a
               href="https://trademind.bot"

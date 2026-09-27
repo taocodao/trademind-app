@@ -272,6 +272,44 @@ export async function updateAccountAlertEmail(accountId: number, userId: string,
     return res.rows.length ? rowToAccount(res.rows[0]) : null;
 }
 
+/**
+ * Adjusts the starting principal after auto-provisioning (checkout creates
+ * $10k Basic / $25k LEAPS by default; the user can change it afterward).
+ * The cash delta rides along so the ledger stays consistent: raising the
+ * principal books a deposit activity, lowering it books a withdrawal, but
+ * cash never drops below zero.
+ */
+export async function updateAccountPrincipal(accountId: number, userId: string, newPrincipal: number): Promise<Account | null> {
+    await initializeAccountTables();
+    if (!isFinite(newPrincipal) || newPrincipal <= 0) return null;
+    const current = await query(`SELECT initial_principal, cash_balance FROM accounts WHERE id = $1 AND user_id = $2`, [accountId, userId]);
+    if (!current.rows[0]) return null;
+    const oldPrincipal = Number(current.rows[0].initial_principal);
+    const delta = newPrincipal - oldPrincipal;
+    if (delta === 0) return rowToAccount(current.rows[0]) as Account;
+    const res = await query(
+        `UPDATE accounts
+         SET initial_principal = $3,
+             cash_balance = GREATEST(0, cash_balance + $4),
+             updated_at = NOW()
+         WHERE id = $1 AND user_id = $2 RETURNING *`,
+        [accountId, userId, newPrincipal, delta]
+    );
+    if (res.rows.length) {
+        await insertActivity(accountId, {
+            type: delta > 0 ? 'deposit' : 'withdraw',
+            symbol: null,
+            quantity: null,
+            price: null,
+            amount: Math.abs(delta),
+            signal_id: null,
+            source: 'manual',
+            note: 'Principal adjustment',
+        });
+    }
+    return res.rows.length ? rowToAccount(res.rows[0]) : null;
+}
+
 /** Sets the member's stated broker preference (display + help-guide preselect only; no brokerage connection). */
 export async function updateAccountBroker(accountId: number, userId: string, broker: string): Promise<Account | null> {
     await initializeAccountTables();

@@ -2,11 +2,15 @@ import { NextRequest } from 'next/server';
 import Stripe from 'stripe';
 import { getStripe } from '@/lib/stripe-server';
 import {
+    createMembershipForAccount,
     getMembershipByAccount,
     getMembershipByStripeSubscription,
+    type MembershipPlan,
     type MembershipStatus,
     updateMembership,
 } from '@/lib/membership';
+import { createAccount } from '@/lib/accounts';
+import { query } from '@/lib/db';
 import { handleReferralFirstPayment } from '@/lib/referrals';
 
 export const dynamic = 'force-dynamic';
@@ -55,10 +59,75 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
     switch (event.type) {
         case 'checkout.session.completed': {
             const session = event.data.object as Stripe.Checkout.Session;
-            const accountId = Number(session.metadata?.account_id);
             const userId = session.metadata?.userId;
+            const metadataPlan = session.metadata?.plan;
             const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
-            if (!Number.isInteger(accountId) || accountId <= 0 || !userId || !subscriptionId) return;
+            if (!userId || !subscriptionId) return;
+
+            const subscription = await getStripe().subscriptions.retrieve(subscriptionId) as Stripe.Subscription & {
+                current_period_end?: number;
+            };
+
+            let accountId = Number(session.metadata?.account_id);
+
+            // Plan-first checkout (Sep 2026): payment succeeded before any
+            // account existed, so create it now with strategy defaults.
+            // Principal defaults: QQQ Basic $10,000, QQQ LEAPS $25,000.
+            if (!Number.isInteger(accountId) || accountId <= 0) {
+                if (session.metadata?.auto_create !== '1' || !metadataPlan) return;
+                const plan = metadataPlan as MembershipPlan;
+                const strategy = plan === 'leaps' ? 'QQQ_LEAPS' : 'TQQQ_TURBOCORE_PRO';
+                const principal = plan === 'leaps' ? 25000 : 10000;
+                const name = plan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Basic';
+                const emailRow = await query(
+                    `SELECT COALESCE(login_email, email) AS e FROM user_settings WHERE user_id = $1`,
+                    [userId]
+                );
+                // One account per plan: reuse an existing account for this plan
+                // if the user managed to create one between checkout and payment.
+                const existing = await query(
+                    `SELECT a.id FROM accounts a
+                     JOIN account_memberships m ON m.account_id = a.id
+                     WHERE a.user_id = $1 AND m.plan = $2
+                     ORDER BY a.created_at ASC LIMIT 1`,
+                    [userId, plan]
+                );
+                if (existing.rows[0]?.id) {
+                    accountId = existing.rows[0].id;
+                } else {
+                    const account = await createAccount(
+                        userId,
+                        name,
+                        strategy,
+                        'moderate',
+                        principal,
+                        emailRow.rows[0]?.e ?? null
+                    );
+                    accountId = account.id;
+                    // Attach any unattached referral attribution so the referee
+                    // and referrer day grants still vest on this first payment.
+                    const ref = await query(
+                        `SELECT id FROM referral_events
+                         WHERE referred_id = $1 AND referred_account_id IS NULL
+                         ORDER BY converted_at ASC LIMIT 1`,
+                        [userId]
+                    );
+                    const referralEventId: string | null = ref.rows[0]?.id ?? null;
+                    if (referralEventId) {
+                        await query(
+                            `UPDATE referral_events SET referred_account_id = $2 WHERE id = $1`,
+                            [referralEventId, accountId]
+                        );
+                    }
+                    await createMembershipForAccount({
+                        accountId,
+                        userId,
+                        strategy,
+                        referredSignup: !!referralEventId,
+                        referralEventId,
+                    });
+                }
+            }
 
             const membership = await getMembershipByAccount(accountId);
             if (!membership || membership.user_id !== userId) {
@@ -66,10 +135,6 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
                 return;
             }
 
-            const subscription = await getStripe().subscriptions.retrieve(subscriptionId) as Stripe.Subscription & {
-                current_period_end?: number;
-            };
-            const metadataPlan = session.metadata?.plan;
             if (metadataPlan && metadataPlan !== membership.plan) {
                 console.warn('Stripe checkout plan metadata does not match membership plan', { accountId, metadataPlan, membershipPlan: membership.plan });
                 return;

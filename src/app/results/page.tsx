@@ -225,7 +225,7 @@ export default async function ResultsPage() {
                     <h2 className="text-2xl font-bold mb-3">See This System Live</h2>
                     <p className="text-gray-400 mb-6 max-w-md mx-auto">
                         The same ML regime model that generated this track record publishes a live signal
-                        every trading day at 3 PM ET. $15 unlocks 30 days of full access.
+                        every trading day at 3:30 PM ET. $15 unlocks 30 days of full access.
                     </p>
                     <a
                         href="https://whop.com/trademindbot/"

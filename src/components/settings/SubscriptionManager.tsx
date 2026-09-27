@@ -57,9 +57,12 @@ export function SubscriptionManager() {
                 },
                 body: JSON.stringify({ accountId: membership.account_id }),
             });
+            const data = await response.json();
             if (!response.ok) {
-                const data = await response.json();
                 throw new Error(data.error || 'Unable to update auto renew');
+            }
+            if (!enabled && data.refunded === true) {
+                alert('Canceled within your first month: the full payment has been refunded and access is now off.');
             }
             await refresh();
         } catch (error) {
@@ -105,8 +108,8 @@ export function SubscriptionManager() {
                     <div className="py-6 text-center text-xs text-tm-muted">Loading memberships</div>
                 ) : memberships.length === 0 ? (
                     <div className="rounded-lg border border-white/10 p-4 text-xs text-tm-muted">
-                        Create an account to start its 30 day free month.
-                        <a href="/accounts" className="ml-2 text-tm-purple font-semibold">Manage accounts</a>
+                        No memberships yet. Subscribe to a plan and the account is created automatically.
+                        <a href="/#pricing" className="ml-2 text-tm-purple font-semibold">See pricing</a>
                     </div>
                 ) : (
                     <div className="space-y-3">

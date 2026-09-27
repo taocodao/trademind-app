@@ -2,7 +2,7 @@ import { PromoNav } from '../components/PromoNav';
 import { PromoFooter } from '../components/PromoFooter';
 
 const FEATURES = [
-  { icon: '🎯', title: 'Daily Regime Signal', description: 'Every day at 3 PM ET, TurboCore classifies the market as BULL, BEAR, or SIDEWAYS with exact QQQ/QLD/TQQQ/SGOV allocations.' },
+  { icon: '🎯', title: 'Daily Regime Signal', description: 'Every day at 3:30 PM ET, TurboCore classifies the market as BULL, BEAR, or SIDEWAYS with exact QQQ/QLD/TQQQ/SGOV allocations.' },
   { icon: '🤖', title: 'Live Chatbot', description: 'Commands like !signal, !regime, !backtest in the Whop community pull from a live database instantly.' },
   { icon: '☀️', title: 'Morning Brief', description: 'Each trading day, members receive a pre-market brief with market conditions and the overnight regime call.' },
   { icon: '📊', title: 'Backtest Dashboard', description: '7-year backtest (2019 to 2025) with full equity curve, drawdown analysis, and year-by-year attribution.' },

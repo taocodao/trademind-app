@@ -957,7 +957,7 @@ function SetupTab({ onToast }: { onToast: (m: string) => void }) {
                         <span className="w-5 h-5 rounded-full bg-purple-500/30 text-purple-300 text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
                         <div>
                             <p className="font-bold text-white text-[11px]">Enable Signal Email Alerts</p>
-                            <p>Enter your email address below so you receive a notification every time a new signal is ready. Without this, you must check the app manually at 3 PM ET.</p>
+                            <p>Enter your email address below so you receive a notification every time a new signal is ready. Without this, you must check the app manually at 3:30 PM ET.</p>
                         </div>
                     </div>
                     <div className="flex items-start gap-2">
@@ -1096,7 +1096,7 @@ function HeroScreen({ onStart }: { onStart: () => void }) {
                     <div className="space-y-3">
                         {[
                             { icon: "📧", title: "Set Up Your Account",          desc: "Subscribe → add your email for signal alerts → optionally connect Tastytrade for live execution." },
-                            { icon: "🤖", title: "AI Generates Signals at 3 PM ET", desc: "Every trading day, the ML engine reads volatility & momentum and calculates your optimal allocation." },
+                            { icon: "🤖", title: "AI Generates Signals at 3:30 PM ET", desc: "Every trading day, the ML engine reads volatility & momentum and calculates your optimal allocation." },
                             { icon: "⚡", title: "Signals Auto-Execute or Wait for You", desc: "With Auto-Approve ON: orders go live instantly. With it OFF: review and approve each signal in the app." },
                             { icon: "💼", title: "Positions Update Automatically",  desc: "Tastytrade users see live positions. Virtual users see their shadow ledger, deposit cash anytime." },
                             { icon: "📈", title: "Track Everything in Activity Log",  desc: "Full audit trail of every signal, trade, virtual execution, and deposit across both strategies." },

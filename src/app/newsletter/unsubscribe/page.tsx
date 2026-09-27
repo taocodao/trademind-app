@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import '../newsletter.css';
-import SimpleTokenAction from '@/components/newsletter/SimpleTokenAction';
+import AutoUnsubscribe from '@/components/newsletter/AutoUnsubscribe';
 import { NewsletterFooter } from '@/components/newsletter/NewsletterShell';
 
 export const metadata: Metadata = {
@@ -17,15 +17,7 @@ export default async function UnsubscribePage({
     return (
         <main className="tm-nl">
             <div className="tm-nl-wrap-narrow">
-                <SimpleTokenAction
-                    token={token ?? ''}
-                    endpoint="/api/newsletter/unsubscribe"
-                    heading="Unsubscribe from The AI Systematic Investor."
-                    body="You will stop receiving the newsletter and marketing emails. If your 30% annual offer is still inside its 90-day window, it stays valid until it expires."
-                    buttonLabel="Unsubscribe"
-                    successHeading="You are unsubscribed."
-                    successBody="No more newsletter emails. Your discount eligibility, if any, remains until its expiry date."
-                />
+                <AutoUnsubscribe token={token ?? ''} />
                 <NewsletterFooter />
             </div>
         </main>

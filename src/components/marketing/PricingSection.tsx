@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePrivy } from '@privy-io/react-auth';
@@ -79,7 +79,19 @@ export function PricingSection() {
         }
     ], [t, basic, leaps]);
 
+    const unlockRef = useRef<HTMLDivElement>(null);
+    const [pendingPlan, setPendingPlan] = useState<'basic' | 'leaps' | null>(null);
+
+    // At the regular (non-subscriber) price, the Start button first drops the
+    // visitor on the newsletter capture: everyone can claim the 30% subscriber
+    // price, so there is no reason to send anyone to checkout at $360/$480.
+    // A "continue at regular price" escape hatch stays on the capture card.
     const handleSubscribe = async (plan: 'basic' | 'leaps') => {
+        if (!unlocked) {
+            setPendingPlan(plan);
+            unlockRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
         if (!authenticated) {
             login();
             return;
@@ -102,6 +114,14 @@ export function PricingSection() {
             const d = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(d.error || 'Subscription failed');
             setUnlocked(true);
+            // Came here from a Start button: keep momentum and continue to
+            // checkout at the subscriber price once the address is captured.
+            if (pendingPlan) {
+                const plan = pendingPlan;
+                setPendingPlan(null);
+                if (!authenticated) login();
+                else window.location.href = `/upgrade?plan=${plan}&email=${encodeURIComponent(email)}`;
+            }
         } catch (err) {
             setNlError(err instanceof Error ? err.message : 'Subscription failed');
         } finally {
@@ -125,27 +145,22 @@ export function PricingSection() {
     };
 
     return (
-        <section className="w-full max-w-7xl mx-auto py-20 px-6 relative z-10" id="pricing">
-            <div className="text-center mb-10">
-                <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">{t('pricing.title')}<br />{t('pricing.subtitle')}</h2>
-                <p className="text-tm-muted max-w-2xl mx-auto mb-6">{t('pricing.description')}</p>
+        <section className="w-full max-w-7xl mx-auto py-10 px-6 relative z-10" id="pricing">
+            <div className="text-center mb-6">
+                <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">{t('pricing.title')} {t('pricing.subtitle')}</h2>
 
                 {/* What you actually get: signals by email, orders placed by you */}
-                <div className="max-w-2xl mx-auto bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-left mb-6">
-                    <p className="text-sm text-gray-300 leading-relaxed">
-                        TradeMind is a signal service, not auto-trading. Every trading day we process the
-                        signal at 3:30 PM ET. When a signal fires, you get an email with the exact order
-                        instructions: what to buy or sell, the limit price, and how to enter it at your own
-                        broker. Your TradeMind virtual account mirrors the same order so your record always
-                        matches the signal.
-                    </p>
-                </div>
+                <p className="text-sm text-gray-300 leading-relaxed max-w-3xl mx-auto">
+                    TradeMind is a signal service, not auto-trading. Every trading day we process the
+                    signal at 3:30 PM ET and email you the exact order instructions to enter at your own
+                    broker. Your TradeMind virtual account mirrors each order so your record matches the signal.
+                </p>
 
-                <div className="inline-flex items-center gap-2 bg-white/5 px-5 py-2 rounded-full border border-white/10 mx-auto">
-                    <span className="text-sm font-bold text-white">{t('pricing.annual_only', 'Annual billing only')}</span>
+                <div className="mt-5 inline-flex items-center gap-3 bg-tm-green/10 px-5 py-2.5 rounded-full border border-tm-green/30 mx-auto">
+                    <span className="text-sm font-bold text-tm-green">First month free: cancel within your first month and the payment is refunded in full</span>
                 </div>
-                <p className="mt-4 text-xs text-tm-purple/80 font-semibold tracking-wider uppercase">
-                    First month free: your card is charged at checkout, and cancelling within the first month refunds the full payment
+                <p className="mt-3 text-xs text-tm-purple/80 font-semibold tracking-wider uppercase">
+                    {t('pricing.annual_only', 'Annual billing only')} · card charged at checkout
                 </p>
             </div>
 
@@ -170,9 +185,9 @@ export function PricingSection() {
                             )}
                             <h3 className="text-xl font-bold text-white mb-1">{tier.name}</h3>
                             <p className={`text-xs italic mb-2 font-medium ${tier.popular ? 'text-tm-purple/80' : 'text-[#4f8ef7]/80'}`}>{tier.tagline}</p>
-                            <p className="text-sm text-tm-muted mb-6 leading-relaxed">{tier.description}</p>
+                            <p className="text-sm text-tm-muted mb-4 leading-relaxed">{tier.description}</p>
 
-                            <div className="flex flex-col mb-8">
+                            <div className="flex flex-col mb-5">
                                 {unlocked ? (
                                     <>
                                         <div className="flex items-end gap-2 mb-1">
@@ -196,22 +211,22 @@ export function PricingSection() {
                                 )}
                             </div>
 
-                            <ul className="flex flex-col gap-4 mb-6 flex-grow">
+                            <ul className="flex flex-col gap-2.5 mb-4 flex-grow">
                                 {(Array.isArray(tier.features) ? tier.features : []).map((feat, i) => (
-                                    <li key={i} className="flex items-start gap-3">
-                                        <Check className={`w-5 h-5 shrink-0 ${tier.popular || isSelected ? 'text-tm-purple' : 'text-tm-green'}`} />
+                                    <li key={i} className="flex items-start gap-2.5">
+                                        <Check className={`w-4 h-4 mt-0.5 shrink-0 ${tier.popular || isSelected ? 'text-tm-purple' : 'text-tm-green'}`} />
                                         <span className="text-sm text-gray-300">{feat}</span>
                                     </li>
                                 ))}
                             </ul>
 
-                            <p className={`text-xs mb-5 font-semibold ${tier.popular ? 'text-tm-purple/90' : 'text-[#4f8ef7]/90'}`}>
+                            <p className={`text-xs mb-3 font-semibold ${tier.popular ? 'text-tm-purple/90' : 'text-[#4f8ef7]/90'}`}>
                                 {tier.permissionNote}
                             </p>
 
                             <button
                                 onClick={(e) => { e.stopPropagation(); handleSubscribe(tier.plan); }}
-                                className={`w-full py-4 rounded-xl font-bold transition-all ${
+                                className={`w-full py-3 rounded-xl font-bold transition-all ${
                                     tier.popular
                                         ? 'bg-tm-purple hover:bg-tm-purple/90 text-white shadow-lg shadow-tm-purple/25'
                                         : isSelected
@@ -228,7 +243,7 @@ export function PricingSection() {
 
             {/* Newsletter unlock: leave an email, get the 30% subscriber price */}
             {!unlocked && (
-                <div className="mt-10 max-w-xl mx-auto bg-white/5 border border-tm-purple/30 rounded-2xl p-6 text-center">
+                <div ref={unlockRef} className="mt-6 max-w-xl mx-auto bg-white/5 border border-tm-purple/30 rounded-2xl p-5 text-center">
                     <p className="text-sm font-bold text-white mb-1">Subscribers pay 30% less</p>
                     <p className="text-xs text-tm-muted mb-4">
                         Enter your email to subscribe to The AI Systematic Investor and the subscriber price
@@ -255,17 +270,26 @@ export function PricingSection() {
                     <p className="mt-3 text-[11px] text-tm-muted">
                         By subscribing you agree to receive the weekly newsletter. Unsubscribe anytime.
                     </p>
+                    {pendingPlan && (
+                        <button
+                            onClick={() => {
+                                const plan = pendingPlan;
+                                setPendingPlan(null);
+                                if (!authenticated) login();
+                                else window.location.href = `/upgrade?plan=${plan}`;
+                            }}
+                            className="mt-3 text-[11px] text-tm-muted underline hover:text-white"
+                        >
+                            No thanks, continue {pendingPlan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Basic'} at the regular ${pendingPlan === 'leaps' ? 480 : 360} price
+                        </button>
+                    )}
                 </div>
             )}
             {unlocked && (
-                <p className="mt-10 text-center text-xs text-tm-green font-semibold tracking-wider uppercase">
+                <p className="mt-6 text-center text-xs text-tm-green font-semibold tracking-wider uppercase">
                     Subscriber price unlocked for {nlEmail || 'your email'}: 30% off your first annual term
                 </p>
             )}
-
-            <div className="mt-8 text-center text-xs text-tm-muted uppercase tracking-widest font-mono">
-                {t('pricing.billed')}
-            </div>
         </section>
     );
 }

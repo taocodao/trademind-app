@@ -4,7 +4,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import {
-    ArrowLeft, Wallet, Pencil, Trash2, RefreshCw, ChevronRight,
+    ArrowLeft, Wallet, Pencil, Trash2, RefreshCw, ChevronRight, CheckCircle2,
 } from "lucide-react";
 import Link from "next/link";
 import { useAccountContext } from "@/components/providers/AccountContext";
@@ -82,6 +82,23 @@ function AccountsPageInner() {
     // reachable from the account workspace back link and Manage Accounts.
     const searchParams = useSearchParams();
     const forceList = searchParams?.get('list') === '1';
+    const checkoutSuccess = searchParams?.get('checkout') === 'success';
+
+    // Just paid: Stripe redirects here the moment checkout closes, but the
+    // webhook that creates the account can lag a few seconds behind. Poll
+    // until the account appears, then open it directly.
+    const [provisionWaited, setProvisionWaited] = useState(0);
+    useEffect(() => {
+        if (!checkoutSuccess || !ready || !authenticated) return;
+        if (accounts.length > 0) return;
+        if (provisionWaited >= 30) return; // give up polling; empty state shows a support path
+        const timer = setTimeout(() => {
+            setProvisionWaited((w) => w + 2);
+            void refreshAccounts();
+        }, 2000);
+        return () => clearTimeout(timer);
+    }, [checkoutSuccess, ready, authenticated, accounts.length, provisionWaited, refreshAccounts]);
+
     useEffect(() => {
         if (forceList || loading || !ready || !authenticated) return;
         if (accounts.length === 1) {
@@ -215,10 +232,22 @@ function AccountsPageInner() {
             <div className="px-6 space-y-3">
                 {loading && accounts.length === 0 ? (
                     <div className="glass-card p-8 text-center text-tm-muted text-sm animate-pulse">Loading accounts...</div>
+                ) : accounts.length === 0 && checkoutSuccess && provisionWaited < 30 ? (
+                    <div className="glass-card p-8 text-center">
+                        <CheckCircle2 className="w-8 h-8 text-tm-green mx-auto mb-3" />
+                        <p className="text-sm font-bold text-white">Payment received</p>
+                        <p className="text-sm text-tm-muted mt-1 animate-pulse">Setting up your virtual account, this takes a few seconds...</p>
+                    </div>
                 ) : accounts.length === 0 ? (
                     <div className="glass-card p-8 text-center">
                         <Wallet className="w-8 h-8 text-tm-muted mx-auto mb-3" />
                         <p className="text-sm text-tm-muted">No accounts yet. Subscribe to a plan above and your virtual account is created automatically.</p>
+                        {checkoutSuccess && (
+                            <p className="text-xs text-tm-muted mt-2">
+                                Payment went through but the account is still not here. Contact{' '}
+                                <a href="mailto:support@trademind.bot" className="text-tm-purple">support@trademind.bot</a> and we will finish the setup.
+                            </p>
+                        )}
                     </div>
                 ) : (
                     accounts.map((a) => {

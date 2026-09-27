@@ -12,6 +12,7 @@ import {
 import { createAccount } from '@/lib/accounts';
 import { query } from '@/lib/db';
 import { handleReferralFirstPayment } from '@/lib/referrals';
+import { provisionCheckoutSession } from '@/lib/stripe-provision';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -59,130 +60,7 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
     switch (event.type) {
         case 'checkout.session.completed': {
             const session = event.data.object as Stripe.Checkout.Session;
-            const userId = session.metadata?.userId;
-            const metadataPlan = session.metadata?.plan;
-            const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
-            if (!userId || !subscriptionId) return;
-
-            const subscription = await getStripe().subscriptions.retrieve(subscriptionId) as Stripe.Subscription & {
-                current_period_end?: number;
-            };
-
-            let accountId = Number(session.metadata?.account_id);
-
-            // Plan-first checkout (Sep 2026): payment succeeded before any
-            // account existed, so create it now with strategy defaults.
-            // Principal defaults: QQQ Basic $10,000, QQQ LEAPS $25,000.
-            if (!Number.isInteger(accountId) || accountId <= 0) {
-                if (session.metadata?.auto_create !== '1' || !metadataPlan) return;
-                const plan = metadataPlan as MembershipPlan;
-                const strategy = plan === 'leaps' ? 'QQQ_LEAPS' : 'TQQQ_TURBOCORE_PRO';
-                const principal = plan === 'leaps' ? 25000 : 10000;
-                const name = plan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Basic';
-                const emailRow = await query(
-                    `SELECT COALESCE(login_email, email) AS e FROM user_settings WHERE user_id = $1`,
-                    [userId]
-                );
-                // One account per plan: reuse an existing account for this plan
-                // if the user managed to create one between checkout and payment.
-                const existing = await query(
-                    `SELECT a.id FROM accounts a
-                     JOIN account_memberships m ON m.account_id = a.id
-                     WHERE a.user_id = $1 AND m.plan = $2
-                     ORDER BY a.created_at ASC LIMIT 1`,
-                    [userId, plan]
-                );
-                if (existing.rows[0]?.id) {
-                    accountId = existing.rows[0].id;
-                } else {
-                    const account = await createAccount(
-                        userId,
-                        name,
-                        strategy,
-                        'moderate',
-                        principal,
-                        emailRow.rows[0]?.e ?? null
-                    );
-                    accountId = account.id;
-                    // Attach any unattached referral attribution so the referee
-                    // and referrer day grants still vest on this first payment.
-                    const ref = await query(
-                        `SELECT id FROM referral_events
-                         WHERE referred_id = $1 AND referred_account_id IS NULL
-                         ORDER BY converted_at ASC LIMIT 1`,
-                        [userId]
-                    );
-                    const referralEventId: string | null = ref.rows[0]?.id ?? null;
-                    if (referralEventId) {
-                        await query(
-                            `UPDATE referral_events SET referred_account_id = $2 WHERE id = $1`,
-                            [referralEventId, accountId]
-                        );
-                    }
-                    await createMembershipForAccount({
-                        accountId,
-                        userId,
-                        strategy,
-                        referredSignup: !!referralEventId,
-                        referralEventId,
-                    });
-                }
-            }
-
-            const membership = await getMembershipByAccount(accountId);
-            if (!membership || membership.user_id !== userId) {
-                console.warn('Stripe checkout could not resolve an owned account membership', { accountId, userId });
-                return;
-            }
-
-            if (metadataPlan && metadataPlan !== membership.plan) {
-                console.warn('Stripe checkout plan metadata does not match membership plan', { accountId, metadataPlan, membershipPlan: membership.plan });
-                return;
-            }
-
-            await updateMembership(accountId, {
-                status: 'active',
-                stripe_subscription_id: subscription.id,
-                current_period_end: unixToIso(subscription.current_period_end),
-                cancel_at_period_end: false,
-                pending_bonus_days: membership.pending_bonus_days > 0 ? 0 : membership.pending_bonus_days,
-            });
-
-            if (membership.referred_signup) {
-                await handleReferralFirstPayment({
-                    referredUserId: membership.user_id,
-                    accountId,
-                    plan: membership.plan,
-                    stripeSubscriptionId: subscription.id,
-                });
-            }
-
-            // Newsletter discount redemption: payment succeeded with the
-            // NEWSLETTER30 coupon attached by checkout.
-            const nlSubscriberId = session.metadata?.newsletter_subscriber_id;
-            if (nlSubscriberId) {
-                const { markRedeemed } = await import('@/lib/newsletter/db');
-                const { sendRedemptionReceiptEmail } = await import('@/lib/newsletter/email');
-                const { query } = await import('@/lib/db');
-                const redeemed = await markRedeemed(Number(nlSubscriberId), subscription.id, accountId);
-                if (redeemed) {
-                    const sub = await query(
-                        `SELECT email FROM newsletter_subscribers WHERE id = $1`,
-                        [Number(nlSubscriberId)]
-                    );
-                    const to = sub.rows[0]?.email;
-                    if (to) {
-                        const renewal = subscription.current_period_end
-                            ? new Date(subscription.current_period_end * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-                            : undefined;
-                        void sendRedemptionReceiptEmail({
-                            to,
-                            planLabel: metadataPlan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Basic',
-                            renewalDate: renewal,
-                        });
-                    }
-                }
-            }
+            await provisionCheckoutSession(session);
             return;
         }
 

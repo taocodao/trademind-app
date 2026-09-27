@@ -62,7 +62,7 @@ export default function AccountsPage() {
 }
 
 function AccountsPageInner() {
-    const { ready, authenticated, user } = usePrivy();
+    const { ready, authenticated, user, getAccessToken } = usePrivy();
     const router = useRouter();
     const { accounts, loading, refreshAccounts, setActiveAccountId } = useAccountContext();
 
@@ -88,10 +88,42 @@ function AccountsPageInner() {
     // webhook that creates the account can lag a few seconds behind. Poll
     // until the account appears, then open it directly.
     const [provisionWaited, setProvisionWaited] = useState(0);
+    const sessionId = searchParams?.get('session_id') || null;
+    // Server-side confirm: turns a paid Stripe checkout into its account
+    // without waiting on the webhook. Runs once per page load for a fresh
+    // checkout, and also whenever a signed-in user has no accounts (recovers
+    // a payment whose redirect or webhook was lost).
+    const [confirmState, setConfirmState] = useState<'idle' | 'running' | 'done'>('idle');
+    useEffect(() => {
+        if (!ready || !authenticated || loading || confirmState !== 'idle') return;
+        if (!checkoutSuccess && accounts.length > 0) return;
+        setConfirmState('running');
+        (async () => {
+            try {
+                const token = await getAccessToken().catch(() => null);
+                const res = await fetch('/api/stripe/confirm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                    body: JSON.stringify(sessionId ? { sessionId } : {}),
+                });
+                const data = await res.json().catch(() => ({}));
+                await refreshAccounts();
+                const ids: number[] = Array.isArray(data.accountIds) ? data.accountIds : [];
+                if (checkoutSuccess && ids.length > 0) {
+                    setActiveAccountId(ids[0]);
+                    router.replace(`/account/${ids[0]}`);
+                    return;
+                }
+            } catch { /* fall through to polling / empty state */ }
+            setConfirmState('done');
+        })();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ready, authenticated, loading, checkoutSuccess, accounts.length, confirmState, sessionId]);
+
     useEffect(() => {
         if (!checkoutSuccess || !ready || !authenticated) return;
         if (accounts.length > 0) return;
-        if (provisionWaited >= 30) return; // give up polling; empty state shows a support path
+        if (provisionWaited >= 30) return; // stop polling; a clear message shows instead of a bounce
         const timer = setTimeout(() => {
             setProvisionWaited((w) => w + 2);
             void refreshAccounts();
@@ -105,15 +137,13 @@ function AccountsPageInner() {
             router.replace(`/account/${accounts[0].id}`);
             return;
         }
-        // Signed in but nothing here (no subscription yet): route to the
-        // pricing section instead of an empty list. Skip while a fresh
-        // checkout is still provisioning its account.
-        if (accounts.length === 0 && !(checkoutSuccess && provisionWaited < 30)) {
+        // Signed in with no account and no recent checkout: route to pricing,
+        // but only after the confirm step found nothing to provision. A fresh
+        // checkout never bounces back to pricing (that re-opened checkout).
+        if (accounts.length === 0 && !checkoutSuccess && confirmState === 'done') {
             router.replace('/#pricing');
         }
-    }, [forceList, loading, ready, authenticated, accounts, router, checkoutSuccess, provisionWaited]);
-
-
+    }, [forceList, loading, ready, authenticated, accounts, router, checkoutSuccess, confirmState]);
 
     // Load a summary per account
     useEffect(() => {

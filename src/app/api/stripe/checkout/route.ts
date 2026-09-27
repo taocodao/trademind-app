@@ -6,6 +6,7 @@ import { getAccount } from '@/lib/accounts';
 import { getMembershipByAccount, planForStrategy, priceKeyForPlan, type MembershipPlan } from '@/lib/membership';
 import { getStripe } from '@/lib/stripe-server';
 import { resolveNewsletterDiscount } from '@/lib/newsletter/checkout';
+import { ensureStripeProductCopy } from '@/lib/stripe-provision';
 
 export const dynamic = 'force-dynamic';
 
@@ -114,6 +115,7 @@ export async function POST(req: NextRequest) {
 
         const priceId = stripePriceIdForPlan(membershipPlan);
         if (!priceId) return NextResponse.json({ error: 'Stripe price is not configured' }, { status: 500 });
+        await ensureStripeProductCopy(membershipPlan, priceId);
 
         const customerResult = await pool.query(
             'SELECT stripe_customer_id FROM user_settings WHERE user_id = $1',
@@ -145,7 +147,7 @@ export async function POST(req: NextRequest) {
             payment_method_types: ['card'],
             billing_address_collection: 'auto',
             line_items: [{ price: priceId, quantity: 1 }],
-            success_url: `${origin}/accounts?checkout=success`,
+            success_url: `${origin}/accounts?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${origin}/#pricing`,
             metadata,
         };

@@ -41,6 +41,8 @@ interface MembershipInfo {
     free_month_ends_at: string | null;
     current_period_end: string | null;
     cancel_at_period_end: boolean;
+    created_at?: string;
+    stripe_subscription_id?: string | null;
 }
 
 export default function AccountDetailPage() {
@@ -69,6 +71,7 @@ export default function AccountDetailPage() {
     const [account, setAccount] = useState<AccountData | null>(null);
     const [membership, setMembership] = useState<MembershipInfo | null>(null);
     const [checkoutBusy, setCheckoutBusy] = useState(false);
+    const [billingBusy, setBillingBusy] = useState(false);
     const [positions, setPositions] = useState<Position[]>([]);
     const [cash, setCash] = useState(0);
     const [positionsValue, setPositionsValue] = useState(0);
@@ -132,6 +135,45 @@ export default function AccountDetailPage() {
             const d = await res.json();
             if (d.url) window.location.href = d.url;
         } finally { setCheckoutBusy(false); }
+    };
+
+    // Cancel: within the first month of the subscription this refunds the full
+    // payment and ends access immediately; after that it stops auto renew so
+    // access runs to the end of the paid year.
+    const cancelSubscription = async () => {
+        if (!membership) return;
+        const refundDaysLeft = getRefundDaysLeft(membership);
+        const msg = refundDaysLeft !== null
+            ? `Cancel now? You are inside the first month, so the full payment will be refunded and ${membership.plan === 'LEAPS' ? 'QQQ LEAPS' : 'QQQ Basic'} signal access ends today.`
+            : `Turn off auto renew? Access continues until ${membership.current_period_end ? new Date(membership.current_period_end).toLocaleDateString() : 'the end of the paid year'} and the plan does not renew.`;
+        if (!confirm(msg)) return;
+        setBillingBusy(true);
+        try {
+            const res = await fetch('/api/stripe/cancel', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accountId }),
+            });
+            const d = await res.json();
+            if (!res.ok) { alert(d.error || 'Unable to cancel'); return; }
+            if (d.refunded) alert('Canceled inside the first month: the full payment has been refunded and access is now off.');
+            fetchMembership();
+        } finally { setBillingBusy(false); }
+    };
+
+    const turnAutoRenewOn = async () => {
+        if (!membership) return;
+        setBillingBusy(true);
+        try {
+            const res = await fetch('/api/stripe/cancel', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accountId }),
+            });
+            const d = await res.json();
+            if (!res.ok) { alert(d.error || 'Unable to turn auto renew back on'); return; }
+            fetchMembership();
+        } finally { setBillingBusy(false); }
     };
 
     if (!ready || !authenticated) {
@@ -259,7 +301,7 @@ export default function AccountDetailPage() {
                 ) : account ? (
                     <div className="space-y-4">
                         {membership && (
-                            <MembershipBanner membership={membership} busy={checkoutBusy} onSubscribe={startCheckout} />
+                            <MembershipBanner membership={membership} busy={checkoutBusy} billingBusy={billingBusy} onSubscribe={startCheckout} onCancel={cancelSubscription} onAutoRenewOn={turnAutoRenewOn} />
                         )}
                         <AccountTab account={account} onChanged={() => { fetchPositions(); fetchMembership(); }} />
                     </div>
@@ -399,7 +441,23 @@ function SignalsTab({ accountId }: { accountId: number }) {
     );
 }
 
-function MembershipBanner({ membership, busy, onSubscribe }: { membership: MembershipInfo; busy: boolean; onSubscribe: () => void }) {
+/** Days remaining to cancel for a full refund (first-month trial), or null once
+ *  the window has closed. The window is 31 days from the membership start. */
+function getRefundDaysLeft(m: MembershipInfo): number | null {
+    if (!m.created_at) return null;
+    const deadline = new Date(m.created_at).getTime() + 31 * 86400000;
+    const left = Math.floor((deadline - Date.now()) / 86400000);
+    return left >= 0 ? left : null;
+}
+
+function MembershipBanner({ membership, busy, billingBusy, onSubscribe, onCancel, onAutoRenewOn }: {
+    membership: MembershipInfo;
+    busy: boolean;
+    billingBusy: boolean;
+    onSubscribe: () => void;
+    onCancel: () => void;
+    onAutoRenewOn: () => void;
+}) {
     const fmt = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
     const daysLeft = (iso: string) => Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000));
     const price = membership.plan === 'LEAPS' ? 336 : 252;
@@ -455,21 +513,80 @@ function MembershipBanner({ membership, busy, onSubscribe }: { membership: Membe
             break;
     }
 
+    const hasSubscription = !!membership.stripe_subscription_id;
+    const refundLeft = getRefundDaysLeft(membership);
+    const refundDeadline = membership.created_at ? fmt(new Date(new Date(membership.created_at).getTime() + 31 * 86400000).toISOString()) : null;
+    const showBilling = hasSubscription && (membership.status === 'active' || membership.status === 'past_due' || membership.status === 'canceled');
+
     return (
-        <div className={`rounded-xl border p-4 flex items-center gap-3 ${tone}`}>
-            <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
-            <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-white">{title}</p>
-                {detail && <p className="text-[11px] text-tm-muted mt-0.5">{detail}</p>}
+        <div className={`rounded-xl border p-4 ${tone}`}>
+            <div className="flex items-center gap-3">
+                <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
+                <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-white">{title}</p>
+                    {detail && <p className="text-[11px] text-tm-muted mt-0.5">{detail}</p>}
+                </div>
+                {cta && (
+                    <button
+                        onClick={onSubscribe}
+                        disabled={busy}
+                        className="shrink-0 px-4 py-2 rounded-lg font-bold bg-tm-purple hover:bg-tm-purple/90 text-white text-xs transition disabled:opacity-50"
+                    >
+                        {busy ? 'Loading...' : cta}
+                    </button>
+                )}
             </div>
-            {cta && (
-                <button
-                    onClick={onSubscribe}
-                    disabled={busy}
-                    className="shrink-0 px-4 py-2 rounded-lg font-bold bg-tm-purple hover:bg-tm-purple/90 text-white text-xs transition disabled:opacity-50"
-                >
-                    {busy ? 'Loading...' : cta}
-                </button>
+            {showBilling && (
+                <div className="mt-3 pt-3 border-t border-white/10">
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[11px] text-tm-muted">
+                        <span>
+                            Auto renew:{' '}
+                            <span className={`font-bold ${membership.cancel_at_period_end ? 'text-tm-red' : 'text-emerald-400'}`}>
+                                {membership.cancel_at_period_end ? 'OFF' : 'ON'}
+                            </span>
+                        </span>
+                        {membership.current_period_end && (
+                            <span>
+                                {membership.cancel_at_period_end ? 'Access expires' : 'Next renewal'}:{' '}
+                                <span className="font-bold text-white">{fmt(membership.current_period_end)}</span>{' '}
+                                ({daysLeft(membership.current_period_end)} day{daysLeft(membership.current_period_end) !== 1 ? 's' : ''})
+                            </span>
+                        )}
+                        {refundLeft !== null && refundDeadline && (
+                            <span className="text-amber-300">
+                                Full-refund cancel window: {refundLeft} day{refundLeft !== 1 ? 's' : ''} left (ends {refundDeadline})
+                            </span>
+                        )}
+                    </div>
+                    <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                        {membership.cancel_at_period_end ? (
+                            <button
+                                onClick={onAutoRenewOn}
+                                disabled={billingBusy}
+                                className="px-3.5 py-1.5 rounded-lg font-bold bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 text-xs transition disabled:opacity-50"
+                            >
+                                {billingBusy ? 'Working...' : 'Turn auto renew on'}
+                            </button>
+                        ) : (
+                            <button
+                                onClick={onCancel}
+                                disabled={billingBusy}
+                                className="px-3.5 py-1.5 rounded-lg font-bold bg-white/5 text-tm-muted hover:text-white hover:bg-white/10 text-xs transition disabled:opacity-50"
+                            >
+                                {billingBusy ? 'Working...' : refundLeft !== null ? 'Cancel and refund in full' : 'Cancel auto renew'}
+                            </button>
+                        )}
+                        {membership.cancel_at_period_end && refundLeft !== null && (
+                            <button
+                                onClick={onCancel}
+                                disabled={billingBusy}
+                                className="px-3.5 py-1.5 rounded-lg font-bold bg-tm-red/20 text-tm-red hover:bg-tm-red/30 text-xs transition disabled:opacity-50"
+                            >
+                                {billingBusy ? 'Working...' : 'Cancel now for full refund'}
+                            </button>
+                        )}
+                    </div>
+                </div>
             )}
         </div>
     );

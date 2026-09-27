@@ -10,6 +10,15 @@ export async function POST(req: NextRequest) {
     try {
         const cookieStore = await cookies();
         let userId = cookieStore.get('privy-user-id')?.value;
+        if (!userId) {
+            const privyToken = cookieStore.get('privy-token')?.value;
+            if (privyToken) {
+                try {
+                    const payload = JSON.parse(Buffer.from(privyToken.split('.')[1], 'base64url').toString());
+                    userId = payload?.sub || payload?.privy_did || '';
+                } catch { /* ignore */ }
+            }
+        }
 
         // Fallback: Bearer token
         if (!userId) {

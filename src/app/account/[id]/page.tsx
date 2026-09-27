@@ -46,7 +46,7 @@ interface MembershipInfo {
 }
 
 export default function AccountDetailPage() {
-    const { ready, authenticated } = usePrivy();
+    const { ready, authenticated, getAccessToken } = usePrivy();
     const router = useRouter();
     const params = useParams();
     const searchParams = useSearchParams();
@@ -149,9 +149,10 @@ export default function AccountDetailPage() {
         if (!confirm(msg)) return;
         setBillingBusy(true);
         try {
+            const token = await getAccessToken().catch(() => null);
             const res = await fetch('/api/stripe/cancel', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
                 body: JSON.stringify({ accountId }),
             });
             const d = await res.json();
@@ -165,9 +166,10 @@ export default function AccountDetailPage() {
         if (!membership) return;
         setBillingBusy(true);
         try {
+            const token = await getAccessToken().catch(() => null);
             const res = await fetch('/api/stripe/cancel', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
                 body: JSON.stringify({ accountId }),
             });
             const d = await res.json();

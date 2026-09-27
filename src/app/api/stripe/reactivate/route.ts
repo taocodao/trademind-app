@@ -10,6 +10,14 @@ async function getUserId(req: NextRequest): Promise<string | null> {
     const cookieStore = await cookies();
     const cookieUserId = cookieStore.get('privy-user-id')?.value;
     if (cookieUserId) return cookieUserId;
+    const privyToken = cookieStore.get('privy-token')?.value;
+    if (privyToken) {
+        try {
+            const payload = JSON.parse(Buffer.from(privyToken.split('.')[1], 'base64url').toString());
+            const id = payload?.sub || payload?.privy_did || null;
+            if (id) return id;
+        } catch { /* fall through */ }
+    }
     const authorization = req.headers.get('authorization');
     if (!authorization?.startsWith('Bearer ')) return null;
     try {

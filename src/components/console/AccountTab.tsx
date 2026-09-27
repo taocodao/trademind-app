@@ -37,6 +37,28 @@ export function AccountTab({ account, onChanged }: { account: AccountSettings; o
         setBroker(account.broker || local);
     }, [account.id, account.name, account.risk_level, account.broker]);
 
+    const [cashAmount, setCashAmount] = useState('');
+    const [cashError, setCashError] = useState<string | null>(null);
+
+    const doCash = async (action: 'deposit' | 'withdraw') => {
+        const amount = parseFloat(cashAmount);
+        if (!isFinite(amount) || amount <= 0) { setCashError('Enter an amount greater than zero'); return; }
+        if (action === 'withdraw' && !window.confirm(`Withdraw $${amount.toFixed(2)} from this account's virtual cash?`)) return;
+        setBusy(true); setCashError(null);
+        try {
+            const res = await fetch(`/api/accounts/${account.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cashAction: action, cashAmount: amount }),
+            });
+            const data = await res.json();
+            if (!res.ok) { setCashError(data.error || 'Unable to update cash'); return; }
+            setCashAmount('');
+            flash(action === 'deposit' ? `Deposited $${amount.toFixed(2)}` : `Withdrew $${amount.toFixed(2)}`);
+            onChanged();
+        } finally { setBusy(false); }
+    };
+
     const flash = (msg: string) => {
         setSaved(msg);
         setTimeout(() => setSaved(null), 2500);
@@ -69,6 +91,35 @@ export function AccountTab({ account, onChanged }: { account: AccountSettings; o
 
     return (
         <div className="space-y-4">
+            {/* Deposit / withdraw virtual cash */}
+            <div className="glass-card p-5">
+                <label className="text-xs font-bold uppercase tracking-wider text-tm-muted">Deposit / withdraw cash</label>
+                <p className="text-[11px] text-tm-muted mt-1 mb-3">Changes the virtual cash balance of this account only. No real money moves.</p>
+                <div className="flex gap-2">
+                    <div className="relative flex-1">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-tm-muted text-sm">$</span>
+                        <input
+                            value={cashAmount}
+                            onChange={(e) => setCashAmount(e.target.value)}
+                            inputMode="decimal"
+                            placeholder="1000.00"
+                            className="w-full bg-black/40 border border-white/15 rounded-lg pl-7 pr-3 py-2 text-sm text-white focus:outline-none focus:border-tm-purple/60"
+                        />
+                    </div>
+                    <button
+                        onClick={() => doCash('deposit')}
+                        disabled={busy}
+                        className="px-4 py-2 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 text-xs font-bold transition disabled:opacity-40"
+                    >Deposit</button>
+                    <button
+                        onClick={() => doCash('withdraw')}
+                        disabled={busy}
+                        className="px-4 py-2 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 text-xs font-bold transition disabled:opacity-40"
+                    >Withdraw</button>
+                </div>
+                {cashError && <p className="text-[11px] text-tm-red mt-2">{cashError}</p>}
+            </div>
+
             {/* Rename */}
             <div className="glass-card p-5">
                 <label className="text-xs font-bold uppercase tracking-wider text-tm-muted">Account name</label>

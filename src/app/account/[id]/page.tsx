@@ -149,7 +149,7 @@ export default function AccountDetailPage() {
             ? new Date(membership.current_period_end).toLocaleDateString()
             : (trialEnd ? new Date(trialEnd).toLocaleDateString() : 'the end of your free month');
         const msg = inTrial
-            ? `Turn off auto renew? Your free month is already paid forward. Access continues until ${until}, and you will not be charged.`
+            ? `Cancel the entire subscription? Access continues until ${until} (the end of your free trial). You were never charged, so there is nothing to refund.`
             : refundDaysLeft !== null
                 ? `Cancel now? You are inside the 31-day window after your first charge, so the payment is refunded in full and ${membership.plan === 'LEAPS' ? 'QQQ LEAPS' : 'QQQ Basic'} access ends today.`
                 : `Turn off auto renew? Access continues until ${until} and the plan does not renew.`;
@@ -637,7 +637,11 @@ function MembershipBanner({ membership, busy, billingBusy, onSubscribe, onCancel
                             disabled={billingBusy}
                             className="px-3.5 py-1.5 rounded-lg font-bold bg-tm-red/20 text-tm-red hover:bg-tm-red/30 text-xs transition disabled:opacity-50"
                         >
-                            {billingBusy ? 'Working...' : refundLeft !== null ? 'Cancel (cancel free trial and get the full refund)' : 'Cancel'}
+                            {billingBusy ? 'Working...' : isInFreeMonth(membership)
+                                ? 'Cancel (cancel the entire subscription, access continues until the trial ends)'
+                                : refundLeft !== null
+                                    ? 'Cancel (cancel and get the full refund)'
+                                    : 'Cancel'}
                         </button>
                     </div>
                 </div>

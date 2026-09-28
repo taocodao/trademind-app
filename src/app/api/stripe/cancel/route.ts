@@ -67,14 +67,25 @@ export async function POST(req: NextRequest) {
         // Toggle path: only turn auto renew off. Never refunds and never ends
         // access early. During the free month this also means no charge.
         const body = (req as NextRequest & { _cancelBody?: Record<string, unknown> })._cancelBody ?? {};
-        if (body.autoRenewOnly === true || full.status === 'trialing') {
+        if (full.status === 'trialing') {
+            // Cancel during the free first month: nothing was ever charged, so
+            // there is nothing to refund. The subscription is canceled outright
+            // and access continues until the trial end.
             const trialEnd = (full as { trial_end?: number }).trial_end;
-            const periodEnd = (full as { current_period_end?: number }).current_period_end;
-            const accessUntil = trialEnd && full.status === 'trialing'
+            const accessUntil = trialEnd
                 ? new Date(trialEnd * 1000).toISOString()
-                : periodEnd
-                    ? new Date(periodEnd * 1000).toISOString()
-                    : result.membership.current_period_end;
+                : result.membership.free_month_ends_at;
+            await stripe.subscriptions.cancel(subscriptionId);
+            await updateMembership(result.membership.account_id, {
+                status: 'canceled',
+                cancel_at_period_end: false,
+                current_period_end: accessUntil,
+            });
+            return NextResponse.json({ success: true, canceled: true, accessUntil, status: 'trial_canceled' });
+        }
+        if (body.autoRenewOnly === true) {
+            const periodEnd = (full as { current_period_end?: number }).current_period_end;
+            const accessUntil = periodEnd ? new Date(periodEnd * 1000).toISOString() : result.membership.current_period_end;
             await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: true });
             await updateMembership(result.membership.account_id, {
                 status: 'canceled',

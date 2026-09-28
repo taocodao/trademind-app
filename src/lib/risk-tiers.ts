@@ -62,10 +62,24 @@ export function scaleAllocation(
 ): Record<string, number> {
     const mult = tierMultiplier(riskLevel);
     if (mult === 1) return allocation;
+    // Weights are fractions of NLV (0.30 = 30%). Scale every leg by the tier
+    // multiplier, each capped at 1.0. The total may never exceed 1.0 (no
+    // leverage in a virtual cash account): any excess is taken out of SGOV
+    // (the cash-equivalent sleeve) first, then all legs shrink proportionally.
     const out: Record<string, number> = {};
     for (const [symbol, pct] of Object.entries(allocation)) {
-        const scaled = Math.min(100, pct * mult);
-        if (scaled > 0) out[symbol] = Math.round(scaled * 100) / 100;
+        const scaled = Math.min(1, pct * mult);
+        if (scaled > 0) out[symbol] = scaled;
     }
+    let total = Object.values(out).reduce((t, v) => t + v, 0);
+    if (total > 1 && out.SGOV !== undefined) {
+        out.SGOV = Math.max(0, out.SGOV - (total - 1));
+        if (out.SGOV === 0) delete out.SGOV;
+        total = Object.values(out).reduce((t, v) => t + v, 0);
+    }
+    if (total > 1) {
+        for (const k of Object.keys(out)) out[k] = out[k] / total;
+    }
+    for (const k of Object.keys(out)) out[k] = Math.floor(out[k] * 10000) / 10000;
     return out;
 }

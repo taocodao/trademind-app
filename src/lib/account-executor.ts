@@ -41,7 +41,23 @@ export async function generateAccountOrders(
     const equityLegs: SignalLeg[] = (signal.legs || []).filter(
         (l) => l.leg_type === 'equity' || (!l.leg_type && typeof l.target_pct === 'number' && l.target_pct > 0 && l.target_pct <= 1)
     );
-    const symbols = equityLegs.map((l) => l.symbol);
+    // QQQ Basic is a full-portfolio ETF allocator: the backtest rebalances the
+    // whole book to the target weights every signal, so any ETF the account
+    // holds that is absent from the new target must be sold to zero (e.g. TQQQ
+    // after a BULL to BEAR switch). Without this, stale legs were held forever.
+    const isEtfAllocator = signal.strategy === 'TQQQ_TURBOCORE_PRO' && equityLegs.length > 0;
+    if (isEtfAllocator) {
+        const targeted = new Set(equityLegs.map((l) => l.symbol));
+        for (const [sym, pos] of Object.entries(posMap)) {
+            if (pos.instrumentType !== 'option' && pos.qty > 0 && !targeted.has(sym)) {
+                equityLegs.push({ symbol: sym, target_pct: 0, leg_type: 'equity' } as SignalLeg);
+            }
+        }
+    }
+    const heldSymbols = Object.entries(posMap)
+        .filter(([, p]) => p.instrumentType !== 'option')
+        .map(([sym]) => sym);
+    const symbols = Array.from(new Set([...equityLegs.map((l) => l.symbol), ...heldSymbols]));
     const prices = await fetchMarketPrices(symbols);
 
     // NLV (cash + positions at live prices). Options carry a 100× contract multiplier.
@@ -69,7 +85,10 @@ export async function generateAccountOrders(
         }
         // Phase cap: a single position may not exceed phaseCap of NLV, even if
         // the tier's target_pct is higher.
-        const effectivePct = Math.min(leg.target_pct, phaseCap);
+        // The per-position phase cap is a LEAPS concentration control. The QQQ
+        // Basic backtest allocates the full target weights (e.g. 70% SGOV in
+        // BEAR), so the cap is not applied to the ETF allocator.
+        const effectivePct = isEtfAllocator ? Math.max(0, leg.target_pct) : Math.min(leg.target_pct, phaseCap);
         const targetQty = Math.floor((nlv * effectivePct) / livePrice);
         const currentQty = posMap[leg.symbol]?.qty ?? 0;
         const delta = targetQty - currentQty;
@@ -83,6 +102,24 @@ export async function generateAccountOrders(
             price: livePrice,
             instruction: `${isBuy ? 'Buy' : 'Sell'} ${qty} share${qty !== 1 ? 's' : ''} of ${leg.symbol} at Market Price`,
         });
+    }
+
+    // Cash guard: sells settle first, and total buy cost may never exceed the
+    // cash available after those sells (an aggressive 1.5x tier can sum past
+    // 100% of NLV). Buys are scaled down proportionally, whole shares only, so
+    // the virtual ledger can never go negative, matching the cash-constrained
+    // backtest.
+    const sellProceeds = rawOrders.filter((o) => o.action === 'sell').reduce((t, o) => t + o.quantity * o.price, 0);
+    const buyCost = rawOrders.filter((o) => o.action === 'buy').reduce((t, o) => t + o.quantity * o.price, 0);
+    const cashAvailable = Math.max(0, account.cash_balance + sellProceeds);
+    if (buyCost > cashAvailable && buyCost > 0) {
+        const ratio = cashAvailable / buyCost;
+        for (const o of rawOrders) {
+            if (o.action !== 'buy') continue;
+            o.quantity = Math.floor(o.quantity * ratio);
+            o.instruction = `Buy ${o.quantity} share${o.quantity !== 1 ? 's' : ''} of ${o.symbol} at Market Price`;
+        }
+        for (let i = rawOrders.length - 1; i >= 0; i--) if (rawOrders[i].quantity < 1) rawOrders.splice(i, 1);
     }
 
     const equityOrders = rawOrders.sort((a, b) => (a.action === 'sell' && b.action !== 'sell' ? -1 : 1));

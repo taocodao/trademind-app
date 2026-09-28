@@ -169,6 +169,28 @@ export default function AccountDetailPage() {
         } finally { setBillingBusy(false); }
     };
 
+    // Toggle auto renew OFF: never refunds, never ends access early. During
+    // the free first month it simply means "do not charge on day 30".
+    const turnAutoRenewOff = async () => {
+        if (!membership) return;
+        const until = membership.current_period_end
+            ? new Date(membership.current_period_end).toLocaleDateString()
+            : 'the end of your free month';
+        if (!confirm(`Turn auto renew off? Access continues until ${until} and no further charge will happen.`)) return;
+        setBillingBusy(true);
+        try {
+            const token = await getAccessToken().catch(() => null);
+            const res = await fetch('/api/stripe/cancel', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                body: JSON.stringify({ accountId, autoRenewOnly: true }),
+            });
+            const d = await res.json();
+            if (!res.ok) { alert(d.error || 'Unable to turn auto renew off'); return; }
+            fetchMembership();
+        } finally { setBillingBusy(false); }
+    };
+
     const turnAutoRenewOn = async () => {
         if (!membership) return;
         setBillingBusy(true);
@@ -310,7 +332,7 @@ export default function AccountDetailPage() {
                 ) : account ? (
                     <div className="space-y-4">
                         {membership && (
-                            <MembershipBanner membership={membership} busy={checkoutBusy} billingBusy={billingBusy} onSubscribe={startCheckout} onCancel={cancelSubscription} onAutoRenewOn={turnAutoRenewOn} />
+                            <MembershipBanner membership={membership} busy={checkoutBusy} billingBusy={billingBusy} onSubscribe={startCheckout} onCancel={cancelSubscription} onAutoRenewOn={turnAutoRenewOn} onAutoRenewOff={turnAutoRenewOff} />
                         )}
                         <AccountTab account={account} onChanged={() => { fetchPositions(); fetchMembership(); }} />
                     </div>
@@ -475,13 +497,14 @@ function getRefundDaysLeft(m: MembershipInfo): number | null {
     return left >= 0 ? left : null;
 }
 
-function MembershipBanner({ membership, busy, billingBusy, onSubscribe, onCancel, onAutoRenewOn }: {
+function MembershipBanner({ membership, busy, billingBusy, onSubscribe, onCancel, onAutoRenewOn, onAutoRenewOff }: {
     membership: MembershipInfo;
     busy: boolean;
     billingBusy: boolean;
     onSubscribe: () => void;
     onCancel: () => void;
     onAutoRenewOn: () => void;
+    onAutoRenewOff: () => void;
 }) {
     const fmt = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
     const daysLeft = (iso: string) => Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000));
@@ -571,8 +594,21 @@ function MembershipBanner({ membership, busy, billingBusy, onSubscribe, onCancel
             {showBilling && (
                 <div className="mt-3 pt-3 border-t border-white/10">
                     <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[11px] text-tm-muted">
-                        <span>
-                            Auto renew:{' '}
+                        <span className="inline-flex items-center gap-2">
+                            Auto renew
+                            <button
+                                type="button"
+                                role="switch"
+                                aria-checked={!membership.cancel_at_period_end}
+                                aria-label="Auto renew"
+                                disabled={billingBusy}
+                                onClick={() => (membership.cancel_at_period_end ? onAutoRenewOn() : onAutoRenewOff())}
+                                className={`relative h-5 w-9 rounded-full transition disabled:opacity-50 ${membership.cancel_at_period_end ? 'bg-white/20' : 'bg-emerald-500'}`}
+                            >
+                                <span
+                                    className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${membership.cancel_at_period_end ? 'left-0.5' : 'left-4'}`}
+                                />
+                            </button>
                             <span className={`font-bold ${membership.cancel_at_period_end ? 'text-tm-red' : 'text-emerald-400'}`}>
                                 {membership.cancel_at_period_end ? 'OFF' : 'ON'}
                             </span>
@@ -596,32 +632,13 @@ function MembershipBanner({ membership, busy, billingBusy, onSubscribe, onCancel
                         )}
                     </div>
                     <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                        {membership.cancel_at_period_end ? (
-                            <button
-                                onClick={onAutoRenewOn}
-                                disabled={billingBusy}
-                                className="px-3.5 py-1.5 rounded-lg font-bold bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 text-xs transition disabled:opacity-50"
-                            >
-                                {billingBusy ? 'Working...' : 'Turn auto renew on'}
-                            </button>
-                        ) : (
-                            <button
-                                onClick={onCancel}
-                                disabled={billingBusy}
-                                className="px-3.5 py-1.5 rounded-lg font-bold bg-white/5 text-tm-muted hover:text-white hover:bg-white/10 text-xs transition disabled:opacity-50"
-                            >
-                                {billingBusy ? 'Working...' : refundLeft !== null ? 'Cancel and refund in full' : 'Cancel auto renew'}
-                            </button>
-                        )}
-                        {membership.cancel_at_period_end && refundLeft !== null && (
-                            <button
-                                onClick={onCancel}
-                                disabled={billingBusy}
-                                className="px-3.5 py-1.5 rounded-lg font-bold bg-tm-red/20 text-tm-red hover:bg-tm-red/30 text-xs transition disabled:opacity-50"
-                            >
-                                {billingBusy ? 'Working...' : 'Cancel now for full refund'}
-                            </button>
-                        )}
+                        <button
+                            onClick={onCancel}
+                            disabled={billingBusy}
+                            className="px-3.5 py-1.5 rounded-lg font-bold bg-tm-red/20 text-tm-red hover:bg-tm-red/30 text-xs transition disabled:opacity-50"
+                        >
+                            {billingBusy ? 'Working...' : refundLeft !== null ? 'Cancel (cancel free trial and get the full refund)' : 'Cancel'}
+                        </button>
                     </div>
                 </div>
             )}

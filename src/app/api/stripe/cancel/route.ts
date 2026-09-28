@@ -33,7 +33,8 @@ type OwnedSubscriptionResult = { membership: AccountMembership } | { error: Next
 async function ownedSubscription(req: NextRequest): Promise<OwnedSubscriptionResult> {
     const userId = await getUserId(req);
     if (!userId) return { error: NextResponse.json({ error: 'Not authenticated' }, { status: 401 }) };
-    const body = await req.json().catch(() => ({}));
+    const body = (req as NextRequest & { _cancelBody?: Record<string, unknown> })._cancelBody ?? await req.json().catch(() => ({}));
+    (req as NextRequest & { _cancelBody?: Record<string, unknown> })._cancelBody = body;
     const accountId = Number(body.accountId);
     if (!Number.isInteger(accountId) || accountId <= 0) {
         return { error: NextResponse.json({ error: 'A valid accountId is required' }, { status: 400 }) };
@@ -63,16 +64,24 @@ export async function POST(req: NextRequest) {
         const stripe = getStripe();
         const full = await stripe.subscriptions.retrieve(subscriptionId, { expand: ['latest_invoice'] });
 
-        if (full.status === 'trialing') {
+        // Toggle path: only turn auto renew off. Never refunds and never ends
+        // access early. During the free month this also means no charge.
+        const body = (req as NextRequest & { _cancelBody?: Record<string, unknown> })._cancelBody ?? {};
+        if (body.autoRenewOnly === true || full.status === 'trialing') {
             const trialEnd = (full as { trial_end?: number }).trial_end;
-            const accessUntil = trialEnd ? new Date(trialEnd * 1000).toISOString() : result.membership.free_month_ends_at;
+            const periodEnd = (full as { current_period_end?: number }).current_period_end;
+            const accessUntil = trialEnd && full.status === 'trialing'
+                ? new Date(trialEnd * 1000).toISOString()
+                : periodEnd
+                    ? new Date(periodEnd * 1000).toISOString()
+                    : result.membership.current_period_end;
             await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: true });
             await updateMembership(result.membership.account_id, {
                 status: 'canceled',
                 cancel_at_period_end: true,
                 current_period_end: accessUntil,
             });
-            return NextResponse.json({ success: true, cancelAt: accessUntil, status: 'trialing_canceled' });
+            return NextResponse.json({ success: true, cancelAt: accessUntil, status: full.status });
         }
 
         const invoice = (full as { latest_invoice?: unknown }).latest_invoice;

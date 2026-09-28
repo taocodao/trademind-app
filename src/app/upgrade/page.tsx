@@ -62,8 +62,8 @@ function UpgradePageInner() {
                     <p className="text-sm text-gray-400 mb-8">
                         {planInfo
                             ? emailParam
-                                ? `${planInfo.label} is $${planInfo.price} per year after a free first month. Sign in with ${emailParam}; it is already filled in for you, then check out.`
-                                : `${planInfo.label} is $${planInfo.price} per year after a free first month. Log in with the email that gets your signal alerts, then check out.`
+                                ? `${planInfo.label} is $${planInfo.price} per year. Sign in with ${emailParam}; it is already filled in for you, then check out.`
+                                : `${planInfo.label} is $${planInfo.price} per year. Log in with the email that gets your signal alerts, then check out.`
                             : 'Log in to subscribe or manage a plan.'}
                     </p>
                     <button
@@ -84,8 +84,8 @@ function UpgradePageInner() {
                     <h1 className="text-2xl font-bold">Preparing secure checkout</h1>
                     <p className="mt-3 text-sm text-gray-400">
                         {planInfo
-                            ? `${planInfo.label}: free for the first month, then $${planInfo.price} per year. No charge today. Turn off auto renew any time and access runs to the end of the free month.`
-                            : 'Free for the first month. No charge today. Turn off auto renew any time and access runs to the end of the free month.'}
+                            ? `${planInfo.label} at $${planInfo.price} per year. Your card is charged today; cancel within your first month and the payment is refunded in full.`
+                            : 'Your card is charged today; cancel within your first month and the payment is refunded in full.'}
                     </p>
                     {error ? (
                         <>
@@ -116,7 +116,7 @@ function UpgradePageInner() {
                         QQQ LEAPS ${PRICING.plans.qqq_leaps.annual}/yr <ArrowRight className="h-4 w-4" />
                     </a>
                 </div>
-                <p className="mt-5 text-xs text-gray-500">Signals process at 3:30 PM ET each trading day and arrive by email. First month free; the first yearly charge comes on day 30. Yearly auto renew starts on by default, and you can turn it off any time.</p>
+                <p className="mt-5 text-xs text-gray-500">Signals process at 3:30 PM ET each trading day and arrive by email. Your card is charged today; cancel within your first month for a full refund. Yearly auto renew starts on by default.</p>
             </section>
         </main>
     );

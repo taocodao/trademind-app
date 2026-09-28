@@ -55,34 +55,15 @@ export async function POST(req: NextRequest) {
         const subscriptionId = result.membership.stripe_subscription_id;
         if (!subscriptionId) return NextResponse.json({ error: 'No Stripe subscription found for this account' }, { status: 404 });
 
-        // First month is a real Stripe trial: nothing is charged until day
-        // 30. Turning auto renew OFF during the trial never cuts access early:
-        // the subscription ends at the trial end and no charge ever happens.
-        // After the first charge, cancelling within 31 days of that charge
-        // refunds it in full and ends access immediately; later cancellations
-        // just stop the next renewal.
+        // The card is charged at checkout. Cancel within 31 days of that first
+        // charge: full refund, access ends immediately. Later cancels, and the
+        // auto-renew toggle, only stop the next renewal.
         const stripe = getStripe();
         const full = await stripe.subscriptions.retrieve(subscriptionId, { expand: ['latest_invoice'] });
 
         // Toggle path: only turn auto renew off. Never refunds and never ends
         // access early. During the free month this also means no charge.
         const body = (req as NextRequest & { _cancelBody?: Record<string, unknown> })._cancelBody ?? {};
-        if (full.status === 'trialing') {
-            // Cancel during the free first month: nothing was ever charged, so
-            // there is nothing to refund. The subscription is canceled outright
-            // and access continues until the trial end.
-            const trialEnd = (full as { trial_end?: number }).trial_end;
-            const accessUntil = trialEnd
-                ? new Date(trialEnd * 1000).toISOString()
-                : result.membership.free_month_ends_at;
-            await stripe.subscriptions.cancel(subscriptionId);
-            await updateMembership(result.membership.account_id, {
-                status: 'canceled',
-                cancel_at_period_end: false,
-                current_period_end: accessUntil,
-            });
-            return NextResponse.json({ success: true, canceled: true, accessUntil, status: 'trial_canceled' });
-        }
         if (body.autoRenewOnly === true) {
             const periodEnd = (full as { current_period_end?: number }).current_period_end;
             const accessUntil = periodEnd ? new Date(periodEnd * 1000).toISOString() : result.membership.current_period_end;

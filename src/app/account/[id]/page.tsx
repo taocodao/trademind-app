@@ -143,16 +143,12 @@ export default function AccountDetailPage() {
     const cancelSubscription = async () => {
         if (!membership) return;
         const refundDaysLeft = getRefundDaysLeft(membership);
-        const trialEnd = getTrialEndsAt(membership);
-        const inTrial = isInFreeMonth(membership);
         const until = membership.current_period_end
             ? new Date(membership.current_period_end).toLocaleDateString()
-            : (trialEnd ? new Date(trialEnd).toLocaleDateString() : 'the end of your free month');
-        const msg = inTrial
-            ? `Cancel the entire subscription? Access continues until ${until} (the end of your free trial). You were never charged, so there is nothing to refund.`
-            : refundDaysLeft !== null
-                ? `Cancel now? You are inside the 31-day window after your first charge, so the payment is refunded in full and ${membership.plan === 'LEAPS' ? 'QQQ LEAPS' : 'QQQ Basic'} access ends today.`
-                : `Turn off auto renew? Access continues until ${until} and the plan does not renew.`;
+            : 'the end of the paid period';
+        const msg = refundDaysLeft !== null
+            ? `Cancel now? You are inside the first month, so the full payment is refunded and ${membership.plan === 'LEAPS' ? 'QQQ LEAPS' : 'QQQ Basic'} signal access ends today.`
+            : `Cancel now? Access continues until ${until} and the plan does not renew.`;
         if (!confirm(msg)) return;
         setBillingBusy(true);
         try {
@@ -176,7 +172,7 @@ export default function AccountDetailPage() {
         const until = membership.current_period_end
             ? new Date(membership.current_period_end).toLocaleDateString()
             : 'the end of your free month';
-        if (!confirm(`Turn auto renew off? Access continues until ${until} and no further charge will happen.`)) return;
+        if (!confirm(`Turn auto renew off? Access continues until ${until} and the plan does not renew.`)) return;
         setBillingBusy(true);
         try {
             const token = await getAccessToken().catch(() => null);
@@ -485,14 +481,12 @@ function isInFreeMonth(m: MembershipInfo): boolean {
     return t !== null && Date.now() < t;
 }
 
-/** Days remaining to cancel for a full refund AFTER the first charge, or null
- *  when there was no charge yet / the window closed. Window: 31 days from the
- *  first charge (trial end + 31 days after signup). */
+/** Days remaining to cancel for a full refund, or null once the window
+ *  closes. The card is charged at signup, so the window is 31 days from the
+ *  membership start. */
 function getRefundDaysLeft(m: MembershipInfo): number | null {
     if (!m.created_at) return null;
-    const chargeAt = getTrialEndsAt(m)!;
-    if (Date.now() < chargeAt) return null; // still free, nothing to refund
-    const deadline = chargeAt + 31 * 86400000;
+    const deadline = new Date(m.created_at).getTime() + 31 * 86400000;
     const left = Math.floor((deadline - Date.now()) / 86400000);
     return left >= 0 ? left : null;
 }
@@ -537,11 +531,6 @@ function MembershipBanner({ membership, busy, billingBusy, onSubscribe, onCancel
                 title = `Active - auto-renew off, ends ${fmt(membership.current_period_end)}`;
                 detail = `${daysLeft(membership.current_period_end)} days of access remaining. Resubscribe any time to continue.`;
                 cta = 'Resubscribe';
-            } else if (isInFreeMonth(membership)) {
-                const t = getTrialEndsAt(membership)!;
-                const d = Math.max(0, Math.ceil((t - Date.now()) / 86400000));
-                title = `Free first month - ${d} day${d !== 1 ? 's' : ''} left`;
-                detail = `No charge yet. Your card is charged $${price} on ${new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} unless auto renew is off.`;
             } else {
                 title = membership.current_period_end ? `Active - renews ${fmt(membership.current_period_end)}` : 'Active';
                 detail = membership.current_period_end ? `${daysLeft(membership.current_period_end)} days until renewal. Signals are running.` : 'Signals are running.';
@@ -570,7 +559,7 @@ function MembershipBanner({ membership, busy, billingBusy, onSubscribe, onCancel
 
     const hasSubscription = !!membership.stripe_subscription_id;
     const refundLeft = getRefundDaysLeft(membership);
-    const refundDeadline = membership.created_at ? fmt(new Date(new Date(membership.created_at).getTime() + 61 * 86400000).toISOString()) : null;
+    const refundDeadline = membership.created_at ? fmt(new Date(new Date(membership.created_at).getTime() + 31 * 86400000).toISOString()) : null;
     const showBilling = hasSubscription && (membership.status === 'active' || membership.status === 'past_due' || membership.status === 'canceled');
 
     return (
@@ -625,11 +614,7 @@ function MembershipBanner({ membership, busy, billingBusy, onSubscribe, onCancel
                                 Full-refund cancel window: {refundLeft} day{refundLeft !== 1 ? 's' : ''} left (ends {refundDeadline})
                             </span>
                         )}
-                        {isInFreeMonth(membership) && (
-                            <span className="text-purple-300">
-                                Free month: no charge until day 30. Turn auto renew off and access still runs to the free-month end.
-                            </span>
-                        )}
+
                     </div>
                     <div className="mt-2.5 flex flex-wrap items-center gap-2">
                         <button
@@ -637,11 +622,9 @@ function MembershipBanner({ membership, busy, billingBusy, onSubscribe, onCancel
                             disabled={billingBusy}
                             className="px-3.5 py-1.5 rounded-lg font-bold bg-tm-red/20 text-tm-red hover:bg-tm-red/30 text-xs transition disabled:opacity-50"
                         >
-                            {billingBusy ? 'Working...' : isInFreeMonth(membership)
-                                ? 'Cancel (cancel the entire subscription, access continues until the trial ends)'
-                                : refundLeft !== null
-                                    ? 'Cancel (cancel and get the full refund)'
-                                    : 'Cancel'}
+                            {billingBusy ? 'Working...' : refundLeft !== null
+                                ? 'Cancel (cancel the entire subscription and get the full refund)'
+                                : 'Cancel'}
                         </button>
                     </div>
                 </div>

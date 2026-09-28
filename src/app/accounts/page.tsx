@@ -301,9 +301,6 @@ function AccountsPageInner() {
                                             <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold border ${cfg?.color || 'bg-white/10 text-white border-white/20'}`}>
                                                 {cfg?.shortLabel || a.strategy}
                                             </span>
-                                            <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-white/5 text-tm-muted border border-white/10 capitalize">
-                                                {a.risk_level}
-                                            </span>
                                             {(() => {
                                                 const b = membershipBadge(a.membership);
                                                 return b ? (

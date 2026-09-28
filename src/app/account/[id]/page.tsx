@@ -247,8 +247,8 @@ export default function AccountDetailPage() {
                         )}
                     </h1>
                     <p className="text-sm text-tm-muted capitalize">
-                        {cfg?.label || account?.strategy} · {account?.risk_level}
-                        {phaseCap != null && (
+                        {cfg?.label || account?.strategy}
+                        {phaseCap != null && account?.strategy === 'QQQ_LEAPS' && (
                             <span className="text-tm-muted/70"> · sizing cap {(phaseCap * 100).toFixed(0)}% NLV</span>
                         )}
                     </p>

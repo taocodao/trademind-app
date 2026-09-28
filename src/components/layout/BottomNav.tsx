@@ -147,7 +147,7 @@ export function BottomNav() {
                                         <div className="flex-1 min-w-0">
                                             <p className="font-bold text-sm text-white truncate">{a.name}</p>
                                             <p className="text-[10px] text-tm-muted capitalize">
-                                                {c?.label || a.strategy} · {a.risk_level}{a.membership?.status === 'free_month' ? ' · free month' : ''}
+                                                {c?.label || a.strategy}{a.membership?.status === 'free_month' ? ' · free month' : ''}
                                             </p>
                                         </div>
                                         {sheet === 'accounts' && isActive && <Check className="w-4 h-4 text-tm-purple shrink-0" />}

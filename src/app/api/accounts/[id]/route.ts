@@ -27,9 +27,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         if (typeof body.name === 'string' && body.name.trim().length > 0) {
             account = (await renameAccount(accountId, userId, body.name)) || account;
         }
-        if (body.riskLevel && ['conservative', 'moderate', 'aggressive'].includes(body.riskLevel)) {
-            account = (await updateAccountRiskLevel(accountId, userId, body.riskLevel as RiskLevel)) || account;
-        }
+        // Risk levels are retired (all accounts size at moderate); body.riskLevel is ignored.
         const VALID_BROKERS = ['schwab', 'tastytrade', 'fidelity', 'robinhood', 'ibkr', 'etrade', 'webull'];
         if (typeof body.broker === 'string' && VALID_BROKERS.includes(body.broker)) {
             account = (await updateAccountBroker(accountId, userId, body.broker)) || account;

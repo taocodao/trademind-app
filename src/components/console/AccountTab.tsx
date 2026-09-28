@@ -17,25 +17,23 @@ const BROKER_PREF_KEY = 'tm_broker_pref';
 type RiskLevel = 'conservative' | 'moderate' | 'aggressive';
 
 /**
- * Account settings tab: rename, risk level (self-selected), broker preference
+ * Account settings tab: rename, broker preference
  * (used to preselect order-entry help), and delete. Membership/billing banner
  * is rendered above this by the console page.
  */
 export function AccountTab({ account, onChanged }: { account: AccountSettings; onChanged: () => void }) {
     const router = useRouter();
     const [name, setName] = useState(account.name);
-    const [risk, setRisk] = useState<RiskLevel>(account.risk_level);
     const [broker, setBroker] = useState('');
     const [busy, setBusy] = useState(false);
     const [saved, setSaved] = useState<string | null>(null);
 
     useEffect(() => {
         setName(account.name);
-        setRisk(account.risk_level);
         // Server value roams across devices; localStorage covers same-device fast path.
         const local = typeof window !== 'undefined' ? (localStorage.getItem(BROKER_PREF_KEY) || '') : '';
         setBroker(account.broker || local);
-    }, [account.id, account.name, account.risk_level, account.broker]);
+    }, [account.id, account.name, account.broker]);
 
     const [cashAmount, setCashAmount] = useState('');
     const [cashError, setCashError] = useState<string | null>(null);
@@ -137,28 +135,6 @@ export function AccountTab({ account, onChanged }: { account: AccountSettings; o
                     >
                         <Pencil className="w-3.5 h-3.5" />
                     </button>
-                </div>
-            </div>
-
-            {/* Risk level */}
-            <div className="glass-card p-5">
-                <label className="text-xs font-bold uppercase tracking-wider text-tm-muted">Risk level</label>
-                <p className="text-[11px] text-tm-muted mt-1 mb-3">You pick this. TradeMind never recommends one.</p>
-                <div className="grid grid-cols-3 gap-2">
-                    {(['conservative', 'moderate', 'aggressive'] as RiskLevel[]).map((r) => (
-                        <button
-                            key={r}
-                            onClick={() => { setRisk(r); patch({ riskLevel: r }, 'Risk level saved'); }}
-                            disabled={busy}
-                            className={`py-2.5 rounded-lg text-xs font-bold capitalize transition border ${
-                                risk === r
-                                    ? 'bg-tm-purple text-white border-tm-purple'
-                                    : 'text-tm-muted border-white/15 hover:border-white/40 hover:text-white'
-                            }`}
-                        >
-                            {r}
-                        </button>
-                    ))}
                 </div>
             </div>
 

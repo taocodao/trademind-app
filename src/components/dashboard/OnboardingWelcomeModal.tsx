@@ -97,7 +97,7 @@ export function OnboardingWelcomeModal() {
                         <div className="animate-in slide-in-from-right-4 duration-300 fade-in">
                             <h3 className="font-semibold mb-3 text-tm-purple">Choose Your Plan</h3>
                             <p className="text-sm text-zinc-300 mb-4">
-                                Your virtual account is created automatically at checkout: QQQ Basic starts with $10,000, QQQ LEAPS with $25,000. You can adjust the principal, risk level, name, and alert email afterward.
+                                Your virtual account is created automatically at checkout: QQQ Basic starts with $10,000, QQQ LEAPS with $25,000. You can adjust the principal, name, and alert email afterward.
                             </p>
 
                             <button

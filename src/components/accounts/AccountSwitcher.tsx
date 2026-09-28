@@ -80,7 +80,7 @@ export function AccountSwitcher({ navigateOnSelect = false, tab }: { navigateOnS
                                     <div className="flex-1 min-w-0">
                                         <p className="font-bold text-sm truncate">{a.name}</p>
                                         <p className="text-[10px] text-tm-muted capitalize">
-                                            {c?.label || a.strategy} · {a.risk_level}
+                                            {c?.label || a.strategy}
                                         </p>
                                     </div>
                                     {isActive && <Check className="w-4 h-4 text-tm-purple shrink-0" />}

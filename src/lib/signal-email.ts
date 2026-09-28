@@ -81,7 +81,7 @@ export async function sendSignalEmail(toEmail: string, data: SignalEmailData): P
 export interface PhaseTransitionEmailData {
     accountName: string;
     strategy: string;
-    riskLevel: string;
+    riskLevel?: string;
     fromPhase: string;
     toPhase: string;
     reason: string;
@@ -108,7 +108,7 @@ export async function sendPhaseTransitionEmail(toEmail: string, data: PhaseTrans
     const text = [
         'TradeMind - Account Phase Transition',
         '='.repeat(48),
-        `Account: ${data.accountName} (${data.strategy} / ${data.riskLevel})`,
+        `Account: ${data.accountName} (${data.strategy})`,
         `Phase: ${data.fromPhase} to ${data.toPhase}`,
         `Reason: ${data.reason}`,
         `Total Value: $${data.nlv.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
@@ -127,7 +127,7 @@ export async function sendPhaseTransitionEmail(toEmail: string, data: PhaseTrans
         <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#374151;margin:0 0 4px">TradeMind</p>
         <h2 style="margin:0 0 16px;font-size:20px">Account Phase Transition</h2>
         <div style="background:#f9fafb;border:1px solid #e5e7eb;border-left:4px solid ${accent};border-radius:6px;padding:16px 18px;margin:0 0 20px">
-            <p style="margin:0 0 6px;font-size:14px"><strong>${escHtml(data.accountName)}</strong> <span style="color:#6b7280">(${escHtml(data.strategy)} / ${escHtml(data.riskLevel)})</span></p>
+            <p style="margin:0 0 6px;font-size:14px"><strong>${escHtml(data.accountName)}</strong> <span style="color:#6b7280">(${escHtml(data.strategy)})</span></p>
             <p style="margin:0 0 6px;font-size:16px;font-weight:700">${escHtml(data.fromPhase)} to ${escHtml(data.toPhase)}</p>
             <p style="margin:0;font-size:13px;color:#374151">${escHtml(data.reason)} / Total value $${data.nlv.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
         </div>

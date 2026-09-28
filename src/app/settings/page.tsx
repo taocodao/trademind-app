@@ -69,9 +69,9 @@ export default function SettingsPage() {
                         <div>
                             <h3 className="font-semibold text-yellow-400 mb-1 text-sm">Risk Warning</h3>
                             <p className="text-xs text-tm-muted leading-relaxed">
-                                TQQQ is a 3× leveraged ETF. Higher risk levels mean larger positions and
-                                significantly increased loss exposure during market reversals. Options on
-                                leveraged ETFs carry elevated gamma and volatility risk.
+                                QQQ Basic can hold leveraged ETFs such as TQQQ and QLD in bull regimes, which
+                                increases loss exposure during market reversals. QQQ LEAPS options carry
+                                leverage, time decay, and volatility risk.
                             </p>
                         </div>
                     </div>

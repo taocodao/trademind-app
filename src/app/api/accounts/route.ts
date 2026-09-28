@@ -54,7 +54,9 @@ async function legacyCreateAccount(req: NextRequest) {
         if (!strategy || !getStrategy(strategy)) {
             return NextResponse.json({ error: 'A valid strategy is required' }, { status: 400 });
         }
-        const risk: RiskLevel = ['conservative', 'moderate', 'aggressive'].includes(riskLevel) ? riskLevel : 'moderate';
+        // Risk levels are retired: every account uses the moderate (1.0x) model.
+        void riskLevel;
+        const risk: RiskLevel = 'moderate';
         const principal = Number(initialPrincipal);
         if (!isFinite(principal) || principal < 0) {
             return NextResponse.json({ error: 'Initial principal must be a non-negative number' }, { status: 400 });

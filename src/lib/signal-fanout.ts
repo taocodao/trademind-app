@@ -110,7 +110,9 @@ export async function fanoutSignal(signalId: string, signalData: SignalData): Pr
 
 async function processAccountSignal(account: Account, signalId: string, signalData: SignalData): Promise<boolean> {
     // 1. Select the tier for this account's risk level (entry strictness)
-    const tieredSignal = selectTier(signalData, account.risk_level);
+    // Risk levels are retired: every account runs the single moderate (1.0x)
+    // model sizing, identical to the published backtest.
+    const tieredSignal = selectTier(signalData, 'moderate');
     tieredSignal.id = signalId;
 
     // 2. Generate delta orders sized to the account's NLV, capped by its phase.
@@ -166,7 +168,7 @@ async function processAccountSignal(account: Account, signalId: string, signalDa
         }
 
         const phaseLabel = phaseMeta.phase ? ` · ${phaseMeta.phase} phase` : '';
-        const rationale = `${signalData.rationale || ''} [${account.name} · ${account.risk_level}${phaseLabel}]`;
+        const rationale = `${signalData.rationale || ''} [${account.name}${phaseLabel}]`;
         await sendSignalEmail(email, {
             strategy: account.strategy,
             regime: signalData.regime,

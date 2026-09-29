@@ -43,6 +43,10 @@ export async function GET(req: NextRequest) {
         );
 
         let sent = 0, failed = 0, skipped = 0;
+        // Resend rate limit is 10 requests/second; each send also issues a
+        // token insert, so pace sends to stay safely under the limit.
+        let lastSendAt = 0;
+        const PACE_MS = 150;
         for (const row of due.rows as { email: string; subscriber_id: number | null; first_name: string | null; next_issue: number }[]) {
             const issue = getIssueByNumber(row.next_issue);
             if (!issue) { skipped++; continue; }
@@ -59,6 +63,9 @@ export async function GET(req: NextRequest) {
                 continue;
             }
 
+            const waitMs = PACE_MS - (Date.now() - lastSendAt);
+            if (lastSendAt > 0 && waitMs > 0) await new Promise((r) => setTimeout(r, waitMs));
+            lastSendAt = Date.now();
             const ok = await sendIssueEmail(issue, {
                 id: row.subscriber_id ?? 0,
                 email: row.email,

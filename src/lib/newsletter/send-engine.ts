@@ -26,18 +26,20 @@ export interface NewsletterSettings {
     max_attempts: number;
     pace_ms: number;
     paused: boolean;
+    /** Canary mode: when set, only this address is ever sent to. */
+    only_email: string | null;
 }
 
 export const DEFAULT_SETTINGS: NewsletterSettings = {
     cadence_days: 2, send_hour_start_et: 9, send_hour_end_et: 18,
-    accepted_grace_hours: 24, max_attempts: 5, pace_ms: 150, paused: true,
+    accepted_grace_hours: 24, max_attempts: 5, pace_ms: 150, paused: true, only_email: null,
 };
 
 export async function getSettings(): Promise<NewsletterSettings> {
     await ensureNewsletterTables();
     const r = await query(
         `SELECT cadence_days, send_hour_start_et, send_hour_end_et, accepted_grace_hours,
-                max_attempts, pace_ms, paused FROM newsletter_settings WHERE id = 1`
+                max_attempts, pace_ms, paused, only_email FROM newsletter_settings WHERE id = 1`
     );
     return { ...DEFAULT_SETTINGS, ...(r.rows[0] ?? {}) };
 }
@@ -52,7 +54,10 @@ export async function updateSettings(patch: Record<string, unknown>): Promise<Ne
     const sets: string[] = [];
     const vals: unknown[] = [];
     for (const [k, v] of Object.entries(patch)) {
-        if (k === 'paused') {
+        if (k === 'only_email') {
+            const v2 = v == null || v === '' ? null : String(v).trim().toLowerCase();
+            sets.push(`only_email = $${vals.length + 1}`); vals.push(v2);
+        } else if (k === 'paused') {
             sets.push(`paused = $${vals.length + 1}`); vals.push(Boolean(v));
         } else if (k in SETTING_BOUNDS) {
             const n = Number(v);
@@ -138,6 +143,7 @@ export async function sendNextIssue(email: string, opts: SendNextOptions = {}): 
     const s = opts.settings ?? await getSettings();
     const addr = email.trim().toLowerCase();
     // A dry run reports what would happen regardless of pause or window.
+    if (s.only_email && addr !== s.only_email) return { result: 'skipped', reason: 'canary_only' };
     if (!opts.dryRun) {
         if (s.paused) return { result: 'skipped', reason: 'paused' };
         if (!opts.bypassWindow && !inSendWindow(s)) return { result: 'skipped', reason: 'outside_window' };

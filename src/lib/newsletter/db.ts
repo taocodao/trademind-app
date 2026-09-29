@@ -207,6 +207,7 @@ export async function ensureNewsletterTables(): Promise<void> {
             CONSTRAINT newsletter_settings_single CHECK (id = 1)
         )
     `);
+    await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS only_email TEXT`);
     await query(`INSERT INTO newsletter_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING`);
 
     tablesReady = true;

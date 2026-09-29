@@ -15,7 +15,13 @@ export const dynamic = 'force-dynamic';
  *                        -> unified subscriber directory (email is the key,
  *                           covers signup forms and lead imports) with drip
  *                           position; optional q filters by email substring
- *   GET  ?history=<email> -> send history (newsletter_send_log) for one address
+ *   GET  ?history=<email> -> send history (newsletter_send_log) for one address,
+ *                           with delivery status, Resend id, open and click times
+ *   GET  ?summary=1       -> per-issue totals and rates (delivered, opened, clicked,
+ *                           bounced, failed)
+ *   GET  ?stuck=1         -> sends in flight over 24h and addresses failing repeatedly
+ *   GET  ?settings=1      -> send engine settings (cadence, window, pause)
+ *   POST { action: 'update-settings', ...fields } -> change cadence_days, window, paused, etc.
  */
 export async function GET(req: NextRequest) {
     const gate = await resolveAdmin(req);
@@ -49,10 +55,51 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ directory: rows.rows, total: total.rows[0]?.n ?? 0 });
     }
 
+    if (sp.get('settings')) {
+        const { getSettings } = await import('@/lib/newsletter/send-engine');
+        return NextResponse.json({ settings: await getSettings() });
+    }
+
+    if (sp.get('summary')) {
+        const rows = await query(`
+            SELECT issue_number,
+                   COUNT(*)::int                                                     AS attempts,
+                   COUNT(*) FILTER (WHERE status IN ('accepted','delivered','opened','clicked','bounced','complained'))::int AS accepted,
+                   COUNT(*) FILTER (WHERE status IN ('delivered','opened','clicked'))::int AS delivered,
+                   COUNT(*) FILTER (WHERE opened_at IS NOT NULL)::int                AS opened,
+                   COUNT(*) FILTER (WHERE clicked_at IS NOT NULL)::int               AS clicked,
+                   COUNT(*) FILTER (WHERE status = 'bounced')::int                   AS bounced,
+                   COUNT(*) FILTER (WHERE status = 'complained')::int                AS complained,
+                   COUNT(*) FILTER (WHERE status = 'failed')::int                    AS failed,
+                   COUNT(*) FILTER (WHERE status = 'accepted')::int                  AS awaiting_event
+            FROM newsletter_send_log
+            WHERE kind = 'issue' AND status IS NOT NULL
+            GROUP BY issue_number ORDER BY issue_number`);
+        const out = rows.rows.map((r) => ({
+            ...r,
+            open_rate: r.delivered > 0 ? Number((r.opened / r.delivered).toFixed(4)) : null,
+            click_rate: r.delivered > 0 ? Number((r.clicked / r.delivered).toFixed(4)) : null,
+        }));
+        return NextResponse.json({ issues: out });
+    }
+
+    if (sp.get('stuck')) {
+        const inflight = await query(`
+            SELECT email, issue_number, status, status_at, resend_id FROM newsletter_send_log
+            WHERE kind = 'issue' AND status IN ('sending','accepted') AND status_at < NOW() - INTERVAL '24 hours'
+            ORDER BY status_at LIMIT 200`);
+        const failing = await query(`
+            SELECT email, issue_number, COUNT(*)::int AS failures, MAX(error) AS last_error
+            FROM newsletter_send_log WHERE kind = 'issue' AND status = 'failed'
+            GROUP BY email, issue_number HAVING COUNT(*) >= 3 ORDER BY failures DESC LIMIT 200`);
+        return NextResponse.json({ inFlightOver24h: inflight.rows, failingRepeatedly: failing.rows });
+    }
+
     if (sp.get('history')) {
         const email = sp.get('history')!.trim().toLowerCase();
         const rows = await query(
-            `SELECT kind, issue_number, issue_slug, ok, created_at
+            `SELECT kind, issue_number, issue_slug, ok, status, resend_id, attempt, error,
+                    delivered_at, opened_at, clicked_at, open_count, click_count, created_at
              FROM newsletter_send_log WHERE email = $1
              ORDER BY created_at DESC LIMIT 100`,
             [email]
@@ -114,6 +161,17 @@ export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
         const action = String(body.action ?? '');
+
+        if (action === 'update-settings') {
+            const { updateSettings } = await import('@/lib/newsletter/send-engine');
+            try {
+                const { action: _a, ...patch } = body;
+                return NextResponse.json({ ok: true, settings: await updateSettings(patch) });
+            } catch (e) {
+                return NextResponse.json({ error: (e as Error).message }, { status: 400 });
+            }
+        }
+
         const id = Number(body.subscriberId);
         if (!Number.isInteger(id)) return NextResponse.json({ error: 'subscriberId required' }, { status: 400 });
 

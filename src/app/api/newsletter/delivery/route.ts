@@ -39,6 +39,34 @@ export async function POST(req: NextRequest) {
         await ensureNewsletterTables();
         const normalized = email.trim().toLowerCase();
         const type: string = event?.type ?? '';
+        const emailId: string | undefined = event?.data?.email_id;
+        const eventAt = event?.created_at ? new Date(event.created_at) : new Date();
+
+        // Per-message lifecycle (send engine): delivered / opened / clicked /
+        // bounced / complained / delayed, matched by the Resend email id.
+        if (emailId) {
+            const { applyDeliveryEvent } = await import('@/lib/newsletter/send-engine');
+            const bounceType: string = event?.data?.bounce?.type ?? '';
+            const bounceMsg: string | undefined = event?.data?.bounce?.message;
+            if (type === 'email.delivered') await applyDeliveryEvent(emailId, 'delivered', eventAt);
+            else if (type === 'email.opened') await applyDeliveryEvent(emailId, 'opened', eventAt);
+            else if (type === 'email.clicked') await applyDeliveryEvent(emailId, 'clicked', eventAt);
+            else if (type === 'email.delivery_delayed') await applyDeliveryEvent(emailId, 'delivery_delayed', eventAt, 'delivery delayed');
+            else if (type === 'email.complained') await applyDeliveryEvent(emailId, 'complained', eventAt);
+            else if (type === 'email.bounced') {
+                // A transient bounce (mailbox full, server busy, message expired) is
+                // retried by the engine; only permanent or undetermined bounces end up
+                // as 'bounced' and suppress the address below.
+                await applyDeliveryEvent(emailId, bounceType === 'Transient' ? 'failed' : 'bounced', eventAt,
+                    `bounce ${bounceType}: ${bounceMsg ?? ''}`.slice(0, 500));
+            }
+            if (['email.delivered', 'email.opened', 'email.clicked', 'email.delivery_delayed', 'email.sent'].includes(type)) {
+                return NextResponse.json({ ok: true });
+            }
+            if (type === 'email.bounced' && bounceType === 'Transient') {
+                return NextResponse.json({ ok: true, transient: true });
+            }
+        }
 
         if (type === 'email.bounced') {
             await query(

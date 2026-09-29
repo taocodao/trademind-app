@@ -45,23 +45,21 @@ export async function POST(req: NextRequest) {
             if (conf) {
                 void sendWelcomeEmail({ to: conf.email, code: conf.code ?? '', offerExpires: conf.windowEnd ?? '' })
                     .then((ok) => logNewsletterSend({ email: conf.email, subscriberId: result.subscriberId, kind: 'welcome', ok }));
-                const { getIssueByNumber, sendIssueEmail } = await import('@/lib/newsletter/issue-email');
-                const first = getIssueByNumber(1);
-                if (first) {
-                    const ok = await sendIssueEmail(first, {
-                        id: result.subscriberId, email: conf.email, referral_id: null,
-                        discount_state: 'eligible', window_end: conf.windowEnd,
+                // Issue 1 goes out right away through the shared send engine; the
+                // send history (not a pointer) decides what each address gets next.
+                const { sendNextIssue } = await import('@/lib/newsletter/send-engine');
+                try {
+                    await sendNextIssue(conf.email, {
+                        bypassWindow: true,
+                        subscriber: {
+                            id: result.subscriberId,
+                            discount_state: 'eligible',
+                            window_end: conf.windowEnd,
+                        },
                     });
-                    await logNewsletterSend({
-                        email: conf.email, subscriberId: result.subscriberId, kind: 'issue',
-                        issueNumber: first.number, issueSlug: first.slug, ok,
-                    });
-                    // Issue 1 sent now; issue 2 lands in two days.
-                    const { query } = await import('@/lib/db');
-                    await query(
-                        `UPDATE newsletter_directory SET next_issue = 2, next_issue_at = NOW() + INTERVAL '2 days' WHERE email = $1`,
-                        [conf.email]
-                    );
+                } catch (err) {
+                    // The hourly drip picks this address up from its (empty) history.
+                    console.error('[subscribe] first issue send failed', err);
                 }
             }
             return NextResponse.json({

@@ -30,6 +30,10 @@ export async function POST(req: NextRequest) {
                 code: result.code,
                 offerExpires: result.offerExpires,
             });
+            // Issue 1 right away (double opt-in path); history decides what follows.
+            void import('@/lib/newsletter/send-engine')
+                .then(({ sendNextIssue }) => sendNextIssue(result.email, { bypassWindow: true }))
+                .catch((err) => console.error('[confirm] first issue send failed', err));
             // SparkLoop conversions are reported only after confirmation.
             if (result.source === 'sparkloop' && result.partnerId) {
                 void reportSparkLoopConversion(result.subscriberId, result.partnerId);

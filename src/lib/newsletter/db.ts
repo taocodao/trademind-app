@@ -168,6 +168,47 @@ export async function ensureNewsletterTables(): Promise<void> {
     await query(`CREATE INDEX IF NOT EXISTS newsletter_send_log_email_idx ON newsletter_send_log (email, created_at)`);
     await query(`CREATE INDEX IF NOT EXISTS newsletter_send_log_kind_idx ON newsletter_send_log (kind, created_at)`);
 
+    // Send-engine columns (Sep 2026): the log is the single source of truth for
+    // which issue an address gets next. status lifecycle:
+    //   sending -> accepted -> delivered -> opened -> clicked | bounced | complained | failed
+    for (const ddl of [
+        `ALTER TABLE newsletter_send_log ADD COLUMN IF NOT EXISTS resend_id TEXT`,
+        `ALTER TABLE newsletter_send_log ADD COLUMN IF NOT EXISTS status TEXT`,
+        `ALTER TABLE newsletter_send_log ADD COLUMN IF NOT EXISTS status_at TIMESTAMPTZ`,
+        `ALTER TABLE newsletter_send_log ADD COLUMN IF NOT EXISTS attempt INT NOT NULL DEFAULT 1`,
+        `ALTER TABLE newsletter_send_log ADD COLUMN IF NOT EXISTS error TEXT`,
+        `ALTER TABLE newsletter_send_log ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ`,
+        `ALTER TABLE newsletter_send_log ADD COLUMN IF NOT EXISTS opened_at TIMESTAMPTZ`,
+        `ALTER TABLE newsletter_send_log ADD COLUMN IF NOT EXISTS clicked_at TIMESTAMPTZ`,
+        `ALTER TABLE newsletter_send_log ADD COLUMN IF NOT EXISTS open_count INT NOT NULL DEFAULT 0`,
+        `ALTER TABLE newsletter_send_log ADD COLUMN IF NOT EXISTS click_count INT NOT NULL DEFAULT 0`,
+        `CREATE INDEX IF NOT EXISTS newsletter_send_log_resend_idx ON newsletter_send_log (resend_id)`,
+    ]) {
+        await query(ddl);
+    }
+    // One live send per address and issue, even if two runs overlap.
+    await query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS newsletter_one_live_send
+        ON newsletter_send_log (email, issue_number)
+        WHERE kind = 'issue' AND status IN ('sending','accepted','delivered','opened','clicked')
+    `);
+    await query(`
+        CREATE TABLE IF NOT EXISTS newsletter_settings (
+            id                    INT PRIMARY KEY DEFAULT 1,
+            cadence_days          INT NOT NULL DEFAULT 2,
+            send_hour_start_et    INT NOT NULL DEFAULT 9,
+            send_hour_end_et      INT NOT NULL DEFAULT 18,
+            accepted_grace_hours  INT NOT NULL DEFAULT 24,
+            max_attempts          INT NOT NULL DEFAULT 5,
+            pace_ms               INT NOT NULL DEFAULT 150,
+            paused                BOOLEAN NOT NULL DEFAULT TRUE,
+            lock_until            TIMESTAMPTZ,
+            updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            CONSTRAINT newsletter_settings_single CHECK (id = 1)
+        )
+    `);
+    await query(`INSERT INTO newsletter_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING`);
+
     tablesReady = true;
 }
 

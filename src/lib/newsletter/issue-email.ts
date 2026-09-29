@@ -57,7 +57,7 @@ function inline(s: string): string {
         });
 }
 
-interface SubscriberForEmail {
+export interface SubscriberForEmail {
     id: number;
     email: string;
     referral_id: string | null;
@@ -200,11 +200,28 @@ const RISK_DISCLAIMER = RISK_DISCLOSURE;
  *  Gmail and Yahoo will not render their own one-click unsubscribe button at the top of
  *  the message. If spam complaints ever climb, restoring these two headers is the first
  *  lever to pull. */
+export interface IssueSendResult {
+    ok: boolean;
+    resendId: string | null;
+    error: string | null;
+    httpStatus: number | null;
+    retryAfterSec: number | null;
+}
+
 export async function sendIssueEmail(
     issue: NewsletterIssue,
     sub: SubscriberForEmail
 ): Promise<boolean> {
-    if (!RESEND_API_KEY) return false;
+    return (await sendIssueEmailDetailed(issue, sub)).ok;
+}
+
+/** Same as sendIssueEmail but returns the Resend email id and failure detail
+ *  so the send engine can track delivery per message. */
+export async function sendIssueEmailDetailed(
+    issue: NewsletterIssue,
+    sub: SubscriberForEmail
+): Promise<IssueSendResult> {
+    if (!RESEND_API_KEY) return { ok: false, resendId: null, error: 'RESEND_API_KEY missing', httpStatus: null, retryAfterSec: null };
     const rendered = await renderIssueEmail(issue, sub);
     try {
         const response = await fetch('https://api.resend.com/emails', {
@@ -223,14 +240,21 @@ export async function sendIssueEmail(
             }),
         });
         if (response.ok) {
+            let resendId: string | null = null;
+            try { resendId = (await response.json())?.id ?? null; } catch { /* body optional */ }
             await recordNewsletterEvent('issue_sent', { issue: issue.number, slug: issue.slug }, sub.id);
-            return true;
+            return { ok: true, resendId, error: null, httpStatus: response.status, retryAfterSec: null };
         }
-        console.error('[issue email] Resend failed:', response.status, await response.text());
-        return false;
+        const bodyText = await response.text();
+        console.error('[issue email] Resend failed:', response.status, bodyText);
+        const ra = Number(response.headers.get('retry-after'));
+        return {
+            ok: false, resendId: null, error: `HTTP ${response.status}: ${bodyText}`.slice(0, 1000),
+            httpStatus: response.status, retryAfterSec: Number.isFinite(ra) && ra > 0 ? ra : null,
+        };
     } catch (err) {
         console.error('[issue email]', err);
-        return false;
+        return { ok: false, resendId: null, error: `network: ${String((err as Error)?.message ?? err)}`.slice(0, 1000), httpStatus: null, retryAfterSec: null };
     }
 }
 

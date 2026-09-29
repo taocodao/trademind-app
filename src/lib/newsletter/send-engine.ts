@@ -160,6 +160,8 @@ export async function sendNextIssue(email: string, opts: SendNextOptions = {}): 
     const row = el.rows[0];
     if (!row) return { result: 'skipped', reason: 'not_in_directory' };
     if (row.suppressed) return { result: 'skipped', reason: 'suppressed' };
+    // Every issue carries a per-subscriber unsubscribe link, which needs a subscriber record.
+    if (!row.subscriber_id) return { result: 'skipped', reason: 'no_subscriber_record' };
     if (row.sub_status && !['confirmed', 'email_change_pending'].includes(row.sub_status)) {
         return { result: 'skipped', reason: `subscriber_${row.sub_status}` };
     }
@@ -196,11 +198,17 @@ export async function sendNextIssue(email: string, opts: SendNextOptions = {}): 
         ...opts.subscriber,
     };
     if (opts.beforeSend) await opts.beforeSend();
-    let res = await sendIssueEmailDetailed(issue, sub);
-    if (!res.ok && res.httpStatus === 429) {
-        // Respect Resend's rate limit once, then record a normal failure.
-        await sleep(Math.min(5000, Math.max(1000, (res.retryAfterSec ?? 1) * 1000)));
+    let res: Awaited<ReturnType<typeof sendIssueEmailDetailed>>;
+    try {
         res = await sendIssueEmailDetailed(issue, sub);
+        if (!res.ok && res.httpStatus === 429) {
+            // Respect Resend's rate limit once, then record a normal failure.
+            await sleep(Math.min(5000, Math.max(1000, (res.retryAfterSec ?? 1) * 1000)));
+            res = await sendIssueEmailDetailed(issue, sub);
+        }
+    } catch (err) {
+        // Rendering or token errors must never leave a claim stuck in 'sending'.
+        res = { ok: false, resendId: null, error: `exception: ${String((err as Error)?.message ?? err)}`.slice(0, 1000), httpStatus: null, retryAfterSec: null };
     }
 
     if (res.ok) {

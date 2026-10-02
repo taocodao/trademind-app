@@ -329,23 +329,57 @@ export async function releaseRunLock(): Promise<void> {
 
 // ---------- full list pass ----------
 
+/** Max addresses per invocation. At ~240 ms per send, 800 stays well inside
+ *  the 270 s deadline; a bigger list chains further invocations via cursor. */
+export const DEFAULT_BATCH_SIZE = 800;
+
 export interface RunSummary {
     checked: number; sent: number; failed: number;
     skipped: Record<string, number>; perIssue: Record<string, number>;
-    stoppedEarly: boolean; reconcile?: { checked: number; updated: number; staleFailed: number };
+    stoppedEarly: boolean;
+    /** Pass cursor: 'created_at_iso|email' of the last address processed. */
+    nextCursor: string | null;
+    /** True when addresses remain beyond this batch; the caller should chain. */
+    hasMore: boolean;
+    reconcile?: { checked: number; updated: number; staleFailed: number };
 }
 
-export async function runDripPass(opts: { dryRun?: boolean; deadlineMs?: number } = {}): Promise<RunSummary> {
+export async function runDripPass(opts: {
+    dryRun?: boolean; deadlineMs?: number; cursor?: string | null;
+    batchSize?: number; runReconcile?: boolean;
+} = {}): Promise<RunSummary> {
     const s = await getSettings();
     const deadline = Date.now() + (opts.deadlineMs ?? 270_000);
-    const summary: RunSummary = { checked: 0, sent: 0, failed: 0, skipped: {}, perIssue: {}, stoppedEarly: false };
+    const batchSize = Math.max(1, Math.min(opts.batchSize ?? DEFAULT_BATCH_SIZE, 2000));
+    const summary: RunSummary = {
+        checked: 0, sent: 0, failed: 0, skipped: {}, perIssue: {}, stoppedEarly: false,
+        nextCursor: opts.cursor ?? null, hasMore: false,
+    };
 
-    if (!opts.dryRun) summary.reconcile = await reconcile(s);
+    if (!opts.dryRun && (opts.runReconcile ?? true)) summary.reconcile = await reconcile(s);
 
-    // Whole list: signups and imported leads alike. Oldest first so nobody starves.
-    const list = await query(`SELECT email FROM newsletter_directory ORDER BY created_at ASC, email ASC`);
+    // Keyset pagination on (created_at, email), oldest first so nobody starves.
+    // Vercel functions are stateless and time boxed, so a large list is walked
+    // in batches: each invocation returns a cursor and the route chains the
+    // next invocation until the whole directory has been checked.
+    let curCreated: string | null = null;
+    let curEmail: string | null = null;
+    if (opts.cursor) {
+        const i = opts.cursor.indexOf('|');
+        if (i > 0) { curCreated = opts.cursor.slice(0, i); curEmail = opts.cursor.slice(i + 1); }
+    }
+    const list = await query(
+        `SELECT email, created_at FROM newsletter_directory
+         WHERE ($1::timestamptz IS NULL OR (created_at, email) > ($1::timestamptz, $2::text))
+         ORDER BY created_at ASC, email ASC LIMIT $3`,
+        [curCreated, curEmail, batchSize + 1]
+    );
+    const rows = list.rows as { email: string; created_at: Date }[];
+    const hasBeyondBatch = rows.length > batchSize;
+    const batch = hasBeyondBatch ? rows.slice(0, batchSize) : rows;
+
     let lastSendAt = 0;
-    for (const { email } of list.rows as { email: string }[]) {
+    for (const { email, created_at } of batch) {
         if (Date.now() > deadline) { summary.stoppedEarly = true; break; }
         summary.checked++;
 
@@ -369,6 +403,8 @@ export async function runDripPass(opts: { dryRun?: boolean; deadlineMs?: number 
                 summary.perIssue[String(out.decision.issue)] = (summary.perIssue[String(out.decision.issue)] ?? 0) + 1;
             }
         }
+        summary.nextCursor = `${new Date(created_at).toISOString()}|${email}`;
     }
+    summary.hasMore = summary.stoppedEarly || hasBeyondBatch;
     return summary;
 }

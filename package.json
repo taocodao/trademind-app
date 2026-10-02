@@ -21,6 +21,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@upstash/redis": "^1.36.1",
     "@vercel/blob": "^2.3.0",
+    "@vercel/functions": "^3.9.11",
     "@vercel/postgres": "^0.5.1",
     "@whop/sdk": "^0.0.38",
     "elevenlabs": "^1.59.0",

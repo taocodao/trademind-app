@@ -329,9 +329,10 @@ export async function releaseRunLock(): Promise<void> {
 
 // ---------- full list pass ----------
 
-/** Max addresses per invocation. At ~240 ms per send, 800 stays well inside
- *  the 270 s deadline; a bigger list chains further invocations via cursor. */
-export const DEFAULT_BATCH_SIZE = 800;
+/** Max addresses per invocation. Small batches (200, about a minute of
+ *  sending) keep each invocation far inside the 270 s deadline; a bigger
+ *  list simply chains more invocations via cursor. */
+export const DEFAULT_BATCH_SIZE = 200;
 
 export interface RunSummary {
     checked: number; sent: number; failed: number;

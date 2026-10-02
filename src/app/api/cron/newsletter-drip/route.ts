@@ -5,8 +5,12 @@ import {
     acquireRunLock, releaseRunLock, getSettings, runDripPass, hourET, inSendWindow,
 } from '@/lib/newsletter/send-engine';
 
-/** Hard cap on chained invocations per daily run (runaway guard). */
-const MAX_CHAIN_DEPTH = 30;
+/** Hard cap on chained invocations per daily run (runaway guard).
+ *  120 batches x 200 addresses covers a 24,000-address directory. */
+const MAX_CHAIN_DEPTH = 120;
+
+/** Chain dispatch attempts before giving up; the run resumes tomorrow either way. */
+const CHAIN_DISPATCH_ATTEMPTS = 3;
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -72,20 +76,30 @@ export async function GET(req: NextRequest) {
                     // The next invocation starts as soon as the request is
                     // dispatched; waiting for its full response would hold this
                     // function alive for the whole batch. Abort after dispatch
-                    // so this invocation can end on time.
-                    const ac = new AbortController();
-                    const timer = setTimeout(() => ac.abort(), 10_000);
-                    try {
-                        await fetch(nextUrl.toString(), {
-                            headers: { authorization: auth }, signal: ac.signal,
-                        });
-                    } catch (err) {
-                        if (!ac.signal.aborted) {
-                            console.error('[cron/newsletter-drip] chain fetch failed', err);
+                    // so this invocation can end on time. Retry the dispatch a
+                    // few times on network errors; if every attempt fails, the
+                    // remaining addresses are picked up by tomorrow's run.
+                    for (let attempt = 1; attempt <= CHAIN_DISPATCH_ATTEMPTS; attempt++) {
+                        const ac = new AbortController();
+                        const timer = setTimeout(() => ac.abort(), 10_000);
+                        try {
+                            await fetch(nextUrl.toString(), {
+                                headers: { authorization: auth }, signal: ac.signal,
+                            });
+                            return; // full response arrived before the abort
+                        } catch (err) {
+                            if (ac.signal.aborted) return; // dispatched, then aborted on purpose
+                            console.error(`[cron/newsletter-drip] chain dispatch attempt ${attempt} failed`, err);
+                            if (attempt < CHAIN_DISPATCH_ATTEMPTS) {
+                                await new Promise((r) => setTimeout(r, 2000 * attempt));
+                            }
+                        } finally {
+                            clearTimeout(timer);
                         }
-                    } finally {
-                        clearTimeout(timer);
                     }
+                    console.error('[cron/newsletter-drip] chain dispatch abandoned after retries', {
+                        cursor: summary.nextCursor, chain: chain + 1,
+                    });
                 })());
             }
 

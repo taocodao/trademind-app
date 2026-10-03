@@ -238,7 +238,9 @@ export async function POST(req: NextRequest) {
             const previewTo = body.previewTo ? String(body.previewTo) : null;
 
             if (previewTo) {
-                // Test send to one address only.
+                // Test send to one address only. Logged as kind='preview' (the
+                // drip engine reads only kind='issue') so the delivery webhook
+                // can update its status and bounces become visible.
                 const { sendIssueEmailDetailed } = await import('@/lib/newsletter/issue-email');
                 const res = await sendIssueEmailDetailed(issue, {
                     id, email: previewTo, referral_id: null,
@@ -247,7 +249,13 @@ export async function POST(req: NextRequest) {
                 if (!res.ok) {
                     return NextResponse.json({ error: `Preview send failed: ${res.error ?? 'unknown'}` }, { status: 502 });
                 }
-                return NextResponse.json({ ok: true, preview: previewTo });
+                await query(
+                    `INSERT INTO newsletter_send_log
+                       (email, subscriber_id, kind, issue_number, issue_slug, ok, status, status_at, attempt, resend_id)
+                     VALUES ($1, $2, 'preview', $3, $4, TRUE, 'accepted', NOW(), 1, $5)`,
+                    [previewTo.trim().toLowerCase(), id, issue.number, issue.slug, res.resendId]
+                );
+                return NextResponse.json({ ok: true, preview: previewTo, resendId: res.resendId });
             }
 
             const limit = Number.isInteger(Number(body.limit)) && Number(body.limit) > 0

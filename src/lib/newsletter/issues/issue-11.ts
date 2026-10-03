@@ -3,7 +3,7 @@ export default {
     slug: 'delta-budgeting-sizing-leverage-on-purpose',
     title: 'Delta Budgeting: Sizing Leverage on Purpose',
     subtitle: 'Think in share-equivalents, not contracts.',
-    publishDate: '2026-10-22',
+    publishDate: '2026-10-19',
     readTime: '6 min',
     tags: ['LEAPS', 'Risk Management', 'Systematic Investing'],
     excerpt:

@@ -3,7 +3,7 @@ export default {
     slug: 'managing-the-pmcc-when-the-market-rips-higher',
     title: 'Managing the PMCC When the Market Rips Higher',
     subtitle: 'Premium income has a price, and it is paid in rallies.',
-    publishDate: '2026-11-05',
+    publishDate: '2026-10-23',
     readTime: '7 min',
     tags: ['PMCC', 'Risk Management', 'QQQ Research'],
     excerpt:

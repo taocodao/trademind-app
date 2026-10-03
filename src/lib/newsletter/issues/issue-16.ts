@@ -3,7 +3,7 @@ export default {
     slug: 'does-complexity-beat-simplicity-benchmark-test',
     title: 'Does Complexity Beat Simplicity? The Honest Benchmark Test',
     subtitle: 'Every active strategy has to beat a simple alternative to justify itself.',
-    publishDate: '2026-11-25',
+    publishDate: '2026-10-29',
     readTime: '8 min',
     tags: ['Backtest Audit', 'Systematic Investing', 'QQQ Research'],
     excerpt:

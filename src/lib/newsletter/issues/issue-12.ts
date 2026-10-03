@@ -3,7 +3,7 @@ export default {
     slug: 'choosing-the-leaps-strike-expiration-cost-of-time',
     title: 'Choosing the LEAPS: Strike, Expiration and the Cost of Time',
     subtitle: 'The cheaper contract is often the more expensive bet.',
-    publishDate: '2026-10-29',
+    publishDate: '2026-10-21',
     readTime: '7 min',
     tags: ['LEAPS', 'QQQ Research', 'Backtest Audit'],
     excerpt:

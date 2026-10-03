@@ -3,7 +3,7 @@ export default {
     slug: 'why-most-retail-trading-bots-blow-up',
     title: 'Why Most Retail Trading Bots Blow Up, and What a Durable Strategy Looks Like',
     subtitle: 'Grids and Martingale systems are built to hide risk, not remove it.',
-    publishDate: '2026-10-08',
+    publishDate: '2026-10-15',
     readTime: '6 min',
     tags: ['Systematic Investing', 'Risk Management', 'Backtest Audit'],
     excerpt:

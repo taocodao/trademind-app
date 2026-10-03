@@ -3,7 +3,7 @@ export default {
     slug: 'inside-the-regime-model-what-the-machine-decides',
     title: 'Inside the Regime Model: What the Machine Actually Decides',
     subtitle: 'Telling market regimes apart is more realistic than calling tops.',
-    publishDate: '2026-11-12',
+    publishDate: '2026-10-25',
     readTime: '7 min',
     tags: ['Machine Learning', 'Systematic Investing', 'Backtest Audit'],
     excerpt:

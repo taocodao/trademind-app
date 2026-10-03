@@ -3,7 +3,7 @@ export default {
     slug: 'stress-test-when-technology-falls-together',
     title: 'Stress Test: When Technology Falls Together',
     subtitle: "Concentration risk doesn't show up until everything drops at once.",
-    publishDate: '2026-11-19',
+    publishDate: '2026-10-27',
     readTime: '7 min',
     tags: ['Risk Management', 'SMH Put Sleeve', 'QQQ Research'],
     excerpt:

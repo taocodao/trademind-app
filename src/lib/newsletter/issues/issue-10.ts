@@ -3,7 +3,7 @@ export default {
     slug: 'where-return-actually-comes-from',
     title: 'Where Return Actually Comes From',
     subtitle: 'Market exposure, leverage, option premium and timing are four separate bets.',
-    publishDate: '2026-10-15',
+    publishDate: '2026-10-17',
     readTime: '7 min',
     tags: ['QQQ Research', 'Backtest Audit', 'Systematic Investing'],
     excerpt:

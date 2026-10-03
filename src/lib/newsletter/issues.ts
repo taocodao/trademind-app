@@ -12,6 +12,14 @@ import i5 from './issues/issue-05';
 import i6 from './issues/issue-06';
 import i7 from './issues/issue-07';
 import i8 from './issues/issue-08';
+import i9 from './issues/issue-09';
+import i10 from './issues/issue-10';
+import i11 from './issues/issue-11';
+import i12 from './issues/issue-12';
+import i13 from './issues/issue-13';
+import i14 from './issues/issue-14';
+import i15 from './issues/issue-15';
+import i16 from './issues/issue-16';
 
 export interface NewsletterIssue {
     number: number;
@@ -30,7 +38,7 @@ export interface NewsletterIssue {
     previewText: string;
 }
 
-export const ISSUES: NewsletterIssue[] = [i1, i2, i3, i4, i5, i6, i7, i8].map((i) => ({
+export const ISSUES: NewsletterIssue[] = [i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16].map((i) => ({
     ...i,
     tags: [...i.tags],
     deepLinks: i.deepLinks.map((d) => ({ ...d })),

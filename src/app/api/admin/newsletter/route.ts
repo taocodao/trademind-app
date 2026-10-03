@@ -4,6 +4,9 @@ import { query } from '@/lib/db';
 import { ensureNewsletterTables } from '@/lib/newsletter/db';
 
 export const dynamic = 'force-dynamic';
+// A full-list send can take minutes; without this the function dies at the
+// platform default timeout and the UI reports a silent failure.
+export const maxDuration = 300;
 
 /**
  * Admin newsletter tools (support@trademind.bot only):
@@ -229,30 +232,76 @@ export async function POST(req: NextRequest) {
 
         if (action === 'send-issue') {
             const issueNumber = Number(body.issueNumber);
-            const { getIssueByNumber, issueRecipients, sendIssueEmail } = await import('@/lib/newsletter/issue-email');
+            const { getIssueByNumber, issueRecipients } = await import('@/lib/newsletter/issue-email');
             const issue = getIssueByNumber(issueNumber);
             if (!issue) return NextResponse.json({ error: 'Unknown issue number' }, { status: 400 });
             const previewTo = body.previewTo ? String(body.previewTo) : null;
 
             if (previewTo) {
                 // Test send to one address only.
-                const sent = await sendIssueEmail(issue, {
+                const { sendIssueEmailDetailed } = await import('@/lib/newsletter/issue-email');
+                const res = await sendIssueEmailDetailed(issue, {
                     id, email: previewTo, referral_id: null,
                     discount_state: 'eligible', window_end: null,
                 });
-                return NextResponse.json({ ok: sent, preview: previewTo });
+                if (!res.ok) {
+                    return NextResponse.json({ error: `Preview send failed: ${res.error ?? 'unknown'}` }, { status: 502 });
+                }
+                return NextResponse.json({ ok: true, preview: previewTo });
             }
 
             const limit = Number.isInteger(Number(body.limit)) && Number(body.limit) > 0
                 ? Math.floor(Number(body.limit))
                 : undefined;
             const recipients = await issueRecipients(limit);
-            let sent = 0, failed = 0;
+            const { sendIssueEmailDetailed } = await import('@/lib/newsletter/issue-email');
+            const { getSettings, sleep } = await import('@/lib/newsletter/send-engine');
+            const pace = (await getSettings()).pace_ms;
+            let sent = 0, failed = 0, alreadySent = 0;
+            const failures: string[] = [];
+            let lastSendAt = 0;
             for (const r of recipients) {
-                const ok = await sendIssueEmail(issue, r);
-                if (ok) sent++; else failed++;
+                // Claim a row in the send log first: the unique live-send index
+                // rejects a second send of the same issue to the same address,
+                // and the drip engine's history stays aware of what went out.
+                let logId: number | null = null;
+                try {
+                    const ins = await query(
+                        `INSERT INTO newsletter_send_log
+                           (email, subscriber_id, kind, issue_number, issue_slug, ok, status, status_at, attempt)
+                         VALUES ($1, $2, 'issue', $3, $4, FALSE, 'sending', NOW(), 1) RETURNING id`,
+                        [r.email.trim().toLowerCase(), r.id, issue.number, issue.slug]
+                    );
+                    logId = ins.rows[0].id;
+                } catch (err) {
+                    if ((err as { code?: string })?.code === '23505') { alreadySent++; continue; }
+                    throw err;
+                }
+                const gap = pace - (Date.now() - lastSendAt);
+                if (lastSendAt > 0 && gap > 0) await sleep(gap);
+                lastSendAt = Date.now();
+                const res = await sendIssueEmailDetailed(issue, r);
+                if (res.ok) {
+                    sent++;
+                    await query(
+                        `UPDATE newsletter_send_log
+                         SET ok = TRUE, status = 'accepted', status_at = NOW(), resend_id = $2, error = NULL
+                         WHERE id = $1`, [logId, res.resendId]
+                    );
+                } else {
+                    failed++;
+                    if (failures.length < 5 && res.error) failures.push(res.error.slice(0, 200));
+                    await query(
+                        `UPDATE newsletter_send_log SET ok = FALSE, status = 'failed', status_at = NOW(), error = $2 WHERE id = $1`,
+                        [logId, res.error ?? 'unknown error']
+                    );
+                }
             }
-            return NextResponse.json({ ok: true, issue: issueNumber, sent, failed, total: recipients.length });
+            return NextResponse.json({
+                ok: true, issue: issueNumber, sent, failed, alreadySent,
+                total: recipients.length,
+                ...(failures.length ? { failures } : {}),
+            });
         }
 
         return NextResponse.json({ error: 'Unknown action' }, { status: 400 });

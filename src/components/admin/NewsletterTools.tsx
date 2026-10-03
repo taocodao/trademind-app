@@ -6,6 +6,9 @@
  * All actions hit /api/admin/newsletter, gated to support@trademind.bot.
  */
 import { useEffect, useState } from 'react';
+import { ISSUES } from '@/lib/newsletter/issues';
+
+const MAX_ISSUE = ISSUES.length;
 
 interface SubscriberView {
     subscriber: Record<string, unknown>;
@@ -169,7 +172,7 @@ export default function NewsletterTools() {
             <div className="mt-5 border-t border-[#232333] pt-4">
                 <p className="text-xs font-semibold text-[#BCC6D8] mb-2">Send an issue email</p>
                 <div className="flex flex-wrap gap-2">
-                    <input type="number" value={issueNumber} onChange={(e) => setIssueNumber(e.target.value)} min={1} max={8}
+                    <input type="number" value={issueNumber} onChange={(e) => setIssueNumber(e.target.value)} min={1} max={MAX_ISSUE}
                         placeholder="Issue #" className="w-24 rounded-lg border border-[#232333] bg-[#0A0A0F] px-3 py-2 text-xs text-white" />
                     <input type="email" value={previewTo} onChange={(e) => setPreviewTo(e.target.value)}
                         placeholder="Preview to (optional email)" className="flex-1 min-w-[180px] rounded-lg border border-[#232333] bg-[#0A0A0F] px-3 py-2 text-xs text-white" />

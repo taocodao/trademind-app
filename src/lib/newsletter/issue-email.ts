@@ -155,7 +155,7 @@ export async function renderIssueEmail(
         </p>
         <p style="font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:#8B5CF6;font-weight:bold;margin:0 0 6px">The AI Systematic Investor &middot; Issue ${issue.number}</p>
         <h1 style="font-size:24px;line-height:1.25;margin:0 0 10px">${esc(issue.title)}</h1>
-        <p style="color:#6b7280;font-size:13px;margin:0 0 20px">Issue ${issue.number} &middot; ${esc(issue.readTime)}</p>
+        <p style="color:#6b7280;font-size:13px;margin:0 0 20px">Issue ${issue.number} &middot; ${esc(issue.readTime)} &middot; <a href="https://trademind.bot" style="color:#8B5CF6;text-decoration:underline">By TradeMindBot</a></p>
         ${firstName ? `<p style="margin:0 0 18px;font-size:15px;color:#111827">Hello ${esc(firstName)},</p>` : ''}
         ${bodyHtml}
         <p style="margin:20px 0"><a href="${viewUrl}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:bold">Read the full issue</a></p>
@@ -178,7 +178,7 @@ export async function renderIssueEmail(
 
     const text = [
         `The AI Systematic Investor - Issue ${issue.number}: ${issue.title}`,
-        `Issue ${issue.number} - ${issue.readTime}`,
+        `Issue ${issue.number} - ${issue.readTime} - By TradeMindBot (https://trademind.bot)`,
         '',
         ...(firstName ? [`Hello ${firstName},`, ''] : []),
         issue.excerpt,

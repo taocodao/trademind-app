@@ -4,7 +4,9 @@
  * deliverability rules; newsletter sends arrive in a later phase.
  */
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
-const TRANSACTIONAL_FROM = 'TradeMind <signals@trademind.bot>';
+// Set TRANSACTIONAL_FROM in Vercel (for example 'TradeMind <hello@communication.trademind.bot>')
+// once the transactional subdomain is verified in Resend.
+const TRANSACTIONAL_FROM = process.env.TRANSACTIONAL_FROM ?? 'TradeMind <signals@trademind.bot>';
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://trademind.bot';
 
 const RISK_DISCLOSURE =

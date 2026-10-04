@@ -117,9 +117,12 @@ export async function GET(req: NextRequest) {
                 const part = await runDripPass({ cursor, runReconcile: fresh && first, deadlineMs: remaining });
                 first = false;
                 summary = summary ? mergeSummaries(summary, part) : part;
+                const before = cursor;
                 cursor = part.nextCursor;
                 await saveRunState(today, cursor, !part.hasMore);
                 if (!part.hasMore) break;
+                // A batch that moved nowhere would loop forever; stop and let the next fire retry.
+                if (cursor === before) { console.error('[cron/newsletter-drip] cursor did not advance', { cursor }); break; }
                 if (Date.now() - t0 > INVOCATION_BUDGET_MS - BATCH_HEADROOM_MS) break;
             }
         } finally {

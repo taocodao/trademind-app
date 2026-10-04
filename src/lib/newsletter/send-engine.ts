@@ -395,17 +395,17 @@ export async function runDripPass(opts: {
         if (i > 0) { curCreated = opts.cursor.slice(0, i); curEmail = opts.cursor.slice(i + 1); }
     }
     const list = await query(
-        `SELECT email, created_at FROM newsletter_directory
+        `SELECT email, created_at, created_at::text AS created_at_txt FROM newsletter_directory
          WHERE ($1::timestamptz IS NULL OR (created_at, email) > ($1::timestamptz, $2::text))
          ORDER BY created_at ASC, email ASC LIMIT $3`,
         [curCreated, curEmail, batchSize + 1]
     );
-    const rows = list.rows as { email: string; created_at: Date }[];
+    const rows = list.rows as { email: string; created_at: Date; created_at_txt: string }[];
     const hasBeyondBatch = rows.length > batchSize;
     const batch = hasBeyondBatch ? rows.slice(0, batchSize) : rows;
 
     let lastSendAt = 0;
-    for (const { email, created_at } of batch) {
+    for (const { email, created_at_txt } of batch) {
         if (Date.now() > deadline) { summary.stoppedEarly = true; break; }
         summary.checked++;
 
@@ -429,7 +429,9 @@ export async function runDripPass(opts: {
                 summary.perIssue[String(out.decision.issue)] = (summary.perIssue[String(out.decision.issue)] ?? 0) + 1;
             }
         }
-        summary.nextCursor = `${new Date(created_at).toISOString()}|${email}`;
+        // Keep the full microsecond timestamp: bulk imports share one created_at,
+        // and a millisecond cursor would restart the same rows every batch.
+        summary.nextCursor = `${created_at_txt}|${email}`;
     }
     summary.hasMore = summary.stoppedEarly || hasBeyondBatch;
     return summary;

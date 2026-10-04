@@ -14,7 +14,8 @@
 import { query } from '@/lib/db';
 import { ensureNewsletterTables } from './db';
 import { ISSUES } from './issues';
-import { getIssueByNumber, sendIssueEmailDetailed, type SubscriberForEmail } from './issue-email';
+import { getIssueByNumber, sendIssueEmailDetailed, DEFAULT_SENDER_NAME, type SubscriberForEmail } from './issue-email';
+import { describeSenderName } from './sender-name';
 
 // ---------- settings ----------
 
@@ -350,6 +351,70 @@ export async function saveRunState(day: string, cursor: string | null, done: boo
         `UPDATE newsletter_settings SET run_day = $1, run_cursor = $2, run_done = $3 WHERE id = 1`,
         [day, cursor, done]
     );
+}
+
+/** Accumulate this invocation's totals into the day's run summary (admin visibility). */
+export async function saveRunSummary(day: string, part: RunSummary, done: boolean): Promise<void> {
+    const r = await query(`SELECT run_summary FROM newsletter_settings WHERE id = 1`);
+    let prev: Record<string, any> | null = null;
+    try { prev = r.rows[0]?.run_summary ? JSON.parse(r.rows[0].run_summary) : null; } catch { prev = null; }
+    const base: Record<string, any> = prev && prev.day === day
+        ? prev : { day, checked: 0, sent: 0, failed: 0, perIssue: {}, skipped: {}, invocations: 0 };
+    base.checked += part.checked; base.sent += part.sent; base.failed += part.failed;
+    for (const [k, v] of Object.entries(part.perIssue)) base.perIssue[k] = (base.perIssue[k] ?? 0) + v;
+    for (const [k, v] of Object.entries(part.skipped)) base.skipped[k] = (base.skipped[k] ?? 0) + v;
+    base.invocations += 1; base.done = done; base.updatedAt = new Date().toISOString();
+    await query(`UPDATE newsletter_settings SET run_summary = $1 WHERE id = 1`, [JSON.stringify(base)]);
+}
+
+/**
+ * Read-only estimate of what the next run would send: per issue, how many
+ * addresses are due by Eastern calendar date and which display name applies.
+ * Sends nothing and picks nothing.
+ */
+export async function previewTodaysRun() {
+    const s = await getSettings();
+    const r = await query(
+        `WITH elig AS (
+             SELECT d.email FROM newsletter_directory d
+             LEFT JOIN newsletter_subscribers sub ON sub.id = d.subscriber_id
+             WHERE d.subscriber_id IS NOT NULL
+               AND (sub.status IS NULL OR sub.status IN ('confirmed','email_change_pending'))
+               AND NOT EXISTS (SELECT 1 FROM newsletter_suppression x WHERE x.email = d.email)
+         ), last AS (
+             SELECT DISTINCT ON (email) email, issue_number, created_at FROM newsletter_send_log
+             WHERE kind = 'issue' AND ${COMPLETED_SQL(s.accepted_grace_hours)}
+             ORDER BY email, issue_number DESC
+         )
+         SELECT COALESCE(l.issue_number, 0) AS last_issue,
+                CASE WHEN l.created_at IS NULL THEN NULL
+                     ELSE ((NOW() AT TIME ZONE 'America/New_York')::date
+                           - (l.created_at AT TIME ZONE 'America/New_York')::date) END AS days_since,
+                COUNT(*)::int AS n
+         FROM elig e LEFT JOIN last l USING (email) GROUP BY 1, 2`
+    );
+    const total = await query(`SELECT COUNT(*)::int AS n FROM newsletter_directory`);
+    const perIssue: Record<number, number> = {};
+    let notDue = 0, complete = 0, eligible = 0;
+    for (const row of r.rows as { last_issue: number; days_since: number | null; n: number }[]) {
+        eligible += row.n;
+        const next = row.last_issue + 1;
+        if (next > ISSUES.length) { complete += row.n; continue; }
+        const due = row.last_issue === 0 || (row.days_since ?? 0) >= s.cadence_days;
+        if (due) perIssue[next] = (perIssue[next] ?? 0) + row.n; else notDue += row.n;
+    }
+    const issues = [];
+    for (const [num, n] of Object.entries(perIssue)) {
+        issues.push({ issue: Number(num), recipients: n, senderName: await describeSenderName(Number(num), DEFAULT_SENDER_NAME) });
+    }
+    issues.sort((a, b) => a.issue - b.issue);
+    const sr = await query(`SELECT run_summary FROM newsletter_settings WHERE id = 1`);
+    let lastRun = null;
+    try { lastRun = sr.rows[0]?.run_summary ? JSON.parse(sr.rows[0].run_summary) : null; } catch { lastRun = null; }
+    return {
+        todayET: etDateString(), cadenceDays: s.cadence_days, windowStartET: s.send_hour_start_et,
+        directory: total.rows[0].n, eligible, notDue, sequenceComplete: complete, dueByIssue: issues, lastRun,
+    };
 }
 
 // ---------- full list pass ----------

@@ -19,7 +19,7 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 // subdomain (its own DKIM identity) since 2026-09-26 (commit 042b8a4).
 const NEWSLETTER_FROM =
     process.env.NEWSLETTER_FROM ?? 'The AI Systematic Investor by TradeMind <newsletter@news.trademind.bot>';
-const DEFAULT_SENDER_NAME = NEWSLETTER_FROM.replace(/\s*<[^>]*>\s*$/, '').trim() || 'The AI Systematic Investor by TradeMind';
+export const DEFAULT_SENDER_NAME = NEWSLETTER_FROM.replace(/\s*<[^>]*>\s*$/, '').trim() || 'The AI Systematic Investor by TradeMind';
 
 /** From header for one issue: explicit issue.senderName, else the history-driven rotation. */
 async function fromFor(issue: NewsletterIssue, persist: boolean): Promise<string> {

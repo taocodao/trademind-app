@@ -23,6 +23,8 @@ export const maxDuration = 300;
  *   GET  ?summary=1       -> per-issue totals and rates (delivered, opened, clicked,
  *                           bounced, failed)
  *   GET  ?stuck=1         -> sends in flight over 24h and addresses failing repeatedly
+ *   GET  ?preview-run=1   -> read-only estimate of the next run (per issue, display name, last run)
+ *   POST { action: 'add-subscriber', email, firstName? } -> add by hand and send issue 1 now
  *   GET  ?settings=1      -> send engine settings (cadence, window, pause)
  *   POST { action: 'update-settings', ...fields } -> change cadence_days, window, paused, etc.
  */
@@ -32,6 +34,11 @@ export async function GET(req: NextRequest) {
     await ensureNewsletterTables();
 
     const sp = req.nextUrl.searchParams;
+
+    if (sp.get('preview-run')) {
+        const { previewTodaysRun } = await import('@/lib/newsletter/send-engine');
+        return NextResponse.json(await previewTodaysRun());
+    }
 
     if (sp.get('directory')) {
         const { backfillDirectory } = await import('@/lib/newsletter/db');
@@ -173,6 +180,16 @@ export async function POST(req: NextRequest) {
             } catch (e) {
                 return NextResponse.json({ error: (e as Error).message }, { status: 400 });
             }
+        }
+
+        if (action === 'add-subscriber') {
+            const { adminAddSubscriber } = await import('@/lib/newsletter/db');
+            const added = await adminAddSubscriber(String(body.email ?? ''), body.firstName ? String(body.firstName) : null);
+            if (!added.ok) return NextResponse.json({ error: added.error }, { status: 400 });
+            // Issue 1 right away; the send history decides what an existing address would get.
+            const { sendNextIssue } = await import('@/lib/newsletter/send-engine');
+            const out = await sendNextIssue(added.email, { bypassWindow: true });
+            return NextResponse.json({ ok: true, email: added.email, existing: added.existing, send: out });
         }
 
         const id = Number(body.subscriberId);

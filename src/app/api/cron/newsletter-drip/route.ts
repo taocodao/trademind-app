@@ -3,7 +3,7 @@ import { waitUntil } from '@vercel/functions';
 import { ensureNewsletterTables } from '@/lib/newsletter/db';
 import {
     acquireRunLock, releaseRunLock, getSettings, runDripPass, hourET, inSendWindow,
-    etDateString, getRunState, saveRunState, type RunSummary,
+    etDateString, getRunState, saveRunState, saveRunSummary, type RunSummary,
 } from '@/lib/newsletter/send-engine';
 
 /** Hard cap on chained invocations per daily run (runaway guard).
@@ -51,9 +51,10 @@ export const maxDuration = 300;
  * run without ever exceeding the function time limit.
  *
  * Run position is persisted in newsletter_settings (run_day, run_cursor,
- * run_done), keyed by Eastern calendar day. The cron fires every 10 minutes
- * through the morning; the first fire of the day starts a run and later fires
- * resume it or exit immediately once it is complete. So a failed chain
+ * run_done), keyed by Eastern calendar day. The cron fires hourly from 14:00 to 17:00
+ * UTC. The send window start (10 AM ET) makes the first in-window fire the
+ * day's start (14:00 UTC in summer, 15:00 UTC in winter); later fires resume an
+ * unfinished run or exit immediately once it is complete. So a failed chain
  * dispatch never strands part of the list: the next fire picks it up.
  *
  *   GET ?force=1   -> start a fresh run today even if one already completed
@@ -120,6 +121,7 @@ export async function GET(req: NextRequest) {
                 const before = cursor;
                 cursor = part.nextCursor;
                 await saveRunState(today, cursor, !part.hasMore);
+                await saveRunSummary(today, part, !part.hasMore);
                 if (!part.hasMore) break;
                 // A batch that moved nowhere would loop forever; stop and let the next fire retry.
                 if (cursor === before) { console.error('[cron/newsletter-drip] cursor did not advance', { cursor }); break; }

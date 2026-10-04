@@ -28,6 +28,42 @@ export default function NewsletterTools() {
     const [issueNumber, setIssueNumber] = useState('');
     const [previewTo, setPreviewTo] = useState('');
     const [batchLimit, setBatchLimit] = useState('');
+    const [addEmail, setAddEmail] = useState('');
+    const [addMsg, setAddMsg] = useState<string | null>(null);
+    const [runPreview, setRunPreview] = useState<{
+        todayET: string; cadenceDays: number; windowStartET: number; directory: number; eligible: number;
+        notDue: number; sequenceComplete: number;
+        dueByIssue: { issue: number; recipients: number; senderName: string }[];
+        lastRun: { day: string; sent: number; failed: number; checked: number; done: boolean; updatedAt: string; perIssue: Record<string, number> } | null;
+    } | null>(null);
+    const [runMsg, setRunMsg] = useState<string | null>(null);
+
+    async function loadRunPreview() {
+        setRunMsg('Loading...');
+        try {
+            const res = await fetch('/api/admin/newsletter?preview-run=1');
+            const data = await res.json();
+            if (!res.ok) { setRunMsg(data?.error ?? 'Failed'); return; }
+            setRunPreview(data); setRunMsg(null);
+        } catch { setRunMsg('Failed to load'); }
+    }
+
+    async function addSubscriber() {
+        if (!addEmail.trim()) return;
+        if (!window.confirm(`Add ${addEmail.trim()} as a subscriber and send the first issue now?`)) return;
+        setAddMsg('Working...');
+        try {
+            const res = await fetch('/api/admin/newsletter', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'add-subscriber', email: addEmail.trim() }),
+            });
+            const data = await res.json();
+            if (!res.ok) { setAddMsg(data?.error ?? 'Failed'); return; }
+            const o = data.send ?? {};
+            setAddMsg(o.result === 'sent' ? `Added. Issue ${o.issue} sent.` : `Added. Not sent: ${o.reason ?? o.error ?? 'see send history'}.`);
+            setAddEmail('');
+        } catch { setAddMsg('Failed'); }
+    }
 
     useEffect(() => {
         fetch('/api/admin/newsletter?aggregate=1')
@@ -196,6 +232,44 @@ export default function NewsletterTools() {
                     </button>
                 </div>
                 <p className="mt-1.5 text-[11px] text-[#8B95A9]">With a preview address it sends only there. Without one it sends to every confirmed, non-suppressed subscriber.</p>
+            </div>
+
+            <div className="mt-5 border-t border-[#232333] pt-4">
+                <p className="text-xs font-semibold text-[#BCC6D8] mb-2">Add a subscriber and send issue 1 now</p>
+                <div className="flex flex-wrap gap-2">
+                    <input type="email" value={addEmail} onChange={(e) => setAddEmail(e.target.value)}
+                        placeholder="Email address" className="flex-1 min-w-[180px] rounded-lg border border-[#232333] bg-[#0A0A0F] px-3 py-2 text-xs text-white" />
+                    <button type="button" onClick={addSubscriber} disabled={!addEmail.trim()}
+                        className="rounded-lg bg-[#8B5CF6] px-4 py-2 text-xs font-semibold text-white disabled:opacity-40">
+                        Add and send
+                    </button>
+                </div>
+                {addMsg && <p className="mt-1.5 text-[11px] text-[#BCC6D8]">{addMsg}</p>}
+                <p className="mt-1.5 text-[11px] text-[#8B95A9]">Suppressed addresses, including people who unsubscribed, are refused. They must subscribe themselves.</p>
+            </div>
+
+            <div className="mt-5 border-t border-[#232333] pt-4">
+                <div className="flex items-center gap-3 mb-2">
+                    <p className="text-xs font-semibold text-[#BCC6D8]">Next run preview (sends nothing)</p>
+                    <button type="button" onClick={loadRunPreview}
+                        className="rounded-lg border border-[#232333] px-3 py-1 text-xs font-semibold text-white hover:border-[#8B5CF6]">
+                        Refresh
+                    </button>
+                </div>
+                {runMsg && <p className="text-[11px] text-[#BCC6D8]">{runMsg}</p>}
+                {runPreview && (
+                    <div className="text-[11px] text-[#BCC6D8] space-y-1">
+                        <p>Today (Eastern): {runPreview.todayET}. Cadence: every {runPreview.cadenceDays} days by date. Window starts {runPreview.windowStartET}:00 ET.</p>
+                        <p>{runPreview.eligible} eligible of {runPreview.directory} in the directory. Not due yet: {runPreview.notDue}. Sequence complete: {runPreview.sequenceComplete}.</p>
+                        {runPreview.dueByIssue.length === 0 && <p>Nothing is due right now.</p>}
+                        {runPreview.dueByIssue.map((d) => (
+                            <p key={d.issue}>Issue {d.issue}: {d.recipients} recipients. Display name: {d.senderName}.</p>
+                        ))}
+                        {runPreview.lastRun && (
+                            <p className="pt-1">Last run {runPreview.lastRun.day}: checked {runPreview.lastRun.checked}, sent {runPreview.lastRun.sent}, failed {runPreview.lastRun.failed}, {runPreview.lastRun.done ? 'finished' : 'not finished'} (updated {new Date(runPreview.lastRun.updatedAt).toLocaleTimeString()}).</p>
+                        )}
+                    </div>
+                )}
             </div>
         </section>
     );

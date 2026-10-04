@@ -1,15 +1,16 @@
+import { randomInt } from 'crypto';
 import { query } from '@/lib/db';
 import { ensureNewsletterTables } from './db';
 
 /**
- * Sender display name per issue, driven by send history.
+ * Sender display name per issue.
  *
- *  1. An issue that already has a recorded name keeps it (every batch and
- *     every late subscriber sees the same name for that issue).
+ *  1. An issue with a recorded name keeps it, so every batch and every late
+ *     subscriber of that issue sees the same name.
  *  2. An issue sent before this feature existed counts as the default name.
- *  3. Otherwise the name is the next one in the rotation after the previous
- *     issue's name (default -> first rotation name -> ... -> wraps around).
- *  4. With no earlier issue at all, the default name is used.
+ *  3. Otherwise one of the four names is picked at random, never the same as
+ *     the previous issue's name (the default name counts as a previous name).
+ *  4. With no earlier issue, or on any lookup error, the default name is used.
  */
 export const SENDER_ROTATION = [
     'AI Investor Copilot',
@@ -21,31 +22,43 @@ export const SENDER_ROTATION = [
 const cache = new Map<number, { name: string; at: number }>();
 const CACHE_MS = 60_000;
 
-function nextName(prev: string, defaultName: string): string {
-    if (prev === defaultName) return SENDER_ROTATION[0];
-    const i = SENDER_ROTATION.indexOf(prev);
-    return i < 0 ? SENDER_ROTATION[0] : SENDER_ROTATION[(i + 1) % SENDER_ROTATION.length];
-}
-
-async function compute(issueNumber: number, defaultName: string): Promise<string> {
+async function loadKnown(defaultName: string): Promise<Map<number, string>> {
     const rec = await query(`SELECT issue_number, sender_name FROM newsletter_issue_sender`);
     const sent = await query(`SELECT DISTINCT issue_number FROM newsletter_send_log WHERE kind = 'issue' AND issue_number IS NOT NULL`);
     const known = new Map<number, string>();
-    for (const r of sent.rows as { issue_number: number }[]) known.set(r.issue_number, defaultName); // legacy sends
+    for (const r of sent.rows as { issue_number: number }[]) known.set(r.issue_number, defaultName); // sent before this feature
     for (const r of rec.rows as { issue_number: number; sender_name: string }[]) known.set(r.issue_number, r.sender_name);
-    let name = known.get(1) ?? defaultName;
-    for (let k = 2; k <= issueNumber; k++) name = known.get(k) ?? nextName(name, defaultName);
-    return name;
+    return known;
 }
 
-/** persist=true on real sends: records the choice so later batches match. */
+/** Name of the closest earlier issue that has one, or null if there is none. */
+function previousName(known: Map<number, string>, issueNumber: number): string | null {
+    let best = -1;
+    for (const k of known.keys()) if (k < issueNumber && k > best) best = k;
+    return best < 0 ? null : (known.get(best) as string);
+}
+
+function pickRandomExcluding(prev: string): string {
+    const choices = SENDER_ROTATION.filter((n) => n !== prev);
+    return choices[randomInt(choices.length)];
+}
+
+/** persist=true on real sends records the choice; persist=false (previews) does not. */
 export async function senderNameForIssue(issueNumber: number, defaultName: string, persist: boolean): Promise<string> {
     try {
         const hit = cache.get(issueNumber);
         if (hit && Date.now() - hit.at < CACHE_MS) return hit.name;
         await ensureNewsletterTables();
-        let name = await compute(issueNumber, defaultName);
+        const known = await loadKnown(defaultName);
+        const existing = known.get(issueNumber);
+        if (existing) {
+            cache.set(issueNumber, { name: existing, at: Date.now() });
+            return existing;
+        }
+        const prev = previousName(known, issueNumber);
+        let name = prev === null ? defaultName : pickRandomExcluding(prev);
         if (persist) {
+            // Concurrent first sends race here; the table keeps the first insert.
             await query(
                 `INSERT INTO newsletter_issue_sender (issue_number, sender_name) VALUES ($1, $2)
                  ON CONFLICT (issue_number) DO NOTHING`, [issueNumber, name]);
@@ -56,6 +69,19 @@ export async function senderNameForIssue(issueNumber: number, defaultName: strin
         return name;
     } catch (err) {
         console.error('[newsletter sender name]', err);
+        return defaultName;
+    }
+}
+
+/** Human description for the admin run preview, without picking anything. */
+export async function describeSenderName(issueNumber: number, defaultName: string): Promise<string> {
+    try {
+        const known = await loadKnown(defaultName);
+        const existing = known.get(issueNumber);
+        if (existing) return existing;
+        const prev = previousName(known, issueNumber);
+        return prev === null ? defaultName : `random of the four names, not "${prev}"`;
+    } catch {
         return defaultName;
     }
 }

@@ -219,6 +219,7 @@ export async function ensureNewsletterTables(): Promise<void> {
     await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS run_day TEXT`);
     await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS run_cursor TEXT`);
     await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS run_done BOOLEAN NOT NULL DEFAULT FALSE`);
+    await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS run_summary TEXT`);
     await query(`INSERT INTO newsletter_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING`);
 
     tablesReady = true;
@@ -382,7 +383,60 @@ async function clearUnsubscribeSuppression(email: string, subscriberId: number):
         [email]
     );
     await query(`UPDATE newsletter_subscribers SET unsubscribed_at = NULL WHERE id = $1`, [subscriberId]);
-    if ((del.rowCount ?? 0) > 0) await recordNewsletterEvent('resubscribed', {}, subscriberId);
+    if ((del.rowCount ?? 0) > 0) {
+        // Restart at issue 1: move earlier issue rows out of the live history
+        // (kept for the record as kind 'issue_prior'). This also frees the
+        // one-live-send-per-issue index so issue 1 can go out again.
+        await query(
+            `UPDATE newsletter_send_log SET kind = 'issue_prior' WHERE email = $1 AND kind = 'issue'`,
+            [email]
+        );
+        await recordNewsletterEvent('resubscribed', {}, subscriberId);
+    }
+}
+
+/**
+ * Admin hand-add: creates a confirmed subscriber (consent not attested, same
+ * as lead imports), enrolls the address in the directory and returns the id so
+ * the caller can send issue 1 immediately. Suppressed addresses are refused,
+ * including people who unsubscribed: they must subscribe themselves.
+ */
+export async function adminAddSubscriber(
+    rawEmail: string, firstName?: string | null
+): Promise<{ ok: true; id: number; email: string; existing: boolean } | { ok: false; error: string }> {
+    await ensureNewsletterTables();
+    const n = normalizeEmail(rawEmail);
+    if (!n.valid) return { ok: false, error: 'Enter a valid email address' };
+    const sup = await suppressionReason(n.email);
+    if (sup) return { ok: false, error: `This address is suppressed (${sup}). It cannot be added by hand.` };
+
+    const ex = await query(
+        `SELECT id, email, status FROM newsletter_subscribers WHERE canonical_email = $1 OR email = $2`,
+        [n.canonical, n.email]
+    );
+    let id: number; let existing = false;
+    if (ex.rows[0]) {
+        if (ex.rows[0].status !== 'confirmed') {
+            return { ok: false, error: `Address already exists with status ${ex.rows[0].status}.` };
+        }
+        id = ex.rows[0].id; existing = true;
+    } else {
+        const ins = await query(
+            `INSERT INTO newsletter_subscribers
+                (email, canonical_email, consent, status, source, first_confirmed_at, confirmed_at)
+             VALUES ($1, $2, FALSE, 'confirmed', 'admin-add', NOW(), NOW()) RETURNING id`,
+            [n.email, n.canonical]
+        );
+        id = ins.rows[0].id as number;
+        await query(`INSERT INTO newsletter_emails (subscriber_id, email, role, confirmed_at) VALUES ($1, $2, 'primary', NOW())`, [id, n.email]);
+        await query(
+            `INSERT INTO newsletter_discounts (subscriber_id, state, personal_code)
+             VALUES ($1, 'not_started', $2) ON CONFLICT (subscriber_id) DO NOTHING`,
+            [id, newDiscountCode()]
+        );
+    }
+    await upsertDirectoryEmail(n.email, 'signup', id, firstName ?? null);
+    return { ok: true, id, email: n.email, existing };
 }
 
 /** Per-IP signup rate limit: max 5 per hour, counted from the event log. */

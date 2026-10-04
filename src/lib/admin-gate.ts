@@ -18,7 +18,7 @@
  * If PRIVY_APP_SECRET is ever configured, the gate instead fetches the
  * account's email from Privy's server API and compares it to ADMIN_EMAIL.
  */
-import { createPublicKey, verify as cryptoVerify, type KeyObject } from 'crypto';
+import { createHmac, createPublicKey, timingSafeEqual, verify as cryptoVerify, type KeyObject } from 'crypto';
 import type { NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
 
@@ -37,6 +37,48 @@ export interface AdminResolution {
     isAdmin: boolean;
     status: number; // 200 ok, 401 unauthenticated, 403 not admin, 503 unprovisioned
     error?: string;
+}
+
+// ── Admin session cookie (8 hours) ──────────────────────────────────────────
+// Privy access tokens last about an hour. After a verified admin sign-in the
+// server issues its own signed, httpOnly cookie that keeps the admin console
+// working for a fixed 8 hours (not sliding). It is bound to the pinned admin
+// DID and signed with a server-only secret; with no secret configured the
+// feature is off and the gate behaves exactly as before.
+export const ADMIN_SESSION_COOKIE = 'tm-admin-session';
+export const ADMIN_SESSION_SECONDS = 8 * 60 * 60;
+
+function sessionSecret(): string {
+    return process.env.ADMIN_SESSION_SECRET || process.env.CRON_SECRET || process.env.PRIVY_APP_SECRET || '';
+}
+
+function sign(payload: string): string {
+    return createHmac('sha256', sessionSecret()).update(`tm-admin-session.${payload}`).digest('base64url');
+}
+
+/** Returns a signed cookie value for this DID, plus its expiry (ms epoch). */
+export function mintAdminSession(did: string, now = Date.now()): { value: string; expiresAt: number } | null {
+    if (!sessionSecret()) return null;
+    const expiresAt = now + ADMIN_SESSION_SECONDS * 1000;
+    const payload = `${Buffer.from(did).toString('base64url')}.${expiresAt}`;
+    return { value: `${payload}.${sign(payload)}`, expiresAt };
+}
+
+/** Expiry (ms epoch) of a valid, unexpired cookie for the pinned admin DID, else null. */
+export function readAdminSession(value: string | undefined): number | null {
+    try {
+        if (!value || !sessionSecret() || !ADMIN_PRIVY_DID) return null;
+        const [didB64, exp, sig] = value.split('.');
+        if (!didB64 || !exp || !sig) return null;
+        const payload = `${didB64}.${exp}`;
+        const a = Buffer.from(sig), b = Buffer.from(sign(payload));
+        if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+        if (Buffer.from(didB64, 'base64url').toString() !== ADMIN_PRIVY_DID) return null;
+        const expiresAt = Number(exp);
+        return Number.isFinite(expiresAt) && expiresAt > Date.now() ? expiresAt : null;
+    } catch {
+        return null;
+    }
 }
 
 // ── Token signature verification (JWKS, cached) ─────────────────────────────
@@ -107,6 +149,10 @@ export async function resolveAdmin(req?: NextRequest): Promise<AdminResolution> 
     let token: string | undefined;
     try {
         const cookieStore = await cookies();
+        // Valid 8 hour admin session: no need for a fresh Privy token.
+        if (readAdminSession(cookieStore.get(ADMIN_SESSION_COOKIE)?.value) && ADMIN_PRIVY_DID) {
+            return { did: ADMIN_PRIVY_DID, isAdmin: true, status: 200 };
+        }
         token = cookieStore.get('privy-token')?.value;
     } catch { /* cookies() unavailable in this context */ }
     if (!token && req) {

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import NewsletterTools from '@/components/admin/NewsletterTools';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useLogin } from '@privy-io/react-auth';
 import {
     Upload,
     FileSpreadsheet,
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'support@trademind.bot';
+const ADMIN_UNTIL_KEY = 'tm-admin-until';
 
 interface ImportResult {
     batch: string;
@@ -33,7 +34,15 @@ interface BatchRow {
 }
 
 export default function AdminPage() {
-    const { ready, authenticated, user, login, logout } = usePrivy();
+    const { ready, authenticated, user, logout } = usePrivy();
+    // A fresh sign-in starts a new 8 hour admin session.
+    const { login } = useLogin({
+        onComplete: (_user, _isNewUser, wasAlreadyAuthenticated) => {
+            if (wasAlreadyAuthenticated) return;
+            try { localStorage.removeItem(ADMIN_UNTIL_KEY); } catch { /* ignore */ }
+            void fetch('/api/admin/session', { method: 'DELETE' }).catch(() => {});
+        },
+    });
     const email = user?.email?.address?.trim().toLowerCase() ?? null;
     const isAdmin = !!email && email === ADMIN_EMAIL;
 
@@ -99,6 +108,41 @@ export default function AdminPage() {
 /* ── Admin console: lead list import + database overview ─────────────────── */
 
 function AdminConsole({ email }: { email: string }) {
+    const { logout } = usePrivy();
+
+    // Fixed 8 hour admin session. The server issues a signed cookie on the
+    // first visit after sign-in; when the time is up we end the session so the
+    // next visit needs a fresh sign-in.
+    useEffect(() => {
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const endSession = async () => {
+            try { localStorage.removeItem(ADMIN_UNTIL_KEY); } catch { /* ignore */ }
+            await fetch('/api/admin/session', { method: 'DELETE' }).catch(() => {});
+            await logout();
+        };
+        const arm = (until: number) => {
+            timer = setTimeout(() => void endSession(), Math.max(0, Math.min(until - Date.now(), 2 ** 31 - 1)));
+        };
+        (async () => {
+            let until = 0;
+            try { until = Number(localStorage.getItem(ADMIN_UNTIL_KEY)) || 0; } catch { /* ignore */ }
+            if (until && until <= Date.now()) { await endSession(); return; }
+            if (!until) {
+                try {
+                    const r = await fetch('/api/admin/session', { method: 'POST' });
+                    const d = await r.json();
+                    if (d?.expiresAt) {
+                        until = d.expiresAt;
+                        try { localStorage.setItem(ADMIN_UNTIL_KEY, String(until)); } catch { /* ignore */ }
+                    }
+                } catch { /* session cookie is an enhancement; the console still works */ }
+            }
+            if (until) arm(until);
+        })();
+        return () => { if (timer) clearTimeout(timer); };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const [file, setFile] = useState<File | null>(null);
     const [title, setTitle] = useState('');
     const [busy, setBusy] = useState(false);

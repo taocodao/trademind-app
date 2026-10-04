@@ -13,6 +13,23 @@ const MAX_CHAIN_DEPTH = 120;
 /** Chain dispatch attempts before giving up; the run resumes tomorrow either way. */
 const CHAIN_DISPATCH_ATTEMPTS = 3;
 
+/** Time one invocation may spend looping over batches (function max is 300 s). */
+const INVOCATION_BUDGET_MS = 240_000;
+/** Stop starting new batches when less than this remains. */
+const BATCH_HEADROOM_MS = 50_000;
+
+function mergeSummaries(a: RunSummary, b: RunSummary): RunSummary {
+    const skipped = { ...a.skipped };
+    for (const [k, v] of Object.entries(b.skipped)) skipped[k] = (skipped[k] ?? 0) + v;
+    const perIssue = { ...a.perIssue };
+    for (const [k, v] of Object.entries(b.perIssue)) perIssue[k] = (perIssue[k] ?? 0) + v;
+    return {
+        checked: a.checked + b.checked, sent: a.sent + b.sent, failed: a.failed + b.failed,
+        skipped, perIssue, stoppedEarly: b.stoppedEarly, nextCursor: b.nextCursor,
+        hasMore: b.hasMore, reconcile: a.reconcile ?? b.reconcile,
+    };
+}
+
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -88,9 +105,23 @@ export async function GET(req: NextRequest) {
                 cursor = state.run_cursor;
             }
 
-            // Reconcile delivery status only when a day's run starts.
-            summary = await runDripPass({ cursor, runReconcile: fresh });
-            await saveRunState(today, summary.nextCursor, !summary.hasMore);
+            // Work through batches until the time budget is spent, saving the
+            // position after every batch. Each batch is small (200 addresses);
+            // looping here means a 10k list needs only a few cron fires even
+            // if the chained dispatch below never works.
+            const t0 = Date.now();
+            let first = true;
+            summary = undefined as unknown as RunSummary;
+            for (;;) {
+                const remaining = INVOCATION_BUDGET_MS - (Date.now() - t0);
+                const part = await runDripPass({ cursor, runReconcile: fresh && first, deadlineMs: remaining });
+                first = false;
+                summary = summary ? mergeSummaries(summary, part) : part;
+                cursor = part.nextCursor;
+                await saveRunState(today, cursor, !part.hasMore);
+                if (!part.hasMore) break;
+                if (Date.now() - t0 > INVOCATION_BUDGET_MS - BATCH_HEADROOM_MS) break;
+            }
         } finally {
             // Release BEFORE chaining so the next batch never sees our lock.
             await releaseRunLock();

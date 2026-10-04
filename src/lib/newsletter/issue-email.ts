@@ -18,10 +18,27 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 // subdomain (its own DKIM identity) since 2026-09-26 (commit 042b8a4).
 const NEWSLETTER_FROM =
     process.env.NEWSLETTER_FROM ?? 'The AI Systematic Investor by TradeMind <newsletter@news.trademind.bot>';
+/**
+ * Sender display names rotated by issue number. Issues 1 to 3 were already
+ * sent under the original name and keep it; rotation starts at issue 4.
+ * An explicit issue.senderName always wins.
+ */
+const SENDER_ROTATION_START = 4;
+const SENDER_ROTATION = [
+    'AI Investor Copilot',
+    'Systematic Investor Copilot',
+    'Growth & Risk Copilot',
+    'The Investment Flight Plan',
+];
+function rotatedSenderName(issueNumber: number): string {
+    if (issueNumber < SENDER_ROTATION_START) return '';
+    return SENDER_ROTATION[(issueNumber - SENDER_ROTATION_START) % SENDER_ROTATION.length];
+}
+
 /** From header for one issue: optional per-issue display name, same sending address. */
 function fromFor(issue: NewsletterIssue): string {
     const addr = NEWSLETTER_FROM.match(/<([^>]+)>/)?.[1] ?? NEWSLETTER_FROM.trim();
-    const name = (issue.senderName ?? '').replace(/["<>\r\n]/g, '').trim().slice(0, 80);
+    const name = (issue.senderName ?? rotatedSenderName(issue.number)).replace(/["<>\r\n]/g, '').trim().slice(0, 80);
     return name ? `"${name}" <${addr}>` : NEWSLETTER_FROM;
 }
 const NEWSLETTER_REPLY_TO = process.env.NEWSLETTER_REPLY_TO ?? 'support@trademind.bot';

@@ -3,6 +3,7 @@ import { waitUntil } from '@vercel/functions';
 import { ensureNewsletterTables } from '@/lib/newsletter/db';
 import {
     acquireRunLock, releaseRunLock, getSettings, runDripPass, hourET, inSendWindow,
+    etDateString, getRunState, saveRunState, type RunSummary,
 } from '@/lib/newsletter/send-engine';
 
 /** Hard cap on chained invocations per daily run (runaway guard).
@@ -32,6 +33,14 @@ export const maxDuration = 300;
  * invocation via waitUntil(fetch) so a 10k+ list completes in a single daily
  * run without ever exceeding the function time limit.
  *
+ * Run position is persisted in newsletter_settings (run_day, run_cursor,
+ * run_done), keyed by Eastern calendar day. The cron fires every 10 minutes
+ * through the morning; the first fire of the day starts a run and later fires
+ * resume it or exit immediately once it is complete. So a failed chain
+ * dispatch never strands part of the list: the next fire picks it up.
+ *
+ *   GET ?force=1   -> start a fresh run today even if one already completed
+ *
  * A table lock stops overlapping runs (for example a second manual trigger
  * while the first is still working). Chained runs release the lock before
  * calling the next batch, which re-acquires it.
@@ -43,72 +52,85 @@ export async function GET(req: NextRequest) {
     }
 
     const dryRun = req.nextUrl.searchParams.get('dryRun') === '1';
-    const cursor = req.nextUrl.searchParams.get('cursor');
+    const force = req.nextUrl.searchParams.get('force') === '1';
+    const dryCursor = req.nextUrl.searchParams.get('cursor');
     const chain = Number(req.nextUrl.searchParams.get('chain') ?? '0');
+    let summary: RunSummary;
+    let settings;
     try {
         await ensureNewsletterTables();
-        const settings = await getSettings();
+        settings = await getSettings();
 
-        if (!dryRun) {
-            if (settings.paused) return NextResponse.json({ ok: true, skipped: 'paused' });
-            if (!inSendWindow(settings)) {
-                return NextResponse.json({ ok: true, skipped: 'outside_window', hourET: hourET() });
-            }
-            if (!(await acquireRunLock())) {
-                return NextResponse.json({ ok: true, skipped: 'already_running' });
-            }
+        if (dryRun) {
+            summary = await runDripPass({ dryRun: true, cursor: dryCursor, runReconcile: false });
+            return NextResponse.json({ ok: true, dryRun, chain, settings, ...summary });
+        }
+
+        if (settings.paused) return NextResponse.json({ ok: true, skipped: 'paused' });
+        if (!inSendWindow(settings)) {
+            return NextResponse.json({ ok: true, skipped: 'outside_window', hourET: hourET() });
+        }
+        if (!(await acquireRunLock())) {
+            return NextResponse.json({ ok: true, skipped: 'already_running' });
         }
 
         try {
-            // Reconcile delivery status only on the first batch of a run.
-            const summary = await runDripPass({ dryRun, cursor, runReconcile: chain === 0 });
-
-            // Chain the next batch after this invocation ends, so each batch
-            // gets a fresh function time budget. The fetch runs via waitUntil:
-            // the response is already sent, but the platform keeps the function
-            // alive long enough to dispatch the next request.
-            if (!dryRun && summary.hasMore && summary.nextCursor && chain < MAX_CHAIN_DEPTH) {
-                const nextUrl = new URL(req.nextUrl);
-                nextUrl.searchParams.set('cursor', summary.nextCursor);
-                nextUrl.searchParams.set('chain', String(chain + 1));
-                const auth = req.headers.get('authorization') ?? '';
-                waitUntil((async () => {
-                    // The next invocation starts as soon as the request is
-                    // dispatched; waiting for its full response would hold this
-                    // function alive for the whole batch. Abort after dispatch
-                    // so this invocation can end on time. Retry the dispatch a
-                    // few times on network errors; if every attempt fails, the
-                    // remaining addresses are picked up by tomorrow's run.
-                    for (let attempt = 1; attempt <= CHAIN_DISPATCH_ATTEMPTS; attempt++) {
-                        const ac = new AbortController();
-                        const timer = setTimeout(() => ac.abort(), 10_000);
-                        try {
-                            await fetch(nextUrl.toString(), {
-                                headers: { authorization: auth }, signal: ac.signal,
-                            });
-                            return; // full response arrived before the abort
-                        } catch (err) {
-                            if (ac.signal.aborted) return; // dispatched, then aborted on purpose
-                            console.error(`[cron/newsletter-drip] chain dispatch attempt ${attempt} failed`, err);
-                            if (attempt < CHAIN_DISPATCH_ATTEMPTS) {
-                                await new Promise((r) => setTimeout(r, 2000 * attempt));
-                            }
-                        } finally {
-                            clearTimeout(timer);
-                        }
-                    }
-                    console.error('[cron/newsletter-drip] chain dispatch abandoned after retries', {
-                        cursor: summary.nextCursor, chain: chain + 1,
-                    });
-                })());
+            const today = etDateString();
+            const state = await getRunState();
+            let cursor: string | null;
+            let fresh = false;
+            if (force || state.run_day !== today) {
+                cursor = null; fresh = true;
+                await saveRunState(today, null, false);
+            } else if (state.run_done) {
+                return NextResponse.json({ ok: true, skipped: 'run_complete', day: today });
+            } else {
+                cursor = state.run_cursor;
             }
 
-            return NextResponse.json({ ok: true, dryRun, chain, settings, ...summary });
+            // Reconcile delivery status only when a day's run starts.
+            summary = await runDripPass({ cursor, runReconcile: fresh });
+            await saveRunState(today, summary.nextCursor, !summary.hasMore);
         } finally {
-            if (!dryRun) await releaseRunLock();
+            // Release BEFORE chaining so the next batch never sees our lock.
+            await releaseRunLock();
         }
     } catch (err) {
         console.error('[cron/newsletter-drip]', err);
         return NextResponse.json({ error: 'Drip failed' }, { status: 500 });
     }
+
+    // Chain the next batch after this invocation ends, so each batch gets a
+    // fresh function time budget. If dispatch fails, the 10-minute cron resumes
+    // from the persisted cursor.
+    if (summary.hasMore && chain < MAX_CHAIN_DEPTH) {
+        const nextUrl = new URL(req.nextUrl);
+        nextUrl.searchParams.delete('cursor');
+        nextUrl.searchParams.delete('force');
+        nextUrl.searchParams.set('chain', String(chain + 1));
+        const auth = req.headers.get('authorization') ?? '';
+        waitUntil((async () => {
+            for (let attempt = 1; attempt <= CHAIN_DISPATCH_ATTEMPTS; attempt++) {
+                const ac = new AbortController();
+                const timer = setTimeout(() => ac.abort(), 10_000);
+                try {
+                    await fetch(nextUrl.toString(), { headers: { authorization: auth }, signal: ac.signal });
+                    return; // full response arrived before the abort
+                } catch (err) {
+                    if (ac.signal.aborted) return; // dispatched, then aborted on purpose
+                    console.error(`[cron/newsletter-drip] chain dispatch attempt ${attempt} failed`, err);
+                    if (attempt < CHAIN_DISPATCH_ATTEMPTS) {
+                        await new Promise((r) => setTimeout(r, 2000 * attempt));
+                    }
+                } finally {
+                    clearTimeout(timer);
+                }
+            }
+            console.error('[cron/newsletter-drip] chain dispatch abandoned; cron will resume', {
+                cursor: summary.nextCursor, chain: chain + 1,
+            });
+        })());
+    }
+
+    return NextResponse.json({ ok: true, dryRun, chain, settings, ...summary });
 }

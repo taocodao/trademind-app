@@ -327,6 +327,31 @@ export async function releaseRunLock(): Promise<void> {
     await query(`UPDATE newsletter_settings SET lock_until = NULL WHERE id = 1`);
 }
 
+// ---------- persisted run state ----------
+
+/** Eastern calendar date, YYYY-MM-DD. */
+export function etDateString(d: Date = new Date()): string {
+    const p = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(d);
+    return p; // en-CA formats as YYYY-MM-DD
+}
+
+export interface RunState { run_day: string | null; run_cursor: string | null; run_done: boolean }
+
+export async function getRunState(): Promise<RunState> {
+    await ensureNewsletterTables();
+    const r = await query(`SELECT run_day, run_cursor, run_done FROM newsletter_settings WHERE id = 1`);
+    return (r.rows[0] as RunState) ?? { run_day: null, run_cursor: null, run_done: false };
+}
+
+export async function saveRunState(day: string, cursor: string | null, done: boolean): Promise<void> {
+    await query(
+        `UPDATE newsletter_settings SET run_day = $1, run_cursor = $2, run_done = $3 WHERE id = 1`,
+        [day, cursor, done]
+    );
+}
+
 // ---------- full list pass ----------
 
 /** Max addresses per invocation. Small batches (200, about a minute of

@@ -208,6 +208,10 @@ export async function ensureNewsletterTables(): Promise<void> {
         )
     `);
     await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS only_email TEXT`);
+    // Persisted position of the current daily run, so a stalled chain resumes.
+    await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS run_day TEXT`);
+    await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS run_cursor TEXT`);
+    await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS run_done BOOLEAN NOT NULL DEFAULT FALSE`);
     await query(`INSERT INTO newsletter_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING`);
 
     tablesReady = true;

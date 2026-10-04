@@ -817,7 +817,9 @@ export async function unsubscribeByToken(raw: string): Promise<'done' | 'already
     const sub = res.rows[0];
     if (!sub) return 'not-found';
     if (sub.status === 'unsubscribed') return 'already';
-    if (sub.status !== 'confirmed' && sub.status !== 'email_change_pending') return 'not-found';
+    // Bounced or complained addresses are already suppressed and receive nothing.
+    if (sub.status === 'bounced' || sub.status === 'complained') return 'already';
+    // confirmed, email_change_pending and pending (never confirmed) all honor an unsubscribe click.
     await query(
         `UPDATE newsletter_subscribers SET status = 'unsubscribed', unsubscribed_at = NOW(), updated_at = NOW()
          WHERE id = $1`,

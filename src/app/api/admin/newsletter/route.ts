@@ -242,8 +242,16 @@ export async function POST(req: NextRequest) {
                 // drip engine reads only kind='issue') so the delivery webhook
                 // can update its status and bounces become visible.
                 const { sendIssueEmailDetailed } = await import('@/lib/newsletter/issue-email');
+                // Use the preview address's own subscriber record when it has one, so the
+                // unsubscribe link in the preview works. Otherwise the placeholder id is
+                // used and that link will show the "could not match" page.
+                const own = await query(
+                    `SELECT id FROM newsletter_subscribers WHERE email = $1 LIMIT 1`,
+                    [previewTo.trim().toLowerCase()]
+                );
+                const previewSubId: number = own.rows[0]?.id ?? id;
                 const res = await sendIssueEmailDetailed(issue, {
-                    id, email: previewTo, referral_id: null,
+                    id: previewSubId, email: previewTo, referral_id: null,
                     discount_state: 'eligible', window_end: null,
                 });
                 if (!res.ok) {

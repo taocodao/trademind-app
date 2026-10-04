@@ -18,6 +18,12 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 // subdomain (its own DKIM identity) since 2026-09-26 (commit 042b8a4).
 const NEWSLETTER_FROM =
     process.env.NEWSLETTER_FROM ?? 'The AI Systematic Investor by TradeMind <newsletter@news.trademind.bot>';
+/** From header for one issue: optional per-issue display name, same sending address. */
+function fromFor(issue: NewsletterIssue): string {
+    const addr = NEWSLETTER_FROM.match(/<([^>]+)>/)?.[1] ?? NEWSLETTER_FROM.trim();
+    const name = (issue.senderName ?? '').replace(/["<>\r\n]/g, '').trim().slice(0, 80);
+    return name ? `"${name}" <${addr}>` : NEWSLETTER_FROM;
+}
 const NEWSLETTER_REPLY_TO = process.env.NEWSLETTER_REPLY_TO ?? 'support@trademind.bot';
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://trademind.bot';
 
@@ -231,7 +237,7 @@ export async function sendIssueEmailDetailed(
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                from: NEWSLETTER_FROM,
+                from: fromFor(issue),
                 reply_to: NEWSLETTER_REPLY_TO,
                 to: sub.email,
                 subject: rendered.subject,

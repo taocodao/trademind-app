@@ -36,6 +36,9 @@ export interface NewsletterIssue {
     emailSubject: string;
     /** Inbox preview snippet shown next to the subject in most clients. */
     previewText: string;
+    /** Optional sender display name for this issue. Omit to use the default
+     *  ("The AI Systematic Investor by TradeMind"). The address never changes. */
+    senderName?: string;
 }
 
 export const ISSUES: NewsletterIssue[] = [i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16].map((i) => ({

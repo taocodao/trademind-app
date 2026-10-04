@@ -902,7 +902,7 @@ const ALLOWED_EVENTS = new Set([
     'offer_block_clicked', 'checkout_started_with_eligibility', 'discount_applied',
     'discount_redeemed', 'discount_expired', 'discount_revoked', 'forwarded_subscribe_clicked',
     'unsubscribed', 'bounced', 'complained', 'sparkloop_conversion_reported',
-    'pending_expired', 'lifecycle_email_sent',
+    'pending_expired', 'lifecycle_email_sent', 'unsubscribe_feedback',
 ]);
 
 export async function recordNewsletterEvent(

@@ -208,6 +208,13 @@ export async function ensureNewsletterTables(): Promise<void> {
         )
     `);
     await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS only_email TEXT`);
+    // Sender display name used for each issue; drives the rotation.
+    await query(`
+        CREATE TABLE IF NOT EXISTS newsletter_issue_sender (
+            issue_number INT PRIMARY KEY,
+            sender_name  TEXT NOT NULL,
+            created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )`);
     // Persisted position of the current daily run, so a stalled chain resumes.
     await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS run_day TEXT`);
     await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS run_cursor TEXT`);

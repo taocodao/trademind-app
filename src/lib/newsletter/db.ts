@@ -364,6 +364,27 @@ export async function isSuppressed(email: string): Promise<boolean> {
     return res.rowCount! > 0;
 }
 
+/** Suppression reason for an address, or null when it is not suppressed. */
+async function suppressionReason(email: string): Promise<string | null> {
+    const res = await query(`SELECT reason FROM newsletter_suppression WHERE email = $1`, [email]);
+    return res.rows[0] ? String(res.rows[0].reason) : null;
+}
+
+/**
+ * A person who unsubscribed and then subscribed again (confirmed) is taken off
+ * the unsubscribed list. Only 'unsubscribed' entries are cleared: bounces,
+ * complaints and retired addresses stay suppressed, and imported leads never
+ * reach this path because it runs only on a subscriber's own confirmation.
+ */
+async function clearUnsubscribeSuppression(email: string, subscriberId: number): Promise<void> {
+    const del = await query(
+        `DELETE FROM newsletter_suppression WHERE email = $1 AND reason = 'unsubscribed' RETURNING email`,
+        [email]
+    );
+    await query(`UPDATE newsletter_subscribers SET unsubscribed_at = NULL WHERE id = $1`, [subscriberId]);
+    if ((del.rowCount ?? 0) > 0) await recordNewsletterEvent('resubscribed', {}, subscriberId);
+}
+
 /** Per-IP signup rate limit: max 5 per hour, counted from the event log. */
 export async function signupRateLimited(ip: string | null | undefined): Promise<boolean> {
     if (!ip) return false;
@@ -383,7 +404,10 @@ export async function signup(ctx: SignupContext & { rawEmail: string }): Promise
     if (!n.valid) return { kind: 'error', message: 'Enter a valid email address' };
     if (!ctx.consent) return { kind: 'error', message: 'Consent is required to subscribe' };
     if (n.disposable) return { kind: 'error', message: 'This email provider is not supported. Please use a permanent address.' };
-    if (await isSuppressed(n.email)) {
+    // Bounced, complained and retired addresses stay blocked. An address that
+    // simply unsubscribed may subscribe again (cleared when they confirm).
+    const supReason = await suppressionReason(n.email);
+    if (supReason && supReason !== 'unsubscribed') {
         return { kind: 'error', message: 'This address is not available for subscription' };
     }
 
@@ -405,8 +429,19 @@ export async function signup(ctx: SignupContext & { rawEmail: string }): Promise
         );
         if (prev.rows[0]) return { kind: 'moved-confirmed' };
     }
+    if (row && row.status === 'unsubscribed') {
+        // Re-subscribe: back to pending with fresh tokens; confirmation clears
+        // the unsubscribed entry.
+        await query(
+            `UPDATE newsletter_subscribers SET status = 'pending', consent = TRUE, updated_at = NOW() WHERE id = $1`,
+            [row.id]
+        );
+        const confirmToken = await issueToken(row.id, 'confirm', row.email);
+        const changeToken = await issueToken(row.id, 'change_email', row.email);
+        return { kind: 'resent', subscriberId: row.id, email: row.email, confirmToken, changeToken };
+    }
     if (row && row.status !== 'expired_pending') {
-        if (row.status === 'confirmed' || row.status === 'unsubscribed'
+        if (row.status === 'confirmed'
             || row.status === 'email_change_pending') {
             return { kind: 'already-confirmed' };
         }
@@ -485,6 +520,7 @@ export async function confirmInstantly(subscriberId: number): Promise<{
     const d = await query(
         `SELECT personal_code, window_end FROM newsletter_discounts WHERE subscriber_id = $1`, [sub.id]
     );
+    await clearUnsubscribeSuppression(sub.email, sub.id);
     await recordNewsletterEvent('subscription_confirmed', { mode: 'instant' }, sub.id);
     return { email: sub.email, windowEnd: d.rows[0]?.window_end ?? null, code: d.rows[0]?.personal_code ?? null };
 }
@@ -559,6 +595,7 @@ export async function confirmByToken(raw: string): Promise<ConfirmOutcome> {
         `SELECT personal_code, window_end FROM newsletter_discounts WHERE subscriber_id = $1`,
         [sub.id]
     );
+    await clearUnsubscribeSuppression(sub.email, sub.id);
     await recordNewsletterEvent('subscription_confirmed', { source: sub.source }, sub.id);
     return {
         outcome: 'confirmed', email: sub.email,
@@ -913,7 +950,7 @@ const ALLOWED_EVENTS = new Set([
     'offer_block_clicked', 'checkout_started_with_eligibility', 'discount_applied',
     'discount_redeemed', 'discount_expired', 'discount_revoked', 'forwarded_subscribe_clicked',
     'unsubscribed', 'bounced', 'complained', 'sparkloop_conversion_reported',
-    'pending_expired', 'lifecycle_email_sent', 'unsubscribe_feedback',
+    'pending_expired', 'lifecycle_email_sent', 'unsubscribe_feedback', 'resubscribed',
 ]);
 
 export async function recordNewsletterEvent(

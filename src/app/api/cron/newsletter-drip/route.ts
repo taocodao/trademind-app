@@ -18,6 +18,11 @@ const INVOCATION_BUDGET_MS = 240_000;
 /** Stop starting new batches when less than this remains. */
 const BATCH_HEADROOM_MS = 50_000;
 
+/** Spread mode: the cron fires every 2 minutes through the send window and each
+ *  invocation sends with random gaps for up to this long, then hands over. */
+const SPREAD_BUDGET_MS = 105_000;
+const SPREAD_INTERVAL_MS = 120_000;
+
 function mergeSummaries(a: RunSummary, b: RunSummary): RunSummary {
     const skipped = { ...a.skipped };
     for (const [k, v] of Object.entries(b.skipped)) skipped[k] = (skipped[k] ?? 0) + v;
@@ -113,9 +118,15 @@ export async function GET(req: NextRequest) {
             const t0 = Date.now();
             let first = true;
             summary = undefined as unknown as RunSummary;
+            const spread = settings.spread_mode;
+            const budget = spread ? SPREAD_BUDGET_MS : INVOCATION_BUDGET_MS;
+            const headroom = spread ? 8_000 : BATCH_HEADROOM_MS;
             for (;;) {
-                const remaining = INVOCATION_BUDGET_MS - (Date.now() - t0);
-                const part = await runDripPass({ cursor, runReconcile: fresh && first, deadlineMs: remaining });
+                const remaining = budget - (Date.now() - t0);
+                const part = await runDripPass({
+                    cursor, runReconcile: fresh && first, deadlineMs: remaining,
+                    dutyCycle: spread ? (SPREAD_BUDGET_MS / SPREAD_INTERVAL_MS) * 0.95 : undefined,
+                });
                 first = false;
                 summary = summary ? mergeSummaries(summary, part) : part;
                 const before = cursor;
@@ -125,7 +136,7 @@ export async function GET(req: NextRequest) {
                 if (!part.hasMore) break;
                 // A batch that moved nowhere would loop forever; stop and let the next fire retry.
                 if (cursor === before) { console.error('[cron/newsletter-drip] cursor did not advance', { cursor }); break; }
-                if (Date.now() - t0 > INVOCATION_BUDGET_MS - BATCH_HEADROOM_MS) break;
+                if (Date.now() - t0 > budget - headroom) break;
             }
         } finally {
             // Release BEFORE chaining so the next batch never sees our lock.
@@ -139,7 +150,8 @@ export async function GET(req: NextRequest) {
     // Chain the next batch after this invocation ends, so each batch gets a
     // fresh function time budget. If dispatch fails, the 10-minute cron resumes
     // from the persisted cursor.
-    if (summary.hasMore && chain < MAX_CHAIN_DEPTH) {
+    // Spread mode is driven by the 2 minute cron, so no immediate chaining.
+    if (summary.hasMore && !settings.spread_mode && chain < MAX_CHAIN_DEPTH) {
         const nextUrl = new URL(req.nextUrl);
         nextUrl.searchParams.delete('cursor');
         nextUrl.searchParams.delete('force');

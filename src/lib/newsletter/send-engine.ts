@@ -29,18 +29,20 @@ export interface NewsletterSettings {
     paused: boolean;
     /** Canary mode: when set, only this address is ever sent to. */
     only_email: string | null;
+    /** Spread the daily send across the whole window with random gaps. */
+    spread_mode: boolean;
 }
 
 export const DEFAULT_SETTINGS: NewsletterSettings = {
     cadence_days: 2, send_hour_start_et: 9, send_hour_end_et: 18,
-    accepted_grace_hours: 24, max_attempts: 5, pace_ms: 150, paused: true, only_email: null,
+    accepted_grace_hours: 24, max_attempts: 5, pace_ms: 150, paused: true, only_email: null, spread_mode: true,
 };
 
 export async function getSettings(): Promise<NewsletterSettings> {
     await ensureNewsletterTables();
     const r = await query(
         `SELECT cadence_days, send_hour_start_et, send_hour_end_et, accepted_grace_hours,
-                max_attempts, pace_ms, paused, only_email FROM newsletter_settings WHERE id = 1`
+                max_attempts, pace_ms, paused, only_email, spread_mode FROM newsletter_settings WHERE id = 1`
     );
     return { ...DEFAULT_SETTINGS, ...(r.rows[0] ?? {}) };
 }
@@ -60,6 +62,8 @@ export async function updateSettings(patch: Record<string, unknown>): Promise<Ne
             sets.push(`only_email = $${vals.length + 1}`); vals.push(v2);
         } else if (k === 'paused') {
             sets.push(`paused = $${vals.length + 1}`); vals.push(Boolean(v));
+        } else if (k === 'spread_mode') {
+            sets.push(`spread_mode = $${vals.length + 1}`); vals.push(Boolean(v));
         } else if (k in SETTING_BOUNDS) {
             const n = Number(v);
             const [lo, hi] = SETTING_BOUNDS[k];
@@ -78,6 +82,21 @@ export function hourET(now: Date = new Date()): number {
     return Number(new Intl.DateTimeFormat('en-US', {
         timeZone: 'America/New_York', hour: 'numeric', hour12: false,
     }).format(now)) % 24;
+}
+
+/** Seconds left in today's send window (America/New_York); negative once it has closed. */
+export function secondsUntilWindowEnd(s: NewsletterSettings, now: Date = new Date()): number {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/New_York', hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false,
+    }).formatToParts(now);
+    const g = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? 0) % 24;
+    const cur = g('hour') * 3600 + g('minute') * 60 + g('second');
+    return s.send_hour_end_et * 3600 - cur;
+}
+
+/** Random gap around a mean: uniform between 0.4x and 1.6x, never under 2 s. */
+export function randomGapMs(meanMs: number): number {
+    return Math.max(2000, Math.round(meanMs * (0.4 + Math.random() * 1.2)));
 }
 
 export function inSendWindow(s: NewsletterSettings, now: Date = new Date()): boolean {
@@ -413,7 +432,7 @@ export async function previewTodaysRun() {
     try { lastRun = sr.rows[0]?.run_summary ? JSON.parse(sr.rows[0].run_summary) : null; } catch { lastRun = null; }
     return {
         todayET: etDateString(), cadenceDays: s.cadence_days, windowStartET: s.send_hour_start_et,
-        directory: total.rows[0].n, eligible, notDue, sequenceComplete: complete, dueByIssue: issues, lastRun,
+        directory: total.rows[0].n, spreadMode: s.spread_mode, windowEndET: s.send_hour_end_et, eligible, notDue, sequenceComplete: complete, dueByIssue: issues, lastRun,
     };
 }
 
@@ -438,6 +457,8 @@ export interface RunSummary {
 export async function runDripPass(opts: {
     dryRun?: boolean; deadlineMs?: number; cursor?: string | null;
     batchSize?: number; runReconcile?: boolean;
+    /** Share of each cron interval this invocation can spend sending (spread mode). */
+    dutyCycle?: number;
 } = {}): Promise<RunSummary> {
     const s = await getSettings();
     const deadline = Date.now() + (opts.deadlineMs ?? 270_000);
@@ -469,17 +490,45 @@ export async function runDripPass(opts: {
     const hasBeyondBatch = rows.length > batchSize;
     const batch = hasBeyondBatch ? rows.slice(0, batchSize) : rows;
 
+    // Spread mode: aim to finish the remaining addresses by the end of the send
+    // window, with a random gap before each real send. The mean gap adapts to
+    // the addresses left and the time left, so the run always fits the window.
+    const spread = !opts.dryRun && s.spread_mode;
+    let meanGapMs = 0;
+    if (spread) {
+        const left = await query(
+            `SELECT COUNT(*)::int AS n FROM newsletter_directory
+             WHERE ($1::timestamptz IS NULL OR (created_at, email) > ($1::timestamptz, $2::text))`,
+            [curCreated, curEmail]
+        );
+        const remaining = Math.max(1, Number(left.rows[0]?.n ?? 1));
+        const secsLeft = Math.max(0, secondsUntilWindowEnd(s));
+        const duty = Math.min(1, Math.max(0.2, opts.dutyCycle ?? 0.8));
+        meanGapMs = Math.min(90_000, Math.max(2_000, Math.floor((secsLeft * duty * 1000) / remaining)));
+    }
+
     let lastSendAt = 0;
     for (const { email, created_at_txt } of batch) {
-        if (Date.now() > deadline) { summary.stoppedEarly = true; break; }
+        if (Date.now() > deadline - (spread ? 5_000 : 0)) { summary.stoppedEarly = true; break; }
+        if (spread && secondsUntilWindowEnd(s) <= 0) { summary.stoppedEarly = true; break; }
         summary.checked++;
 
-        // Pace only real sends: wait until pace_ms after the previous Resend call.
+        // Pace only real sends. Normal mode: fixed pace_ms. Spread mode: a random
+        // gap, never sleeping past this invocation's deadline.
         const out = await sendNextIssue(email, {
             settings: s, dryRun: opts.dryRun,
             beforeSend: async () => {
-                const gap = s.pace_ms - (Date.now() - lastSendAt);
-                if (lastSendAt > 0 && gap > 0) await sleep(gap);
+                if (spread) {
+                    if (lastSendAt > 0) {
+                        const want = randomGapMs(meanGapMs) - (Date.now() - lastSendAt);
+                        const room = deadline - 15_000 - Date.now();
+                        const wait = Math.min(want, room);
+                        if (wait > 0) await sleep(wait);
+                    }
+                } else {
+                    const gap = s.pace_ms - (Date.now() - lastSendAt);
+                    if (lastSendAt > 0 && gap > 0) await sleep(gap);
+                }
                 lastSendAt = Date.now();
             },
         });

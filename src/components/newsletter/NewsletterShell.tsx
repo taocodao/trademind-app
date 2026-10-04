@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import InstantSubscribe from './InstantSubscribe';
 
 /** Shared disclosure + footer block for every newsletter page. */
 export function NewsletterFooter() {
@@ -49,6 +50,7 @@ export function OfferBlock({ onClickPath }: { onClickPath?: string }) {
                 automatically.{' '}
                 <Link href="/newsletter/offer" className="tm-nl-link">Offer terms</Link>
             </p>
+            <InstantSubscribe variant="offer" source="offer-block" />
             <Link href={onClickPath ?? '/#pricing'} className="tm-nl-btn tm-nl-btn-primary">
                 Claim 30% off annual plan
             </Link>

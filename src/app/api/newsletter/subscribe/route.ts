@@ -43,8 +43,12 @@ export async function POST(req: NextRequest) {
         if (body.instant === true && 'subscriberId' in result) {
             const conf = await confirmInstantly(result.subscriberId);
             if (conf) {
-                void sendWelcomeEmail({ to: conf.email, code: conf.code ?? '', offerExpires: conf.windowEnd ?? '' })
-                    .then((ok) => logNewsletterSend({ email: conf.email, subscriberId: result.subscriberId, kind: 'welcome', ok }));
+                // Web page "subscribe with your own email" sends only the first issue
+                // (skipWelcome), nothing else.
+                if (body.skipWelcome !== true) {
+                    void sendWelcomeEmail({ to: conf.email, code: conf.code ?? '', offerExpires: conf.windowEnd ?? '' })
+                        .then((ok) => logNewsletterSend({ email: conf.email, subscriberId: result.subscriberId, kind: 'welcome', ok }));
+                }
                 // Issue 1 goes out right away through the shared send engine; the
                 // send history (not a pointer) decides what each address gets next.
                 const { sendNextIssue } = await import('@/lib/newsletter/send-engine');
@@ -62,9 +66,12 @@ export async function POST(req: NextRequest) {
                     console.error('[subscribe] first issue send failed', err);
                 }
             }
+            const returning = 'returning' in result && result.returning === true;
             return NextResponse.json({
-                ok: true, status: 'subscribed',
-                message: 'Subscribed. Check your inbox: the first issue is on its way.',
+                ok: true, status: 'subscribed', returning,
+                message: returning
+                    ? 'Welcome back. Issue 1 is on its way.'
+                    : 'Subscribed. Check your inbox: the first issue is on its way.',
             });
         }
         if (result.kind === 'moved-confirmed') {

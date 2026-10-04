@@ -316,7 +316,7 @@ export interface SignupContext {
 
 export type SignupOutcome =
     | { kind: 'pending-created'; subscriberId: number; email: string; confirmToken: string; changeToken: string }
-    | { kind: 'resent'; subscriberId: number; email: string; confirmToken: string; changeToken: string }
+    | { kind: 'resent'; subscriberId: number; email: string; confirmToken: string; changeToken: string; returning?: boolean }
     | { kind: 'already-confirmed'; message?: string }
     | { kind: 'moved-confirmed' }
     | { kind: 'error'; message: string };
@@ -492,7 +492,7 @@ export async function signup(ctx: SignupContext & { rawEmail: string }): Promise
         );
         const confirmToken = await issueToken(row.id, 'confirm', row.email);
         const changeToken = await issueToken(row.id, 'change_email', row.email);
-        return { kind: 'resent', subscriberId: row.id, email: row.email, confirmToken, changeToken };
+        return { kind: 'resent', subscriberId: row.id, email: row.email, confirmToken, changeToken, returning: true };
     }
     if (row && row.status !== 'expired_pending') {
         if (row.status === 'confirmed'

@@ -14,6 +14,7 @@ import {
 import NewsletterShare from '@/components/newsletter/NewsletterShare';
 import { NewsletterFooter, Breadcrumb, OfferBlock } from '@/components/newsletter/NewsletterShell';
 import { IssueCard } from '@/components/newsletter/IssueCard';
+import InstantSubscribe from '@/components/newsletter/InstantSubscribe';
 
 const BASE = 'https://trademind.bot';
 
@@ -97,6 +98,8 @@ export default async function IssuePage({ params }: { params: Promise<{ slug: st
                         { label: `Issue ${issue.number}` },
                     ]}
                 />
+
+                <InstantSubscribe variant="bar" source="issue-page-top" issueSlug={issue.slug} />
 
                 <p className="tm-nl-meta">
                     Issue {issue.number} · {issue.readTime}

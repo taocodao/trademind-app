@@ -155,14 +155,18 @@ export async function resolveAdmin(req?: NextRequest): Promise<AdminResolution> 
         }
         token = cookieStore.get('privy-token')?.value;
     } catch { /* cookies() unavailable in this context */ }
-    if (!token && req) {
+    // Cookie token first; when it is missing or stale (idle tab), use the
+    // fresh Bearer token the admin page sends.
+    let did = token ? await verifyTokenDid(token) : null;
+    if (!did && req) {
         const authHeader = req.headers.get('Authorization');
-        if (authHeader?.startsWith('Bearer ')) token = authHeader.slice(7);
+        if (authHeader?.startsWith('Bearer ')) {
+            token = authHeader.slice(7);
+            did = await verifyTokenDid(token);
+        }
     }
     if (!token) return { did: null, isAdmin: false, status: 401, error: 'Not signed in' };
-
-    const did = await verifyTokenDid(token);
-    if (!did) return { did: null, isAdmin: false, status: 401, error: 'Invalid session token' };
+    if (!did) return { did: null, isAdmin: false, status: 401, error: 'Session expired. Reload the page.' };
 
     // Full verification path when the server secret is configured.
     if (process.env.PRIVY_APP_SECRET) {

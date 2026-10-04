@@ -7,6 +7,7 @@
  */
 import { useEffect, useState } from 'react';
 import { ISSUES } from '@/lib/newsletter/issues';
+import { adminFetch } from '@/lib/admin-fetch';
 
 const MAX_ISSUE = ISSUES.length;
 
@@ -41,7 +42,7 @@ export default function NewsletterTools() {
     async function loadRunPreview() {
         setRunMsg('Loading...');
         try {
-            const res = await fetch('/api/admin/newsletter?preview-run=1');
+            const res = await adminFetch('/api/admin/newsletter?preview-run=1');
             const data = await res.json();
             if (!res.ok) { setRunMsg(data?.error ?? 'Failed'); return; }
             setRunPreview(data); setRunMsg(null);
@@ -53,7 +54,7 @@ export default function NewsletterTools() {
         if (!window.confirm(`Add ${addEmail.trim()} as a subscriber and send the first issue now?`)) return;
         setAddMsg('Working...');
         try {
-            const res = await fetch('/api/admin/newsletter', {
+            const res = await adminFetch('/api/admin/newsletter', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'add-subscriber', email: addEmail.trim() }),
             });
@@ -66,7 +67,7 @@ export default function NewsletterTools() {
     }
 
     useEffect(() => {
-        fetch('/api/admin/newsletter?aggregate=1')
+        adminFetch('/api/admin/newsletter?aggregate=1')
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => d && setStats(d))
             .catch(() => {});
@@ -77,7 +78,7 @@ export default function NewsletterTools() {
         setLookupError(null);
         setView(null);
         try {
-            const res = await fetch(`/api/admin/newsletter?email=${encodeURIComponent(lookupEmail)}`);
+            const res = await adminFetch(`/api/admin/newsletter?email=${encodeURIComponent(lookupEmail)}`);
             const data = await res.json();
             if (!res.ok) setLookupError(data?.error ?? 'Not found');
             else setView(data);
@@ -93,7 +94,7 @@ export default function NewsletterTools() {
         setBusy(true);
         setActionMsg(null);
         try {
-            const res = await fetch('/api/admin/newsletter', {
+            const res = await adminFetch('/api/admin/newsletter', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

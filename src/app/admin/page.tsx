@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import NewsletterTools from '@/components/admin/NewsletterTools';
+import { adminFetch, adminToken, setAdminTokenGetter } from '@/lib/admin-fetch';
 import { usePrivy, useLogin } from '@privy-io/react-auth';
 import {
     Upload,
@@ -108,7 +109,24 @@ export default function AdminPage() {
 /* ── Admin console: lead list import + database overview ─────────────────── */
 
 function AdminConsole({ email }: { email: string }) {
-    const { logout } = usePrivy();
+    const { logout, getAccessToken } = usePrivy();
+
+    // Keep a fresh Privy token available for admin API calls, and refresh it
+    // when the tab wakes up after sitting idle.
+    useEffect(() => {
+        setAdminTokenGetter(() => getAccessToken());
+        const wake = () => { if (document.visibilityState === 'visible') void getAccessToken().catch(() => {}); };
+        document.addEventListener('visibilitychange', wake);
+        window.addEventListener('focus', wake);
+        const iv = setInterval(() => void getAccessToken().catch(() => {}), 5 * 60 * 1000);
+        return () => {
+            setAdminTokenGetter(null);
+            document.removeEventListener('visibilitychange', wake);
+            window.removeEventListener('focus', wake);
+            clearInterval(iv);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Fixed 8 hour admin session. The server issues a signed cookie on the
     // first visit after sign-in; when the time is up we end the session so the
@@ -160,14 +178,14 @@ function AdminConsole({ email }: { email: string }) {
 
     const loadStats = useCallback(async () => {
         try {
-            const res = await fetch('/api/leads/import');
+            const res = await adminFetch('/api/leads/import');
             const data = await res.json();
             if (res.ok) {
                 setTotal(data.total);
                 setBatches(data.batches ?? []);
             } else if (res.status === 503) {
                 // Admin account id not pinned yet: show it for one-time setup.
-                const who = await fetch('/api/admin/whoami');
+                const who = await adminFetch('/api/admin/whoami');
                 const whoData = await who.json();
                 if (whoData.did) setNeedsProvisioning(whoData.did);
                 else setError(data?.error ?? 'Could not load stats');
@@ -199,6 +217,8 @@ function AdminConsole({ email }: { email: string }) {
 
             const xhr = new XMLHttpRequest();
             xhr.open('POST', '/api/leads/import');
+            const tok = await adminToken();
+            if (tok) xhr.setRequestHeader('Authorization', `Bearer ${tok}`);
             xhr.upload.onprogress = (e) => {
                 if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 90));
             };

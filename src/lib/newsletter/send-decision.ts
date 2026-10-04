@@ -2,8 +2,17 @@
 
 interface DecisionSettings { cadence_days: number; max_attempts: number }
 
-/** Hours of tolerance so an hourly run never slips a whole day. */
-export const DUE_TOLERANCE_HOURS = 3;
+/** Kept for compatibility; the due check now compares Eastern calendar days. */
+export const DUE_TOLERANCE_HOURS = 0;
+
+/** Days since epoch for the America/New_York calendar date of `d`. */
+export function etDayNumber(d: Date): number {
+    const p = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(d);
+    const g = (t: string) => Number(p.find((x) => x.type === t)?.value);
+    return Math.floor(Date.UTC(g('year'), g('month') - 1, g('day')) / 86400_000);
+}
 
 export type Decision =
     | { action: 'send'; issue: number; attempt: number }
@@ -30,9 +39,11 @@ export function decideNext(
     const issue = h.lastCompleted + 1;
     if (h.failedAttemptsNext >= s.max_attempts) return { action: 'wait', reason: 'max_attempts' };
     if (h.lastCompleted > 0 && h.lastCompletedAt) {
-        const dueAt = h.lastCompletedAt.getTime()
-            + s.cadence_days * 86400_000 - DUE_TOLERANCE_HOURS * 3600_000;
-        if (now.getTime() < dueAt) return { action: 'wait', reason: 'not_due' };
+        // Due on the Eastern calendar day cadence_days after the last send,
+        // regardless of the hour it went out. The daily run then sends it.
+        if (etDayNumber(now) - etDayNumber(h.lastCompletedAt) < s.cadence_days) {
+            return { action: 'wait', reason: 'not_due' };
+        }
     }
     return { action: 'send', issue, attempt: h.failedAttemptsNext + 1 };
 }

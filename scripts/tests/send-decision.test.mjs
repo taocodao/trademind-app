@@ -11,10 +11,12 @@ const hoursAgo = (n) => new Date(now.getTime() - n * 3600_000);
 assert.deepStrictEqual(decideNext(h({}), s, 8, now), { action: 'send', issue: 1, attempt: 1 });
 // mid sequence, 49h after last -> next issue
 assert.deepStrictEqual(decideNext(h({ lastCompleted: 1, lastCompletedAt: hoursAgo(49) }), s, 8, now), { action: 'send', issue: 2, attempt: 1 });
-// 46h after last (inside 3h tolerance) -> send
-assert.strictEqual(decideNext(h({ lastCompleted: 2, lastCompletedAt: hoursAgo(46) }), s, 8, now).action, 'send');
-// 40h after last -> not due
-assert.deepStrictEqual(decideNext(h({ lastCompleted: 2, lastCompletedAt: hoursAgo(40) }), s, 8, now), { action: 'wait', reason: 'not_due' });
+// sent 1:50 PM ET two days ago, daily run at 10 AM ET -> due (calendar days)
+assert.strictEqual(decideNext(h({ lastCompleted: 2, lastCompletedAt: new Date('2026-09-29T17:50:00Z') }), s, 8, now).action, 'send');
+// sent yesterday late evening ET -> not due yet
+assert.deepStrictEqual(decideNext(h({ lastCompleted: 2, lastCompletedAt: new Date('2026-10-01T01:30:00Z') }), s, 8, now), { action: 'wait', reason: 'not_due' });
+// sent yesterday -> not due
+assert.deepStrictEqual(decideNext(h({ lastCompleted: 2, lastCompletedAt: hoursAgo(20) }), s, 8, now), { action: 'wait', reason: 'not_due' });
 // in flight -> wait
 assert.deepStrictEqual(decideNext(h({ inFlight: true }), s, 8, now), { action: 'wait', reason: 'in_flight' });
 // final issue completed -> done

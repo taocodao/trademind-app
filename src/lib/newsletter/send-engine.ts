@@ -31,18 +31,26 @@ export interface NewsletterSettings {
     only_email: string | null;
     /** Spread the daily send across the whole window with random gaps. */
     spread_mode: boolean;
+    /** Hold the daily send for imported (purchased list) Gmail addresses. Opt-in signups still send. */
+    hold_gmail: boolean;
+}
+
+/** SQL fragment that removes held addresses. `col` is the column prefix, e.g. 'd.' or ''. */
+function heldClause(s: { hold_gmail: boolean }, col = ''): string {
+    if (!s.hold_gmail) return '';
+    return `AND NOT (${col}source = 'lead-import' AND ${col}email ~* '@(gmail|googlemail)\\.com$')`;
 }
 
 export const DEFAULT_SETTINGS: NewsletterSettings = {
     cadence_days: 2, send_hour_start_et: 9, send_hour_end_et: 18,
-    accepted_grace_hours: 24, max_attempts: 5, pace_ms: 150, paused: true, only_email: null, spread_mode: true,
+    accepted_grace_hours: 24, max_attempts: 5, pace_ms: 150, paused: true, only_email: null, spread_mode: true, hold_gmail: true,
 };
 
 export async function getSettings(): Promise<NewsletterSettings> {
     await ensureNewsletterTables();
     const r = await query(
         `SELECT cadence_days, send_hour_start_et, send_hour_end_et, accepted_grace_hours,
-                max_attempts, pace_ms, paused, only_email, spread_mode FROM newsletter_settings WHERE id = 1`
+                max_attempts, pace_ms, paused, only_email, spread_mode, hold_gmail FROM newsletter_settings WHERE id = 1`
     );
     return { ...DEFAULT_SETTINGS, ...(r.rows[0] ?? {}) };
 }
@@ -62,6 +70,8 @@ export async function updateSettings(patch: Record<string, unknown>): Promise<Ne
             sets.push(`only_email = $${vals.length + 1}`); vals.push(v2);
         } else if (k === 'paused') {
             sets.push(`paused = $${vals.length + 1}`); vals.push(Boolean(v));
+        } else if (k === 'hold_gmail') {
+            sets.push(`hold_gmail = $${vals.length + 1}`); vals.push(Boolean(v));
         } else if (k === 'spread_mode') {
             sets.push(`spread_mode = $${vals.length + 1}`); vals.push(Boolean(v));
         } else if (k in SETTING_BOUNDS) {
@@ -171,7 +181,7 @@ export async function sendNextIssue(email: string, opts: SendNextOptions = {}): 
 
     // Eligibility: directory row, active subscriber (or none), not suppressed.
     const el = await query(
-        `SELECT d.email, d.subscriber_id, d.first_name, s.status AS sub_status,
+        `SELECT d.email, d.source, d.subscriber_id, d.first_name, s.status AS sub_status,
                 EXISTS (SELECT 1 FROM newsletter_suppression sup WHERE sup.email = d.email) AS suppressed
          FROM newsletter_directory d
          LEFT JOIN newsletter_subscribers s ON s.id = d.subscriber_id
@@ -180,6 +190,11 @@ export async function sendNextIssue(email: string, opts: SendNextOptions = {}): 
     const row = el.rows[0];
     if (!row) return { result: 'skipped', reason: 'not_in_directory' };
     if (row.suppressed) return { result: 'skipped', reason: 'suppressed' };
+    // Gmail hold: the daily run skips imported Gmail addresses while Gmail files our mail as spam.
+    // Direct sends (admin add, instant signup, seeds) set bypassWindow and still go out.
+    if (s.hold_gmail && !opts.bypassWindow && row.source === 'lead-import' && /@(gmail|googlemail)\.com$/i.test(addr)) {
+        return { result: 'skipped', reason: 'gmail_hold' };
+    }
     // Every issue carries a per-subscriber unsubscribe link, which needs a subscriber record.
     if (!row.subscriber_id) return { result: 'skipped', reason: 'no_subscriber_record' };
     if (row.sub_status && !['confirmed', 'email_change_pending'].includes(row.sub_status)) {
@@ -400,6 +415,7 @@ export async function previewTodaysRun() {
              WHERE d.subscriber_id IS NOT NULL
                AND (sub.status IS NULL OR sub.status IN ('confirmed','email_change_pending'))
                AND NOT EXISTS (SELECT 1 FROM newsletter_suppression x WHERE x.email = d.email)
+               ${heldClause(s, 'd.')}
          ), last AS (
              SELECT DISTINCT ON (email) email, issue_number, created_at FROM newsletter_send_log
              WHERE kind = 'issue' AND ${COMPLETED_SQL(s.accepted_grace_hours)}
@@ -413,6 +429,10 @@ export async function previewTodaysRun() {
          FROM elig e LEFT JOIN last l USING (email) GROUP BY 1, 2`
     );
     const total = await query(`SELECT COUNT(*)::int AS n FROM newsletter_directory`);
+    const held = await query(
+        `SELECT COUNT(*)::int AS n FROM newsletter_directory
+         WHERE source = 'lead-import' AND email ~* '@(gmail|googlemail)\\.com$'`
+    );
     const perIssue: Record<number, number> = {};
     let notDue = 0, complete = 0, eligible = 0;
     for (const row of r.rows as { last_issue: number; days_since: number | null; n: number }[]) {
@@ -432,7 +452,7 @@ export async function previewTodaysRun() {
     try { lastRun = sr.rows[0]?.run_summary ? JSON.parse(sr.rows[0].run_summary) : null; } catch { lastRun = null; }
     return {
         todayET: etDateString(), cadenceDays: s.cadence_days, windowStartET: s.send_hour_start_et,
-        directory: total.rows[0].n, spreadMode: s.spread_mode, windowEndET: s.send_hour_end_et, eligible, notDue, sequenceComplete: complete, dueByIssue: issues, lastRun,
+        directory: total.rows[0].n, holdGmail: s.hold_gmail, heldGmail: s.hold_gmail ? held.rows[0].n : 0, spreadMode: s.spread_mode, windowEndET: s.send_hour_end_et, eligible, notDue, sequenceComplete: complete, dueByIssue: issues, lastRun,
     };
 }
 
@@ -498,7 +518,8 @@ export async function runDripPass(opts: {
     if (spread) {
         const left = await query(
             `SELECT COUNT(*)::int AS n FROM newsletter_directory
-             WHERE ($1::timestamptz IS NULL OR (created_at, email) > ($1::timestamptz, $2::text))`,
+             WHERE ($1::timestamptz IS NULL OR (created_at, email) > ($1::timestamptz, $2::text))
+             ${heldClause(s)}`,
             [curCreated, curEmail]
         );
         const remaining = Math.max(1, Number(left.rows[0]?.n ?? 1));

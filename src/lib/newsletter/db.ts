@@ -210,6 +210,7 @@ export async function ensureNewsletterTables(): Promise<void> {
     await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS only_email TEXT`);
     // Spread mode: sends are paced with random gaps across the send window.
     await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS spread_mode BOOLEAN NOT NULL DEFAULT TRUE`);
+    await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS hold_gmail BOOLEAN NOT NULL DEFAULT TRUE`);
     // Sender display name used for each issue; drives the rotation.
     await query(`
         CREATE TABLE IF NOT EXISTS newsletter_issue_sender (

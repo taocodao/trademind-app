@@ -32,7 +32,7 @@ export default function NewsletterTools() {
     const [addEmail, setAddEmail] = useState('');
     const [addMsg, setAddMsg] = useState<string | null>(null);
     const [runPreview, setRunPreview] = useState<{
-        todayET: string; cadenceDays: number; windowStartET: number; directory: number; eligible: number;
+        todayET: string; cadenceDays: number; windowStartET: number; directory: number; holdGmail?: boolean; heldGmail?: number; eligible: number;
         notDue: number; sequenceComplete: number;
         dueByIssue: { issue: number; recipients: number; senderName: string }[];
         lastRun: { day: string; sent: number; failed: number; checked: number; done: boolean; updatedAt: string; perIssue: Record<string, number> } | null;
@@ -262,6 +262,7 @@ export default function NewsletterTools() {
                     <div className="text-[11px] text-[#BCC6D8] space-y-1">
                         <p>Today (Eastern): {runPreview.todayET}. Cadence: every {runPreview.cadenceDays} days by date. Window starts {runPreview.windowStartET}:00 ET.</p>
                         <p>{runPreview.eligible} eligible of {runPreview.directory} in the directory. Not due yet: {runPreview.notDue}. Sequence complete: {runPreview.sequenceComplete}.</p>
+                        {runPreview.holdGmail && <p>Gmail hold is on: {runPreview.heldGmail ?? 0} imported Gmail addresses are skipped by the daily run. Opt-in signups still send.</p>}
                         {runPreview.dueByIssue.length === 0 && <p>Nothing is due right now.</p>}
                         {runPreview.dueByIssue.map((d) => (
                             <p key={d.issue}>Issue {d.issue}: {d.recipients} recipients. Display name: {d.senderName}.</p>

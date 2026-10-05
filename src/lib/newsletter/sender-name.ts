@@ -45,6 +45,9 @@ function pickRandomExcluding(prev: string): string {
 
 /** persist=true on real sends records the choice; persist=false (previews) does not. */
 export async function senderNameForIssue(issueNumber: number, defaultName: string, persist: boolean): Promise<string> {
+    // Gmail's sender guidelines ask for a display name that consistently identifies the sender,
+    // so rotation is off unless SENDER_ROTATION=on is set in the environment.
+    if (process.env.SENDER_ROTATION !== 'on') return defaultName;
     try {
         const hit = cache.get(issueNumber);
         if (hit && Date.now() - hit.at < CACHE_MS) return hit.name;
@@ -75,6 +78,7 @@ export async function senderNameForIssue(issueNumber: number, defaultName: strin
 
 /** Human description for the admin run preview, without picking anything. */
 export async function describeSenderName(issueNumber: number, defaultName: string): Promise<string> {
+    if (process.env.SENDER_ROTATION !== 'on') return `${defaultName} (fixed)`;
     try {
         const known = await loadKnown(defaultName);
         const existing = known.get(issueNumber);

@@ -35,6 +35,11 @@ export async function GET(req: NextRequest) {
 
     const sp = req.nextUrl.searchParams;
 
+    if (sp.get('seeds')) {
+        const { seedReport } = await import('@/lib/newsletter/seed-monitor');
+        return NextResponse.json(await seedReport());
+    }
+
     if (sp.get('preview-run')) {
         const { previewTodaysRun } = await import('@/lib/newsletter/send-engine');
         return NextResponse.json(await previewTodaysRun());
@@ -180,6 +185,34 @@ export async function POST(req: NextRequest) {
             } catch (e) {
                 return NextResponse.json({ error: (e as Error).message }, { status: 400 });
             }
+        }
+
+        if (action === 'add-seed') {
+            const { addSeed } = await import('@/lib/newsletter/seed-monitor');
+            const provider = ['gmail', 'yahoo', 'icloud', 'other'].includes(String(body.provider)) ? String(body.provider) : 'gmail';
+            const saved = await addSeed(
+                String(body.email ?? ''), String(body.appPassword ?? ''),
+                provider as 'gmail' | 'yahoo' | 'icloud' | 'other', body.host ? String(body.host) : undefined
+            );
+            if (!saved.ok) return NextResponse.json({ error: saved.error }, { status: 400 });
+            // A seed is a normal subscriber: add it and send issue 1 now so the first probe starts at once.
+            const { adminAddSubscriber } = await import('@/lib/newsletter/db');
+            const added = await adminAddSubscriber(String(body.email ?? ''), null);
+            if (!added.ok) return NextResponse.json({ ok: true, seed: true, subscriber: added.error });
+            const { sendNextIssue } = await import('@/lib/newsletter/send-engine');
+            const out = await sendNextIssue(added.email, { bypassWindow: true });
+            return NextResponse.json({ ok: true, seed: true, send: out });
+        }
+
+        if (action === 'remove-seed') {
+            const { removeSeed } = await import('@/lib/newsletter/seed-monitor');
+            await removeSeed(String(body.email ?? ''));
+            return NextResponse.json({ ok: true });
+        }
+
+        if (action === 'check-seeds') {
+            const { runSeedChecks } = await import('@/lib/newsletter/seed-monitor');
+            return NextResponse.json({ ok: true, ...(await runSeedChecks(body.email ? String(body.email) : undefined)) });
         }
 
         if (action === 'add-subscriber') {

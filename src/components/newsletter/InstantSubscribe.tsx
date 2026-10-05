@@ -94,7 +94,7 @@ export default function InstantSubscribe({ variant, source, issueSlug }: Props) 
                 ) : (
                     <>
                         <strong>You are subscribed.</strong> Issue 1 is on its way to {done.email}.
-                        Check your inbox in a minute. Future issues arrive every two days.
+                        Check your inbox in a minute. If you do not see it, check Spam or Promotions and mark it Not spam. Future issues arrive every two days.
                     </>
                 )}
             </div>

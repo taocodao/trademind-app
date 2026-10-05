@@ -206,10 +206,10 @@ export async function renderIssueEmail(
 const RISK_DISCLAIMER = RISK_DISCLOSURE;
 
 /** Send one issue to one subscriber. The per-subscriber unsubscribe link lives in the
- *  email footer only (Eric's call, 2026-09-26): no List-Unsubscribe header, which means
- *  Gmail and Yahoo will not render their own one-click unsubscribe button at the top of
- *  the message. If spam complaints ever climb, restoring these two headers is the first
- *  lever to pull. */
+ *  email footer and, since 2026-10-04, in the RFC 8058 List-Unsubscribe and
+ *  List-Unsubscribe-Post headers. Gmail then shows its own one-click unsubscribe control,
+ *  which is part of its bulk sender requirements. The header URL posts to
+ *  /api/newsletter/unsubscribe with the same per-subscriber token. */
 export interface IssueSendResult {
     ok: boolean;
     resendId: string | null;
@@ -248,6 +248,10 @@ export async function sendIssueEmailDetailed(
                 subject: rendered.subject,
                 html: rendered.html,
                 text: rendered.text,
+                headers: {
+                    'List-Unsubscribe': `<${rendered.unsubscribeUrl.replace('/newsletter/unsubscribe?', '/api/newsletter/unsubscribe?')}>`,
+                    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+                },
             }),
         });
         if (response.ok) {

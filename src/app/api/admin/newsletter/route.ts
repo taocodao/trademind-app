@@ -196,8 +196,16 @@ export async function POST(req: NextRequest) {
             );
             if (!saved.ok) return NextResponse.json({ error: saved.error }, { status: 400 });
             // A seed is a normal subscriber: add it and send issue 1 now so the first probe starts at once.
-            const { adminAddSubscriber } = await import('@/lib/newsletter/db');
-            const added = await adminAddSubscriber(String(body.email ?? ''), null);
+            const { adminAddSubscriber, confirmInstantly } = await import('@/lib/newsletter/db');
+            let added = await adminAddSubscriber(String(body.email ?? ''), null);
+            // We own the seed mailbox, so a signup left pending by an earlier test is confirmed here.
+            if (!added.ok && /status pending/.test(added.error)) {
+                const pend = await query(`SELECT id FROM newsletter_subscribers WHERE email = $1`, [String(body.email ?? '').trim().toLowerCase()]);
+                if (pend.rows[0]) {
+                    await confirmInstantly(pend.rows[0].id as number);
+                    added = await adminAddSubscriber(String(body.email ?? ''), null);
+                }
+            }
             if (!added.ok) return NextResponse.json({ ok: true, seed: true, subscriber: added.error });
             const { sendNextIssue } = await import('@/lib/newsletter/send-engine');
             const out = await sendNextIssue(added.email, { bypassWindow: true });

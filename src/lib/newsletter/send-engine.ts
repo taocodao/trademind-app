@@ -33,6 +33,8 @@ export interface NewsletterSettings {
     spread_mode: boolean;
     /** From header override (for example a test domain). Null uses NEWSLETTER_FROM. */
     sender_from: string | null;
+    /** Let a test sender domain also mail the imported list (owner decision). */
+    include_imported: boolean;
     /** Each run picks 1 to 3 random days until the next run. */
     random_cadence: boolean;
     /** Hours one run spreads its sends over. */
@@ -40,14 +42,15 @@ export interface NewsletterSettings {
 }
 
 /** Imported (purchased list) rows never go out from a test sender domain. */
-export function excludesImported(s: { sender_from: string | null }): boolean {
+export function excludesImported(s: { sender_from: string | null; include_imported?: boolean }): boolean {
+    if (s.include_imported) return false;
     return !!s.sender_from && !/@news\.trademind\.bot|@trademind\.bot/i.test(s.sender_from);
 }
 
 export const DEFAULT_SETTINGS: NewsletterSettings = {
     cadence_days: 2, send_hour_start_et: 9, send_hour_end_et: 18,
     accepted_grace_hours: 24, max_attempts: 5, pace_ms: 150, paused: true, only_email: null, spread_mode: true,
-    sender_from: null, random_cadence: false, run_hours: 24,
+    sender_from: null, include_imported: false, random_cadence: false, run_hours: 24,
 };
 
 export async function getSettings(): Promise<NewsletterSettings> {
@@ -55,7 +58,7 @@ export async function getSettings(): Promise<NewsletterSettings> {
     const r = await query(
         `SELECT cadence_days, send_hour_start_et, send_hour_end_et, accepted_grace_hours,
                 max_attempts, pace_ms, paused, only_email, spread_mode,
-                sender_from, random_cadence, run_hours FROM newsletter_settings WHERE id = 1`
+                sender_from, include_imported, random_cadence, run_hours FROM newsletter_settings WHERE id = 1`
     );
     return { ...DEFAULT_SETTINGS, ...(r.rows[0] ?? {}) };
 }
@@ -77,6 +80,8 @@ export async function updateSettings(patch: Record<string, unknown>): Promise<Ne
             sets.push(`paused = $${vals.length + 1}`); vals.push(Boolean(v));
         } else if (k === 'random_cadence') {
             sets.push(`random_cadence = $${vals.length + 1}`); vals.push(Boolean(v));
+        } else if (k === 'include_imported') {
+            sets.push(`include_imported = $${vals.length + 1}`); vals.push(Boolean(v));
         } else if (k === 'sender_from') {
             const v2 = v == null || v === '' ? null : String(v).trim().slice(0, 200);
             sets.push(`sender_from = $${vals.length + 1}`); vals.push(v2);

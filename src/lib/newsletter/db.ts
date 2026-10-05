@@ -225,6 +225,7 @@ export async function ensureNewsletterTables(): Promise<void> {
     // Random-cadence run scheduling (Oct 2026): each run starts at run_started_at and spreads its
     // sends over run_hours; the next run starts next_run_at (1-3 random days later).
     await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS sender_from TEXT`);
+    await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS include_imported BOOLEAN NOT NULL DEFAULT FALSE`);
     await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS random_cadence BOOLEAN NOT NULL DEFAULT FALSE`);
     await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS run_hours INT NOT NULL DEFAULT 24`);
     await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS run_started_at TIMESTAMPTZ`);

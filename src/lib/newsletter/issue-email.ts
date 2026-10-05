@@ -22,11 +22,25 @@ const NEWSLETTER_FROM =
 export const DEFAULT_SENDER_NAME = NEWSLETTER_FROM.replace(/\s*<[^>]*>\s*$/, '').trim() || 'The AI Systematic Investor by TradeMind';
 
 /** From header for one issue: explicit issue.senderName, else the history-driven rotation. */
+let fromCache: { v: string | null; at: number } | null = null;
+/** Sender override from newsletter_settings.sender_from (for example a test domain), cached 30 s. */
+async function senderFromSetting(): Promise<string | null> {
+    if (fromCache && Date.now() - fromCache.at < 30_000) return fromCache.v;
+    try {
+        const r = await query(`SELECT sender_from FROM newsletter_settings WHERE id = 1`);
+        const v = (r.rows[0]?.sender_from as string | null) ?? null;
+        fromCache = { v, at: Date.now() };
+        return v;
+    } catch { return null; }
+}
+
 async function fromFor(issue: NewsletterIssue, persist: boolean): Promise<string> {
-    const addr = NEWSLETTER_FROM.match(/<([^>]+)>/)?.[1] ?? NEWSLETTER_FROM.trim();
-    const raw = issue.senderName ?? await senderNameForIssue(issue.number, DEFAULT_SENDER_NAME, persist);
+    const base = (await senderFromSetting()) ?? NEWSLETTER_FROM;
+    const addr = base.match(/<([^>]+)>/)?.[1] ?? base.trim();
+    const defaultName = base.replace(/\s*<[^>]*>\s*$/, '').trim() || DEFAULT_SENDER_NAME;
+    const raw = issue.senderName ?? await senderNameForIssue(issue.number, defaultName, persist);
     const name = raw.replace(/["<>\r\n]/g, '').trim().slice(0, 80);
-    return name ? `"${name}" <${addr}>` : NEWSLETTER_FROM;
+    return name ? `"${name}" <${addr}>` : base;
 }
 const NEWSLETTER_REPLY_TO = process.env.NEWSLETTER_REPLY_TO ?? 'support@trademind.bot';
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://trademind.bot';

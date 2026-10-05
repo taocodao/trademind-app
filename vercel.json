@@ -30,7 +30,7 @@
     },
     {
       "path": "/api/cron/newsletter-drip",
-      "schedule": "*/2 14-23 * * *"
+      "schedule": "*/2 * * * *"
     }
   ]
 }

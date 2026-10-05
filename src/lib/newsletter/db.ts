@@ -222,6 +222,15 @@ export async function ensureNewsletterTables(): Promise<void> {
     await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS run_cursor TEXT`);
     await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS run_done BOOLEAN NOT NULL DEFAULT FALSE`);
     await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS run_summary TEXT`);
+    // Random-cadence run scheduling (Oct 2026): each run starts at run_started_at and spreads its
+    // sends over run_hours; the next run starts next_run_at (1-3 random days later).
+    await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS sender_from TEXT`);
+    await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS random_cadence BOOLEAN NOT NULL DEFAULT FALSE`);
+    await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS run_hours INT NOT NULL DEFAULT 24`);
+    await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS run_started_at TIMESTAMPTZ`);
+    await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS next_run_at TIMESTAMPTZ`);
+    await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS next_send_at TIMESTAMPTZ`);
+    await query(`ALTER TABLE newsletter_settings ADD COLUMN IF NOT EXISTS run_mean_gap_ms BIGINT`);
     await query(`INSERT INTO newsletter_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING`);
 
     tablesReady = true;

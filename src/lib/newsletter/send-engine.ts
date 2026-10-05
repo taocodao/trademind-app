@@ -31,25 +31,38 @@ export interface NewsletterSettings {
     only_email: string | null;
     /** Spread the daily send across the whole window with random gaps. */
     spread_mode: boolean;
+    /** From header override (for example a test domain). Null uses NEWSLETTER_FROM. */
+    sender_from: string | null;
+    /** Each run picks 1 to 3 random days until the next run. */
+    random_cadence: boolean;
+    /** Hours one run spreads its sends over. */
+    run_hours: number;
+}
+
+/** Imported (purchased list) rows never go out from a test sender domain. */
+export function excludesImported(s: { sender_from: string | null }): boolean {
+    return !!s.sender_from && !/@news\.trademind\.bot|@trademind\.bot/i.test(s.sender_from);
 }
 
 export const DEFAULT_SETTINGS: NewsletterSettings = {
     cadence_days: 2, send_hour_start_et: 9, send_hour_end_et: 18,
     accepted_grace_hours: 24, max_attempts: 5, pace_ms: 150, paused: true, only_email: null, spread_mode: true,
+    sender_from: null, random_cadence: false, run_hours: 24,
 };
 
 export async function getSettings(): Promise<NewsletterSettings> {
     await ensureNewsletterTables();
     const r = await query(
         `SELECT cadence_days, send_hour_start_et, send_hour_end_et, accepted_grace_hours,
-                max_attempts, pace_ms, paused, only_email, spread_mode FROM newsletter_settings WHERE id = 1`
+                max_attempts, pace_ms, paused, only_email, spread_mode,
+                sender_from, random_cadence, run_hours FROM newsletter_settings WHERE id = 1`
     );
     return { ...DEFAULT_SETTINGS, ...(r.rows[0] ?? {}) };
 }
 
 const SETTING_BOUNDS: Record<string, [number, number]> = {
     cadence_days: [1, 30], send_hour_start_et: [0, 23], send_hour_end_et: [1, 24],
-    accepted_grace_hours: [1, 168], max_attempts: [1, 20], pace_ms: [100, 5000],
+    accepted_grace_hours: [1, 168], max_attempts: [1, 20], pace_ms: [100, 5000], run_hours: [1, 48],
 };
 
 export async function updateSettings(patch: Record<string, unknown>): Promise<NewsletterSettings> {
@@ -62,6 +75,11 @@ export async function updateSettings(patch: Record<string, unknown>): Promise<Ne
             sets.push(`only_email = $${vals.length + 1}`); vals.push(v2);
         } else if (k === 'paused') {
             sets.push(`paused = $${vals.length + 1}`); vals.push(Boolean(v));
+        } else if (k === 'random_cadence') {
+            sets.push(`random_cadence = $${vals.length + 1}`); vals.push(Boolean(v));
+        } else if (k === 'sender_from') {
+            const v2 = v == null || v === '' ? null : String(v).trim().slice(0, 200);
+            sets.push(`sender_from = $${vals.length + 1}`); vals.push(v2);
         } else if (k === 'spread_mode') {
             sets.push(`spread_mode = $${vals.length + 1}`); vals.push(Boolean(v));
         } else if (k in SETTING_BOUNDS) {
@@ -180,6 +198,8 @@ export async function sendNextIssue(email: string, opts: SendNextOptions = {}): 
     const row = el.rows[0];
     if (!row) return { result: 'skipped', reason: 'not_in_directory' };
     if (row.suppressed) return { result: 'skipped', reason: 'suppressed' };
+    // A test sender domain never mails the imported (purchased) list.
+    if (excludesImported(s) && row.source === 'lead-import') return { result: 'skipped', reason: 'imported_excluded' };
     // Every issue carries a per-subscriber unsubscribe link, which needs a subscriber record.
     if (!row.subscriber_id) return { result: 'skipped', reason: 'no_subscriber_record' };
     if (row.sub_status && !['confirmed', 'email_change_pending'].includes(row.sub_status)) {
@@ -357,12 +377,25 @@ export function etDateString(d: Date = new Date()): string {
     return p; // en-CA formats as YYYY-MM-DD
 }
 
-export interface RunState { run_day: string | null; run_cursor: string | null; run_done: boolean }
+export interface RunState {
+    run_day: string | null; run_cursor: string | null; run_done: boolean;
+    run_started_at: Date | null; next_run_at: Date | null; next_send_at: Date | null; run_mean_gap_ms: number | null;
+}
 
 export async function getRunState(): Promise<RunState> {
     await ensureNewsletterTables();
-    const r = await query(`SELECT run_day, run_cursor, run_done FROM newsletter_settings WHERE id = 1`);
-    return (r.rows[0] as RunState) ?? { run_day: null, run_cursor: null, run_done: false };
+    const r = await query(
+        `SELECT run_day, run_cursor, run_done, run_started_at, next_run_at, next_send_at, run_mean_gap_ms
+         FROM newsletter_settings WHERE id = 1`
+    );
+    const x = r.rows[0] ?? {};
+    return {
+        run_day: x.run_day ?? null, run_cursor: x.run_cursor ?? null, run_done: Boolean(x.run_done),
+        run_started_at: x.run_started_at ? new Date(x.run_started_at) : null,
+        next_run_at: x.next_run_at ? new Date(x.next_run_at) : null,
+        next_send_at: x.next_send_at ? new Date(x.next_send_at) : null,
+        run_mean_gap_ms: x.run_mean_gap_ms != null ? Number(x.run_mean_gap_ms) : null,
+    };
 }
 
 export async function saveRunState(day: string, cursor: string | null, done: boolean): Promise<void> {
@@ -370,6 +403,50 @@ export async function saveRunState(day: string, cursor: string | null, done: boo
         `UPDATE newsletter_settings SET run_day = $1, run_cursor = $2, run_done = $3 WHERE id = 1`,
         [day, cursor, done]
     );
+}
+
+/** Addresses that would get an issue if a run started now with the given cadence. */
+export async function countDueNow(s: NewsletterSettings, cadenceDays: number): Promise<number> {
+    const r = await query(
+        `WITH elig AS (
+             SELECT d.email FROM newsletter_directory d
+             LEFT JOIN newsletter_subscribers sub ON sub.id = d.subscriber_id
+             WHERE d.subscriber_id IS NOT NULL
+               AND (sub.status IS NULL OR sub.status IN ('confirmed','email_change_pending'))
+               AND NOT EXISTS (SELECT 1 FROM newsletter_suppression x WHERE x.email = d.email)
+               ${excludesImported(s) ? "AND d.source <> 'lead-import'" : ''}
+         ), last AS (
+             SELECT DISTINCT ON (email) email, issue_number, created_at FROM newsletter_send_log
+             WHERE kind = 'issue' AND ${COMPLETED_SQL(s.accepted_grace_hours)}
+             ORDER BY email, issue_number DESC
+         )
+         SELECT COUNT(*)::int AS n FROM elig e LEFT JOIN last l USING (email)
+         WHERE COALESCE(l.issue_number, 0) < $1
+           AND (l.issue_number IS NULL
+                OR ((NOW() AT TIME ZONE 'America/New_York')::date - (l.created_at AT TIME ZONE 'America/New_York')::date) >= $2)`,
+        [ISSUES.length, cadenceDays]
+    );
+    return Number(r.rows[0]?.n ?? 0);
+}
+
+/** Begin a new run: roll the cadence (1 to 3 random days when enabled), size the random gap
+ *  so the due addresses spread across run_hours, and schedule the next run. */
+export async function startRun(s: NewsletterSettings, day: string): Promise<{ cadenceDays: number; due: number; meanGapMs: number }> {
+    const cadenceDays = s.random_cadence ? 1 + Math.floor(Math.random() * 3) : s.cadence_days;
+    // Runs are cadenceDays apart, so every address is due when its run starts.
+    const dueCadence = s.random_cadence ? 1 : s.cadence_days;
+    const due = await countDueNow(s, dueCadence);
+    const meanGapMs = Math.max(2000, Math.floor((s.run_hours * 3600_000 * 0.97) / Math.max(1, due)));
+    await query(
+        `UPDATE newsletter_settings SET
+            run_day = $1, run_cursor = NULL, run_done = FALSE,
+            run_started_at = NOW(), next_run_at = NOW() + ($2 || ' days')::interval,
+            next_send_at = NOW(), run_mean_gap_ms = $3
+            ${s.random_cadence ? ', cadence_days = 1' : ''}
+         WHERE id = 1`,
+        [day, String(cadenceDays), meanGapMs]
+    );
+    return { cadenceDays, due, meanGapMs };
 }
 
 /** Accumulate this invocation's totals into the day's run summary (admin visibility). */
@@ -400,6 +477,7 @@ export async function previewTodaysRun() {
              WHERE d.subscriber_id IS NOT NULL
                AND (sub.status IS NULL OR sub.status IN ('confirmed','email_change_pending'))
                AND NOT EXISTS (SELECT 1 FROM newsletter_suppression x WHERE x.email = d.email)
+               ${excludesImported(s) ? "AND d.source <> 'lead-import'" : ''}
          ), last AS (
              SELECT DISTINCT ON (email) email, issue_number, created_at FROM newsletter_send_log
              WHERE kind = 'issue' AND ${COMPLETED_SQL(s.accepted_grace_hours)}
@@ -490,53 +568,56 @@ export async function runDripPass(opts: {
     const hasBeyondBatch = rows.length > batchSize;
     const batch = hasBeyondBatch ? rows.slice(0, batchSize) : rows;
 
-    // Spread mode: aim to finish the remaining addresses by the end of the send
-    // window, with a random gap before each real send. The mean gap adapts to
-    // the addresses left and the time left, so the run always fits the window.
+    // Spread mode: the run's mean gap is fixed at run start (run_hours spread over the due
+    // addresses). Every real send waits for the persisted next_send_at, then draws a new random
+    // gap. A gap longer than this invocation's budget ends the invocation; the next cron tick resumes.
     const spread = !opts.dryRun && s.spread_mode;
-    let meanGapMs = 0;
-    if (spread) {
-        const left = await query(
-            `SELECT COUNT(*)::int AS n FROM newsletter_directory
-             WHERE ($1::timestamptz IS NULL OR (created_at, email) > ($1::timestamptz, $2::text))`,
-            [curCreated, curEmail]
-        );
-        const remaining = Math.max(1, Number(left.rows[0]?.n ?? 1));
-        const secsLeft = Math.max(0, secondsUntilWindowEnd(s));
-        const duty = Math.min(1, Math.max(0.2, opts.dutyCycle ?? 0.8));
-        meanGapMs = Math.min(90_000, Math.max(2_000, Math.floor((secsLeft * duty * 1000) / remaining)));
-    }
+    const pace = spread ? await getRunState() : null;
+    let nextSendAt = pace?.next_send_at ? pace.next_send_at.getTime() : 0;
+    const meanGapMs = pace?.run_mean_gap_ms ?? 60_000;
 
     let lastSendAt = 0;
     for (const { email, created_at_txt } of batch) {
         if (Date.now() > deadline - (spread ? 5_000 : 0)) { summary.stoppedEarly = true; break; }
-        if (spread && secondsUntilWindowEnd(s) <= 0) { summary.stoppedEarly = true; break; }
+
+        if (spread) {
+            // Only addresses that will really send are paced.
+            const probe = await sendNextIssue(email, { settings: s, dryRun: true });
+            const probeReason = probe.result === 'skipped' ? probe.reason : 'unexpected';
+            if (!probeReason.startsWith('dry_run_would_send')) {
+                summary.checked++;
+                summary.skipped[probeReason] = (summary.skipped[probeReason] ?? 0) + 1;
+                summary.nextCursor = `${created_at_txt}|${email}`;
+                continue;
+            }
+            const wait = nextSendAt - Date.now();
+            const room = deadline - 10_000 - Date.now();
+            if (wait > room) { summary.stoppedEarly = true; break; }
+            if (wait > 0) await sleep(wait);
+        }
         summary.checked++;
 
-        // Pace only real sends. Normal mode: fixed pace_ms. Spread mode: a random
-        // gap, never sleeping past this invocation's deadline.
+        // Normal mode: fixed pace_ms between real sends.
         const out = await sendNextIssue(email, {
             settings: s, dryRun: opts.dryRun,
             beforeSend: async () => {
-                if (spread) {
-                    if (lastSendAt > 0) {
-                        const want = randomGapMs(meanGapMs) - (Date.now() - lastSendAt);
-                        const room = deadline - 15_000 - Date.now();
-                        const wait = Math.min(want, room);
-                        if (wait > 0) await sleep(wait);
-                    }
-                } else {
+                if (!spread) {
                     const gap = s.pace_ms - (Date.now() - lastSendAt);
                     if (lastSendAt > 0 && gap > 0) await sleep(gap);
                 }
                 lastSendAt = Date.now();
             },
         });
-        if (out.result === 'sent') {
-            summary.sent++; lastSendAt = Date.now();
-            summary.perIssue[String(out.issue)] = (summary.perIssue[String(out.issue)] ?? 0) + 1;
-        } else if (out.result === 'failed') {
-            summary.failed++; lastSendAt = Date.now();
+        if (out.result === 'sent' || out.result === 'failed') {
+            if (out.result === 'sent') {
+                summary.sent++;
+                summary.perIssue[String(out.issue)] = (summary.perIssue[String(out.issue)] ?? 0) + 1;
+            } else summary.failed++;
+            lastSendAt = Date.now();
+            if (spread) {
+                nextSendAt = Date.now() + randomGapMs(meanGapMs);
+                await query(`UPDATE newsletter_settings SET next_send_at = $1 WHERE id = 1`, [new Date(nextSendAt).toISOString()]);
+            }
         } else {
             summary.skipped[out.reason] = (summary.skipped[out.reason] ?? 0) + 1;
             if (opts.dryRun && out.decision?.action === 'send') {

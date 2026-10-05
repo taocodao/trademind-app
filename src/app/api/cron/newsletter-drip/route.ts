@@ -3,7 +3,7 @@ import { waitUntil } from '@vercel/functions';
 import { ensureNewsletterTables } from '@/lib/newsletter/db';
 import {
     acquireRunLock, releaseRunLock, getSettings, runDripPass, hourET, inSendWindow,
-    etDateString, getRunState, saveRunState, saveRunSummary, type RunSummary,
+    etDateString, getRunState, saveRunState, saveRunSummary, startRun, type RunSummary,
 } from '@/lib/newsletter/send-engine';
 
 /** Hard cap on chained invocations per daily run (runaway guard).
@@ -102,11 +102,21 @@ export async function GET(req: NextRequest) {
             const state = await getRunState();
             let cursor: string | null;
             let fresh = false;
-            if (force || state.run_day !== today) {
-                cursor = null; fresh = true;
-                await saveRunState(today, null, false);
+            const now = Date.now();
+            if (force || !state.run_started_at) {
+                fresh = true;
             } else if (state.run_done) {
-                return NextResponse.json({ ok: true, skipped: 'run_complete', day: today });
+                // The next run starts 1 to 3 random days after the last run started.
+                if (state.next_run_at && now < state.next_run_at.getTime()) {
+                    return NextResponse.json({ ok: true, skipped: 'next_run_not_due', nextRunAt: state.next_run_at });
+                }
+                fresh = true;
+            }
+            if (fresh) {
+                const started = await startRun(settings, today);
+                console.log('[cron/newsletter-drip] run started', started);
+                cursor = null;
+                settings = await getSettings();
             } else {
                 cursor = state.run_cursor;
             }

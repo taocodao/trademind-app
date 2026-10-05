@@ -28,8 +28,6 @@ interface MailPayload {
     cta?: { label: string; url: string };
     secondaryLink?: { label: string; url: string };
     note?: string;
-    /** Plain text only: no HTML part, so no images, buttons or tracking-friendly markup. */
-    textOnly?: boolean;
 }
 
 function render(p: MailPayload): { text: string; html: string } {
@@ -71,9 +69,7 @@ async function send(p: MailPayload): Promise<boolean> {
                 Authorization: `Bearer ${RESEND_API_KEY}`,
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(p.textOnly
-                ? { from: TRANSACTIONAL_FROM, to: p.to, subject: p.subject, text }
-                : { from: TRANSACTIONAL_FROM, to: p.to, subject: p.subject, text, html }),
+            body: JSON.stringify({ from: TRANSACTIONAL_FROM, to: p.to, subject: p.subject, text, html }),
         });
         if (!response.ok) {
             console.error('[Newsletter email] Resend failed:', response.status, await response.text());
@@ -89,18 +85,18 @@ async function send(p: MailPayload): Promise<boolean> {
 export function sendConfirmationEmail(input: {
     to: string; confirmToken: string; changeToken: string;
 }): Promise<boolean> {
-    // Plain text with one direct first-party link. Gmail files the HTML version in Spam
-    // while the domain's reputation recovers, and a single link is the cleanest signal.
-    // The change-address link was dropped from this email to keep a single link; the signup
-    // response still returns changeUrl, and the token stays in the signature for callers.
     return send({
         to: input.to,
         subject: 'Confirm your subscription to The AI Systematic Investor',
         heading: 'One click and you are in',
-        intro: 'Welcome. You signed up for The AI Systematic Investor, the TradeMind research letter. Confirming unlocks 30% off the first year of an annual TradeMind plan for 90 days.',
+        intro: 'Welcome. You signed up for The AI Systematic Investor, the weekly TradeMind research letter.',
+        bullets: [
+            'One weekly research issue on systematic investing, machine learning, options structure, and risk control',
+            'Confirming unlocks 30% off the first year of an annual TradeMind plan for 90 days',
+        ],
         cta: { label: 'Confirm this email', url: `${BASE_URL}/newsletter/confirm?token=${input.confirmToken}` },
-        note: 'If this message landed in Spam or Promotions, please mark it Not spam so future issues reach your inbox. If you did not sign up, ignore this email and you will not hear from us.',
-        textOnly: true,
+        secondaryLink: { label: 'Use a different email address', url: `${BASE_URL}/newsletter/change-email?token=${input.changeToken}` },
+        note: 'If you did not sign up, ignore this email and you will not hear from us. Offer terms: trademind.bot/newsletter/offer',
     });
 }
 

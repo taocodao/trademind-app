@@ -82,7 +82,7 @@ export default function SignupForm({ source }: { source: string }) {
             <div className="tm-nlsignup-done">
                 {done === 'pending' ? (
                     <>
-                        <p className="tm-nlsignup-done-msg">Check your inbox to confirm and unlock 30% off. If you do not see it, check Spam or Promotions and mark it Not spam.</p>
+                        <p className="tm-nlsignup-done-msg">Check your inbox to confirm and unlock 30% off.</p>
                         <p className="tm-nl-muted" style={{ fontSize: 13.5, margin: '0 0 12px' }}>
                             Nothing arrived?{' '}
                             <button type="button" onClick={resend} className="tm-nl-link" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit' }}>

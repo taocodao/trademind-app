@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
                 ok: true, status: 'subscribed', returning,
                 message: returning
                     ? 'Welcome back. Issue 1 is on its way.'
-                    : 'Subscribed. Check your inbox: the first issue is on its way. If you do not see it, check Spam or Promotions and mark it Not spam.',
+                    : 'Subscribed. Check your inbox: the first issue is on its way.',
             });
         }
         if (result.kind === 'moved-confirmed') {
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
             ok: true,
             status: 'pending',
             emailed,
-            message: 'Check your inbox to confirm and unlock 30% off. If you do not see it, check Spam or Promotions and mark it Not spam.',
+            message: 'Check your inbox to confirm and unlock 30% off.',
             changeUrl: `/newsletter/change-email?token=${result.changeToken}`,
         });
     } catch (err) {

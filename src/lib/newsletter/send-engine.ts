@@ -189,7 +189,7 @@ export async function sendNextIssue(email: string, opts: SendNextOptions = {}): 
 
     // Eligibility: directory row, active subscriber (or none), not suppressed.
     const el = await query(
-        `SELECT d.email, d.subscriber_id, d.first_name, s.status AS sub_status,
+        `SELECT d.email, d.source, d.subscriber_id, d.first_name, s.status AS sub_status,
                 EXISTS (SELECT 1 FROM newsletter_suppression sup WHERE sup.email = d.email) AS suppressed
          FROM newsletter_directory d
          LEFT JOIN newsletter_subscribers s ON s.id = d.subscriber_id
@@ -199,7 +199,7 @@ export async function sendNextIssue(email: string, opts: SendNextOptions = {}): 
     if (!row) return { result: 'skipped', reason: 'not_in_directory' };
     if (row.suppressed) return { result: 'skipped', reason: 'suppressed' };
     // A test sender domain never mails the imported (purchased) list.
-    if (excludesImported(s) && row.source === 'lead-import') return { result: 'skipped', reason: 'imported_excluded' };
+    if (excludesImported(s) && row.source !== 'signup') return { result: 'skipped', reason: 'imported_excluded' };
     // Every issue carries a per-subscriber unsubscribe link, which needs a subscriber record.
     if (!row.subscriber_id) return { result: 'skipped', reason: 'no_subscriber_record' };
     if (row.sub_status && !['confirmed', 'email_change_pending'].includes(row.sub_status)) {

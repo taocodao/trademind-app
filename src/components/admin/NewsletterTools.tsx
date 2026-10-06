@@ -220,6 +220,7 @@ export default function NewsletterTools() {
                             <option value="full">Full email</option>
                             <option value="lean">Lean HTML (no offer, no personal links)</option>
                             <option value="text">Plain text only</option>
+                            <option value="personal">Personal test (name in subject, no unsubscribe link, signed)</option>
                         </select>
                     ) : null}
                     <input type="number" value={batchLimit} onChange={(e) => setBatchLimit(e.target.value)} min={1}

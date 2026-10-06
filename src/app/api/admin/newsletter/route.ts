@@ -311,7 +311,8 @@ export async function POST(req: NextRequest) {
                 const res = await sendIssueEmailDetailed(issue, {
                     id: previewSubId, email: previewTo, referral_id: null,
                     discount_state: 'eligible', window_end: null,
-                }, { preview: true, variant: body.variant === 'lean' || body.variant === 'text' ? body.variant : 'full' });
+                    first_name: body.variant === 'personal' ? 'Tom' : null,
+                }, { preview: true, variant: body.variant === 'lean' || body.variant === 'text' || body.variant === 'personal' ? body.variant : 'full' });
                 if (!res.ok) {
                     return NextResponse.json({ error: `Preview send failed: ${res.error ?? 'unknown'}` }, { status: 502 });
                 }

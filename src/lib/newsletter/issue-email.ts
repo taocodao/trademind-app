@@ -138,9 +138,10 @@ export interface IssueEmail {
 export async function renderIssueEmail(
     issue: NewsletterIssue,
     sub: SubscriberForEmail,
-    variant: 'full' | 'lean' | 'text' = 'full'
+    variant: 'full' | 'lean' | 'text' | 'personal' = 'full'
 ): Promise<IssueEmail> {
-    const lean = variant !== 'full';
+    const lean = variant === 'lean' || variant === 'text';
+    const personal = variant === 'personal';
     const canonical = `${BASE_URL}${issueUrl(issue)}`;
     const unsubscribeUrl = `${BASE_URL}/newsletter/unsubscribe?token=${await makeUnsubscribeToken(sub.id)}`;
     const firstName = greetingName(sub.first_name);
@@ -187,9 +188,10 @@ export async function renderIssueEmail(
         <p style="font-size:12px;color:#9ca3af">
             Sent to ${esc(maskEmail(sub.email))} &middot;
             <a href="${BASE_URL}/newsletter/offer" style="color:#9ca3af">Offer terms</a> &middot;
-            <a href="${BASE_URL}/newsletter/disclosures" style="color:#9ca3af">Disclosures</a> &middot;
-            <a href="${unsubscribeUrl}" style="color:#9ca3af">Unsubscribe</a>
+            <a href="${BASE_URL}/newsletter/disclosures" style="color:#9ca3af">Disclosures</a>${personal ? '' : ` &middot;
+            <a href="${unsubscribeUrl}" style="color:#9ca3af">Unsubscribe</a>`}
         </p>
+        ${personal ? '<p style="font-size:14px;color:#111827;margin:18px 0 0">Eric<br/>CEO, TrademindBot Corp</p>' : ''}
     </div>`;
 
     const text = [
@@ -207,11 +209,11 @@ export async function renderIssueEmail(
         '']),
         RISK_DISCLAIMER,
         `TradeMind, ${MAILING_ADDRESS}`,
-        `Unsubscribe: ${unsubscribeUrl}`,
+        ...(personal ? ['', 'Eric', 'CEO, TrademindBot Corp'] : [`Unsubscribe: ${unsubscribeUrl}`]),
     ].join('\n');
 
     return {
-        subject: issue.emailSubject,
+        subject: personal && firstName ? `${firstName}, ${issue.emailSubject.replace(/ before another prediction$/i, '')}` : issue.emailSubject,
         html: variant === 'text' ? '' : html,
         text,
         unsubscribeUrl,
@@ -246,7 +248,7 @@ export async function sendIssueEmail(
 export async function sendIssueEmailDetailed(
     issue: NewsletterIssue,
     sub: SubscriberForEmail,
-    opts?: { preview?: boolean; variant?: 'full' | 'lean' | 'text' }
+    opts?: { preview?: boolean; variant?: 'full' | 'lean' | 'text' | 'personal' }
 ): Promise<IssueSendResult> {
     if (!RESEND_API_KEY) return { ok: false, resendId: null, error: 'RESEND_API_KEY missing', httpStatus: null, retryAfterSec: null };
     const rendered = await renderIssueEmail(issue, sub, opts?.variant ?? 'full');

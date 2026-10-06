@@ -1,23 +1,24 @@
 /**
- * Invitation email variants for the placement test framework.
+ * Invitation and plain-text variants for the placement test framework.
  *
- * Instead of sending the newsletter itself, these short personal notes
- * introduce the newsletter and link to the signup page. The variants differ
- * only in the factors being tested: name in the subject, unsubscribe link in
- * the body, reply-based opt-in, plain text.
+ * Instead of sending the newsletter itself, the invitation variants introduce the
+ * newsletter and link to a first-party signup page that requires confirmation.
+ * They differ only in the factors being tested. Copy follows the optimized
+ * acquisition plan: fixed sender identity, one primary subscribe button, a real
+ * signature, and (except in the diagnostic variant) a visible opt-out.
  */
 import type { NewsletterIssue } from './issues';
 import { MAILING_ADDRESS } from './email';
 
 export type InviteVariant =
-    | 'invite_named_unsub'      // name in subject and greeting, unsubscribe link in body
-    | 'invite_named_nounsub'    // same, no unsubscribe link in body (header kept)
-    | 'invite_generic_unsub'    // no name anywhere, unsubscribe link in body
-    | 'invite_reply'            // named, asks the reader to reply yes instead of clicking
-    | 'invite_plain';           // named, plain text only
+    | 'fulltext_plain'          // the whole issue as plain text, unsubscribe link in body
+    | 'invite_hello'            // generic subject, "Hello,", button, opt-out
+    | 'invite_hi_name'          // generic subject, "Hi {name},", button, opt-out
+    | 'invite_hello_nounsub'    // diagnostic: as invite_hello without the visible opt-out
+    | 'invite_name_subject';    // diagnostic: first name in the subject and greeting
 
 export const INVITE_VARIANTS: InviteVariant[] = [
-    'invite_named_unsub', 'invite_named_nounsub', 'invite_generic_unsub', 'invite_reply', 'invite_plain',
+    'fulltext_plain', 'invite_hello', 'invite_hi_name', 'invite_hello_nounsub', 'invite_name_subject',
 ];
 
 export function isInviteVariant(v: string | undefined | null): v is InviteVariant {
@@ -34,51 +35,72 @@ export interface InviteRendered {
     text: string;
 }
 
+const DISCLAIMER = 'TradeMind is software for self-directed investors, not investment advice. Options involve risk and are not suitable for every investor.';
+
+/** Markdown subset to readable plain text. */
+function mdToText(md: string): string {
+    return md
+        .replace(/^## (.*)$/gm, (_m, h: string) => `${h.toUpperCase()}`)
+        .replace(/\*\*(.*?)\*\*/g, '$1')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+
 export function renderInvite(
     issue: NewsletterIssue,
     variant: InviteVariant,
     opts: { firstName: string; baseUrl: string; unsubscribeUrl: string }
 ): InviteRendered {
-    const named = variant !== 'invite_generic_unsub';
-    const unsub = variant === 'invite_named_unsub' || variant === 'invite_generic_unsub' || variant === 'invite_reply' || variant === 'invite_plain';
-    const reply = variant === 'invite_reply';
-    const plain = variant === 'invite_plain';
     const name = opts.firstName;
-    const topic = issue.emailSubject.replace(/ before another prediction$/i, '');
-    const subject = named ? `${name}, ${topic}` : topic;
     const signupUrl = `${opts.baseUrl}/newsletter`;
-    const greeting = named ? `Hi ${name},` : 'Hi,';
 
-    const p1 = 'I am Eric, the founder of TradeMindBot. I write a short newsletter for self-directed investors about building a repeatable process for evidence, structure, and risk.';
-    const p2 = `The first issue is called "${issue.title}". ${issue.excerpt}`;
-    const ask = reply
-        ? 'If that sounds useful, just reply with the word yes and I will add you. If not, no action is needed.'
-        : 'If that sounds useful, you can subscribe here and I will send you the next issue:';
-    const disclaimer = 'TradeMind is software for self-directed investors, not investment advice.';
+    if (variant === 'fulltext_plain') {
+        const text = [
+            issue.title, '',
+            mdToText(issue.body), '',
+            `Read this issue online: ${opts.baseUrl}/newsletter/${issue.slug}`, '',
+            'Eric Huang',
+            'Founder, TradeMind', '',
+            DISCLAIMER,
+            `TradeMind, ${MAILING_ADDRESS}`,
+            `Unsubscribe: ${opts.unsubscribeUrl}`,
+        ].join('\n');
+        return { subject: issue.emailSubject, html: '', text };
+    }
+
+    const topic = 'a risk-first investing newsletter';
+    const subject = variant === 'invite_name_subject'
+        ? `${name}, ${topic}`
+        : 'A risk-first investing newsletter';
+    const greeting = variant === 'invite_hi_name' || variant === 'invite_name_subject' ? `Hi ${name},` : 'Hello,';
+    const showUnsub = variant !== 'invite_hello_nounsub';
+
+    const p1 = 'TradeMind publishes The AI Systematic Investor, a free educational newsletter for self-directed investors who want a more structured approach to market regime, portfolio risk, options, and model-based research.';
+    const p2 = 'If that sounds useful, you can review the newsletter and choose whether to subscribe. You will receive a confirmation email, and no newsletter issues will be sent unless you confirm.';
+    const once = 'This is a one-time invitation.';
+    const optout = 'If you do not want any further email from TradeMind, unsubscribe here.';
 
     const text = [
         greeting, '',
         p1, '',
         p2, '',
-        ask,
-        ...(reply ? [] : [signupUrl]),
-        '',
-        'Eric',
-        'CEO, TrademindBot Corp',
-        '',
-        disclaimer,
+        `Review and subscribe: ${signupUrl}`, '',
+        'Regards,',
+        'Eric Huang',
+        'Founder, TradeMind', '',
+        showUnsub ? `${once} ${optout} ${opts.unsubscribeUrl}` : once,
         `TradeMind, ${MAILING_ADDRESS}`,
-        ...(unsub ? [`Unsubscribe: ${opts.unsubscribeUrl}`] : []),
     ].join('\n');
 
     const html = `<div style="font-family:Arial,sans-serif;color:#111827;font-size:15px;line-height:1.55;max-width:560px">
         <p style="margin:0 0 14px">${esc(greeting)}</p>
         <p style="margin:0 0 14px">${esc(p1)}</p>
-        <p style="margin:0 0 14px">${esc(p2)}</p>
-        <p style="margin:0 0 14px">${esc(ask)}${reply ? '' : ` <a href="${signupUrl}" style="color:#6d28d9">${signupUrl.replace(/^https?:\/\//, '')}</a>`}</p>
-        <p style="margin:18px 0 0">Eric<br/>CEO, TrademindBot Corp</p>
-        <p style="margin:22px 0 0;font-size:12px;color:#6b7280">${esc(disclaimer)}<br/>TradeMind, ${esc(MAILING_ADDRESS)}${unsub ? ` &middot; <a href="${opts.unsubscribeUrl}" style="color:#6b7280">Unsubscribe</a>` : ''}</p>
+        <p style="margin:0 0 18px">${esc(p2)}</p>
+        <p style="margin:0 0 22px"><a href="${signupUrl}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:bold">Review and subscribe</a></p>
+        <p style="margin:0">Regards,<br/>Eric Huang<br/>Founder, TradeMind</p>
+        <p style="margin:24px 0 0;font-size:12px;color:#6b7280">${esc(once)}${showUnsub ? ` ${esc('If you do not want any further email from TradeMind,')} <a href="${opts.unsubscribeUrl}" style="color:#6b7280">unsubscribe here</a>.` : ''}<br/>TradeMind, ${esc(MAILING_ADDRESS)}</p>
     </div>`;
 
-    return { subject, html: plain ? '' : html, text };
+    return { subject, html, text };
 }

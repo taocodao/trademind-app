@@ -316,7 +316,7 @@ export async function POST(req: NextRequest) {
                     id: previewSubId, email: previewTo, referral_id: null,
                     discount_state: 'eligible', window_end: null,
                     first_name: body.variant === 'personal' || String(body.variant ?? '').startsWith('invite') ? 'Tom' : null,
-                }, { preview: true, variant: ['lean','text','personal','invite_named_unsub','invite_named_nounsub','invite_generic_unsub','invite_reply','invite_plain'].includes(body.variant) ? body.variant : 'full' });
+                }, { preview: true, variant: ['lean','text','personal','fulltext_plain','invite_hello','invite_hi_name','invite_hello_nounsub','invite_name_subject'].includes(body.variant) ? body.variant : 'full' });
                 if (!res.ok) {
                     return NextResponse.json({ error: `Preview send failed: ${res.error ?? 'unknown'}` }, { status: 502 });
                 }

@@ -256,7 +256,7 @@ export async function runSeedChecks(only?: string): Promise<{ seeds: number; sav
     for (const seed of seeds) {
         const pend = await query(
             `SELECT l.id, l.issue_number, l.created_at AS sent_at FROM newsletter_send_log l
-             WHERE l.email = $1 AND l.kind = 'issue'
+             WHERE l.email = $1 AND l.kind IN ('issue','preview')
                AND l.status IN ('accepted','delivered','opened','clicked')
                AND l.created_at > NOW() - INTERVAL '7 days'
                AND l.created_at < NOW() - INTERVAL '${MIN_AGE_MIN} minutes'
@@ -297,7 +297,7 @@ export async function seedReport() {
     const pending = (await query(
         `SELECT l.email AS seed_email, l.issue_number, l.created_at AS sent_at
          FROM newsletter_send_log l JOIN newsletter_seeds s ON s.email = l.email
-         WHERE l.kind = 'issue' AND l.status IN ('accepted','delivered','opened','clicked')
+         WHERE l.kind IN ('issue','preview') AND l.status IN ('accepted','delivered','opened','clicked')
            AND l.created_at > NOW() - INTERVAL '7 days'
            AND NOT EXISTS (SELECT 1 FROM newsletter_seed_checks k WHERE k.send_log_id = l.id)
          ORDER BY l.created_at DESC LIMIT 40`

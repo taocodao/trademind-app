@@ -225,6 +225,7 @@ export default function NewsletterTools() {
                             <option value="invite_hi_name">Invitation: Hi name, opt-out link</option>
                             <option value="invite_hello_nounsub">Invitation: no opt-out link (test only)</option>
                             <option value="invite_name_subject">Invitation: name in subject (test only)</option>
+                            <option value="invite_short_question">Invitation: short plain text with a question</option>
                             <option value="personal">Personal test (name in subject, no unsubscribe link, signed)</option>
                         </select>
                     ) : null}

@@ -15,10 +15,11 @@ export type InviteVariant =
     | 'invite_hello'            // generic subject, "Hello,", button, opt-out
     | 'invite_hi_name'          // generic subject, "Hi {name},", button, opt-out
     | 'invite_hello_nounsub'    // diagnostic: as invite_hello without the visible opt-out
-    | 'invite_name_subject';    // diagnostic: first name in the subject and greeting
+    | 'invite_name_subject'     // diagnostic: first name in the subject and greeting
+    | 'invite_short_question';  // plain text, reason for contact, one question, under 75 words
 
 export const INVITE_VARIANTS: InviteVariant[] = [
-    'fulltext_plain', 'invite_hello', 'invite_hi_name', 'invite_hello_nounsub', 'invite_name_subject',
+    'fulltext_plain', 'invite_hello', 'invite_hi_name', 'invite_hello_nounsub', 'invite_name_subject', 'invite_short_question',
 ];
 
 export function isInviteVariant(v: string | undefined | null): v is InviteVariant {
@@ -67,6 +68,19 @@ export function renderInvite(
             `Unsubscribe: ${opts.unsubscribeUrl}`,
         ].join('\n');
         return { subject: issue.emailSubject, html: '', text };
+    }
+
+    if (variant === 'invite_short_question') {
+        const text = [
+            'Hello,', '',
+            'I am writing because your address appears in a database of investor contacts. TradeMind publishes a free educational newsletter on portfolio risk, options, and model-based research. Would you like me to send the first issue? Reply yes, or review it first:',
+            `${signupUrl}`, '',
+            'Eric Huang',
+            'Founder, TradeMind', '',
+            `One-time note. If you do not want any more email from TradeMind, unsubscribe here: ${opts.unsubscribeUrl}`,
+            `TradeMind, ${MAILING_ADDRESS}`,
+        ].join('\n');
+        return { subject: 'A risk-first investing newsletter', html: '', text };
     }
 
     const topic = 'a risk-first investing newsletter';

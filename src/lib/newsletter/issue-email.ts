@@ -137,12 +137,14 @@ export interface IssueEmail {
 
 export async function renderIssueEmail(
     issue: NewsletterIssue,
-    sub: SubscriberForEmail
+    sub: SubscriberForEmail,
+    variant: 'full' | 'lean' | 'text' = 'full'
 ): Promise<IssueEmail> {
+    const lean = variant !== 'full';
     const canonical = `${BASE_URL}${issueUrl(issue)}`;
     const unsubscribeUrl = `${BASE_URL}/newsletter/unsubscribe?token=${await makeUnsubscribeToken(sub.id)}`;
     const firstName = greetingName(sub.first_name);
-    const viewUrl = `${canonical}?e=${encodeURIComponent(sub.email)}${sub.referral_id ? `&ref=${encodeURIComponent(sub.referral_id)}` : ''}`;
+    const viewUrl = lean ? canonical : `${canonical}?e=${encodeURIComponent(sub.email)}${sub.referral_id ? `&ref=${encodeURIComponent(sub.referral_id)}` : ''}`;
     const claimUrl = `${BASE_URL}/?email=${encodeURIComponent(sub.email)}#pricing`;
 
     const daysLeft = sub.window_end
@@ -174,11 +176,11 @@ export async function renderIssueEmail(
         ${bodyHtml}
         <p style="margin:20px 0"><a href="${viewUrl}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:bold">Read the full issue</a></p>
         <p style="font-size:13.5px;color:#6b7280">Go deeper: ${deep}</p>
-        ${offerBlock(sub, daysLeft)}
-        <p style="font-size:13.5px;color:#6b7280">
+        ${lean ? '' : offerBlock(sub, daysLeft)}
+        ${lean ? '' : `<p style="font-size:13.5px;color:#6b7280">
             Was this forwarded to you? <a href="${subscribeForForward}" style="color:#8B5CF6">Subscribe with your own email</a><br/>
             Enjoying it? <a href="${shareUrl}" style="color:#8B5CF6">Share this issue</a>
-        </p>
+        </p>`}
         <p style="font-size:12.5px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:14px;margin-top:28px">
             ${esc(RISK_DISCLAIMER)}
         </p>
@@ -199,10 +201,10 @@ export async function renderIssueEmail(
         '',
         `Read the full issue: ${canonical}`,
         '',
-        sub.discount_state === 'eligible' && sub.window_end
+        ...(lean ? [] : [sub.discount_state === 'eligible' && sub.window_end
             ? `Your 30% annual offer is active until ${fmtDate(sub.window_end)}. Log in at trademind.bot with this email address and it applies automatically: ${claimUrl}`
             : `This address already carries 30% off a first-year plan. Log in with it to claim: ${claimUrl}`,
-        '',
+        '']),
         RISK_DISCLAIMER,
         `TradeMind, ${MAILING_ADDRESS}`,
         `Unsubscribe: ${unsubscribeUrl}`,
@@ -210,7 +212,7 @@ export async function renderIssueEmail(
 
     return {
         subject: issue.emailSubject,
-        html,
+        html: variant === 'text' ? '' : html,
         text,
         unsubscribeUrl,
         listUnsubscribe: unsubscribeUrl,
@@ -244,10 +246,10 @@ export async function sendIssueEmail(
 export async function sendIssueEmailDetailed(
     issue: NewsletterIssue,
     sub: SubscriberForEmail,
-    opts?: { preview?: boolean }
+    opts?: { preview?: boolean; variant?: 'full' | 'lean' | 'text' }
 ): Promise<IssueSendResult> {
     if (!RESEND_API_KEY) return { ok: false, resendId: null, error: 'RESEND_API_KEY missing', httpStatus: null, retryAfterSec: null };
-    const rendered = await renderIssueEmail(issue, sub);
+    const rendered = await renderIssueEmail(issue, sub, opts?.variant ?? 'full');
     try {
         const response = await fetch('https://api.resend.com/emails', {
             method: 'POST',
@@ -260,7 +262,7 @@ export async function sendIssueEmailDetailed(
                 reply_to: NEWSLETTER_REPLY_TO,
                 to: sub.email,
                 subject: rendered.subject,
-                html: rendered.html,
+                ...(rendered.html ? { html: rendered.html } : {}),
                 text: rendered.text,
                 headers: {
                     'List-Unsubscribe': `<${rendered.unsubscribeUrl.replace('/newsletter/unsubscribe?', '/api/newsletter/unsubscribe?')}>`,

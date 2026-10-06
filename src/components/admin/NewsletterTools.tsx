@@ -28,6 +28,7 @@ export default function NewsletterTools() {
     const [stats, setStats] = useState<Record<string, unknown> | null>(null);
     const [issueNumber, setIssueNumber] = useState('');
     const [previewTo, setPreviewTo] = useState('');
+    const [previewVariant, setPreviewVariant] = useState('full');
     const [batchLimit, setBatchLimit] = useState('');
     const [addEmail, setAddEmail] = useState('');
     const [addMsg, setAddMsg] = useState<string | null>(null);
@@ -213,6 +214,14 @@ export default function NewsletterTools() {
                         placeholder="Issue #" className="w-24 rounded-lg border border-[#232333] bg-[#0A0A0F] px-3 py-2 text-xs text-white" />
                     <input type="email" value={previewTo} onChange={(e) => setPreviewTo(e.target.value)}
                         placeholder="Preview to (optional email)" className="flex-1 min-w-[180px] rounded-lg border border-[#232333] bg-[#0A0A0F] px-3 py-2 text-xs text-white" />
+                    {previewTo ? (
+                        <select value={previewVariant} onChange={(e) => setPreviewVariant(e.target.value)}
+                            className="rounded-lg border border-[#232333] bg-[#0A0A0F] px-3 py-2 text-xs text-white">
+                            <option value="full">Full email</option>
+                            <option value="lean">Lean HTML (no offer, no personal links)</option>
+                            <option value="text">Plain text only</option>
+                        </select>
+                    ) : null}
                     <input type="number" value={batchLimit} onChange={(e) => setBatchLimit(e.target.value)} min={1}
                         placeholder="Batch cap (optional)" title="Warm-up cap: send only to the newest N confirmed subscribers"
                         className="w-36 rounded-lg border border-[#232333] bg-[#0A0A0F] px-3 py-2 text-xs text-white" />
@@ -223,7 +232,7 @@ export default function NewsletterTools() {
                             if (!previewTo && !window.confirm(`Send issue ${issueNumber}${limTxt}?`)) return;
                             act('send-issue', {
                                 issueNumber: Number(issueNumber),
-                                ...(previewTo ? { previewTo } : {}),
+                                ...(previewTo ? { previewTo, variant: previewVariant } : {}),
                                 ...(Number.isInteger(lim) && lim > 0 ? { limit: lim } : {}),
                                 subscriberId: 1,
                             });

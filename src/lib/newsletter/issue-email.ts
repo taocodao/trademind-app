@@ -13,6 +13,7 @@ import { makeUnsubscribeToken, recordNewsletterEvent } from './db';
 import { MAILING_ADDRESS } from './email';
 import { maskEmail } from './normalize';
 import { senderNameForIssue } from './sender-name';
+import { isInviteVariant, renderInvite, type InviteVariant } from './invite-email';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 // Sender identity: marketing mail goes out under the verified news.trademind.bot
@@ -139,8 +140,15 @@ export interface IssueEmail {
 export async function renderIssueEmail(
     issue: NewsletterIssue,
     sub: SubscriberForEmail,
-    variant: 'full' | 'lean' | 'text' | 'personal' = 'full'
+    variant: 'full' | 'lean' | 'text' | 'personal' | InviteVariant = 'full'
 ): Promise<IssueEmail> {
+    if (isInviteVariant(variant)) {
+        const unsubscribeUrl = `${BASE_URL}/newsletter/unsubscribe?token=${await makeUnsubscribeToken(sub.id)}`;
+        const r = renderInvite(issue, variant, {
+            firstName: greetingName(sub.first_name) ?? 'there', baseUrl: BASE_URL, unsubscribeUrl,
+        });
+        return { subject: r.subject, html: r.html, text: r.text, unsubscribeUrl, listUnsubscribe: unsubscribeUrl };
+    }
     const lean = variant === 'lean' || variant === 'text';
     const personal = variant === 'personal';
     const canonical = `${BASE_URL}${issueUrl(issue)}`;
@@ -249,7 +257,7 @@ export async function sendIssueEmail(
 export async function sendIssueEmailDetailed(
     issue: NewsletterIssue,
     sub: SubscriberForEmail,
-    opts?: { preview?: boolean; variant?: 'full' | 'lean' | 'text' | 'personal' }
+    opts?: { preview?: boolean; variant?: 'full' | 'lean' | 'text' | 'personal' | InviteVariant; fromOverride?: string }
 ): Promise<IssueSendResult> {
     if (!RESEND_API_KEY) return { ok: false, resendId: null, error: 'RESEND_API_KEY missing', httpStatus: null, retryAfterSec: null };
     const rendered = await renderIssueEmail(issue, sub, opts?.variant ?? 'full');
@@ -261,7 +269,7 @@ export async function sendIssueEmailDetailed(
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                from: await fromFor(issue, !opts?.preview, opts?.variant === 'personal'),
+                from: opts?.fromOverride ?? await fromFor(issue, !opts?.preview, opts?.variant === 'personal'),
                 reply_to: NEWSLETTER_REPLY_TO,
                 to: sub.email,
                 subject: rendered.subject,

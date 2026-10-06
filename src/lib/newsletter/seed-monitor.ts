@@ -171,7 +171,7 @@ async function findInFolder(
     try { lock = await c.getMailboxLock(folder, { readOnly: true }); } catch { return null; }
     try {
         const since = new Date(sentAt.getTime() - 24 * 3600 * 1000);
-        const uids = await c.search({ since, or: [{ from: 'news.trademind.bot' }, { from: 'taocodao.com' }] }, { uid: true });
+        const uids = await c.search({ since, or: [{ from: 'news.trademind.bot' }, { from: 'taocodao.com' }, { from: 'trademindbot.com' }] }, { uid: true });
         if (!uids || uids.length === 0) return null;
         let best: Found | null = null;
         let bestDiff = Infinity;

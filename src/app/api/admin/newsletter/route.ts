@@ -40,6 +40,10 @@ export async function GET(req: NextRequest) {
         return NextResponse.json(await seedReport());
     }
 
+    if (sp.get('placement-report')) {
+        const { placementReport } = await import('@/lib/newsletter/placement-test');
+        return NextResponse.json(await placementReport(sp.get('placement-report') || 'default'));
+    }
     if (sp.get('preview-run')) {
         const { previewTodaysRun } = await import('@/lib/newsletter/send-engine');
         return NextResponse.json(await previewTodaysRun());
@@ -307,12 +311,12 @@ export async function POST(req: NextRequest) {
                     `SELECT id FROM newsletter_subscribers WHERE email = $1 LIMIT 1`,
                     [previewTo.trim().toLowerCase()]
                 );
-                const previewSubId: number = own.rows[0]?.id ?? id;
+                const previewSubId: number = own.rows[0]?.id ?? 0;
                 const res = await sendIssueEmailDetailed(issue, {
                     id: previewSubId, email: previewTo, referral_id: null,
                     discount_state: 'eligible', window_end: null,
-                    first_name: body.variant === 'personal' ? 'Tom' : null,
-                }, { preview: true, variant: body.variant === 'lean' || body.variant === 'text' || body.variant === 'personal' ? body.variant : 'full' });
+                    first_name: body.variant === 'personal' || String(body.variant ?? '').startsWith('invite') ? 'Tom' : null,
+                }, { preview: true, variant: ['lean','text','personal','invite_named_unsub','invite_named_nounsub','invite_generic_unsub','invite_reply','invite_plain'].includes(body.variant) ? body.variant : 'full' });
                 if (!res.ok) {
                     return NextResponse.json({ error: `Preview send failed: ${res.error ?? 'unknown'}` }, { status: 502 });
                 }

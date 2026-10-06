@@ -220,6 +220,11 @@ export default function NewsletterTools() {
                             <option value="full">Full email</option>
                             <option value="lean">Lean HTML (no offer, no personal links)</option>
                             <option value="text">Plain text only</option>
+                            <option value="invite_named_unsub">Invite: name, unsubscribe link</option>
+                            <option value="invite_named_nounsub">Invite: name, no unsubscribe link</option>
+                            <option value="invite_generic_unsub">Invite: no name, unsubscribe link</option>
+                            <option value="invite_reply">Invite: reply yes to join</option>
+                            <option value="invite_plain">Invite: plain text</option>
                             <option value="personal">Personal test (name in subject, no unsubscribe link, signed)</option>
                         </select>
                     ) : null}

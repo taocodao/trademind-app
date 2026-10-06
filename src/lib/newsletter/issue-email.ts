@@ -34,8 +34,9 @@ async function senderFromSetting(): Promise<string | null> {
     } catch { return null; }
 }
 
-async function fromFor(issue: NewsletterIssue, persist: boolean): Promise<string> {
+async function fromFor(issue: NewsletterIssue, persist: boolean, fixedName = false): Promise<string> {
     const base = (await senderFromSetting()) ?? NEWSLETTER_FROM;
+    if (fixedName) return base;
     const addr = base.match(/<([^>]+)>/)?.[1] ?? base.trim();
     const defaultName = base.replace(/\s*<[^>]*>\s*$/, '').trim() || DEFAULT_SENDER_NAME;
     const raw = issue.senderName ?? await senderNameForIssue(issue.number, defaultName, persist);
@@ -260,7 +261,7 @@ export async function sendIssueEmailDetailed(
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                from: await fromFor(issue, !opts?.preview),
+                from: await fromFor(issue, !opts?.preview, opts?.variant === 'personal'),
                 reply_to: NEWSLETTER_REPLY_TO,
                 to: sub.email,
                 subject: rendered.subject,

@@ -14,6 +14,7 @@ import { query } from '@/lib/db';
 import { MAILING_ADDRESS } from '@/lib/newsletter/email';
 import { INVITE_TEMPLATES } from './templates';
 import { INVITE_TEMPLATES_V5 } from './templates-v5';
+import { processRecaps } from './recap';
 import { BASE_URL, CAMPAIGN, ensureOutreachTables, getSettings, setSetting } from './db';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
@@ -478,6 +479,8 @@ export async function reportIfDue(now = new Date()): Promise<boolean> {
 export async function tick(): Promise<Record<string, unknown>> {
     const planned = await planToday();
     const sent = await processDue(40);
+    let recaps: Record<string, number | string> = {};
+    try { recaps = await processRecaps(15); } catch (e) { recaps = { error: (e as Error).message.slice(0, 120) }; }
     const reported = await reportIfDue();
-    return { planned, sent, reported };
+    return { planned, sent, recaps, reported };
 }

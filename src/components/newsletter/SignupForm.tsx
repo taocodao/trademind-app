@@ -26,11 +26,12 @@ function attribution() {
         campaign: p.get('utm_campaign'),
         referralId: p.get('ref'),
         referringIssue: p.get('utm_campaign'),
+        outreachToken: p.get('t'),
     };
 }
 
-export default function SignupForm({ source }: { source: string }) {
-    const [email, setEmail] = useState('');
+export default function SignupForm({ source, initialEmail }: { source: string; initialEmail?: string }) {
+    const [email, setEmail] = useState(initialEmail ?? '');
     const [experience, setExperience] = useState('');
     const [consent, setConsent] = useState(false);
     const [honeypot, setHoneypot] = useState('');

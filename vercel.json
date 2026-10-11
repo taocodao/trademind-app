@@ -35,6 +35,10 @@
     {
       "path": "/api/cron/placement-test",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/invite-send",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

@@ -1,0 +1,34 @@
+/**
+ * Cold invitation templates (v4) generated from invitation_templates.md.
+ * Plain text only. Fixes applied: licensed-list reason line, no "open" claim in the follow-up.
+ */
+export const INVITE_TEMPLATES: Record<string, { subject: string; body: string }> = {
+    "T1": {
+        "subject": "watchlist or system",
+        "body": "Hi {{first_name}},\n\nMost investors I meet have a watchlist, not a process.\n\nI write AI Investor Copilot, a free weekly brief. Each issue covers the market regime, what our ML research detects, one strategy concept (QQQ, LEAPS) and what could go wrong.\n\nPreview an issue: {{preview_url}}\n\nSubscribe free: {{subscribe_url}}\n\nSubscribe free and you're entitled to 30% off a yearly TradeMind Strategy subscription. Use the same email within 3 months of confirming.\n\n{{sender_name}}\n\n{{sig_sep}}\nAI Investor Copilot, published by TradeMind\n{{mailing_address}}\nYou're receiving this one-time invitation because your address is on an investor mailing list we licensed. Not interested? Unsubscribe in one click: {{unsub_url}}\nEducational content only, not investment advice. Investing involves risk, including loss of principal. Options involve substantial risk and are not suitable for every investor."
+    },
+    "T2": {
+        "subject": "growth, guardrails",
+        "body": "Hi {{first_name}},\n\nIn your peak earning years, a big drawdown costs time as well as money.\n\nEach week AI Investor Copilot shows how systematic strategies pursue growth with limits on exposure and loss, plus the assumptions behind the research.\n\nSee a past issue: {{preview_url}}\n\nSubscribe free: {{subscribe_url}}\n\nSubscribe free and you're entitled to 30% off a yearly TradeMind Strategy subscription. Use the same email within 3 months of confirming.\n\n{{sender_name}}\n\n{{sig_sep}}\nAI Investor Copilot, published by TradeMind\n{{mailing_address}}\nYou're receiving this one-time invitation because your address is on an investor mailing list we licensed. Not interested? Unsubscribe in one click: {{unsub_url}}\nEducational content only, not investment advice. Investing involves risk, including loss of principal. Options involve substantial risk and are not suitable for every investor."
+    },
+    "T3": {
+        "subject": "drawdown question",
+        "body": "Hi {{first_name}},\n\nClose to retirement, the question becomes \"how much can I afford to lose on the way?\"\n\nAI Investor Copilot is a free weekly brief on drawdown, position sizing and rules that cut emotional decisions.\n\nRead a past issue first: {{preview_url}}\n\nSubscribe free: {{subscribe_url}}\n\nSubscribe free and you're entitled to 30% off a yearly TradeMind Strategy subscription. Use the same email within 3 months of confirming.\n\n{{sender_name}}\n\n{{sig_sep}}\nAI Investor Copilot, published by TradeMind\n{{mailing_address}}\nYou're receiving this one-time invitation because your address is on an investor mailing list we licensed. Not interested? Unsubscribe in one click: {{unsub_url}}\nEducational content only, not investment advice. Investing involves risk, including loss of principal. Options involve substantial risk and are not suitable for every investor."
+    },
+    "T4": {
+        "subject": "plain-english risk brief",
+        "body": "Hi {{first_name}},\n\nMarket headlines are loud and rarely explain the risk.\n\nAI Investor Copilot explains market conditions and risk in plain language. Education only, no hype.\n\nSee for yourself: {{preview_url}}\n\nSubscribe free: {{subscribe_url}}\n\nSubscribe free and you're entitled to 30% off a yearly TradeMind Strategy subscription. Use the same email within 3 months of confirming.\n\n{{sender_name}}\n\n{{sig_sep}}\nAI Investor Copilot, published by TradeMind\n{{mailing_address}}\nYou're receiving this one-time invitation because your address is on an investor mailing list we licensed. Not interested? Unsubscribe in one click: {{unsub_url}}\nEducational content only, not investment advice. Investing involves risk, including loss of principal. Options involve substantial risk and are not suitable for every investor."
+    },
+    "T5": {
+        "subject": "fellow new yorker",
+        "body": "Hi {{first_name}},\n\nI'm building TradeMind out of Queens.\n\nI write AI Investor Copilot, a free weekly brief on ML market research, QQQ strategy concepts and the risk rules behind them. No stock tips.\n\nPreview an issue: {{preview_url}}\n\nSubscribe free: {{subscribe_url}}\n\nSubscribe free and you're entitled to 30% off a yearly TradeMind Strategy subscription. Use the same email within 3 months of confirming.\n\n{{sender_name}}\n\n{{sig_sep}}\nAI Investor Copilot, published by TradeMind\n{{mailing_address}}\nYou're receiving this one-time invitation because your address is on an investor mailing list we licensed. Not interested? Unsubscribe in one click: {{unsub_url}}\nEducational content only, not investment advice. Investing involves risk, including loss of principal. Options involve substantial risk and are not suitable for every investor."
+    },
+    "T6": {
+        "subject": "ml and investing",
+        "body": "Hi {{first_name}},\n\nAI is everywhere in tech. In investing, the real question is what it can't do.\n\nAI Investor Copilot breaks down how ML reads market regimes and why a backtest matters only if its assumptions hold.\n\nBrowse a sample issue: {{preview_url}}\n\nSubscribe free: {{subscribe_url}}\n\nSubscribe free and you're entitled to 30% off a yearly TradeMind Strategy subscription. Use the same email within 3 months of confirming.\n\n{{sender_name}}\n\n{{sig_sep}}\nAI Investor Copilot, published by TradeMind\n{{mailing_address}}\nYou're receiving this one-time invitation because your address is on an investor mailing list we licensed. Not interested? Unsubscribe in one click: {{unsub_url}}\nEducational content only, not investment advice. Investing involves risk, including loss of principal. Options involve substantial risk and are not suitable for every investor."
+    },
+    "FU": {
+        "subject": "most-read issue",
+        "body": "Hi {{first_name}},\n\nOne follow-up only. Here's one of our most popular issues: {{preview_url}}\n\nIf it's useful, subscribe free: {{subscribe_url}}\nSubscribers are entitled to 30% off a yearly TradeMind Strategy subscription.\n\nIf not, no problem. This is the last email from me.\n\n{{sender_name}}\n\n{{sig_sep}}\nAI Investor Copilot, published by TradeMind\n{{mailing_address}}\nYou're receiving this one-time invitation because your address is on an investor mailing list we licensed. Not interested? Unsubscribe in one click: {{unsub_url}}\nEducational content only, not investment advice. Investing involves risk, including loss of principal. Options involve substantial risk and are not suitable for every investor."
+    }
+};

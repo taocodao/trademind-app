@@ -3,6 +3,7 @@ import {
     signup, signupRateLimited, confirmInstantly, logNewsletterSend,
 } from '@/lib/newsletter/db';
 import { sendConfirmationEmail, sendWelcomeEmail } from '@/lib/newsletter/email';
+import { markContactByToken } from '@/lib/outreach/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,6 +33,10 @@ export async function POST(req: NextRequest) {
 
         if (result.kind === 'error') {
             return NextResponse.json({ error: result.message }, { status: 400 });
+        }
+        // Invitation campaign: tie this signup to the contact whose personal link was used.
+        if (body.outreachToken && 'email' in result && result.email) {
+            void markContactByToken(String(body.outreachToken), String(result.email), 'subscribed');
         }
         if (result.kind === 'already-confirmed') {
             return NextResponse.json({ ok: true, status: 'already-confirmed', message: "You're already subscribed" });

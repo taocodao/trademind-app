@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { query } from '@/lib/db';
 import { ensureNewsletterTables, recordNewsletterEvent } from '@/lib/newsletter/db';
+import { applyOutreachEvent } from '@/lib/outreach/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,6 +46,12 @@ export async function POST(req: NextRequest) {
         // Per-message lifecycle (send engine): delivered / opened / clicked /
         // bounced / complained / delayed, matched by the Resend email id.
         if (emailId) {
+            // Cold invitation campaign messages are tracked in the outreach tables.
+            try {
+                const bt: string = event?.data?.bounce?.type ?? '';
+                const bm: string = event?.data?.bounce?.message ?? '';
+                await applyOutreachEvent(emailId, type, bt, bm);
+            } catch (e) { console.error('[delivery] outreach event', e); }
             const { applyDeliveryEvent } = await import('@/lib/newsletter/send-engine');
             const bounceType: string = event?.data?.bounce?.type ?? '';
             const bounceMsg: string | undefined = event?.data?.bounce?.message;

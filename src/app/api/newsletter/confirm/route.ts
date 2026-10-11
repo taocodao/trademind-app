@@ -3,6 +3,7 @@ import {
     confirmByToken, previewConfirm, resendConfirmation, recordNewsletterEvent,
 } from '@/lib/newsletter/db';
 import { sendConfirmationEmail, sendWelcomeEmail } from '@/lib/newsletter/email';
+import { markContactByEmail } from '@/lib/outreach/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +26,7 @@ export async function POST(req: NextRequest) {
         const result = await confirmByToken(String(token));
 
         if (result.outcome === 'confirmed') {
+            void markContactByEmail(result.email, 'confirmed');
             void sendWelcomeEmail({
                 to: result.email,
                 code: result.code,

@@ -71,7 +71,7 @@ export function renderRecap(opts: { token: string; firstName: string | null; sen
         sender_name: opts.senderName, mailing_address: MAILING_ADDRESS,
     };
     const fillHtml = (src: string, extra: Record<string, string> = {}) => src.replace(/\{\{(\w+)\}\}/g, (_x, k: string) => esc((extra[k] ?? m[k]) ?? ''));
-    const blockRe = /<tr><td style="padding:14px 0;border-bottom:1px solid #e5e7eb;[\s\S]*?<\/td><\/tr>/;
+    const blockRe = /<tr><td style="padding:14px 0;border-bottom:1px solid #[0-9a-f]{6};[\s\S]*?<\/td><\/tr>/;
     const block = RECAP_HTML.match(blockRe)?.[0];
     if (!block) throw new Error('recap template block not found');
     const blocks = issues.map((i) => fillHtml(block, { n: String(i.n), date: i.date, title: i.title, one_line_takeaway: i.takeaway, issue_url: i.url })).join('');

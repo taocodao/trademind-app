@@ -214,7 +214,17 @@ export async function confirmHuman(token: string): Promise<boolean> {
                      AND ts > NOW() - INTERVAL '30 minutes' ORDER BY ts DESC LIMIT 1)
          RETURNING id`, [token]
     );
-    if (r.rowCount) {
+    let confirmed = !!r.rowCount;
+    if (!confirmed && (await getContact(token))) {
+        // Deep link (for example an issue page opened from the Start Here page after the 30 minute window):
+        // log the human visit directly so the reader is still counted.
+        await query(
+            `INSERT INTO outreach_click_events (token, link_type, step, method, is_bot, human_confirmed, user_agent)
+             VALUES ($1, 'preview', NULL, 'GET', FALSE, TRUE, 'engage')`, [token]
+        );
+        confirmed = true;
+    }
+    if (confirmed) {
         await query(
             `UPDATE outreach_contacts SET status = 'clicked', updated_at = NOW()
              WHERE token = $1 AND status IN ('pending', 'sent')`, [token]
@@ -222,7 +232,7 @@ export async function confirmHuman(token: string): Promise<boolean> {
         // A person who clicked is never sent the follow-up.
         await query(`UPDATE outreach_queue SET state = 'skipped', note = 'human click' WHERE token = $1 AND step = 2 AND state = 'pending'`, [token]);
     }
-    return !!r.rowCount;
+    return confirmed;
 }
 
 /** One-click unsubscribe: suppress the address, cancel pending sends. */

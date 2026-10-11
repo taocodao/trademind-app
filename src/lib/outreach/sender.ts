@@ -15,6 +15,8 @@ import { MAILING_ADDRESS } from '@/lib/newsletter/email';
 import { INVITE_TEMPLATES } from './templates';
 import { INVITE_TEMPLATES_V5 } from './templates-v5';
 import { processRecaps } from './recap';
+import { FOLLOWUPS_V5 } from './followups-v5';
+import { STAGE_BY_STEP, STEP_DAYS, PREVIEW_VARIANT, followupFooterText, followupHtml } from './followup';
 import { BASE_URL, CAMPAIGN, ensureOutreachTables, getSettings, setSetting } from './db';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
@@ -71,20 +73,29 @@ function fillSubject(subject: string, first: string): string {
 }
 
 export function renderInvite(opts: {
-    template: string; step: 1 | 2 | 3; token: string; firstName: string | null; senderName: string; useHtml?: boolean;
+    template: string; step: number; token: string; firstName: string | null; senderName: string; useHtml?: boolean;
+    branch?: 'C' | 'N'; seqV2?: boolean;
 }): { subject: string; text: string; html: string | null; unsubUrl: string } {
+    const stage = STAGE_BY_STEP[opts.step];
+    const fuKey = stage && opts.seqV2 && opts.branch ? `${opts.template}_${opts.branch}_${stage}` : null;
+    const fu = fuKey ? FOLLOWUPS_V5[fuKey] : undefined;
+    if (stage && opts.seqV2 && opts.branch && !fu) throw new Error(`Unknown follow-up ${fuKey}`);
+    if (stage && !fu && opts.step !== 2) throw new Error(`Follow-up step ${opts.step} needs the v2 sequence`);
     const key = opts.step === 3 ? 'CHECKIN' : opts.step === 2 ? 'FU' : opts.template;
-    const v5 = INVITE_TEMPLATES_V5[key];
+    const v5 = fu
+        ? { subject: fu.subject, body: `${fu.body}\n${followupFooterText()}`, html: opts.useHtml === true ? followupHtml(fu.body, fu.preheader) : null }
+        : INVITE_TEMPLATES_V5[key];
     const legacy = INVITE_TEMPLATES[key];
-    // v5 (HTML plus plain text, new subjects) only when switched on; the check-in only exists in v5.
-    const useV5 = !!v5 && (opts.useHtml === true || key === 'CHECKIN');
+    // v5 (HTML plus plain text, new subjects) only when switched on; follow-ups v2 and the check-in always use v5.
+    const useV5 = !!v5 && (!!fu || opts.useHtml === true || key === 'CHECKIN');
     const t = useV5 ? v5 : legacy;
     if (!t) throw new Error(`Unknown template ${key}`);
+    const variant = fuKey ? PREVIEW_VARIANT[fuKey] : undefined;
     const unsubUrl = `${BASE_URL}/u/${opts.token}`;
     const first = (opts.firstName ?? '').trim();
     const map: Record<string, string> = {
         first_name: first || 'there',
-        preview_url: `${BASE_URL}/r/${opts.token}/p?s=${opts.step}`,
+        preview_url: `${BASE_URL}/r/${opts.token}/p?s=${opts.step}${variant ? `&v=${variant}` : ''}`,
         subscribe_url: `${BASE_URL}/r/${opts.token}/s?s=${opts.step}`,
         unsub_url: unsubUrl,
         sender_name: opts.senderName,
@@ -172,9 +183,35 @@ export async function planToday(now = new Date()): Promise<PlanResult | null> {
             cap.set(d.domain, Math.max(c, 0)); assigned += Math.max(c, 0);
         });
 
+        // Follow-ups. v2 sequence: 7, 14, 21 and 28 days after the first email to everyone who has not subscribed or
+        // unsubscribed. People with a real click get all four; people without a click get FU1 and FINAL, plus FU2 and
+        // FU3 while the complaint rate stays low. The old single follow-up runs when seq_v2 is off.
+        const seqV2 = s.seq_v2 === 'true';
         const gap = Number(s.followup_gap_days || 6);
-        // Follow-ups: step 1 sent at least `gap` days ago, still status 'sent' (no human click, no bounce, no unsub).
-        const fu = await query(`
+        let midOn = s.n_mid_steps !== 'false';
+        if (midOn) {
+            const cr = await query(`SELECT COUNT(*)::int AS sent, COUNT(*) FILTER (WHERE complaint)::int AS complaints FROM outreach_sends WHERE sent_at > NOW() - INTERVAL '14 days' AND step < 100`);
+            const { sent, complaints } = cr.rows[0] as { sent: number; complaints: number };
+            if (complaints >= 2 && complaints / Math.max(sent, 1) >= 0.001) midOn = false;
+        }
+        const fu = seqV2
+            ? await query(`
+                SELECT c.token, c.tz, s1.domain,
+                       (s1.sent_at AT TIME ZONE 'America/New_York')::date AS first_day,
+                       (SELECT MAX(sent_at AT TIME ZONE 'America/New_York')::date FROM outreach_sends x WHERE x.token = c.token AND x.step < 100) AS last_day,
+                       COALESCE((SELECT array_agg(x.step) FROM outreach_sends x WHERE x.token = c.token), '{}') AS sent_steps,
+                       COALESCE((SELECT array_agg(q.step) FROM outreach_queue q WHERE q.token = c.token AND q.state = 'pending'), '{}') AS queued_steps,
+                       (c.status = 'clicked' OR EXISTS (SELECT 1 FROM outreach_click_events e WHERE e.token = c.token AND (NOT e.is_bot OR e.human_confirmed))) AS has_click
+                FROM outreach_contacts c
+                JOIN outreach_sends s1 ON s1.token = c.token AND s1.step = 1 AND s1.status IN ('sent','delivered')
+                WHERE c.status IN ('sent','clicked') AND c.wave <> 'seed'
+                  AND (s1.sent_at AT TIME ZONE 'America/New_York')::date <= ($1::date - 7)
+                  AND NOT EXISTS (SELECT 1 FROM outreach_sends x WHERE x.token = c.token AND x.step = 7)
+                  AND NOT EXISTS (SELECT 1 FROM newsletter_suppression ns WHERE ns.email = c.email)
+                  AND NOT EXISTS (SELECT 1 FROM newsletter_subscribers sub WHERE sub.status IN ('confirmed','pending') AND sub.email IN (c.email, COALESCE(c.subscriber_email, c.email)))
+                ORDER BY s1.sent_at ASC
+                LIMIT 6000`, [et.date])
+            : await query(`
             SELECT c.token, c.tz, s1.domain
             FROM outreach_contacts c
             JOIN outreach_sends s1 ON s1.token = c.token AND s1.step = 1
@@ -187,6 +224,20 @@ export async function planToday(now = new Date()): Promise<PlanResult | null> {
               AND NOT EXISTS (SELECT 1 FROM outreach_click_events e WHERE e.token = c.token AND e.human_confirmed)
             ORDER BY s1.sent_at ASC
             LIMIT $3`, [et.date, gap, budget]);
+        const dayDiff = (a: string, b: string) => Math.round((Date.parse(a) - Date.parse(b)) / 86_400_000);
+        const dstr = (v: unknown) => (v instanceof Date ? v.toISOString().slice(0, 10) : String(v).slice(0, 10));
+        const fuRows: { token: string; tz: string; domain: string; step: number }[] = [];
+        for (const row of fu.rows) {
+            if (!seqV2) { fuRows.push({ token: row.token, tz: row.tz, domain: row.domain, step: 2 }); continue; }
+            const sentSteps = new Set<number>(row.sent_steps);
+            const queued = new Set<number>(row.queued_steps);
+            const seq = row.has_click || midOn ? [2, 5, 6, 7] : [2, 7];
+            const next = seq.find((st) => !sentSteps.has(st));
+            if (next === undefined || queued.has(next)) continue;
+            if (dayDiff(et.date, dstr(row.first_day)) < STEP_DAYS[next]) continue;
+            if (row.last_day && dayDiff(et.date, dstr(row.last_day)) < 4) continue; // keep at least 4 days between emails
+            fuRows.push({ token: row.token, tz: row.tz, domain: row.domain, step: next });
+        }
 
         const picks: { token: string; tz: string; domain: string; step: number }[] = [];
         const used = new Map<string, number>();
@@ -206,12 +257,12 @@ export async function planToday(now = new Date()): Promise<PlanResult | null> {
             used.set(d, (used.get(d) ?? 0) + 1);
         }
         const fuCap = Math.floor(budget * 0.55);
-        for (const row of fu.rows) {
+        for (const row of fuRows) {
             if (picks.length >= fuCap) break;
             let d = String(row.domain);
             if (!cap.has(d)) d = doms.map((x) => x.domain).sort((a, b) => room(b) - room(a))[0];
             if (room(d) <= 0) continue;
-            picks.push({ token: row.token, tz: row.tz, domain: d, step: 2 });
+            picks.push({ token: row.token, tz: row.tz, domain: d, step: row.step });
             used.set(d, (used.get(d) ?? 0) + 1);
         }
 
@@ -340,28 +391,48 @@ async function sendAlert(subject: string, body: string): Promise<void> {
 // ---------- sending ----------
 
 async function sendOne(row: { id: number; token: string; step: number; domain: string }, s: Record<string, string>, fromLocal: string): Promise<'sent' | 'skipped' | 'failed'> {
-    const cr = await query(`SELECT token, email, first_name, template, wave, status, snooze_until FROM outreach_contacts WHERE token = $1`, [row.token]);
+    const cr = await query(`SELECT token, email, first_name, template, wave, status, snooze_until, subscriber_email FROM outreach_contacts WHERE token = $1`, [row.token]);
     const c = cr.rows[0];
     const skip = async (note: string) => { await query(`UPDATE outreach_queue SET state = 'skipped', note = $2 WHERE id = $1`, [row.id, note]); return 'skipped' as const; };
     if (!c) return skip('no contact');
     const isSeed = c.wave === 'seed';
+    const stage = STAGE_BY_STEP[row.step];
+    const seqV2 = s.seq_v2 === 'true';
+    let branch: 'C' | 'N' = 'N';
     if (!isSeed) {
-        if (['unsubscribed', 'bounced', 'complained', 'subscribed', 'confirmed', 'clicked', 'monthly', 'checked_in'].includes(c.status)) return skip(`status ${c.status}`);
+        const blocked = ['unsubscribed', 'bounced', 'complained', 'subscribed', 'confirmed', 'monthly', 'checked_in'];
+        if (!(stage && seqV2)) blocked.push('clicked');
+        if (blocked.includes(c.status)) return skip(`status ${c.status}`);
         if (row.step === 1 && c.status !== 'pending') return skip(`status ${c.status}`);
-        if (row.step === 2 && c.status !== 'sent') return skip(`status ${c.status}`);
+        if (stage && !seqV2 && c.status !== 'sent') return skip(`status ${c.status}`);
+        if (stage && seqV2 && !['sent', 'clicked'].includes(c.status)) return skip(`status ${c.status}`);
+        if (stage && row.step !== 2 && !seqV2) return skip('sequence v2 off');
         if (row.step === 3 && (c.status !== 'snoozed' || !c.snooze_until || new Date(c.snooze_until).getTime() > Date.now())) return skip(`status ${c.status}`);
         if (c.status === 'snoozed' && row.step !== 3) return skip('snoozed');
         const sup = await query(`SELECT 1 FROM newsletter_suppression WHERE email = $1`, [c.email]);
         if (sup.rowCount) return skip('suppressed');
-        if (row.step === 2) {
+        if (stage && !seqV2) {
             const hc = await query(`SELECT 1 FROM outreach_click_events WHERE token = $1 AND human_confirmed LIMIT 1`, [row.token]);
             if (hc.rowCount) return skip('human click');
         }
+        if (stage) {
+            // Anyone who signed up (even with another address) or is on the newsletter list gets no more invitations.
+            const sub = await query(
+                `SELECT 1 FROM newsletter_subscribers WHERE status IN ('confirmed','pending') AND email = ANY($1::text[]) LIMIT 1`,
+                [[String(c.email).toLowerCase(), String(c.subscriber_email ?? '').toLowerCase()].filter(Boolean)]
+            );
+            if (sub.rowCount) return skip('already subscribed');
+        }
     }
-    const tmplStep: 1 | 2 | 3 = row.step === 3 ? 3 : row.step === 2 ? 2 : 1;
+    if (stage) {
+        // Branch C: any real (non bot) click on any tracked link, ever. Otherwise branch N.
+        const ck = await query(`SELECT 1 FROM outreach_click_events WHERE token = $1 AND (NOT is_bot OR human_confirmed) LIMIT 1`, [row.token]);
+        branch = ck.rowCount || c.status === 'clicked' ? 'C' : 'N';
+    }
+    const tmplStep: number = row.step >= 100 ? 1 : row.step;
     const msg = renderInvite({
         template: c.template, step: tmplStep, token: c.token, firstName: c.first_name,
-        senderName: s.sender_name || 'Eric Huang', useHtml: s.html_enabled === 'true',
+        senderName: s.sender_name || 'Eric Huang', useHtml: s.html_enabled === 'true', branch, seqV2,
     });
     const from = `${s.from_display || 'Eric Huang From AI Investor Copilot'} <${fromLocal}@${row.domain}>`;
     let resp: Response;
@@ -388,7 +459,7 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
     const data = (await resp.json()) as { id?: string };
     await query(
         `INSERT INTO outreach_sends (token, step, template, domain, from_addr, message_id) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (token, step) DO NOTHING`,
-        [row.token, row.step, tmplStep === 3 ? 'CHECKIN' : tmplStep === 2 ? 'FU' : c.template, row.domain, from, data.id ?? null]
+        [row.token, row.step, tmplStep === 3 ? 'CHECKIN' : stage ? (seqV2 ? `${stage}_${branch}` : 'FU') : c.template, row.domain, from, data.id ?? null]
     );
     await query(`UPDATE outreach_queue SET state = 'sent' WHERE id = $1`, [row.id]);
     if (!isSeed) {

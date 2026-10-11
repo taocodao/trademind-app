@@ -125,6 +125,8 @@ export async function ensureOutreachTables(): Promise<void> {
         ['ramp_step', '50'],           // added each send day
         ['ramp_cap', '10000'],         // hard ceiling per day
         ['followup_gap_days', '6'],
+        ['seq_v2', 'false'],             // 4 stage click/no-click follow-up sequence; off until approved
+        ['n_mid_steps', 'true'],         // no-click branch also gets FU2 and FU3 while complaints stay low
         ['list_unsub_header', 'true'],   // List-Unsubscribe headers (mail clients show their own Unsubscribe button when present)
         ['html_enabled', 'false'],       // HTML plus plain text v5 templates; off until Eric approves the samples
         ['sender_name', 'Eric Huang'],
@@ -242,8 +244,11 @@ export async function confirmHuman(token: string): Promise<boolean> {
             `UPDATE outreach_contacts SET status = 'clicked', updated_at = NOW()
              WHERE token = $1 AND status IN ('pending', 'sent')`, [token]
         );
-        // A person who clicked is never sent the follow-up.
-        await query(`UPDATE outreach_queue SET state = 'skipped', note = 'human click' WHERE token = $1 AND step = 2 AND state = 'pending'`, [token]);
+        // With the v2 sequence a click does not cancel follow-ups: it moves the person to the clicked branch.
+        const v2 = await query(`SELECT value FROM outreach_settings WHERE key = 'seq_v2'`);
+        if (v2.rows[0]?.value !== 'true') {
+            await query(`UPDATE outreach_queue SET state = 'skipped', note = 'human click' WHERE token = $1 AND step = 2 AND state = 'pending'`, [token]);
+        }
     }
     return confirmed;
 }

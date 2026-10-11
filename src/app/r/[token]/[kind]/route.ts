@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { recordClick, validToken, BASE_URL, CAMPAIGN } from '@/lib/outreach/db';
 import { getContact } from '@/lib/outreach/db';
+import { VARIANT_PATH } from '@/lib/outreach/followup';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -17,7 +18,7 @@ async function handle(req: NextRequest, params: Promise<{ token: string; kind: s
     const fallback = NextResponse.redirect(new URL('/newsletter', BASE_URL), 302);
     if (!validToken(token) || !['p', 's', 'i', 'h', 'n'].includes(kind)) return fallback;
     const sParam = Number(req.nextUrl.searchParams.get('s') ?? '1');
-    const step = sParam >= 1 && sParam <= 4 ? sParam : 1;
+    const step = sParam >= 1 && sParam <= 9 ? sParam : 1;
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
     const ua = req.headers.get('user-agent');
     const { known, isBot } = await recordClick({
@@ -28,7 +29,10 @@ async function handle(req: NextRequest, params: Promise<{ token: string; kind: s
     const c = await getContact(token);
     const utm = `utm_source=coldlist&utm_medium=email&utm_campaign=${CAMPAIGN}&utm_content=${encodeURIComponent(c?.template ?? 'T')}_s${step}`;
     let dest: string;
-    if (kind === 'p') dest = `/newsletter/start-here?t=${token}&${utm}`;
+    if (kind === 'p') {
+        const v = req.nextUrl.searchParams.get('v') ?? '';
+        dest = VARIANT_PATH[v] ? `${VARIANT_PATH[v]}?t=${token}&${utm}` : `/newsletter/start-here?t=${token}&${utm}`;
+    }
     else if (kind === 's') dest = `/newsletter/join?t=${token}&${utm}`;
     else if (kind === 'i') {
         const a = req.nextUrl.searchParams.get('a') ?? '';

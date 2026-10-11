@@ -363,7 +363,7 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
         template: c.template, step: tmplStep, token: c.token, firstName: c.first_name,
         senderName: s.sender_name || 'Eric Huang', useHtml: s.html_enabled === 'true',
     });
-    const from = `${s.sender_name || 'Eric Huang'} <${fromLocal}@${row.domain}>`;
+    const from = `${s.from_display || 'Eric Huang From AI Investor Copilot'} <${fromLocal}@${row.domain}>`;
     let resp: Response;
     try {
         resp = await fetch('https://api.resend.com/emails', {

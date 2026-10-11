@@ -128,6 +128,7 @@ export async function ensureOutreachTables(): Promise<void> {
         ['list_unsub_header', 'true'],   // List-Unsubscribe headers (mail clients show their own Unsubscribe button when present)
         ['html_enabled', 'false'],       // HTML plus plain text v5 templates; off until Eric approves the samples
         ['sender_name', 'Eric Huang'],
+        ['from_display', 'Eric Huang From AI Investor Copilot'], // display name in the From line
         ['reply_to', 'eric@taocodao.com'],
         ['alert_email', 'eric@taocodao.com'],
         ['last_report_date', ''],

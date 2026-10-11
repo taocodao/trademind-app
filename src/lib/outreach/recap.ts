@@ -122,7 +122,7 @@ export async function processRecaps(limit = 15, now = new Date()): Promise<Recor
                 method: 'POST',
                 headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json', 'Idempotency-Key': `recap-${c.token}-${monthKey}` },
                 body: JSON.stringify({
-                    from: `${s.sender_name || 'Eric Huang'} <${d.from_local}@${d.domain}>`, to: [c.email], reply_to: s.reply_to || undefined,
+                    from: `${s.from_display || 'Eric Huang From AI Investor Copilot'} <${d.from_local}@${d.domain}>`, to: [c.email], reply_to: s.reply_to || undefined,
                     subject: msg.subject, text: msg.text, html: msg.html,
                     ...(s.list_unsub_header === 'false' ? {} : { headers: { 'List-Unsubscribe': `<${msg.unsubUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } }),
                     tags: [{ name: 'campaign', value: CAMPAIGN }, { name: 'step', value: 'recap' }],

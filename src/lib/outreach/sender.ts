@@ -4,7 +4,8 @@
  * Transport: Resend, one verified sending subdomain per brand domain, plain text only,
  * no open or click tracking, links on trademind.bot, one-click unsubscribe headers.
  *
- * Ramp (set by Eric, Oct 2026): 100 sends on the first send day, +50 each send day.
+ * Ramp (set by Eric, Oct 2026): 100 sends on the first send day, +50 each send day, seven days a week,
+ * spread across 8:00 AM to 8:00 PM ET.
  * Pilot wave first; each segment's rollout (W2) is released by the confirmed-rate gate.
  * Nothing sends while outreach_settings.paused = 'true'.
  */
@@ -49,8 +50,9 @@ export function zonedInstant(date: string, hhmm: string, tz: string): Date {
     return guess;
 }
 
-export function isSendDay(date: string, dow: number): boolean {
-    return dow >= 1 && dow <= 5 && !HOLIDAYS.has(date);
+/** Sends run seven days a week; only the listed holidays are skipped. */
+export function isSendDay(date: string, _dow: number): boolean {
+    return !HOLIDAYS.has(date);
 }
 
 // ---------- rendering ----------
@@ -211,14 +213,18 @@ export async function planToday(now = new Date()): Promise<PlanResult | null> {
         await query(`UPDATE outreach_plan_days SET planned = $2 WHERE plan_date = $1`, [et.date, picks.length]);
 
         const nowMs = now.getTime();
+        // Send window: 8:00 AM to 8:00 PM ET. Contacts in earlier time zones start no earlier than 7:00 AM local.
+        const windowEnd = zonedInstant(et.date, '20:00', ET).getTime();
         for (const p of picks) {
-            const start = zonedInstant(et.date, '08:00', p.tz || ET);
-            const jitter = randomInt(0, 180) * 60_000 + randomInt(0, 60) * 1000;
-            let at = start.getTime() + jitter;
+            const startEt = zonedInstant(et.date, '08:00', ET).getTime();
+            const startLocal = zonedInstant(et.date, '07:00', p.tz || ET).getTime();
+            const start = Math.max(startEt, startLocal);
+            const spanSec = Math.max(Math.floor((windowEnd - start) / 1000), 60);
+            let at = start + randomInt(0, spanSec) * 1000;
             if (at < nowMs) at = nowMs + randomInt(0, 20) * 60_000;
             await query(
                 `INSERT INTO outreach_queue (plan_date, token, step, domain, scheduled_at) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (token, step) DO NOTHING`,
-                [et.date, p.token, p.step, p.domain, new Date(at)]
+                [et.date, p.token, p.step, p.domain, new Date(Math.min(at, windowEnd))]
             );
         }
         for (const sd of seedRows) {

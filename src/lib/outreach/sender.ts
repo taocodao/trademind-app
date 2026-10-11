@@ -13,6 +13,7 @@ import { randomInt } from 'crypto';
 import { query } from '@/lib/db';
 import { MAILING_ADDRESS } from '@/lib/newsletter/email';
 import { INVITE_TEMPLATES } from './templates';
+import { INVITE_TEMPLATES_V5 } from './templates-v5';
 import { BASE_URL, CAMPAIGN, ensureOutreachTables, getSettings, setSetting } from './db';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
@@ -57,11 +58,27 @@ export function isSendDay(date: string, _dow: number): boolean {
 
 // ---------- rendering ----------
 
+function escHtml(v: string): string {
+    return v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/** Subject lines begin with "{{first_name}}, ". Without a name that prefix is dropped and the rest is capitalized. */
+function fillSubject(subject: string, first: string): string {
+    if (first) return subject.replace(/\{\{first_name\}\}/g, first);
+    const rest = subject.replace(/^\{\{first_name\}\},\s*/, '').replace(/\{\{first_name\}\}/g, 'there');
+    return rest.charAt(0).toUpperCase() + rest.slice(1);
+}
+
 export function renderInvite(opts: {
-    template: string; step: 1 | 2; token: string; firstName: string | null; senderName: string;
-}): { subject: string; text: string; unsubUrl: string } {
-    const t = INVITE_TEMPLATES[opts.step === 2 ? 'FU' : opts.template];
-    if (!t) throw new Error(`Unknown template ${opts.template}`);
+    template: string; step: 1 | 2 | 3; token: string; firstName: string | null; senderName: string; useHtml?: boolean;
+}): { subject: string; text: string; html: string | null; unsubUrl: string } {
+    const key = opts.step === 3 ? 'CHECKIN' : opts.step === 2 ? 'FU' : opts.template;
+    const v5 = INVITE_TEMPLATES_V5[key];
+    const legacy = INVITE_TEMPLATES[key];
+    // v5 (HTML plus plain text, new subjects) only when switched on; the check-in only exists in v5.
+    const useV5 = !!v5 && (opts.useHtml === true || key === 'CHECKIN');
+    const t = useV5 ? v5 : legacy;
+    if (!t) throw new Error(`Unknown template ${key}`);
     const unsubUrl = `${BASE_URL}/u/${opts.token}`;
     const first = (opts.firstName ?? '').trim();
     const map: Record<string, string> = {
@@ -73,8 +90,11 @@ export function renderInvite(opts: {
         mailing_address: MAILING_ADDRESS,
         sig_sep: '-'.repeat(2),
     };
-    const text = t.body.replace(/\{\{(\w+)\}\}/g, (_m, k: string) => map[k] ?? '');
-    return { subject: t.subject, text, unsubUrl };
+    const fill = (src: string, esc: boolean) => src.replace(/\{\{(\w+)\}\}/g, (_m, k: string) => esc ? escHtml(map[k] ?? '') : (map[k] ?? ''));
+    const subject = useV5 ? fillSubject(t.subject, first) : t.subject;
+    const text = fill(t.body, false);
+    const html = useV5 && v5.html && opts.useHtml === true ? fill(v5.html.replace(/<title>[\s\S]*?<\/title>/, `<title>${escHtml(subject)}</title>`), true) : null;
+    return { subject, text, html, unsubUrl };
 }
 
 // ---------- planning ----------
@@ -164,6 +184,20 @@ export async function planToday(now = new Date()): Promise<PlanResult | null> {
         const picks: { token: string; tz: string; domain: string; step: number }[] = [];
         const used = new Map<string, number>();
         const room = (d: string) => (cap.get(d) ?? 0) - (used.get(d) ?? 0);
+        // Check-ins: people who asked to be contacted again after 3 or 6 months (one email, then done).
+        const ci = await query(`
+            SELECT c.token, c.tz FROM outreach_contacts c
+            WHERE c.status = 'snoozed' AND c.snooze_until IS NOT NULL AND c.snooze_until <= NOW()
+              AND NOT EXISTS (SELECT 1 FROM outreach_sends s WHERE s.token = c.token AND s.step = 3)
+              AND NOT EXISTS (SELECT 1 FROM outreach_queue q WHERE q.token = c.token AND q.step = 3)
+              AND NOT EXISTS (SELECT 1 FROM newsletter_suppression ns WHERE ns.email = c.email)
+            ORDER BY c.snooze_until ASC LIMIT $1`, [budget]);
+        for (const row of ci.rows) {
+            const d = doms.map((x) => x.domain).sort((a, b) => room(b) - room(a))[0];
+            if (room(d) <= 0) break;
+            picks.push({ token: row.token, tz: row.tz, domain: d, step: 3 });
+            used.set(d, (used.get(d) ?? 0) + 1);
+        }
         const fuCap = Math.floor(budget * 0.55);
         for (const row of fu.rows) {
             if (picks.length >= fuCap) break;
@@ -299,15 +333,17 @@ async function sendAlert(subject: string, body: string): Promise<void> {
 // ---------- sending ----------
 
 async function sendOne(row: { id: number; token: string; step: number; domain: string }, s: Record<string, string>, fromLocal: string): Promise<'sent' | 'skipped' | 'failed'> {
-    const cr = await query(`SELECT token, email, first_name, template, wave, status FROM outreach_contacts WHERE token = $1`, [row.token]);
+    const cr = await query(`SELECT token, email, first_name, template, wave, status, snooze_until FROM outreach_contacts WHERE token = $1`, [row.token]);
     const c = cr.rows[0];
     const skip = async (note: string) => { await query(`UPDATE outreach_queue SET state = 'skipped', note = $2 WHERE id = $1`, [row.id, note]); return 'skipped' as const; };
     if (!c) return skip('no contact');
     const isSeed = c.wave === 'seed';
     if (!isSeed) {
-        if (['unsubscribed', 'bounced', 'complained', 'subscribed', 'confirmed', 'clicked'].includes(c.status)) return skip(`status ${c.status}`);
+        if (['unsubscribed', 'bounced', 'complained', 'subscribed', 'confirmed', 'clicked', 'monthly', 'checked_in'].includes(c.status)) return skip(`status ${c.status}`);
         if (row.step === 1 && c.status !== 'pending') return skip(`status ${c.status}`);
         if (row.step === 2 && c.status !== 'sent') return skip(`status ${c.status}`);
+        if (row.step === 3 && (c.status !== 'snoozed' || !c.snooze_until || new Date(c.snooze_until).getTime() > Date.now())) return skip(`status ${c.status}`);
+        if (c.status === 'snoozed' && row.step !== 3) return skip('snoozed');
         const sup = await query(`SELECT 1 FROM newsletter_suppression WHERE email = $1`, [c.email]);
         if (sup.rowCount) return skip('suppressed');
         if (row.step === 2) {
@@ -315,8 +351,11 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
             if (hc.rowCount) return skip('human click');
         }
     }
-    const tmplStep: 1 | 2 = row.step === 2 ? 2 : 1;
-    const msg = renderInvite({ template: c.template, step: tmplStep, token: c.token, firstName: c.first_name, senderName: s.sender_name || 'Eric Huang' });
+    const tmplStep: 1 | 2 | 3 = row.step === 3 ? 3 : row.step === 2 ? 2 : 1;
+    const msg = renderInvite({
+        template: c.template, step: tmplStep, token: c.token, firstName: c.first_name,
+        senderName: s.sender_name || 'Eric Huang', useHtml: s.html_enabled === 'true',
+    });
     const from = `${s.sender_name || 'Eric Huang'} <${fromLocal}@${row.domain}>`;
     let resp: Response;
     try {
@@ -324,7 +363,7 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
             method: 'POST',
             headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json', 'Idempotency-Key': `outreach-${row.token}-${row.step}` },
             body: JSON.stringify({
-                from, to: [c.email], reply_to: s.reply_to || undefined, subject: msg.subject, text: msg.text,
+                from, to: [c.email], reply_to: s.reply_to || undefined, subject: msg.subject, text: msg.text, ...(msg.html ? { html: msg.html } : {}),
                 headers: { 'List-Unsubscribe': `<${msg.unsubUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
                 tags: [{ name: 'campaign', value: CAMPAIGN }, { name: 'step', value: String(row.step >= 100 ? 0 : row.step) }],
             }),
@@ -342,10 +381,13 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
     const data = (await resp.json()) as { id?: string };
     await query(
         `INSERT INTO outreach_sends (token, step, template, domain, from_addr, message_id) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (token, step) DO NOTHING`,
-        [row.token, row.step, tmplStep === 2 ? 'FU' : c.template, row.domain, from, data.id ?? null]
+        [row.token, row.step, tmplStep === 3 ? 'CHECKIN' : tmplStep === 2 ? 'FU' : c.template, row.domain, from, data.id ?? null]
     );
     await query(`UPDATE outreach_queue SET state = 'sent' WHERE id = $1`, [row.id]);
-    if (!isSeed) await query(`UPDATE outreach_contacts SET status = 'sent', updated_at = NOW() WHERE token = $1 AND status = 'pending'`, [row.token]);
+    if (!isSeed) {
+        await query(`UPDATE outreach_contacts SET status = 'sent', updated_at = NOW() WHERE token = $1 AND status = 'pending'`, [row.token]);
+        if (row.step === 3) await query(`UPDATE outreach_contacts SET status = 'checked_in', updated_at = NOW() WHERE token = $1 AND status = 'snoozed'`, [row.token]);
+    }
     return 'sent';
 }
 
@@ -415,6 +457,8 @@ export async function reportIfDue(now = new Date()): Promise<boolean> {
         FROM outreach_contacts c JOIN outreach_sends s ON s.token = c.token AND s.step = 1
         WHERE c.wave = 'W1_pilot' GROUP BY c.segment ORDER BY c.segment`);
     const dom = await query(`SELECT domain, status, paused_reason FROM outreach_domains ORDER BY domain`);
+    const fb = await query(`SELECT choice, COUNT(*)::int AS n FROM outreach_feedback WHERE ts > NOW() - INTERVAL '1 day' GROUP BY choice ORDER BY choice`);
+    const snz = await query(`SELECT COUNT(*) FILTER (WHERE status = 'snoozed')::int AS snoozed, COUNT(*) FILTER (WHERE status = 'monthly')::int AS monthly FROM outreach_contacts`);
     const t = tot.rows[0];
     const lines = [
         `Invitation report for ${et.date}. Send day ${plan.rows[0].day_index}, budget ${plan.rows[0].budget}, planned ${plan.rows[0].planned}.`,
@@ -423,6 +467,7 @@ export async function reportIfDue(now = new Date()): Promise<boolean> {
         '', `Totals: delivered or sent step 1 ${t.delivered_all}, human clicks ${t.human_clicks}, bot-filtered clicks ${t.bot_clicks}, subscribe submissions ${t.subscribed}, confirmed ${t.confirmed}, unsubscribed ${t.unsub}, contacts still pending ${t.pending}.`,
         '', 'Pilot gate by segment (delivered, confirmed, rate; needs 300 delivered and 1.5%):',
         ...seg.rows.map((r) => `- ${r.segment}: ${r.delivered}, ${r.confirmed}, ${Number(r.delivered) ? (Number(r.confirmed) / Number(r.delivered) * 100).toFixed(2) : '0.00'}%`),
+        '', `Unsubscribe page choices in the last 24 hours: ${fb.rows.length ? fb.rows.map((r) => `${r.choice} ${r.n}`).join(', ') : 'none'}. Paused for a check-in: ${snz.rows[0].snoozed}. Asked for a monthly recap (nothing sent yet): ${snz.rows[0].monthly}.`,
         '', 'Domains:', ...dom.rows.map((r) => `- ${r.domain}: ${r.status}${r.paused_reason ? ` (${r.paused_reason})` : ''}`),
     ];
     await sendAlert(`Invitation report ${et.date}`, lines.join('\n'));

@@ -16,7 +16,8 @@ async function handle(req: NextRequest, params: Promise<{ token: string; kind: s
     const { token, kind } = await params;
     const fallback = NextResponse.redirect(new URL('/newsletter', BASE_URL), 302);
     if (!validToken(token) || (kind !== 'p' && kind !== 's')) return fallback;
-    const step = Number(req.nextUrl.searchParams.get('s') ?? '1') === 2 ? 2 : 1;
+    const sParam = Number(req.nextUrl.searchParams.get('s') ?? '1');
+    const step = sParam === 3 ? 3 : sParam === 2 ? 2 : 1;
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
     const ua = req.headers.get('user-agent');
     const { known, isBot } = await recordClick({

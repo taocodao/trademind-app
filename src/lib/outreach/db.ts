@@ -32,6 +32,16 @@ export async function ensureOutreachTables(): Promise<void> {
             updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )`);
     await query(`ALTER TABLE outreach_contacts ADD COLUMN IF NOT EXISTS subscriber_email TEXT`);
+    await query(`ALTER TABLE outreach_contacts ADD COLUMN IF NOT EXISTS snooze_until TIMESTAMPTZ`);
+    await query(`
+        CREATE TABLE IF NOT EXISTS outreach_feedback (
+            id        BIGSERIAL PRIMARY KEY,
+            token     TEXT NOT NULL,
+            choice    TEXT NOT NULL,
+            why       TEXT[] NOT NULL DEFAULT '{}',
+            comment   TEXT,
+            ts        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )`);
     await query(`CREATE INDEX IF NOT EXISTS outreach_contacts_status_idx ON outreach_contacts (status, wave, segment)`);
     await query(`
         CREATE TABLE IF NOT EXISTS outreach_sends (
@@ -115,6 +125,7 @@ export async function ensureOutreachTables(): Promise<void> {
         ['ramp_step', '50'],           // added each send day
         ['ramp_cap', '10000'],         // hard ceiling per day
         ['followup_gap_days', '6'],
+        ['html_enabled', 'false'],       // HTML plus plain text v5 templates; off until Eric approves the samples
         ['sender_name', 'Eric Huang'],
         ['reply_to', 'eric@taocodao.com'],
         ['alert_email', 'eric@taocodao.com'],
@@ -247,6 +258,34 @@ export async function unsubscribeContact(token: string): Promise<'done' | 'alrea
     await query(`UPDATE outreach_contacts SET status = 'unsubscribed', updated_at = NOW() WHERE token = $1`, [token]);
     await query(`UPDATE outreach_queue SET state = 'skipped', note = 'unsubscribed' WHERE token = $1 AND state = 'pending'`, [token]);
     return already ? 'already' : 'done';
+}
+
+export type UnsubChoice = 'unsub' | 'snooze_90' | 'snooze_180' | 'monthly';
+export const UNSUB_CHOICES: UnsubChoice[] = ['unsub', 'snooze_90', 'snooze_180', 'monthly'];
+export const WHY_VALUES = ['not_relevant', 'no_options', 'too_many', 'dont_know', 'other'];
+
+/**
+ * Unsubscribe page confirm step. unsub suppresses the address everywhere. snooze_90 and snooze_180 stop
+ * all email and schedule exactly one check-in at the end of the gap. monthly stops the invitation sequence
+ * and records the wish for a monthly recap (no recap is sent until one exists). The optional survey is stored.
+ */
+export async function applyUnsubChoice(token: string, choice: UnsubChoice, why: string[], comment: string | null): Promise<'done' | 'unknown'> {
+    await ensureOutreachTables();
+    const c = await getContact(token);
+    if (!c) return 'unknown';
+    await query(
+        `INSERT INTO outreach_feedback (token, choice, why, comment) VALUES ($1, $2, $3, $4)`,
+        [token, choice, why.filter((w) => WHY_VALUES.includes(w)).slice(0, 5), comment ? comment.slice(0, 1000) : null]
+    );
+    if (choice === 'unsub') { await unsubscribeContact(token); return 'done'; }
+    const days = choice === 'snooze_90' ? 90 : choice === 'snooze_180' ? 180 : null;
+    if (c.status === 'unsubscribed' || c.status === 'bounced' || c.status === 'complained') return 'done';
+    await query(
+        `UPDATE outreach_contacts SET status = $2, snooze_until = CASE WHEN $3::int IS NULL THEN NULL ELSE NOW() + ($3::int || ' days')::interval END, updated_at = NOW() WHERE token = $1`,
+        [token, days ? 'snoozed' : 'monthly', days]
+    );
+    await query(`UPDATE outreach_queue SET state = 'skipped', note = $2 WHERE token = $1 AND state = 'pending'`, [token, choice]);
+    return 'done';
 }
 
 /** Subscribe form submitted from a personal link: tie the signup (maybe a different address) to the contact. */

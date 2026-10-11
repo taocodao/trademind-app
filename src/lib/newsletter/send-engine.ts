@@ -42,9 +42,10 @@ export interface NewsletterSettings {
 }
 
 /** Imported (purchased list) rows never go out from a test sender domain. */
+/** The purchased (lead-import) list is never on the drip unless include_imported is switched on.
+ *  Invitation campaign contacts only join the drip after they subscribe and confirm themselves. */
 export function excludesImported(s: { sender_from: string | null; include_imported?: boolean }): boolean {
-    if (s.include_imported) return false;
-    return !!s.sender_from && !/@news\.trademind\.bot|@trademind\.bot/i.test(s.sender_from);
+    return !s.include_imported;
 }
 
 export const DEFAULT_SETTINGS: NewsletterSettings = {
@@ -438,19 +439,34 @@ export async function countDueNow(s: NewsletterSettings, cadenceDays: number): P
  *  so the due addresses spread across run_hours, and schedule the next run. */
 export async function startRun(s: NewsletterSettings, day: string): Promise<{ cadenceDays: number; due: number; meanGapMs: number }> {
     const cadenceDays = s.random_cadence ? 1 + Math.floor(Math.random() * 3) : s.cadence_days;
-    // Runs are cadenceDays apart, so every address is due when its run starts.
+    // Random mode: runs are cadenceDays apart, so every address is due when its run starts.
+    // Fixed mode (for example weekly): a run happens every day and each address is due once
+    // cadence_days Eastern calendar days have passed since its last issue, so people who join
+    // mid-week get their next issue exactly cadence_days later, not at the next weekly run.
     const dueCadence = s.random_cadence ? 1 : s.cadence_days;
     const due = await countDueNow(s, dueCadence);
     const meanGapMs = Math.max(2000, Math.floor((s.run_hours * 3600_000 * 0.97) / Math.max(1, due)));
-    await query(
-        `UPDATE newsletter_settings SET
-            run_day = $1, run_cursor = NULL, run_done = FALSE,
-            run_started_at = NOW(), next_run_at = NOW() + ($2 || ' days')::interval,
-            next_send_at = NOW(), run_mean_gap_ms = $3
-            ${s.random_cadence ? ', cadence_days = 1' : ''}
-         WHERE id = 1`,
-        [day, String(cadenceDays), meanGapMs]
-    );
+    if (s.random_cadence) {
+        await query(
+            `UPDATE newsletter_settings SET
+                run_day = $1, run_cursor = NULL, run_done = FALSE,
+                run_started_at = NOW(), next_run_at = NOW() + ($2 || ' days')::interval,
+                next_send_at = NOW(), run_mean_gap_ms = $3, cadence_days = 1
+             WHERE id = 1`,
+            [day, String(cadenceDays), meanGapMs]
+        );
+    } else {
+        // Next run is eligible from 00:00 Eastern tomorrow; the send window then sets the clock time.
+        await query(
+            `UPDATE newsletter_settings SET
+                run_day = $1, run_cursor = NULL, run_done = FALSE,
+                run_started_at = NOW(),
+                next_run_at = (((NOW() AT TIME ZONE 'America/New_York')::date + 1)::timestamp AT TIME ZONE 'America/New_York'),
+                next_send_at = NOW(), run_mean_gap_ms = $2
+             WHERE id = 1`,
+            [day, meanGapMs]
+        );
+    }
     return { cadenceDays, due, meanGapMs };
 }
 

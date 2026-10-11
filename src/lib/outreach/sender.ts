@@ -93,8 +93,14 @@ export function renderInvite(opts: {
     };
     const fill = (src: string, esc: boolean) => src.replace(/\{\{(\w+)\}\}/g, (_m, k: string) => esc ? escHtml(map[k] ?? '') : (map[k] ?? ''));
     const subject = useV5 ? fillSubject(t.subject, first) : t.subject;
-    const text = fill(t.body, false);
-    const html = useV5 && v5.html && opts.useHtml === true ? fill(v5.html.replace(/<title>[\s\S]*?<\/title>/, `<title>${escHtml(subject)}</title>`), true) : null;
+    const trk = (kind: string, extra = '') => `${BASE_URL}/r/${opts.token}/${kind}?s=${opts.step}${extra}`;
+    // Track every link: section links and the header link in the email go through the personal redirect.
+    const track = (src: string, isHtml: boolean) => src
+        .replace(/https:\/\/trademind\.bot\/newsletter\/inside#(weather|readout|flight|turbulence)/g, (_m, a: string) => isHtml ? trk('i', `&amp;a=${a}`) : trk('i', `&a=${a}`))
+        .replace(/https:\/\/trademind\.bot\/newsletter\/inside(?![#\w\/])/g, trk('i'))
+        .replace(/href="https:\/\/trademind\.bot"/g, `href="${trk('h')}"`);
+    const text = track(fill(t.body, false), false);
+    const html = useV5 && v5.html && opts.useHtml === true ? track(fill(v5.html.replace(/<title>[\s\S]*?<\/title>/, `<title>${escHtml(subject)}</title>`), true), true) : null;
     return { subject, text, html, unsubUrl };
 }
 
@@ -365,7 +371,7 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
             headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json', 'Idempotency-Key': `outreach-${row.token}-${row.step}` },
             body: JSON.stringify({
                 from, to: [c.email], reply_to: s.reply_to || undefined, subject: msg.subject, text: msg.text, ...(msg.html ? { html: msg.html } : {}),
-                headers: { 'List-Unsubscribe': `<${msg.unsubUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
+                ...(s.list_unsub_header === 'false' ? {} : { headers: { 'List-Unsubscribe': `<${msg.unsubUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } }),
                 tags: [{ name: 'campaign', value: CAMPAIGN }, { name: 'step', value: String(row.step >= 100 ? 0 : row.step) }],
             }),
         });

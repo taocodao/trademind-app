@@ -74,12 +74,13 @@ export function renderRecap(opts: { token: string; firstName: string | null; sen
     const blockRe = /<tr><td style="padding:14px 0;border-bottom:1px solid #[0-9a-f]{6};[\s\S]*?<\/td><\/tr>/;
     const block = RECAP_HTML.match(blockRe)?.[0];
     if (!block) throw new Error('recap template block not found');
-    const blocks = issues.map((i) => fillHtml(block, { n: String(i.n), date: i.date, title: i.title, one_line_takeaway: i.takeaway, issue_url: i.url })).join('');
+    const tIssue = (url: string, amp: string) => `${BASE_URL}/r/${opts.token}/n?s=4${amp}u=${encodeURIComponent(url.replace(BASE_URL, ''))}`;
+    const blocks = issues.map((i) => fillHtml(block, { n: String(i.n), date: i.date, title: i.title, one_line_takeaway: i.takeaway, issue_url: tIssue(i.url, '&') })).join('');
     let html = RECAP_HTML.replace(blockRe, '\u0000BLOCKS\u0000');
     html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${esc(subject)}</title>`);
-    html = fillHtml(html).replace('\u0000BLOCKS\u0000', blocks);
+    html = fillHtml(html).replace('\u0000BLOCKS\u0000', blocks).replace(/href="https:\/\/trademind\.bot"/g, `href="${BASE_URL}/r/${opts.token}/h?s=4"`);
 
-    const issueText = issues.map((i) => `Issue ${i.n} (${i.date}, ${opts.monthKey.slice(0, 4)}): ${i.title}\n${i.takeaway}\n${i.url}`).join('\n\n');
+    const issueText = issues.map((i) => `Issue ${i.n} (${i.date}, ${opts.monthKey.slice(0, 4)}): ${i.title}\n${i.takeaway}\n${tIssue(i.url, '&')}`).join('\n\n');
     const text = [
         `Hi ${m.first_name},`, '', intro, '', 'THE MONTH IN ONE MINUTE',
         `Market weather: ${m.weather_summary}`, `Copilot readout: ${m.readout_summary}`, `Biggest risk lesson: ${m.risk_lesson}`, '',
@@ -123,7 +124,7 @@ export async function processRecaps(limit = 15, now = new Date()): Promise<Recor
                 body: JSON.stringify({
                     from: `${s.sender_name || 'Eric Huang'} <${d.from_local}@${d.domain}>`, to: [c.email], reply_to: s.reply_to || undefined,
                     subject: msg.subject, text: msg.text, html: msg.html,
-                    headers: { 'List-Unsubscribe': `<${msg.unsubUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
+                    ...(s.list_unsub_header === 'false' ? {} : { headers: { 'List-Unsubscribe': `<${msg.unsubUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } }),
                     tags: [{ name: 'campaign', value: CAMPAIGN }, { name: 'step', value: 'recap' }],
                 }),
             });

@@ -19,7 +19,6 @@ export default async function JoinPage({
 }) {
     const { t } = await searchParams;
     const contact = t ? await getContact(t) : null;
-    const unsubscribed = contact?.status === 'unsubscribed';
     return (
         <main className="tm-nl">
             <div className="tm-nl-wrap-narrow">
@@ -29,10 +28,7 @@ export default async function JoinPage({
                     A free weekly brief on systematic investing: the market regime, what our ML research detects, one strategy concept, and what could go wrong.
                     You will get a confirmation email first. Nothing is sent until you confirm.
                 </p>
-                {unsubscribed ? (
-                    <p className="tm-nl-sub">You unsubscribed from our invitation emails. You can still subscribe below at any time.</p>
-                ) : null}
-                <SignupForm source="coldlist" initialEmail={unsubscribed ? '' : contact?.email ?? ''} />
+                <SignupForm source="coldlist" initialEmail={contact?.email ?? ''} implicitConsent />
                 <p className="tm-nl-offerline">
                     Confirmed subscribers are entitled to 30% off the first year of a yearly TradeMind Strategy subscription, using the same email within 90 days of confirming.
                     {' '}<Link href="/newsletter/offer" className="tm-nl-link">Offer terms</Link>

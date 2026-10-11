@@ -125,6 +125,7 @@ export async function ensureOutreachTables(): Promise<void> {
         ['ramp_step', '50'],           // added each send day
         ['ramp_cap', '10000'],         // hard ceiling per day
         ['followup_gap_days', '6'],
+        ['list_unsub_header', 'true'],   // List-Unsubscribe headers (mail clients show their own Unsubscribe button when present)
         ['html_enabled', 'false'],       // HTML plus plain text v5 templates; off until Eric approves the samples
         ['sender_name', 'Eric Huang'],
         ['reply_to', 'eric@taocodao.com'],
@@ -181,7 +182,7 @@ const SCANNER_UA = /bot|crawl|spider|scanner|python-requests|curl|wget|headless|
 
 /** Records a link click and classifies it. Returns the contact and whether it counted as a bot. */
 export async function recordClick(input: {
-    token: string; linkType: 'preview' | 'subscribe' | 'unsub'; step: number | null;
+    token: string; linkType: 'preview' | 'subscribe' | 'unsub' | 'inside' | 'home' | 'issue'; step: number | null;
     method: string; ip: string | null; ua: string | null;
 }): Promise<{ known: boolean; isBot: boolean }> {
     await ensureOutreachTables();

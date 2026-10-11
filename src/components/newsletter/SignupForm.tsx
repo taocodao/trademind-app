@@ -30,10 +30,12 @@ function attribution() {
     };
 }
 
-export default function SignupForm({ source, initialEmail }: { source: string; initialEmail?: string }) {
+export default function SignupForm({ source, initialEmail, implicitConsent = false }: { source: string; initialEmail?: string; implicitConsent?: boolean }) {
     const [email, setEmail] = useState(initialEmail ?? '');
     const [experience, setExperience] = useState('');
-    const [consent, setConsent] = useState(false);
+    const [consentBox, setConsent] = useState(false);
+    // implicitConsent: the join page shows the consent sentence next to the button instead of a checkbox.
+    const consent = implicitConsent || consentBox;
     const [honeypot, setHoneypot] = useState('');
     const [busy, setBusy] = useState(false);
     const [done, setDone] = useState<'pending' | 'already' | null>(null);
@@ -153,19 +155,26 @@ export default function SignupForm({ source, initialEmail }: { source: string; i
                     <option key={l.value} value={l.value}>{l.label}</option>
                 ))}
             </select>
-            <label className="tm-nl-consent">
-                <input
-                    type="checkbox"
-                    checked={consent}
-                    onChange={(e) => setConsent(e.target.checked)}
-                    required
-                />
-                <span>Send me The AI Systematic Investor and TradeMind offers</span>
-            </label>
+            {implicitConsent ? null : (
+                <label className="tm-nl-consent">
+                    <input
+                        type="checkbox"
+                        checked={consentBox}
+                        onChange={(e) => setConsent(e.target.checked)}
+                        required
+                    />
+                    <span>Send me The AI Systematic Investor and TradeMind offers</span>
+                </label>
+            )}
             {error && <p className="tm-nl-error" role="alert">{error}</p>}
             <button type="submit" disabled={busy || !consent} className="tm-nl-btn tm-nl-btn-primary">
                 {busy ? 'Subscribing...' : 'Subscribe'}
             </button>
+            {implicitConsent ? (
+                <p className="tm-nl-consent" style={{ margin: '4px 0 0' }}>
+                    By subscribing you agree to receive The AI Systematic Investor and TradeMind offers. Unsubscribe any time.
+                </p>
+            ) : null}
         </form>
     );
 }

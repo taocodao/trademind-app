@@ -5,6 +5,7 @@ import pool from '@/lib/db';
 import { getAccount } from '@/lib/accounts';
 import { getMembershipByAccount, planForStrategy, priceKeyForPlan, type MembershipPlan } from '@/lib/membership';
 import { getStripe } from '@/lib/stripe-server';
+import { upsertLoginEmail } from '@/lib/auth-helpers';
 import { resolveNewsletterDiscount } from '@/lib/newsletter/checkout';
 import { ensureStripeProductCopy } from '@/lib/stripe-provision';
 
@@ -125,13 +126,17 @@ export async function POST(req: NextRequest) {
         if (!priceId) return NextResponse.json({ error: 'Stripe price is not configured' }, { status: 500 });
         await ensureStripeProductCopy(membershipPlan, priceId);
 
+        // The login email shown on the payment page and kept as this login's canonical email.
+        const loginEmail = typeof body.loginEmail === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.loginEmail.trim()) ? body.loginEmail.trim() : null;
+        if (loginEmail) await upsertLoginEmail(userId, loginEmail);
+
         const customerResult = await pool.query(
             'SELECT stripe_customer_id FROM user_settings WHERE user_id = $1',
             [userId]
         );
         let customerId: string | undefined = customerResult.rows[0]?.stripe_customer_id;
         if (!customerId) {
-            const customer = await getStripe().customers.create({ metadata: { privy_did: userId } });
+            const customer = await getStripe().customers.create({ ...(loginEmail ? { email: loginEmail } : {}), metadata: { privy_did: userId } });
             customerId = customer.id;
             await pool.query(
                 `INSERT INTO user_settings (user_id, stripe_customer_id, updated_at)
@@ -140,6 +145,16 @@ export async function POST(req: NextRequest) {
                  SET stripe_customer_id = EXCLUDED.stripe_customer_id, updated_at = NOW()`,
                 [userId, customerId]
             );
+        }
+
+        if (loginEmail) {
+            // Existing customers: keep Stripe's copy of the email equal to the login the plan belongs to.
+            try {
+                const existingCustomer = await getStripe().customers.retrieve(customerId);
+                if (!('deleted' in existingCustomer && existingCustomer.deleted) && (existingCustomer as Stripe.Customer).email?.toLowerCase() !== loginEmail.toLowerCase()) {
+                    await getStripe().customers.update(customerId, { email: loginEmail });
+                }
+            } catch (err) { console.warn('[checkout] customer email sync failed', err); }
         }
 
         const metadata: Record<string, string> = { userId, plan: membershipPlan };

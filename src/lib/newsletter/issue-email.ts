@@ -117,7 +117,7 @@ function offerBlock(sub: SubscriberForEmail, daysLeft: number | null): string {
             : `Your 30% offer ends on ${until}.`;
         return wrap(`<p style="margin:0;font-size:15px;color:#111827"><strong>${line}</strong></p>
             <p style="margin:8px 0 0;font-size:13.5px;color:#4b5563">No verification step: the discount is already attached to the address this newsletter was sent to. Log in at trademind.bot with ${esc(sub.email)} and 30% comes off your first annual term automatically. <a href="${BASE_URL}/newsletter/offer" style="color:#8B5CF6">Offer terms</a></p>
-            ${btn('Claim 30% off annual plan', `${BASE_URL}/?email=${encodeURIComponent(sub.email)}#pricing`)}`);
+            ${btn('Claim 30% off annual plan', `${BASE_URL}/plans?email=${encodeURIComponent(sub.email)}`)}`);
     }
     if (sub.discount_state === 'redeemed') {
         return wrap(`<p style="margin:0;font-size:15px;color:#111827"><strong>Your subscription is active.</strong></p>
@@ -126,7 +126,7 @@ function offerBlock(sub: SubscriberForEmail, daysLeft: number | null): string {
     }
     return wrap(`<p style="margin:0;font-size:15px;color:#111827"><strong>Every address that received this newsletter carries 30% off a first-year plan.</strong></p>
         <p style="margin:8px 0 0;font-size:13.5px;color:#4b5563">It is already built in: log in at trademind.bot with ${esc(sub.email)} and the discount applies automatically. QQQ Basic and QQQ LEAPS, annual billing, every signal verified in the public ledger. <a href="${BASE_URL}/newsletter/offer" style="color:#8B5CF6">Offer terms</a></p>
-        ${btn('Claim 30% off annual plan', `${BASE_URL}/?email=${encodeURIComponent(sub.email)}#pricing`)}`);
+        ${btn('Claim 30% off annual plan', `${BASE_URL}/plans?email=${encodeURIComponent(sub.email)}`)}`);
 }
 
 export interface IssueEmail {
@@ -155,7 +155,7 @@ export async function renderIssueEmail(
     const unsubscribeUrl = `${BASE_URL}/newsletter/unsubscribe?token=${await makeUnsubscribeToken(sub.id)}`;
     const firstName = greetingName(sub.first_name);
     const viewUrl = lean ? canonical : `${canonical}?e=${encodeURIComponent(sub.email)}${sub.referral_id ? `&ref=${encodeURIComponent(sub.referral_id)}` : ''}`;
-    const claimUrl = `${BASE_URL}/?email=${encodeURIComponent(sub.email)}#pricing`;
+    const claimUrl = `${BASE_URL}/plans?email=${encodeURIComponent(sub.email)}`;
 
     const daysLeft = sub.window_end
         ? Math.ceil((new Date(sub.window_end).getTime() - Date.now()) / 864e5)

@@ -1,17 +1,22 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { ArrowRight, CreditCard } from 'lucide-react';
 import { PRICING } from '@/lib/pricing-config';
+import { loginEmailOf, sameEmail } from '@/lib/privy-email';
 
 function UpgradePageInner() {
     const searchParams = useSearchParams();
     const accountId = searchParams.get('accountId');
     const planParam = searchParams.get('plan');
     const emailParam = searchParams.get('email');
-    const { ready, authenticated, login, getAccessToken } = usePrivy();
+    const { ready, authenticated, login, logout, getAccessToken, user } = usePrivy();
+    const signedEmail = authenticated ? loginEmailOf(user) : null;
+    const [proceedAsSigned, setProceedAsSigned] = useState(false);
+    const mismatch = authenticated && !!emailParam && emailParam.includes('@') && !!signedEmail && !sameEmail(emailParam, signedEmail) && !proceedAsSigned;
+    const autoLoginOnce = useRef(false);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
@@ -38,6 +43,7 @@ function UpgradePageInner() {
                     ...(accountId ? { accountId: Number(accountId) } : {}),
                     ...(plan ? { plan } : {}),
                     ...(emailParam ? { newsletterEmail: emailParam } : {}),
+                    ...(signedEmail ? { loginEmail: signedEmail } : {}),
                 }),
             });
             const data = await response.json();
@@ -50,9 +56,17 @@ function UpgradePageInner() {
     };
 
     useEffect(() => {
-        if (ready && authenticated && (accountId || plan)) void startCheckout();
+        if (ready && authenticated && (accountId || plan) && !mismatch) void startCheckout();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [ready, authenticated, accountId, plan]);
+    }, [ready, authenticated, accountId, plan, mismatch]);
+
+    // Arriving signed out with a plan: open the sign in dialog straight away, with the email from the link filled in.
+    useEffect(() => {
+        if (ready && !authenticated && plan && !autoLoginOnce.current) {
+            autoLoginOnce.current = true;
+            login(emailParam && emailParam.includes('@') ? { prefill: { type: 'email', value: emailParam } } : {});
+        }
+    }, [ready, authenticated, plan, emailParam, login]);
 
     if (ready && !authenticated) {
         return (
@@ -70,7 +84,28 @@ function UpgradePageInner() {
                         onClick={() => login(emailParam && emailParam.includes('@') ? { prefill: { type: 'email', value: emailParam } } : {})}
                         className="w-full rounded-xl bg-tm-purple py-3 font-bold hover:bg-tm-purple/80"
                     >Sign in</button>
-                    <a href="/#pricing" className="inline-block mt-5 text-sm text-gray-400 hover:text-white">Back to pricing</a>
+                    <a href="/plans" className="inline-block mt-5 text-sm text-gray-400 hover:text-white">Back to plans</a>
+                </section>
+            </main>
+        );
+    }
+
+    if (mismatch) {
+        return (
+            <main className="min-h-screen bg-black text-white flex items-center justify-center px-6">
+                <section className="w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.03] p-8 text-center">
+                    <h1 className="text-2xl font-bold">Which login should hold this plan?</h1>
+                    <p className="mt-3 text-sm text-gray-400">
+                        You are signed in as <strong className="text-white">{signedEmail}</strong>, but this offer was sent to <strong className="text-white">{emailParam}</strong>.
+                    </p>
+                    <button
+                        onClick={async () => { await logout(); login({ prefill: { type: 'email', value: String(emailParam) } }); }}
+                        className="mt-6 w-full rounded-xl bg-tm-purple py-3 font-bold hover:bg-tm-purple/80"
+                    >Sign out and continue as {emailParam}</button>
+                    <button
+                        onClick={() => setProceedAsSigned(true)}
+                        className="mt-3 w-full rounded-xl border border-white/20 py-3 font-bold hover:bg-white/5"
+                    >Continue as {signedEmail}</button>
                 </section>
             </main>
         );
@@ -82,6 +117,7 @@ function UpgradePageInner() {
                 <section className="w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.03] p-8 text-center">
                     <CreditCard className="mx-auto mb-4 h-8 w-8 text-tm-purple" />
                     <h1 className="text-2xl font-bold">Preparing secure checkout</h1>
+                    <p className="mt-3 text-sm text-gray-300">Signed in as <strong className="text-white">{signedEmail ?? 'your account'}</strong>. This plan will be created for this login.</p>
                     <p className="mt-3 text-sm text-gray-400">
                         {planInfo
                             ? `${planInfo.label} at $${planInfo.price} per year. Your card is charged today; cancel within your first month and the payment is refunded in full.`

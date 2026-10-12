@@ -6,6 +6,7 @@ import { SettingsProvider } from "@/components/providers/SettingsProvider";
 import { StrategyProvider } from "@/components/providers/StrategyContext";
 import { AccountProvider } from "@/components/providers/AccountContext";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { SessionEmailBadge } from "@/components/layout/SessionEmailBadge";
 import { SupportChatWidget } from "@/components/ui/SupportChatWidget";
 import { MarketingProviders } from "@/components/marketing/MarketingProviders";
 import Script from "next/script";
@@ -64,6 +65,7 @@ export default function RootLayout({
                                             {children}
                                         </div>
                                         <BottomNav />
+                                        <SessionEmailBadge />
                                         <SupportChatWidget />
                                     </AccountProvider>
                                 </StrategyProvider>

@@ -141,7 +141,7 @@ export function sendWelcomeEmail(input: {
             `Your personal code: ${input.code} (only works with this email address)`,
             'Start reading: Issue 1, Why most retail investors need a process before another prediction',
         ],
-        cta: { label: 'View your offer', url: `${BASE_URL}/upgrade` },
+        cta: { label: 'View your offer', url: `${BASE_URL}/plans?email=${encodeURIComponent(input.to)}` },
         secondaryLink: { label: 'Start with Issue 1', url: `${BASE_URL}/newsletter/issues/2026-08-06-why-most-investors-need-a-process` },
         note: 'Offer terms: trademind.bot/newsletter/offer. Renews at the standard annual price after the first year.',
     });
@@ -215,8 +215,8 @@ export function sendOfferEmail(input: {
         heading: map.heading,
         intro: map.intro,
         cta: input.kind === 'expired'
-            ? { label: 'Explore TradeMind plans', url: `${BASE_URL}/upgrade` }
-            : { label: 'Claim 30% off', url: `${BASE_URL}/upgrade` },
+            ? { label: 'Explore TradeMind plans', url: `${BASE_URL}/plans?email=${encodeURIComponent(input.to)}` }
+            : { label: 'Claim 30% off', url: `${BASE_URL}/plans?email=${encodeURIComponent(input.to)}` },
         secondaryLink: input.unsubscribeUrl
             ? { label: 'Unsubscribe', url: input.unsubscribeUrl }
             : undefined,

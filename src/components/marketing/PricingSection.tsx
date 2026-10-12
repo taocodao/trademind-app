@@ -89,6 +89,26 @@ export function PricingSection() {
     const [nlModalOpen, setNlModalOpen] = useState(false);
     const [nlModalSent, setNlModalSent] = useState(false);
 
+    // Sign in, then continue straight to checkout for the plan that was clicked. The sign-in dialog does not
+    // navigate on its own, so the chosen plan is remembered and picked up once the login completes.
+    const loginThenCheckout = (plan: 'basic' | 'leaps', email: string) => {
+        try { sessionStorage.setItem('tm_pending_plan', JSON.stringify({ plan, email, ts: Date.now() })); } catch { /* private mode */ }
+        login(email.includes('@') ? { prefill: { type: 'email', value: email } } : {});
+    };
+
+    useEffect(() => {
+        if (!authenticated) return;
+        let pending: { plan?: string; email?: string; ts?: number } | null = null;
+        try {
+            const raw = sessionStorage.getItem('tm_pending_plan');
+            pending = raw ? JSON.parse(raw) : null;
+            sessionStorage.removeItem('tm_pending_plan');
+        } catch { /* ignore */ }
+        if (pending && Date.now() - (pending.ts ?? 0) < 10 * 60 * 1000 && (pending.plan === 'basic' || pending.plan === 'leaps')) {
+            window.location.href = `/upgrade?plan=${pending.plan}${pending.email ? `&email=${encodeURIComponent(pending.email)}` : ''}`;
+        }
+    }, [authenticated]);
+
     const handleSubscribe = async (plan: 'basic' | 'leaps') => {
         if (!unlocked) {
             setPendingPlan(plan);
@@ -97,7 +117,7 @@ export function PricingSection() {
             return;
         }
         if (!authenticated) {
-            login(nlEmail.includes('@') ? { prefill: { type: 'email', value: nlEmail } } : {});
+            loginThenCheckout(plan, nlEmail);
             return;
         }
         window.location.href = `/upgrade?plan=${plan}${nlEmail ? `&email=${encodeURIComponent(nlEmail)}` : ''}`;
@@ -292,7 +312,7 @@ export function PricingSection() {
                                             const plan = pendingPlan;
                                             setPendingPlan(null);
                                             setNlModalOpen(false);
-                                            if (!authenticated) login(nlEmail.includes('@') ? { prefill: { type: 'email', value: nlEmail } } : {});
+                                            if (!authenticated) loginThenCheckout(plan, nlEmail);
                                             else window.location.href = `/upgrade?plan=${plan}`;
                                         }}
                                         className="mt-3 text-[11px] text-tm-muted underline hover:text-white"
@@ -314,7 +334,7 @@ export function PricingSection() {
                                             const plan = pendingPlan;
                                             setPendingPlan(null);
                                             setNlModalOpen(false);
-                                            if (!authenticated) login({ prefill: { type: 'email', value: nlEmail } });
+                                            if (!authenticated) loginThenCheckout(plan, nlEmail);
                                             else window.location.href = `/upgrade?plan=${plan}&email=${encodeURIComponent(nlEmail)}`;
                                         }}
                                         className="w-full rounded-lg bg-tm-purple px-5 py-3 text-sm font-bold text-white hover:bg-tm-purple/90"

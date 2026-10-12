@@ -3,7 +3,7 @@ import {
     signup, signupRateLimited, confirmInstantly, logNewsletterSend,
 } from '@/lib/newsletter/db';
 import { sendConfirmationEmail, sendWelcomeEmail } from '@/lib/newsletter/email';
-import { markContactByToken } from '@/lib/outreach/db';
+import { markContactByToken, getContact } from '@/lib/outreach/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +17,15 @@ export async function POST(req: NextRequest) {
         const ua = req.headers.get('user-agent') ?? null;
         if (await signupRateLimited(ip)) {
             return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 });
+        }
+
+        // Someone using their personal invitation link, with the address we invited, subscribes on the spot:
+        // no confirmation email. Any other address (or no link) still gets the confirmation step.
+        let instant = body.instant === true;
+        if (body.outreachToken) {
+            const invited = await getContact(String(body.outreachToken));
+            const norm = (v: unknown) => String(v ?? '').trim().toLowerCase();
+            if (invited && norm(invited.email) === norm(body.email)) instant = true;
         }
 
         const result = await signup({
@@ -45,7 +54,7 @@ export async function POST(req: NextRequest) {
         // Instant mode (pricing popup): no confirmation step. The address is
         // confirmed immediately and the first issue goes out right away, then
         // issues 2-8 every two days and weekly after that (newsletter-drip cron).
-        if (body.instant === true && 'subscriberId' in result) {
+        if (instant && 'subscriberId' in result) {
             const conf = await confirmInstantly(result.subscriberId);
             if (conf) {
                 // Web page "subscribe with your own email" sends only the first issue

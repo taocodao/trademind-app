@@ -30,7 +30,7 @@ function attribution() {
     };
 }
 
-export default function SignupForm({ source, initialEmail, implicitConsent = false }: { source: string; initialEmail?: string; implicitConsent?: boolean }) {
+export default function SignupForm({ source, initialEmail, implicitConsent = false, outreachToken = '' }: { source: string; initialEmail?: string; implicitConsent?: boolean; outreachToken?: string }) {
     const [email, setEmail] = useState(initialEmail ?? '');
     const [experience, setExperience] = useState('');
     const [consentBox, setConsent] = useState(false);
@@ -38,7 +38,7 @@ export default function SignupForm({ source, initialEmail, implicitConsent = fal
     const consent = implicitConsent || consentBox;
     const [honeypot, setHoneypot] = useState('');
     const [busy, setBusy] = useState(false);
-    const [done, setDone] = useState<'pending' | 'already' | null>(null);
+    const [done, setDone] = useState<'pending' | 'already' | 'subscribed' | null>(null);
     const [changeUrl, setChangeUrl] = useState<string | null>(null);
     const [showShare, setShowShare] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -59,13 +59,14 @@ export default function SignupForm({ source, initialEmail, implicitConsent = fal
                     website: honeypot, // honeypot; always empty for humans
                     source,
                     ...attribution(),
+                    ...(outreachToken ? { outreachToken } : {}),
                 }),
             });
             const data = await res.json();
             if (!res.ok) {
                 setError(data?.error ?? 'Something went wrong. Try again.');
             } else {
-                setDone(data.status === 'already-confirmed' ? 'already' : 'pending');
+                setDone(data.status === 'already-confirmed' ? 'already' : data.status === 'subscribed' ? 'subscribed' : 'pending');
                 setChangeUrl(data.changeUrl ?? null);
                 trackNewsletter('signup_submitted', { source, experience: experience || null });
             }
@@ -83,7 +84,9 @@ export default function SignupForm({ source, initialEmail, implicitConsent = fal
     if (done) {
         return (
             <div className="tm-nlsignup-done">
-                {done === 'pending' ? (
+                {done === 'subscribed' ? (
+                    <p className="tm-nlsignup-done-msg">You are subscribed. Your first issue is on its way, so check your inbox (and the Promotions or Spam folder the first time).</p>
+                ) : done === 'pending' ? (
                     <>
                         <p className="tm-nlsignup-done-msg">Check your inbox to confirm and unlock 30% off.</p>
                         <p className="tm-nl-muted" style={{ fontSize: 13.5, margin: '0 0 12px' }}>

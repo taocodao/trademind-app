@@ -44,7 +44,10 @@ async function handle(req: NextRequest, params: Promise<{ token: string; kind: s
         dest = `${u}?t=${token}&${utm}`;
     }
     void isBot;
-    return NextResponse.redirect(new URL(dest, BASE_URL), 302);
+    const res = NextResponse.redirect(new URL(dest, BASE_URL), 302);
+    // Remember the personal link for 30 days so the subscribe page can still prefill the address on a later visit.
+    res.cookies.set('tm_t', token, { path: '/', maxAge: 60 * 60 * 24 * 30, sameSite: 'lax', httpOnly: true, secure: true });
+    return res;
 }
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ token: string; kind: string }> }) {

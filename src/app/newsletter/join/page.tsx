@@ -3,6 +3,7 @@ import Link from 'next/link';
 import '../newsletter.css';
 import SignupForm from '@/components/newsletter/SignupForm';
 import { NewsletterFooter } from '@/components/newsletter/NewsletterShell';
+import { cookies } from 'next/headers';
 import { getContact } from '@/lib/outreach/db';
 
 export const dynamic = 'force-dynamic';
@@ -18,7 +19,11 @@ export default async function JoinPage({
     searchParams: Promise<{ t?: string }>;
 }) {
     const { t } = await searchParams;
-    const contact = t ? await getContact(t) : null;
+    // The personal link carries ?t=. If a visitor reaches this page some other way (a menu link, a second visit),
+    // fall back to the token remembered from their last click on one of our email links.
+    const remembered = (await cookies()).get('tm_t')?.value;
+    const token = t || remembered || '';
+    const contact = token ? await getContact(token) : null;
     return (
         <main className="tm-nl">
             <div className="tm-nl-wrap-narrow">
@@ -26,9 +31,11 @@ export default async function JoinPage({
                 <h1 className="tm-nl-h1">Subscribe free</h1>
                 <p className="tm-nl-sub">
                     A free weekly brief on systematic investing: the market regime, what our ML research detects, one strategy concept, and what could go wrong.
-                    You will get a confirmation email first. Nothing is sent until you confirm.
+                    {contact
+                        ? 'Press Subscribe and your first issue arrives right away. You can unsubscribe at any time.'
+                        : 'You will get a confirmation email first. Nothing is sent until you confirm.'}
                 </p>
-                <SignupForm source="coldlist" initialEmail={contact?.email ?? ''} implicitConsent />
+                <SignupForm source="coldlist" initialEmail={contact?.email ?? ''} outreachToken={contact ? token : ''} implicitConsent />
                 <p className="tm-nl-offerline">
                     Confirmed subscribers are entitled to 30% off the first year of a yearly TradeMind Strategy subscription, using the same email within 90 days of confirming.
                     {' '}<Link href="/newsletter/offer" className="tm-nl-link">Offer terms</Link>

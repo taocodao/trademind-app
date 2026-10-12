@@ -1,5 +1,6 @@
 "use client";
 
+import { loginEmailOf } from '@/lib/privy-email';
 import { usePrivy } from "@privy-io/react-auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -104,7 +105,7 @@ function AccountsPageInner() {
                 const res = await fetch('/api/stripe/confirm', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-                    body: JSON.stringify(sessionId ? { sessionId } : {}),
+                    body: JSON.stringify({ ...(sessionId ? { sessionId } : {}), ...(user ? { loginEmail: loginEmailOf(user) } : {}) }),
                 });
                 const data = await res.json().catch(() => ({}));
                 await refreshAccounts();

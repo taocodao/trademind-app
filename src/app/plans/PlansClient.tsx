@@ -1,113 +1,92 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { PRICING } from '@/lib/pricing-config';
-import { loginEmailOf, sameEmail } from '@/lib/privy-email';
+import { loginEmailOf } from '@/lib/privy-email';
 
 type Plan = 'basic' | 'leaps';
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const CARDS: Array<{ plan: Plan; name: string; blurb: string; regular: number; price: number; start: string; points: string[]; note: string }> = [
+const CARDS: Array<{ plan: Plan; name: string; blurb: string; regular: number; price: number; start: string; points: string[] }> = [
     {
         plan: 'basic', name: PRICING.plans.turbocore_pro_bundle.label, blurb: 'Regime-aware ML signal. Any brokerage account works.',
         regular: PRICING.plans.turbocore_pro_bundle.regularAnnual, price: PRICING.plans.turbocore_pro_bundle.annual,
-        start: '$10,000 virtual account',
+        start: '$10,000',
         points: ['Signal processed at 3:30 PM ET each trading day', 'Email order instructions you enter at your own broker', 'No options approval needed'],
-        note: 'No options approval needed.',
     },
     {
         plan: 'leaps', name: PRICING.plans.qqq_leaps.label, blurb: 'ML-powered long-term options on QQQ.',
         regular: PRICING.plans.qqq_leaps.regularAnnual, price: PRICING.plans.qqq_leaps.annual,
-        start: '$25,000 virtual account',
+        start: '$25,000',
         points: ['Signal processed at 3:30 PM ET each trading day', 'Email order instructions you enter at your own broker', 'Requires options approval at your broker (long calls)'],
-        note: 'Requires options approval at your broker.',
     },
 ];
 
+const STEPS = [
+    ['Confirm your email', 'This address becomes your TradeMind login. There is no password. Your signals are emailed to it too.'],
+    ['Pay securely with Stripe', 'Annual plan, charged today at the 30% subscriber price. Cancel within your first month and the payment is refunded in full.'],
+    ['Sign in with the same email', 'Right after payment you land on the sign in screen with your email already filled in. Enter the one-time code we send to that address.'],
+    ['Your account opens automatically', 'Your virtual account is created for you, $25,000 for QQQ LEAPS or $10,000 for QQQ Basic, and signals arrive by email from the next trading day.'],
+];
+
 export default function PlansClient({ linkEmail }: { linkEmail: string }) {
-    const { ready, authenticated, user, login, logout } = usePrivy();
+    const { ready, authenticated, user } = usePrivy();
     const signedEmail = authenticated ? loginEmailOf(user) : null;
-    const [useSigned, setUseSigned] = useState(false);
-    // The address the plan will be created for when signing in. Starts as the address in the link; the visitor can change it.
     const [chosen, setChosen] = useState(linkEmail);
     const [editing, setEditing] = useState(!linkEmail);
     const [draft, setDraft] = useState('');
-    const [draftError, setDraftError] = useState<string | null>(null);
-    const wantedEmail = (typeof window !== 'undefined' && authenticated ? (() => { try { return JSON.parse(sessionStorage.getItem('tm_pending_plan') || 'null')?.email as string | undefined; } catch { return undefined; } })() : undefined) || linkEmail;
-    const mismatch = authenticated && !!wantedEmail && !!signedEmail && !sameEmail(wantedEmail, signedEmail) && !useSigned;
-    const target = useSigned ? (signedEmail ?? '') : (wantedEmail || signedEmail || '');
+    const [error, setError] = useState<string | null>(null);
+    const [busy, setBusy] = useState<Plan | null>(null);
 
-    const go = (plan: Plan) => {
-        window.location.href = `/upgrade?plan=${plan}${target ? `&email=${encodeURIComponent(target)}` : ''}`;
-    };
-
-    const choose = (plan: Plan) => {
-        if (!authenticated) {
-            if (editing && !chosen) { setDraftError('Enter the email address you want to use first.'); return; }
-            try { sessionStorage.setItem('tm_pending_plan', JSON.stringify({ plan, email: chosen, ts: Date.now() })); } catch { /* ignore */ }
-            login(chosen ? { prefill: { type: 'email', value: chosen } } : {});
-            return;
-        }
-        if (!mismatch) go(plan);
-    };
-
-    // After sign in, carry on to payment for the plan that was chosen.
-    useEffect(() => {
-        if (!authenticated) return;
-        let pending: { plan?: string; email?: string; ts?: number } | null = null;
+    const pay = async (plan: Plan) => {
+        setError(null);
+        if (editing || !EMAIL_RE.test(chosen)) { setError('Confirm the email address you want to use first.'); return; }
+        setBusy(plan);
         try {
-            const raw = sessionStorage.getItem('tm_pending_plan');
-            pending = raw ? JSON.parse(raw) : null;
-        } catch { /* ignore */ }
-        if (!pending || Date.now() - (pending.ts ?? 0) > 10 * 60 * 1000) return;
-        const wanted = pending.email || linkEmail;
-        if (wanted && signedEmail && !sameEmail(wanted, signedEmail)) return; // mismatch box decides
-        try { sessionStorage.removeItem('tm_pending_plan'); } catch { /* ignore */ }
-        if (pending.plan === 'basic' || pending.plan === 'leaps') {
-            window.location.href = `/upgrade?plan=${pending.plan}&email=${encodeURIComponent(signedEmail || wanted || '')}`;
+            const res = await fetch('/api/stripe/guest-checkout', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan, email: chosen }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data.url) throw new Error(data.error || 'Unable to start checkout.');
+            window.location.href = data.url;
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Unable to start checkout.');
+            setBusy(null);
         }
-    }, [authenticated, linkEmail, signedEmail]);
-
-    const switchLogin = async () => {
-        await logout();
-        login(linkEmail ? { prefill: { type: 'email', value: linkEmail } } : {});
     };
 
     return (
-        <main style={{ minHeight: '100vh', background: '#07080f', color: '#fff', padding: '48px 20px 120px' }}>
-            <div style={{ maxWidth: 880, margin: '0 auto' }}>
+        <main style={{ minHeight: '100vh', background: '#07080f', color: '#fff', padding: '48px 20px 140px' }}>
+            <div style={{ maxWidth: 900, margin: '0 auto' }}>
                 <p style={{ fontSize: 12, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#a78bfa', fontWeight: 700 }}>TradeMind plans</p>
                 <h1 style={{ fontSize: 34, margin: '10px 0 8px', fontWeight: 800 }}>Choose your plan</h1>
-                <p style={{ color: '#94a3b8', fontSize: 15, lineHeight: 1.6, maxWidth: 640 }}>
-                    TradeMind is a signal service, not auto-trading. Each trading day we process the signal at 3:30 PM ET and email you the exact order to enter at your own broker. Annual billing only. Your card is charged at checkout, and if you cancel within the first month the payment is refunded in full.
+                <p style={{ color: '#94a3b8', fontSize: 15, lineHeight: 1.6, maxWidth: 660 }}>
+                    TradeMind is a signal service, not auto-trading. Each trading day we process the signal at 3:30 PM ET and email you the exact order to enter at your own broker.
                 </p>
 
-                <div style={{ margin: '22px 0', padding: '14px 16px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)', fontSize: 14 }}>
-                    {!ready ? (
-                        <span style={{ color: '#94a3b8' }}>Checking your sign in</span>
-                    ) : mismatch ? (
-                        <>
-                            <p style={{ margin: '0 0 10px', lineHeight: 1.5 }}>
-                                You are signed in as <strong>{signedEmail}</strong>, but this offer was sent to <strong>{linkEmail}</strong>. Which login should hold your subscription?
-                            </p>
-                            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                                <button onClick={() => void switchLogin()} style={btn(true)}>Sign out and continue as {linkEmail}</button>
-                                <button onClick={() => setUseSigned(true)} style={btn(false)}>Continue as {signedEmail}</button>
-                            </div>
-                        </>
-                    ) : authenticated ? (
-                        <span>Your subscription will be created for the login <strong>{signedEmail ?? 'on this device'}</strong>.</span>
-                    ) : editing ? (
+                <ol style={{ listStyle: 'none', padding: 0, margin: '22px 0', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12 }}>
+                    {STEPS.map(([t, d], i) => (
+                        <li key={t} style={{ border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '12px 14px', background: 'rgba(255,255,255,0.03)' }}>
+                            <div style={{ color: '#a78bfa', fontWeight: 800, fontSize: 12 }}>STEP {i + 1}</div>
+                            <div style={{ fontWeight: 700, margin: '4px 0', fontSize: 14 }}>{t}</div>
+                            <div style={{ color: '#94a3b8', fontSize: 12.5, lineHeight: 1.5 }}>{d}</div>
+                        </li>
+                    ))}
+                </ol>
+
+                <div style={{ margin: '0 0 22px', padding: '16px 18px', borderRadius: 12, border: '1px solid rgba(124,58,237,0.5)', background: 'rgba(124,58,237,0.08)', fontSize: 14 }}>
+                    {editing ? (
                         <form
                             onSubmit={(e) => {
                                 e.preventDefault();
                                 const v = draft.trim();
-                                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { setDraftError('Enter a valid email address.'); return; }
-                                setChosen(v); setEditing(false); setDraftError(null);
+                                if (!EMAIL_RE.test(v)) { setError('Enter a valid email address.'); return; }
+                                setChosen(v); setEditing(false); setError(null);
                             }}
                         >
                             <p style={{ margin: '0 0 10px', lineHeight: 1.5 }}>
-                                Enter the email you want for your TradeMind login. Your signals will be sent there, and the 30% subscriber price applies to any email you use.
+                                Step 1. Enter the email you want as your TradeMind login. The 30% subscriber price applies to any email you use.
                             </p>
                             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                                 <input
@@ -115,21 +94,26 @@ export default function PlansClient({ linkEmail }: { linkEmail: string }) {
                                     style={{ flex: '1 1 240px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.4)', color: '#fff', padding: '10px 12px', fontSize: 14 }}
                                 />
                                 <button type="submit" style={btn(true)}>Use this email</button>
-                                {linkEmail && <button type="button" onClick={() => { setChosen(linkEmail); setEditing(false); setDraftError(null); }} style={btn(false)}>Keep {linkEmail}</button>}
+                                {linkEmail && <button type="button" onClick={() => { setChosen(linkEmail); setEditing(false); setError(null); }} style={btn(false)}>Keep {linkEmail}</button>}
                             </div>
-                            {draftError && <p style={{ color: '#f87171', margin: '8px 0 0', fontSize: 13 }}>{draftError}</p>}
                         </form>
                     ) : (
                         <>
                             <p style={{ margin: '0 0 10px', lineHeight: 1.5 }}>
-                                Your plan will be created for the login <strong>{chosen}</strong>. Is this the email you want to use?
+                                Step 1. Your TradeMind login will be <strong>{chosen}</strong>. Is this the email you want to use?
                             </p>
-                            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                                <span style={{ alignSelf: 'center', color: '#a7f3d0', fontSize: 13 }}>Yes: choose a plan below</span>
-                                <button onClick={() => { setDraft(''); setEditing(true); }} style={btn(false)}>No, use a different email</button>
+                            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                                <span style={{ color: '#a7f3d0', fontSize: 13 }}>Yes: choose a plan below.</span>
+                                <button onClick={() => { setDraft(''); setEditing(true); setError(null); }} style={btn(false)}>No, use a different email</button>
                             </div>
                         </>
                     )}
+                    {ready && signedEmail && signedEmail.toLowerCase() !== chosen.toLowerCase() && (
+                        <p style={{ margin: '12px 0 0', color: '#fcd34d', fontSize: 13, lineHeight: 1.5 }}>
+                            This browser is currently signed in as {signedEmail}. After payment you will be asked to sign in as {chosen || 'your chosen email'}.
+                        </p>
+                    )}
+                    {error && <p style={{ color: '#f87171', margin: '10px 0 0', fontSize: 13 }}>{error}</p>}
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 18 }}>
@@ -142,16 +126,19 @@ export default function PlansClient({ linkEmail }: { linkEmail: string }) {
                                 <span style={{ color: '#94a3b8' }}> / year </span>
                                 <span style={{ color: '#64748b', textDecoration: 'line-through', marginLeft: 6 }}>${c.regular}</span>
                             </p>
-                            <p style={{ color: '#a78bfa', fontSize: 13, margin: '6px 0 14px' }}>Newsletter subscriber price, billed annually. Starts with a {c.start}.</p>
+                            <p style={{ color: '#a78bfa', fontSize: 13, margin: '6px 0 14px' }}>Subscriber price, billed annually. Opens a {c.start} virtual account.</p>
                             <ul style={{ paddingLeft: 18, color: '#cbd5e1', fontSize: 14, lineHeight: 1.7, margin: '0 0 18px' }}>
                                 {c.points.map((p) => <li key={p}>{p}</li>)}
                             </ul>
-                            <button onClick={() => choose(c.plan)} disabled={mismatch || !ready} style={{ ...btn(c.plan === 'leaps'), width: '100%', opacity: mismatch || !ready ? 0.5 : 1 }}>
-                                {authenticated ? `Continue to payment, ${c.name}` : `Sign in${chosen ? ` as ${chosen}` : ''} and continue`}
+                            <button onClick={() => void pay(c.plan)} disabled={busy !== null} style={{ ...btn(c.plan === 'leaps'), width: '100%', opacity: busy ? 0.6 : 1 }}>
+                                {busy === c.plan ? 'Opening secure payment' : `Pay for ${c.name}`}
                             </button>
                         </section>
                     ))}
                 </div>
+                <p style={{ color: '#64748b', fontSize: 12, marginTop: 18, lineHeight: 1.6 }}>
+                    TradeMind is software for self-directed investors, not investment advice. You place every order yourself at your own broker. Options involve risk.
+                </p>
             </div>
         </main>
     );

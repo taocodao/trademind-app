@@ -23,8 +23,9 @@ import { handleReferralFirstPayment } from '@/lib/referrals';
  * still turns a paid session into an account, so the user lands on their
  * account instead of being bounced back to pricing and checkout.
  */
-export async function provisionCheckoutSession(session: Stripe.Checkout.Session): Promise<number | null> {
-    const userId = session.metadata?.userId;
+export async function provisionCheckoutSession(session: Stripe.Checkout.Session, opts?: { userId?: string }): Promise<number | null> {
+    // Pay-first (guest) sessions carry no userId; they are provisioned only through /api/stripe/claim, which passes the signed-in login.
+    const userId = opts?.userId ?? session.metadata?.userId;
     const metadataPlan = session.metadata?.plan;
     const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
     if (!userId || !subscriptionId) return null;

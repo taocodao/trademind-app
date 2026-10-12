@@ -53,6 +53,18 @@ export async function POST(req: NextRequest) {
             const id = await provisionCheckoutSession(session);
             if (id) accountIds.push(id);
         }
+        // Pay-first purchases that were never claimed (tab closed after paying): when this login's email matches the paid email.
+        const loginEmail = typeof body.loginEmail === 'string' ? body.loginEmail.trim().toLowerCase() : '';
+        if (loginEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmail)) {
+            try {
+                const list = await getStripe().checkout.sessions.list({ customer_details: { email: loginEmail }, status: 'complete', limit: 10 });
+                for (const s of list.data) {
+                    if (s.metadata?.guest !== '1' || (s.metadata.guest_email ?? '') !== loginEmail) continue;
+                    const id = await provisionCheckoutSession(s, { userId });
+                    if (id && !accountIds.includes(id)) accountIds.push(id);
+                }
+            } catch (err) { console.warn('[confirm] guest reconcile failed', err); }
+        }
         for (const id of await reconcileUserCheckouts(userId)) {
             if (!accountIds.includes(id)) accountIds.push(id);
         }

@@ -1,2 +1,0 @@
-﻿Status: 400
-Body: {"error":"Invalid request body. ΓÜá∩╕Å Please migrate to v3 API","details":[{"code":"invalid_type","expected":"string","received":"undefined","path":["integrationId"],"message":"Required"},{"code":"invalid_type","expected":"object","received":"undefined","path":["data"],"message":"Required"}]}

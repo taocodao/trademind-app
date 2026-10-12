@@ -6,13 +6,29 @@
  */
 
 import { Pool, QueryResult } from 'pg';
+import { RDS_CA_BUNDLE } from './rds-ca';
+
+// The server certificate is verified against the AWS RDS CA bundle. sslmode/ssl params are removed from the URL
+// because the pg driver would otherwise let them override the explicit TLS settings below.
+// Emergency switch: set DB_SSL_INSECURE=1 to go back to unverified TLS if the CA bundle ever needs refreshing.
+function dbConnectionString(): string | undefined {
+    const raw = process.env.DATABASE_URL;
+    if (!raw) return raw;
+    try {
+        const u = new URL(raw);
+        for (const k of ['sslmode', 'ssl', 'sslrootcert', 'sslcert', 'sslkey']) u.searchParams.delete(k);
+        return u.toString();
+    } catch {
+        return raw;
+    }
+}
 
 // Database connection pool
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false  // Required for AWS RDS
-    },
+    connectionString: dbConnectionString(),
+    ssl: process.env.DB_SSL_INSECURE === '1'
+        ? { rejectUnauthorized: false }
+        : { ca: RDS_CA_BUNDLE, rejectUnauthorized: true },
     max: 10,           // Max pool size
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,

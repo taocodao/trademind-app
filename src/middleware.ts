@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTO_APPROVE_ENABLED } from '@/lib/feature-flags';
+import { verifyPrivyToken, privyVerificationConfigured } from '@/lib/privy-verify';
 
 // ── Configuration ──────────────────────────────────────────────────────────
 const SUPPORTED_LOCALES = ['en', 'es', 'zh'] as const;
@@ -48,8 +49,29 @@ function classifyAutoApproveRoute(pathname: string, method: string): 'read' | 'w
 }
 
 // ── Middleware ─────────────────────────────────────────────────────────────
-export function middleware(request: NextRequest) {
+// ── Identity hardening ─────────────────────────────────────────
+// Routes read the user id from the privy-token and privy-user-id cookies. Neither can be trusted as sent:
+// anyone can set a cookie by hand. Here the token is verified once, and the request that reaches the
+// routes carries only verified identity: a bad privy-token is dropped, and privy-user-id is always
+// replaced by the verified DID (or removed when there is no valid token).
+async function sanitizeIdentity(request: NextRequest): Promise<Headers | null> {
+    const raw = request.headers.get('cookie');
+    if (!raw || !/privy-(token|user-id)/.test(raw) || !privyVerificationConfigured()) return null;
+    const jar = raw.split(';').map((c) => c.trim()).filter(Boolean);
+    const get = (n: string) => jar.find((c) => c.startsWith(`${n}=`))?.slice(n.length + 1);
+    const token = get('privy-token');
+    const did = token ? await verifyPrivyToken(decodeURIComponent(token)) : null;
+    const kept = jar.filter((c) => !c.startsWith('privy-user-id=') && (did || !c.startsWith('privy-token=')));
+    if (did) kept.push(`privy-user-id=${encodeURIComponent(did)}`);
+    const headers = new Headers(request.headers);
+    kept.length ? headers.set('cookie', kept.join('; ')) : headers.delete('cookie');
+    return headers;
+}
+
+export async function middleware(request: NextRequest) {
     const { pathname, search } = request.nextUrl;
+    const cleaned = await sanitizeIdentity(request);
+    const pass = () => NextResponse.next(cleaned ? { request: { headers: cleaned } } : undefined);
 
     // Auto-Approve kill switch: block every API surface at the edge.
     if (!AUTO_APPROVE_ENABLED) {
@@ -86,12 +108,12 @@ export function middleware(request: NextRequest) {
 
     // Referral landing page route: /c/[campaign] → /[locale]/c/[campaign]
     if (!pathname.startsWith('/c/')) {
-        return NextResponse.next();
+        return pass();
     }
     const campaignSlug = pathname.slice(3);
     const firstSegment = campaignSlug.split('/')[0]?.toLowerCase();
     if ((SUPPORTED_LOCALES as readonly string[]).includes(firstSegment)) {
-        return NextResponse.next();
+        return pass();
     }
     const locale = detectLocale(request);
     const redirectUrl = new URL(`/${locale}/c/${campaignSlug}${search}`, request.url);
@@ -109,9 +131,7 @@ export function middleware(request: NextRequest) {
 // Intercept bare /c/* referral links and the auto-approve configuration.
 export const config = {
     matcher: [
-        '/c/:campaign*',
-        '/api/settings/auto-approve/:path*',
-        '/api/settings/auto-approve',
-        '/api/admin/migrate-strategy-auto-approve',
+        // Everything except static assets, so the cookie cleanup also covers server-rendered pages and all API routes.
+        '/((?!_next/static|_next/image|favicon\\.ico|.*\\.[a-zA-Z0-9]+$).*)',
     ],
 };

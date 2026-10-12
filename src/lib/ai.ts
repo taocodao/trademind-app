@@ -1,3 +1,4 @@
+import { didFromToken } from '@/lib/privy-verify';
 import { cookies } from 'next/headers';
 import { NextRequest } from 'next/server';
 import { query } from '@/lib/db';
@@ -17,9 +18,7 @@ export async function getUserFromRequest(_req: NextRequest) {
     const privyToken = cookieStore.get('privy-token')?.value;
     if (!privyToken) throw new Error('Unauthorized');
 
-    const payload = privyToken.split('.')[1];
-    const decoded = JSON.parse(Buffer.from(payload, 'base64').toString());
-    const privyDid = decoded.sub || decoded.privy_did;
+    const privyDid = await didFromToken(privyToken);
     if (!privyDid) throw new Error('Unauthorized');
 
     return { privyDid, tier: await resolveEffectiveTier(privyDid) };

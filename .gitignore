@@ -50,3 +50,13 @@ next-env.d.ts
 *.avi
 public/videos/
 .env*.local
+
+# Local, scratch and secret-bearing files
+.env.vercel
+.vercel
+*_configs.json
+out*.txt
+git_*.txt
+git_*.json
+scratch_*
+tmp_*

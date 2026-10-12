@@ -1,0 +1,1 @@
+One-off scripts moved out of the repository root. They are kept for reference only, are excluded from the type check, and read their database and API keys from environment variables (DATABASE_URL, COMPOSIO_API_KEY). Review a script before running it.

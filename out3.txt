@@ -1,1 +1,0 @@
-Error! composio.createConnectedAccount is not a function

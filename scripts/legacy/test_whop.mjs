@@ -1,6 +1,6 @@
 import { Client } from 'pg';
 
-const dbUrl = 'postgresql://erichuang2005:Ya2039349@travelwise-marketplace-db.curmg864eafo.us-east-1.rds.amazonaws.com:5432/ib_trading';
+const dbUrl = process.env.DATABASE_URL;
 const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
 
 async function run() {

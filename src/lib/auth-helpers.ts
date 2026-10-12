@@ -9,14 +9,10 @@
 import { cookies } from 'next/headers';
 import type { NextRequest } from 'next/server';
 import { query } from '@/lib/db';
+import { didFromToken } from '@/lib/privy-verify';
 
-function decodePrivyToken(token: string): string | null {
-    try {
-        const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-        return payload.sub || payload.privy_did || payload.userId || null;
-    } catch {
-        return null;
-    }
+async function decodePrivyToken(token: string): Promise<string | null> {
+    return didFromToken(token);
 }
 
 /**
@@ -38,7 +34,7 @@ export async function getPrivyUserId(req?: NextRequest): Promise<string | null> 
     // 2. Decode privy-token cookie
     const privyToken = cookieStore.get('privy-token')?.value;
     if (privyToken) {
-        const id = decodePrivyToken(privyToken);
+        const id = await decodePrivyToken(privyToken);
         if (id) return id;
     }
 
@@ -46,7 +42,7 @@ export async function getPrivyUserId(req?: NextRequest): Promise<string | null> 
     if (req) {
         const authHeader = req.headers.get('Authorization');
         if (authHeader?.startsWith('Bearer ')) {
-            const id = decodePrivyToken(authHeader.slice(7));
+            const id = await decodePrivyToken(authHeader.slice(7));
             if (id) return id;
         }
     }

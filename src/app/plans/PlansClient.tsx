@@ -28,8 +28,14 @@ export default function PlansClient({ linkEmail }: { linkEmail: string }) {
     const { ready, authenticated, user, login, logout } = usePrivy();
     const signedEmail = authenticated ? loginEmailOf(user) : null;
     const [useSigned, setUseSigned] = useState(false);
-    const mismatch = authenticated && !!linkEmail && !!signedEmail && !sameEmail(linkEmail, signedEmail) && !useSigned;
-    const target = useSigned ? (signedEmail ?? '') : (linkEmail || signedEmail || '');
+    // The address the plan will be created for when signing in. Starts as the address in the link; the visitor can change it.
+    const [chosen, setChosen] = useState(linkEmail);
+    const [editing, setEditing] = useState(!linkEmail);
+    const [draft, setDraft] = useState('');
+    const [draftError, setDraftError] = useState<string | null>(null);
+    const wantedEmail = (typeof window !== 'undefined' && authenticated ? (() => { try { return JSON.parse(sessionStorage.getItem('tm_pending_plan') || 'null')?.email as string | undefined; } catch { return undefined; } })() : undefined) || linkEmail;
+    const mismatch = authenticated && !!wantedEmail && !!signedEmail && !sameEmail(wantedEmail, signedEmail) && !useSigned;
+    const target = useSigned ? (signedEmail ?? '') : (wantedEmail || signedEmail || '');
 
     const go = (plan: Plan) => {
         window.location.href = `/upgrade?plan=${plan}${target ? `&email=${encodeURIComponent(target)}` : ''}`;
@@ -37,8 +43,9 @@ export default function PlansClient({ linkEmail }: { linkEmail: string }) {
 
     const choose = (plan: Plan) => {
         if (!authenticated) {
-            try { sessionStorage.setItem('tm_pending_plan', JSON.stringify({ plan, email: linkEmail, ts: Date.now() })); } catch { /* ignore */ }
-            login(linkEmail ? { prefill: { type: 'email', value: linkEmail } } : {});
+            if (editing && !chosen) { setDraftError('Enter the email address you want to use first.'); return; }
+            try { sessionStorage.setItem('tm_pending_plan', JSON.stringify({ plan, email: chosen, ts: Date.now() })); } catch { /* ignore */ }
+            login(chosen ? { prefill: { type: 'email', value: chosen } } : {});
             return;
         }
         if (!mismatch) go(plan);
@@ -53,10 +60,11 @@ export default function PlansClient({ linkEmail }: { linkEmail: string }) {
             pending = raw ? JSON.parse(raw) : null;
         } catch { /* ignore */ }
         if (!pending || Date.now() - (pending.ts ?? 0) > 10 * 60 * 1000) return;
-        if (linkEmail && signedEmail && !sameEmail(linkEmail, signedEmail)) return; // mismatch box decides
+        const wanted = pending.email || linkEmail;
+        if (wanted && signedEmail && !sameEmail(wanted, signedEmail)) return; // mismatch box decides
         try { sessionStorage.removeItem('tm_pending_plan'); } catch { /* ignore */ }
         if (pending.plan === 'basic' || pending.plan === 'leaps') {
-            window.location.href = `/upgrade?plan=${pending.plan}&email=${encodeURIComponent(linkEmail || signedEmail || '')}`;
+            window.location.href = `/upgrade?plan=${pending.plan}&email=${encodeURIComponent(signedEmail || wanted || '')}`;
         }
     }, [authenticated, linkEmail, signedEmail]);
 
@@ -89,10 +97,38 @@ export default function PlansClient({ linkEmail }: { linkEmail: string }) {
                         </>
                     ) : authenticated ? (
                         <span>Your subscription will be created for the login <strong>{signedEmail ?? 'on this device'}</strong>.</span>
-                    ) : linkEmail ? (
-                        <span>This offer was sent to <strong>{linkEmail}</strong>. You will sign in with that address, then go to payment.</span>
+                    ) : editing ? (
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                const v = draft.trim();
+                                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { setDraftError('Enter a valid email address.'); return; }
+                                setChosen(v); setEditing(false); setDraftError(null);
+                            }}
+                        >
+                            <p style={{ margin: '0 0 10px', lineHeight: 1.5 }}>
+                                Enter the email you want for your TradeMind login. Your signals will be sent there, and the 30% subscriber price applies to any email you use.
+                            </p>
+                            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                                <input
+                                    type="email" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="you@example.com" autoFocus
+                                    style={{ flex: '1 1 240px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.4)', color: '#fff', padding: '10px 12px', fontSize: 14 }}
+                                />
+                                <button type="submit" style={btn(true)}>Use this email</button>
+                                {linkEmail && <button type="button" onClick={() => { setChosen(linkEmail); setEditing(false); setDraftError(null); }} style={btn(false)}>Keep {linkEmail}</button>}
+                            </div>
+                            {draftError && <p style={{ color: '#f87171', margin: '8px 0 0', fontSize: 13 }}>{draftError}</p>}
+                        </form>
                     ) : (
-                        <span>You will sign in with the email you want your signals sent to, then go to payment.</span>
+                        <>
+                            <p style={{ margin: '0 0 10px', lineHeight: 1.5 }}>
+                                Your plan will be created for the login <strong>{chosen}</strong>. Is this the email you want to use?
+                            </p>
+                            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                                <span style={{ alignSelf: 'center', color: '#a7f3d0', fontSize: 13 }}>Yes: choose a plan below</span>
+                                <button onClick={() => { setDraft(''); setEditing(true); }} style={btn(false)}>No, use a different email</button>
+                            </div>
+                        </>
                     )}
                 </div>
 
@@ -111,7 +147,7 @@ export default function PlansClient({ linkEmail }: { linkEmail: string }) {
                                 {c.points.map((p) => <li key={p}>{p}</li>)}
                             </ul>
                             <button onClick={() => choose(c.plan)} disabled={mismatch || !ready} style={{ ...btn(c.plan === 'leaps'), width: '100%', opacity: mismatch || !ready ? 0.5 : 1 }}>
-                                {authenticated ? `Continue to payment, ${c.name}` : `Sign in${linkEmail ? ` as ${linkEmail}` : ''} and continue`}
+                                {authenticated ? `Continue to payment, ${c.name}` : `Sign in${chosen ? ` as ${chosen}` : ''} and continue`}
                             </button>
                         </section>
                     ))}

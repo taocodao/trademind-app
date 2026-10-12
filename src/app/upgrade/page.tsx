@@ -64,9 +64,10 @@ function UpgradePageInner() {
     useEffect(() => {
         if (ready && !authenticated && plan && !autoLoginOnce.current) {
             autoLoginOnce.current = true;
-            login(emailParam && emailParam.includes('@') ? { prefill: { type: 'email', value: emailParam } } : {});
+            // Signed out: first confirm which email the plan is for, on the plans page.
+            window.location.replace(`/plans${emailParam && emailParam.includes('@') ? `?email=${encodeURIComponent(emailParam)}` : ''}`);
         }
-    }, [ready, authenticated, plan, emailParam, login]);
+    }, [ready, authenticated, plan, emailParam]);
 
     if (ready && !authenticated) {
         return (

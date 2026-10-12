@@ -1,3 +1,4 @@
+import { syncMembershipsFromStripe } from '@/lib/membership-sync';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAccount } from '@/lib/accounts';
 import { getMembershipByAccount, isMembershipEntitled } from '@/lib/membership';
@@ -10,7 +11,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const { id } = await params;
     const account = await getAccount(Number(id), userId);
     if (!account) return NextResponse.json({ error: 'Account not found' }, { status: 404 });
-    const membership = await getMembershipByAccount(account.id);
+    const found = await getMembershipByAccount(account.id);
+    const membership = found ? (await syncMembershipsFromStripe([found]))[0] : null;
     if (!membership) return NextResponse.json({ error: 'Membership not found' }, { status: 404 });
     return NextResponse.json({ membership, entitled: isMembershipEntitled(membership) });
 }

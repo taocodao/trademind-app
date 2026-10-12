@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { syncMembershipsFromStripe } from '@/lib/membership-sync';
 import { isMembershipEntitled, listMembershipsForUser } from '@/lib/membership';
 
 async function getUserId(req: NextRequest): Promise<string | null> {
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
     const userId = await getUserId(req);
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     try {
-        const memberships = await listMembershipsForUser(userId);
+        const memberships = await syncMembershipsFromStripe(await listMembershipsForUser(userId));
         return NextResponse.json({
             memberships: memberships.map((membership) => ({
                 ...membership,

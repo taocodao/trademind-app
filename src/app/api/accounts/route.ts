@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { syncMembershipsFromStripe } from '@/lib/membership-sync';
 import { createAccount, listAccounts, type RiskLevel } from '@/lib/accounts';
 import { getStrategy } from '@/lib/strategies';
 import { getUserId } from '@/lib/auth';
@@ -18,7 +19,7 @@ export async function GET() {
             listAccounts(userId),
             listMembershipsForUser(userId),
         ]);
-        const byAccount = new Map(memberships.map((m) => [m.account_id, m]));
+        const byAccount = new Map((await syncMembershipsFromStripe(memberships)).map((m) => [m.account_id, m]));
         return NextResponse.json({
             accounts: accounts.map((a) => ({ ...a, membership: byAccount.get(a.id) ?? null })),
         });

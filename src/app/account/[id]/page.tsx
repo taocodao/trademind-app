@@ -118,7 +118,10 @@ export default function AccountDetailPage() {
         if (!accountId) return;
         fetch(`/api/accounts/${accountId}/membership`)
             .then((r) => (r.ok ? r.json() : null))
-            .then((d) => { if (d?.membership) setMembership(d.membership); })
+            .then((d) => {
+                if (d?.membership && d.membership.status === 'expired' && !d.membership.stripe_subscription_id) { router.replace('/plans'); return; }
+                if (d?.membership) setMembership(d.membership);
+            })
             .catch(() => {});
     }, [accountId]);
 

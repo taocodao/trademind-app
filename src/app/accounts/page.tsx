@@ -137,11 +137,11 @@ function AccountsPageInner() {
             router.replace(`/account/${accounts[0].id}`);
             return;
         }
-        // Signed in with no account and no recent checkout: route to pricing,
+        // Signed in with no account and no recent checkout: send to the plan picker (an account is created when a plan is paid),
         // but only after the confirm step found nothing to provision. A fresh
         // checkout never bounces back to pricing (that re-opened checkout).
         if (accounts.length === 0 && !checkoutSuccess && confirmState === 'done') {
-            router.replace('/#pricing');
+            router.replace('/upgrade');
         }
     }, [forceList, loading, ready, authenticated, accounts, router, checkoutSuccess, confirmState]);
 

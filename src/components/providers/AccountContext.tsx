@@ -13,6 +13,7 @@ export interface AccountMembershipInfo {
     cancel_at_period_end: boolean;
     referred_signup: boolean;
     pending_bonus_days: number;
+    stripe_subscription_id?: string | null;
 }
 
 export interface Account {

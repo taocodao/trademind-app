@@ -65,7 +65,9 @@ export default function AccountsPage() {
 function AccountsPageInner() {
     const { ready, authenticated, user, getAccessToken } = usePrivy();
     const router = useRouter();
-    const { accounts, loading, refreshAccounts, setActiveAccountId } = useAccountContext();
+    const { accounts: allAccounts, loading, refreshAccounts, setActiveAccountId } = useAccountContext();
+    // Accounts that were never paid for (expired or awaiting payment, no Stripe subscription) are not treated as the user's account here.
+    const accounts = allAccounts.filter((a) => !(a.membership && !a.membership.stripe_subscription_id && ['expired', 'awaiting_payment'].includes(a.membership.status)));
 
     const [summaries, setSummaries] = useState<Record<number, AccountSummary>>({});
     const [renameId, setRenameId] = useState<number | null>(null);

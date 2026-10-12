@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { query } from '@/lib/db';
 import { getStripe } from '@/lib/stripe-server';
 import { provisionCheckoutSession, reconcileUserCheckouts } from '@/lib/stripe-provision';
 
@@ -53,6 +54,18 @@ export async function POST(req: NextRequest) {
             const id = await provisionCheckoutSession(session);
             if (id) accountIds.push(id);
         }
+        // Keep Stripe's customer email equal to this login's email (invoices and receipts go there).
+        try {
+            const row = await query('SELECT stripe_customer_id, login_email FROM user_settings WHERE user_id = $1', [userId]);
+            const cid = row.rows[0]?.stripe_customer_id as string | undefined;
+            const le = (row.rows[0]?.login_email as string | undefined)?.trim();
+            if (cid && le) {
+                const cust = await getStripe().customers.retrieve(cid);
+                if (!('deleted' in cust && cust.deleted) && (cust as { email?: string | null }).email?.toLowerCase() !== le.toLowerCase()) {
+                    await getStripe().customers.update(cid, { email: le });
+                }
+            }
+        } catch (err) { console.warn('[confirm] customer email sync failed', err); }
         // Pay-first purchases that were never claimed (tab closed after paying): when this login's email matches the paid email.
         const loginEmail = typeof body.loginEmail === 'string' ? body.loginEmail.trim().toLowerCase() : '';
         if (loginEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmail)) {

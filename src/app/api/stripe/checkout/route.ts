@@ -127,8 +127,11 @@ export async function POST(req: NextRequest) {
         await ensureStripeProductCopy(membershipPlan, priceId);
 
         // The login email shown on the payment page and kept as this login's canonical email.
-        const loginEmail = typeof body.loginEmail === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.loginEmail.trim()) ? body.loginEmail.trim() : null;
-        if (loginEmail) await upsertLoginEmail(userId, loginEmail);
+        const bodyEmail = typeof body.loginEmail === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.loginEmail.trim()) ? body.loginEmail.trim() : null;
+        if (bodyEmail) await upsertLoginEmail(userId, bodyEmail);
+        // No email sent by the browser (not ready yet, old tab): fall back to the login email stored for this user.
+        const storedEmail = bodyEmail ? null : ((await pool.query('SELECT login_email FROM user_settings WHERE user_id = $1', [userId]).catch(() => null))?.rows[0]?.login_email ?? null);
+        const loginEmail: string | null = bodyEmail ?? storedEmail;
 
         const customerResult = await pool.query(
             'SELECT stripe_customer_id FROM user_settings WHERE user_id = $1',

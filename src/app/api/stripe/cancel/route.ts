@@ -48,6 +48,21 @@ async function ownedSubscription(req: NextRequest): Promise<OwnedSubscriptionRes
     return { membership };
 }
 
+/** Stripe no longer knows this subscription (deleted, refunded, or from another Stripe account): reset the membership instead of failing. */
+async function handleMissingSubscription(req: NextRequest, error: unknown): Promise<NextResponse | null> {
+    const message = error instanceof Error ? error.message : '';
+    if (!/^No such subscription/i.test(message)) return null;
+    const body = (req as NextRequest & { _cancelBody?: Record<string, unknown> })._cancelBody ?? {};
+    const accountId = Number(body.accountId);
+    if (Number.isInteger(accountId) && accountId > 0) {
+        await updateMembership(accountId, { status: 'expired', stripe_subscription_id: null, cancel_at_period_end: false, current_period_end: new Date().toISOString() });
+    }
+    return NextResponse.json({
+        error: 'This subscription no longer exists at our payment provider, so there is nothing left to cancel. The account is now shown as not subscribed. If you were charged, contact support@trademind.bot with your payment email.',
+        reset: true,
+    }, { status: 410 });
+}
+
 export async function POST(req: NextRequest) {
     try {
         const result = await ownedSubscription(req);
@@ -116,6 +131,8 @@ export async function POST(req: NextRequest) {
         });
         return NextResponse.json({ success: true, cancelAt: currentPeriodEnd, status: subscription.status });
     } catch (error: unknown) {
+        const missing = await handleMissingSubscription(req, error);
+        if (missing) return missing;
         const message = error instanceof Error ? error.message : 'Failed to turn off auto renew';
         console.error('Stripe cancel error:', error);
         return NextResponse.json({ error: message }, { status: 500 });
@@ -137,6 +154,8 @@ export async function PUT(req: NextRequest) {
         });
         return NextResponse.json({ success: true, cancelAtPeriodEnd: false, status: subscription.status });
     } catch (error: unknown) {
+        const missing = await handleMissingSubscription(req, error);
+        if (missing) return missing;
         const message = error instanceof Error ? error.message : 'Failed to turn on auto renew';
         console.error('Stripe reactivate error:', error);
         return NextResponse.json({ error: message }, { status: 500 });

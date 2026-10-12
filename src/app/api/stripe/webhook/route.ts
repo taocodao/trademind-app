@@ -1,3 +1,4 @@
+import { emailInvoiceForSession } from '@/lib/stripe-invoice-email';
 import { NextRequest } from 'next/server';
 import Stripe from 'stripe';
 import { getStripe } from '@/lib/stripe-server';
@@ -60,6 +61,7 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
     switch (event.type) {
         case 'checkout.session.completed': {
             const session = event.data.object as Stripe.Checkout.Session;
+            await emailInvoiceForSession(session);
             await provisionCheckoutSession(session);
             return;
         }

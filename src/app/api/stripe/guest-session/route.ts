@@ -1,3 +1,4 @@
+import { emailInvoiceForSession } from '@/lib/stripe-invoice-email';
 import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe-server';
 
@@ -12,6 +13,7 @@ export async function GET(req: NextRequest) {
         const s = await getStripe().checkout.sessions.retrieve(id);
         if (s.metadata?.guest !== '1') return NextResponse.json({ valid: false }, { status: 404 });
         const paid = s.status === 'complete' && (s.payment_status === 'paid' || s.payment_status === 'no_payment_required');
+        if (paid) await emailInvoiceForSession(s);
         return NextResponse.json({ valid: true, paid, email: s.metadata?.guest_email ?? s.customer_details?.email ?? null, plan: s.metadata?.plan ?? null });
     } catch {
         return NextResponse.json({ valid: false }, { status: 404 });

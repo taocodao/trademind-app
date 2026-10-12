@@ -92,8 +92,8 @@ export function PricingSection() {
     // Sign in, then continue straight to checkout for the plan that was clicked. The sign-in dialog does not
     // navigate on its own, so the chosen plan is remembered and picked up once the login completes.
     const loginThenCheckout = (plan: 'basic' | 'leaps', email: string) => {
-        try { sessionStorage.setItem('tm_pending_plan', JSON.stringify({ plan, email, ts: Date.now() })); } catch { /* private mode */ }
-        login(email.includes('@') ? { prefill: { type: 'email', value: email } } : {});
+        void plan;
+        window.location.href = `/plans${email.includes('@') ? `?email=${encodeURIComponent(email)}` : ''}`;
     };
 
     useEffect(() => {

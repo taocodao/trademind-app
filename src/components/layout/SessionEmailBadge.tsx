@@ -1,13 +1,21 @@
 'use client';
 
+import { useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { loginEmailOf } from '@/lib/privy-email';
 
 /** Small fixed label on every page showing which login is active, with a sign-out link. */
 export function SessionEmailBadge() {
     const { ready, authenticated, user, logout } = usePrivy();
+    const email = authenticated ? loginEmailOf(user) : null;
+    // Record the login email once per browser session so alerts, newsletter checks and payment matching can use it.
+    useEffect(() => {
+        if (!authenticated || !email) return;
+        const key = `tm_login_email_${email}`;
+        try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1'); } catch { /* ignore */ }
+        fetch('/api/auth/login-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) }).catch(() => {});
+    }, [authenticated, email]);
     if (!ready || !authenticated) return null;
-    const email = loginEmailOf(user);
     return (
         <div
             style={{

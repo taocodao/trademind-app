@@ -10,6 +10,8 @@ export function PrivyProvider({ children }: { children: React.ReactNode }) {
                 appearance: {
                     theme: "dark",
                     accentColor: "#7C3AED",
+                    landingHeader: "Sign in to TradeMind",
+                    loginMessage: "Type your email, press Submit, then enter the 6 digit passcode we email you. No password.",
                 },
                 loginMethods: ["email", "google"],
             }}

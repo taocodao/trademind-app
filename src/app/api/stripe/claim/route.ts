@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe-server';
 import { getPrivyUserId, upsertLoginEmail } from '@/lib/auth-helpers';
+import { emailInvoiceForSession } from '@/lib/stripe-invoice-email';
 import { provisionCheckoutSession } from '@/lib/stripe-provision';
 import { getMembershipByStripeSubscription } from '@/lib/membership';
 import { query } from '@/lib/db';
@@ -64,6 +65,7 @@ export async function POST(req: NextRequest) {
         }
 
         const accountId = await provisionCheckoutSession(session, { userId });
+        void emailInvoiceForSession(session);
         if (!accountId) return NextResponse.json({ error: 'Payment is not complete yet. Try again in a moment.' }, { status: 409 });
 
         if (subId) {

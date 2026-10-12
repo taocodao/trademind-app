@@ -112,7 +112,7 @@ export default function SinglePageMarketing() {
                 onCta={() => {
                     const el = document.getElementById('pricing');
                     if (el) el.scrollIntoView({ behavior: 'smooth' });
-                    else login();
+                    else window.location.href = '/signin';
                 }}
                 ctaLabel={t('hero.cta', 'Start your account')}
             />

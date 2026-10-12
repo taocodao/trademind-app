@@ -2,57 +2,46 @@
 
 import { useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
+import EmailCodeLogin from '@/components/auth/EmailCodeLogin';
 
-// ── /signin ─────────────────────────────────────────────────────────────────
-// Dedicated auth entry point. The marketing homepage at '/' is now a static
-// landing page (public/landing/index.html) with no Privy runtime, so app pages
-// redirect unauthenticated visitors here. Privy's modal handles both sign-in
-// and account creation; once authenticated we send the user to the dashboard.
+// /signin: the one place to sign in or create an account, with step by step instructions.
+// Email plus a 6 digit passcode, no password. Once signed in, people with a plan go to their account;
+// people without one are sent to the plans page (see /accounts).
 
-export default function SignInPage() {
-    const { ready, authenticated, login } = usePrivy();
+function SignInInner() {
+    const { ready, authenticated } = usePrivy();
     const router = useRouter();
+    const email = useSearchParams().get('email') ?? '';
 
     useEffect(() => {
-        if (ready && authenticated) {
-            router.push('/dashboard');
-        }
+        if (ready && authenticated) router.push('/dashboard');
     }, [ready, authenticated, router]);
 
     return (
-        <div className="min-h-screen bg-tm-bg flex flex-col items-center justify-center px-6">
-            <div className="w-full max-w-sm text-center">
-                {/* Logo */}
-                <div className="flex items-center justify-center gap-2.5 mb-10">
+        <div className="min-h-screen bg-tm-bg flex flex-col items-center justify-center px-6 py-10">
+            <div className="w-full max-w-md">
+                <div className="flex items-center justify-center gap-2.5 mb-6">
                     <svg viewBox="0 0 32 32" fill="none" aria-label="TradeMind logo" className="w-8 h-8">
                         <path d="M4 24 L12 12 L18 18 L28 4" stroke="#e0a458" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
                         <circle cx="28" cy="4" r="2.6" fill="#e0a458" />
                     </svg>
                     <span className="text-tm-text text-xl font-bold">TradeMind</span>
                 </div>
-
-                <h1 className="text-tm-text text-2xl font-bold mb-2">Sign in to TradeMind</h1>
-                <p className="text-tm-muted text-sm mb-8">
-                    One account for your signals, virtual accounts, and subscription.
-                    New here? The same button creates your account.
+                <h1 className="text-tm-text text-2xl font-bold mb-1 text-center">Sign in with your email</h1>
+                <p className="text-tm-muted text-sm mb-6 text-center">Newsletter readers and subscribers: use the email your newsletter arrives at.</p>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+                    <EmailCodeLogin initialEmail={email} />
+                </div>
+                <p className="text-center mt-5 text-sm">
+                    <a href="/plans" className="text-tm-muted hover:text-tm-text">See plans and pricing</a>
                 </p>
-
-                <button
-                    onClick={login}
-                    disabled={!ready}
-                    className="w-full bg-tm-green hover:opacity-90 disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl transition-opacity"
-                >
-                    {ready ? 'Sign in / Create account' : 'Loading…'}
-                </button>
-
-                <a
-                    href="/"
-                    className="inline-block mt-6 text-tm-muted hover:text-tm-text text-sm transition-colors"
-                >
-                    ← Back to homepage
-                </a>
             </div>
         </div>
     );
+}
+
+export default function SignInPage() {
+    return <Suspense fallback={null}><SignInInner /></Suspense>;
 }

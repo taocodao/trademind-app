@@ -30,7 +30,7 @@ function attribution() {
     };
 }
 
-export default function SignupForm({ source, initialEmail, implicitConsent = false, outreachToken = '' }: { source: string; initialEmail?: string; implicitConsent?: boolean; outreachToken?: string }) {
+export default function SignupForm({ source, initialEmail, implicitConsent = false, outreachToken = '', nextPath = '' }: { source: string; initialEmail?: string; implicitConsent?: boolean; outreachToken?: string; nextPath?: string }) {
     const [email, setEmail] = useState(initialEmail ?? '');
     const [experience, setExperience] = useState('');
     const [consentBox, setConsent] = useState(false);
@@ -67,6 +67,11 @@ export default function SignupForm({ source, initialEmail, implicitConsent = fal
                 setError(data?.error ?? 'Something went wrong. Try again.');
             } else {
                 setDone(data.status === 'already-confirmed' ? 'already' : data.status === 'subscribed' ? 'subscribed' : 'pending');
+                if (nextPath && (data.status === 'subscribed' || data.status === 'already-confirmed')) {
+                    setTimeout(() => {
+                        window.location.href = `${nextPath}${nextPath.includes('?') ? '&' : '?'}email=${encodeURIComponent(email)}&sub=1`;
+                    }, 1600);
+                }
                 setChangeUrl(data.changeUrl ?? null);
                 trackNewsletter('signup_submitted', { source, experience: experience || null });
             }

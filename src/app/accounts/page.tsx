@@ -142,7 +142,7 @@ function AccountsPageInner() {
         // but only after the confirm step found nothing to provision. A fresh
         // checkout never bounces back to pricing (that re-opened checkout).
         if (accounts.length === 0 && !checkoutSuccess && confirmState === 'done') {
-            router.replace('/upgrade');
+            router.replace('/plans');
         }
     }, [forceList, loading, ready, authenticated, accounts, router, checkoutSuccess, confirmState]);
 

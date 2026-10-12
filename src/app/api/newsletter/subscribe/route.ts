@@ -4,6 +4,8 @@ import {
 } from '@/lib/newsletter/db';
 import { sendConfirmationEmail, sendWelcomeEmail } from '@/lib/newsletter/email';
 import { markContactByToken, getContact } from '@/lib/outreach/db';
+import { getPrivyUserId } from '@/lib/auth-helpers';
+import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,6 +28,18 @@ export async function POST(req: NextRequest) {
             const invited = await getContact(String(body.outreachToken));
             const norm = (v: unknown) => String(v ?? '').trim().toLowerCase();
             if (invited && norm(invited.email) === norm(body.email)) instant = true;
+        }
+
+        // A signed-in person subscribing with their own login email also subscribes on the spot.
+        if (!instant) {
+            try {
+                const did = await getPrivyUserId(req);
+                if (did) {
+                    const r = await query('SELECT login_email FROM user_settings WHERE user_id = $1', [did]);
+                    const norm = (v: unknown) => String(v ?? '').trim().toLowerCase();
+                    if (r.rows[0]?.login_email && norm(r.rows[0].login_email) === norm(body.email)) instant = true;
+                }
+            } catch { /* fall back to the confirmation email */ }
         }
 
         const result = await signup({

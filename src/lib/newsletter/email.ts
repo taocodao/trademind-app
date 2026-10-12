@@ -224,6 +224,25 @@ export function sendOfferEmail(input: {
     });
 }
 
+export function sendInvoiceEmail(input: {
+    to: string; planLabel: string; amount: string; paidOn: string; invoiceNumber?: string | null;
+    renewalDate?: string | null; hostedUrl?: string | null; pdfUrl?: string | null;
+}): Promise<boolean> {
+    const bullets = [`Plan: ${input.planLabel}, billed annually`, `Amount paid: ${input.amount}`, `Paid on: ${input.paidOn}`];
+    if (input.invoiceNumber) bullets.push(`Invoice number: ${input.invoiceNumber}`);
+    if (input.renewalDate) bullets.push(`Renews on: ${input.renewalDate}`);
+    return send({
+        to: input.to,
+        subject: `Your TradeMind invoice${input.invoiceNumber ? ` ${input.invoiceNumber}` : ''}`,
+        heading: 'Payment received, thank you',
+        intro: `This is your invoice for the ${input.planLabel} annual plan.`,
+        bullets,
+        cta: input.hostedUrl ? { label: 'View invoice', url: input.hostedUrl } : undefined,
+        secondaryLink: input.pdfUrl ? { label: 'Download PDF invoice', url: input.pdfUrl } : undefined,
+        note: `Sign in at trademind.bot with this email address (${input.to}). We email you a 6 digit passcode, no password. Cancel within your first month for a full refund.`,
+    });
+}
+
 export function sendRedemptionReceiptEmail(input: {
     to: string; planLabel: string; renewalDate?: string;
 }): Promise<boolean> {

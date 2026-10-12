@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { PRICING } from '@/lib/pricing-config';
-import { loginEmailOf } from '@/lib/privy-email';
+import { loginEmailOf, sameEmail } from '@/lib/privy-email';
 
 type Plan = 'basic' | 'leaps';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -30,7 +30,7 @@ const STEPS = [
     ['Your account opens automatically', 'Your virtual account is created for you, $25,000 for QQQ LEAPS or $10,000 for QQQ Basic, and signals arrive by email from the next trading day.'],
 ];
 
-export default function PlansClient({ linkEmail }: { linkEmail: string }) {
+export default function PlansClient({ linkEmail, justSubscribed = false }: { linkEmail: string; justSubscribed?: boolean }) {
     const { ready, authenticated, user } = usePrivy();
     const signedEmail = authenticated ? loginEmailOf(user) : null;
     const [chosen, setChosen] = useState(linkEmail);
@@ -38,6 +38,35 @@ export default function PlansClient({ linkEmail }: { linkEmail: string }) {
     const [draft, setDraft] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [busy, setBusy] = useState<Plan | null>(null);
+    const [elig, setElig] = useState<'unknown' | 'checking' | 'eligible' | 'other'>('unknown');
+    const [until, setUntil] = useState<string | null>(null);
+
+    // Signed in with no plan yet: use the login email as the default, and check the newsletter discount.
+    useEffect(() => {
+        if (ready && authenticated && signedEmail && !linkEmail && !chosen) { setChosen(signedEmail); setEditing(false); }
+    }, [ready, authenticated, signedEmail, linkEmail, chosen]);
+
+    useEffect(() => {
+        if (!ready || !authenticated || !signedEmail) return;
+        if (linkEmail && !sameEmail(linkEmail, signedEmail)) return;
+        let cancelled = false;
+        (async () => {
+            setElig('checking');
+            try {
+                await fetch('/api/auth/login-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: signedEmail }) }).catch(() => {});
+                const r = await (await fetch(`/api/newsletter/eligibility?email=${encodeURIComponent(signedEmail)}`)).json();
+                if (cancelled) return;
+                if (r.state === 'eligible') { setElig('eligible'); setUntil(r.until ?? null); return; }
+                if ((r.state === 'not-found' || r.state === 'pending') && !justSubscribed) {
+                    // Not on the newsletter yet: subscribe first, then come back here with the discount.
+                    window.location.replace(`/newsletter/join?email=${encodeURIComponent(signedEmail)}&next=${encodeURIComponent('/plans')}`);
+                    return;
+                }
+                setElig('other');
+            } catch { if (!cancelled) setElig('other'); }
+        })();
+        return () => { cancelled = true; };
+    }, [ready, authenticated, signedEmail, linkEmail, justSubscribed]);
 
     const pay = async (plan: Plan) => {
         setError(null);
@@ -75,6 +104,14 @@ export default function PlansClient({ linkEmail }: { linkEmail: string }) {
                     ))}
                 </ol>
 
+                {authenticated && elig === 'checking' && (
+                    <p style={{ margin: '0 0 14px', color: '#94a3b8', fontSize: 14 }}>Checking your newsletter subscription for {signedEmail}</p>
+                )}
+                {authenticated && elig === 'eligible' && (
+                    <div style={{ margin: '0 0 14px', padding: '12px 16px', borderRadius: 12, border: '1px solid rgba(52,211,153,0.5)', background: 'rgba(52,211,153,0.08)', fontSize: 14, color: '#a7f3d0', lineHeight: 1.5 }}>
+                        Your 30% subscriber price is unlocked for {signedEmail}{until ? `, available until ${new Date(until).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}` : ''}.
+                    </div>
+                )}
                 <div style={{ margin: '0 0 22px', padding: '16px 18px', borderRadius: 12, border: '1px solid rgba(124,58,237,0.5)', background: 'rgba(124,58,237,0.08)', fontSize: 14 }}>
                     {editing ? (
                         <form

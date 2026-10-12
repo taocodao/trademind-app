@@ -4,17 +4,17 @@ import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { loginEmailOf, sameEmail } from '@/lib/privy-email';
+import EmailCodeLogin from '@/components/auth/EmailCodeLogin';
 
 type Info = { valid: boolean; paid?: boolean; email?: string | null; plan?: string | null };
 
 export default function WelcomeClient() {
     const sessionId = useSearchParams().get('session_id') ?? '';
-    const { ready, authenticated, user, login, logout } = usePrivy();
+    const { ready, authenticated, user, logout } = usePrivy();
     const signedEmail = authenticated ? loginEmailOf(user) : null;
     const [info, setInfo] = useState<Info | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [claiming, setClaiming] = useState(false);
-    const opened = useRef(false);
     const claimed = useRef(false);
 
     useEffect(() => {
@@ -27,14 +27,6 @@ export default function WelcomeClient() {
     const planName = info?.plan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Basic';
     const balance = info?.plan === 'leaps' ? '$25,000' : '$10,000';
     const mismatch = authenticated && !!payEmail && !!signedEmail && !sameEmail(payEmail, signedEmail);
-
-    // Straight to the sign in dialog with the paid email filled in.
-    useEffect(() => {
-        if (ready && !authenticated && payEmail && !opened.current) {
-            opened.current = true;
-            login({ prefill: { type: 'email', value: payEmail } });
-        }
-    }, [ready, authenticated, payEmail, login]);
 
     const claim = async () => {
         if (!payEmail || !signedEmail) return;
@@ -78,12 +70,12 @@ export default function WelcomeClient() {
             {mismatch ? (
                 <>
                     <p style={{ color: '#fcd34d', fontSize: 13.5, lineHeight: 1.5, marginTop: 14 }}>This browser is signed in as {signedEmail}. Your payment belongs to {payEmail}.</p>
-                    <button style={btn(true)} onClick={async () => { await logout(); opened.current = true; login({ prefill: { type: 'email', value: payEmail } }); }}>Sign out and sign in as {payEmail}</button>
+                    <button style={btn(true)} onClick={() => void logout()}>Sign out, then sign in as {payEmail}</button>
                 </>
             ) : authenticated ? (
                 <p style={{ color: '#94a3b8', fontSize: 14, marginTop: 16 }}>{claiming ? 'Creating your account' : 'Finishing setup'}</p>
             ) : (
-                <button style={btn(true)} onClick={() => login({ prefill: { type: 'email', value: payEmail } })}>Sign in as {payEmail}</button>
+                <div style={{ marginTop: 16 }}><EmailCodeLogin initialEmail={payEmail} lockEmail /></div>
             )}
             {error && (<><p style={{ color: '#f87171', fontSize: 13.5, marginTop: 12 }}>{error}</p>{authenticated && !mismatch && <button style={btn(false)} onClick={() => { claimed.current = true; void claim(); }}>Try again</button>}</>)}
         </>

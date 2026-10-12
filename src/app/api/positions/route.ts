@@ -3,29 +3,20 @@
  * Get user's trading positions from PostgreSQL database
  */
 
+import { getPrivyUserId } from '@/lib/auth-helpers';
 import { NextResponse } from 'next/server';
 import { getUserPositions } from '@/lib/db';
 import { cookies } from 'next/headers';
 
-async function getUserIdFromCookie(): Promise<string> {
-    const cookieStore = await cookies();
-    const privyToken = cookieStore.get("privy-token")?.value;
-
-    if (privyToken) {
-        try {
-            const payload = privyToken.split(".")[1];
-            const decoded = JSON.parse(Buffer.from(payload, "base64").toString());
-            return decoded.sub || decoded.userId || "default-user";
-        } catch {
-            // Fall through
-        }
-    }
-    return "default-user";
+/** Verified Privy user id (the middleware drops forged or expired cookies), or null when not signed in. */
+async function getUserIdFromCookie(): Promise<string | null> {
+    return getPrivyUserId();
 }
 
 export async function GET(request: Request) {
     try {
         const userId = await getUserIdFromCookie();
+        if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
         // Get status filter from query params
         const { searchParams } = new URL(request.url);

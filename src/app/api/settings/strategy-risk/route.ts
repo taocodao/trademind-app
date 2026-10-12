@@ -3,6 +3,7 @@
  * Get and update user's per-strategy risk level and initial principal
  */
 
+import { getPrivyUserId } from '@/lib/auth-helpers';
 import { NextResponse } from 'next/server';
 import {
     getUserStrategySettings,
@@ -13,20 +14,9 @@ import {
 } from '@/lib/db';
 import { cookies } from 'next/headers';
 
-async function getUserIdFromCookie(): Promise<string> {
-    const cookieStore = await cookies();
-    const privyToken = cookieStore.get("privy-token")?.value;
-
-    if (privyToken) {
-        try {
-            const payload = privyToken.split(".")[1];
-            const decoded = JSON.parse(Buffer.from(payload, "base64").toString());
-            return decoded.sub || decoded.userId || "default-user";
-        } catch {
-            // Fall through
-        }
-    }
-    return "default-user";
+/** Verified Privy user id (the middleware drops forged or expired cookies), or null when not signed in. */
+async function getUserIdFromCookie(): Promise<string | null> {
+    return getPrivyUserId();
 }
 
 const VALID_RISK_LEVELS = ['conservative', 'moderate', 'aggressive'] as const;
@@ -39,6 +29,7 @@ const VALID_STRATEGIES = ['TQQQ_TURBOCORE_PRO', 'QQQ_LEAPS'] as const;
 export async function GET(request: Request) {
     try {
         const userId = await getUserIdFromCookie();
+        if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         const { searchParams } = new URL(request.url);
         const strategy = searchParams.get('strategy');
 
@@ -80,6 +71,7 @@ export async function GET(request: Request) {
 export async function PUT(request: Request) {
     try {
         const userId = await getUserIdFromCookie();
+        if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         const body = await request.json();
         const { strategy, riskLevel, initialPrincipal } = body;
 

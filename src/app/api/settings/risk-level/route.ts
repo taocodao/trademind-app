@@ -3,24 +3,14 @@
  * Get and update user's risk level preference
  */
 
+import { getPrivyUserId } from '@/lib/auth-helpers';
 import { NextResponse } from 'next/server';
 import { getUserSettings, setUserRiskLevel } from '@/lib/db';
 import { cookies } from 'next/headers';
 
-async function getUserIdFromCookie(): Promise<string> {
-    const cookieStore = await cookies();
-    const privyToken = cookieStore.get("privy-token")?.value;
-
-    if (privyToken) {
-        try {
-            const payload = privyToken.split(".")[1];
-            const decoded = JSON.parse(Buffer.from(payload, "base64").toString());
-            return decoded.sub || decoded.userId || "default-user";
-        } catch {
-            // Fall through
-        }
-    }
-    return "default-user";
+/** Verified Privy user id (the middleware drops forged or expired cookies), or null when not signed in. */
+async function getUserIdFromCookie(): Promise<string | null> {
+    return getPrivyUserId();
 }
 
 // Valid risk levels
@@ -33,6 +23,7 @@ const VALID_RISK_LEVELS = ['conservative', 'moderate', 'aggressive'];
 export async function GET() {
     try {
         const userId = await getUserIdFromCookie();
+        if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
         const settings = await getUserSettings(userId);
 
@@ -57,6 +48,7 @@ export async function GET() {
 export async function PUT(request: Request) {
     try {
         const userId = await getUserIdFromCookie();
+        if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         const { riskLevel } = await request.json();
 
         // Validate risk level

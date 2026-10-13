@@ -1,6 +1,7 @@
 "use client";
 
 import { PrivyProvider as Privy } from "@privy-io/react-auth";
+import { SessionTimeout } from "@/components/providers/SessionTimeout";
 
 export function PrivyProvider({ children }: { children: React.ReactNode }) {
     return (
@@ -16,6 +17,7 @@ export function PrivyProvider({ children }: { children: React.ReactNode }) {
                 loginMethods: ["email", "google"],
             }}
         >
+            <SessionTimeout />
             {children}
         </Privy>
     );

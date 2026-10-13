@@ -13,7 +13,9 @@ import EmailCodeLogin from '@/components/auth/EmailCodeLogin';
 function SignInInner() {
     const { ready, authenticated } = usePrivy();
     const router = useRouter();
-    const email = useSearchParams().get('email') ?? '';
+    const params = useSearchParams();
+    const email = params.get('email') ?? '';
+    const timedOut = params.get('reason') === 'timeout';
 
     useEffect(() => {
         if (ready && authenticated) router.push('/dashboard');
@@ -29,6 +31,7 @@ function SignInInner() {
                     </svg>
                     <span className="text-tm-text text-xl font-bold">TradeMind</span>
                 </div>
+                {timedOut && <p className="mb-4 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-center text-sm text-amber-200">You were signed out to keep your account safe. Sign in again to continue.</p>}
                 <h1 className="text-tm-text text-2xl font-bold mb-1 text-center">Sign in with your email</h1>
                 <p className="text-tm-muted text-sm mb-6 text-center">Newsletter readers and subscribers: use the email your newsletter arrives at.</p>
                 <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">

@@ -342,6 +342,7 @@ function optionInstruction(order: OptionsOrder, accountName?: string): Universal
         instrumentType: order.instrumentType,
         referencePrice: order.limitPrice,
         priceEffect: order.priceEffect,
+        reason: order.exitReason,
     });
 }
 

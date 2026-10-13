@@ -21,6 +21,7 @@ export interface UniversalOrderInput {
     referencePrice?: number | null;
     priceEffect?: 'Debit' | 'Credit';
     option?: OptionContractDetails;
+    reason?: string;
 }
 
 export interface UniversalOrderInstruction {
@@ -59,6 +60,7 @@ export function buildUniversalOrderInstruction(order: UniversalOrderInput): Univ
         ['Reference price', referencePrice],
         [`Estimated ${effect.toLowerCase()}`, estimatedAmount],
     ];
+    if (order.reason && order.reason.trim()) fields.push(['Why', order.reason.trim()]);
 
     const text = [
         'Enter this order at your brokerage.',

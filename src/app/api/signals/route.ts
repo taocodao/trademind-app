@@ -40,6 +40,8 @@ export async function GET() {
         // Standardize signal format for frontend and attach userExecution
         const formattedSignals = await Promise.all((signals || []).map(async (s) => {
             const signalData = typeof s.data === 'string' ? JSON.parse(s.data) : s.data;
+            // MANAGE signals name individual member accounts and lots; never expose them in this feed.
+            if (signalData && typeof signalData === 'object' && 'closes' in signalData) delete signalData.closes;
             let userExecution = null;
             
             if (userId) {

@@ -40,15 +40,17 @@ export default function PlansClient({ linkEmail, justSubscribed = false }: { lin
     const [busy, setBusy] = useState<Plan | null>(null);
     const [elig, setElig] = useState<'unknown' | 'checking' | 'eligible' | 'other'>('unknown');
     const [until, setUntil] = useState<string | null>(null);
+    const [picked, setPicked] = useState(false); // user typed or kept an email by hand
 
     // Signed in with no plan yet: use the login email as the default, and check the newsletter discount.
     useEffect(() => {
-        if (ready && authenticated && signedEmail && !linkEmail && !chosen) { setChosen(signedEmail); setEditing(false); }
-    }, [ready, authenticated, signedEmail, linkEmail, chosen]);
+        // The signed-in login wins over a remembered invitation link or cookie, unless the user picked another address.
+        if (ready && authenticated && signedEmail && !picked && !sameEmail(chosen, signedEmail)) { setChosen(signedEmail); setEditing(false); }
+    }, [ready, authenticated, signedEmail, picked, chosen]);
 
     useEffect(() => {
         if (!ready || !authenticated || !signedEmail) return;
-        if (linkEmail && !sameEmail(linkEmail, signedEmail)) return;
+        if (picked && chosen && !sameEmail(chosen, signedEmail)) return;
         let cancelled = false;
         (async () => {
             setElig('checking');
@@ -66,7 +68,7 @@ export default function PlansClient({ linkEmail, justSubscribed = false }: { lin
             } catch { if (!cancelled) setElig('other'); }
         })();
         return () => { cancelled = true; };
-    }, [ready, authenticated, signedEmail, linkEmail, justSubscribed]);
+    }, [ready, authenticated, signedEmail, picked, chosen, justSubscribed]);
 
     const pay = async (plan: Plan) => {
         setError(null);
@@ -119,7 +121,7 @@ export default function PlansClient({ linkEmail, justSubscribed = false }: { lin
                                 e.preventDefault();
                                 const v = draft.trim();
                                 if (!EMAIL_RE.test(v)) { setError('Enter a valid email address.'); return; }
-                                setChosen(v); setEditing(false); setError(null);
+                                setChosen(v); setPicked(true); setEditing(false); setError(null);
                             }}
                         >
                             <p style={{ margin: '0 0 10px', lineHeight: 1.5 }}>
@@ -131,7 +133,7 @@ export default function PlansClient({ linkEmail, justSubscribed = false }: { lin
                                     style={{ flex: '1 1 240px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.4)', color: '#fff', padding: '10px 12px', fontSize: 14 }}
                                 />
                                 <button type="submit" style={btn(true)}>Use this email</button>
-                                {linkEmail && <button type="button" onClick={() => { setChosen(linkEmail); setEditing(false); setError(null); }} style={btn(false)}>Keep {linkEmail}</button>}
+                                {linkEmail && <button type="button" onClick={() => { setChosen(linkEmail); setPicked(true); setEditing(false); setError(null); }} style={btn(false)}>Keep {linkEmail}</button>}
                             </div>
                         </form>
                     ) : (

@@ -3,6 +3,8 @@ import { cookies } from 'next/headers';
 import { getAccount } from '@/lib/accounts';
 import { getMembershipByAccount, updateMembership, type AccountMembership } from '@/lib/membership';
 import { getStripe } from '@/lib/stripe-server';
+import { query } from '@/lib/db';
+import { sendRefundEmail } from '@/lib/newsletter/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,10 +102,14 @@ export async function POST(req: NextRequest) {
             const piRef = invoiceObj.payment_intent;
             const paymentIntentId = typeof piRef === 'string' ? piRef : (piRef as { id?: string } | null)?.id;
             let refunded = false;
+            let refundAmount = 0;
+            let refundCurrency = 'usd';
             if (paymentIntentId) {
                 try {
-                    await stripe.refunds.create({ payment_intent: paymentIntentId });
+                    const refund = await stripe.refunds.create({ payment_intent: paymentIntentId });
                     refunded = true;
+                    refundAmount = refund.amount;
+                    refundCurrency = refund.currency || 'usd';
                 } catch (refundError) {
                     console.error('Stripe first-month refund failed:', refundError);
                 }
@@ -115,6 +121,33 @@ export async function POST(req: NextRequest) {
                 cancel_at_period_end: false,
                 current_period_end: new Date().toISOString(),
             });
+            if (refunded) {
+                try {
+                    let to = '';
+                    const ls = await query('SELECT login_email FROM user_settings WHERE user_id = $1', [result.membership.user_id]);
+                    to = (ls.rows[0]?.login_email || '').trim();
+                    if (!to) {
+                        const custRef = (full as { customer?: unknown }).customer;
+                        const custId = typeof custRef === 'string' ? custRef : (custRef as { id?: string } | null)?.id;
+                        if (custId) {
+                            const cust = await stripe.customers.retrieve(custId);
+                            if (!('deleted' in cust && cust.deleted)) to = (cust.email || '').trim();
+                        }
+                    }
+                    if (to) {
+                        const planMeta = result.membership.plan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Basic';
+                        await sendRefundEmail({
+                            to,
+                            planLabel: planMeta,
+                            amount: (refundAmount / 100).toLocaleString('en-US', { style: 'currency', currency: refundCurrency.toUpperCase() }),
+                            refundedOn: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' }),
+                            invoiceNumber: (invoiceObj as { number?: string | null } | null)?.number ?? null,
+                        });
+                    }
+                } catch (mailErr) {
+                    console.warn('[refund-email] failed', mailErr);
+                }
+            }
             return NextResponse.json({ success: true, refunded, status: 'canceled' });
         }
 

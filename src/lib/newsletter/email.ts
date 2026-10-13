@@ -243,6 +243,22 @@ export function sendInvoiceEmail(input: {
     });
 }
 
+export function sendRefundEmail(input: {
+    to: string; planLabel: string; amount: string; refundedOn: string; invoiceNumber?: string | null;
+}): Promise<boolean> {
+    const bullets = [`Plan: ${input.planLabel}`, `Amount refunded: ${input.amount}`, `Refund requested on: ${input.refundedOn}`];
+    if (input.invoiceNumber) bullets.push(`Invoice number: ${input.invoiceNumber}`);
+    return send({
+        to: input.to,
+        subject: 'Your TradeMind refund is on its way',
+        heading: 'Your subscription is canceled and refunded',
+        intro: `We canceled your ${input.planLabel} annual plan and refunded the full amount to your original payment method. Access to the plan has ended.`,
+        bullets,
+        cta: { label: 'Choose a plan again', url: `${BASE_URL}/plans?email=${encodeURIComponent(input.to)}` },
+        note: 'Refunds usually appear on your statement within 5 to 10 business days, depending on your bank. Questions? Reply to this email or write to support@trademind.bot.',
+    });
+}
+
 export function sendRedemptionReceiptEmail(input: {
     to: string; planLabel: string; renewalDate?: string;
 }): Promise<boolean> {

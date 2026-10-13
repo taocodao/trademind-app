@@ -196,7 +196,7 @@ function buildTextBody(data: SignalEmailData): string {
         lines.push('EQUITY REBALANCE: No equity changes required. The portfolio is at its target allocation.');
         lines.push('');
     }
-    if (data.optionsEntries.length === 0 && data.skipOptions && data.skipReason) {
+    if (data.optionsEntries.length === 0 && data.skipOptions && data.skipReason && data.strategy !== 'TQQQ_TURBOCORE_PRO') {
         lines.push(`OPTIONS ORDERS: Skipped. ${data.skipReason}`);
         lines.push('');
     }
@@ -236,7 +236,7 @@ export function buildHtmlBody(data: SignalEmailData): string {
         : emptySection('Equity Rebalance', 'No equity changes required. The portfolio is at its target allocation.');
     const optionsHtml = data.optionsEntries.length > 0
         ? renderInstructionSection('Options Orders', data.optionsEntries.map((order) => optionInstruction(order, data.accountName)))
-        : data.skipOptions && data.skipReason
+        : data.skipOptions && data.skipReason && data.strategy !== 'TQQQ_TURBOCORE_PRO'
             ? emptySection('Options Orders', `Skipped: ${data.skipReason}`)
             : '';
     const statusHtml = `<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px 16px;margin:0 0 8px;color:#374151;font-size:13px">

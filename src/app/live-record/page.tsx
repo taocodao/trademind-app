@@ -1,0 +1,180 @@
+/* /live-record - the public live record. A real TradeMind virtual account that
+   follows the published signals, shown with a delay. Never the model portfolio.
+   COMPLIANCE: the disclaimer must stay directly under the figures. */
+
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { MarketingHeader } from '@/components/marketing/MarketingHeader';
+import { LegalFooter } from '@/components/marketing/LegalFooter';
+import { getPublicRecord, type PublicAccountRecord } from '@/lib/public-record';
+import './live-record.css';
+
+export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+    title: 'Live record | TradeMind',
+    description:
+        'A real TradeMind virtual account that follows every published signal. Every position, every trade, every exit reason, shown with a short delay.',
+};
+
+function money(n: number, digits = 0) {
+    return `$${n.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
+}
+
+function pct(n: number) {
+    return `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
+}
+
+function Spark({ series }: { series: Array<{ date: string; value: number }> }) {
+    const w = 640;
+    const h = 120;
+    if (series.length < 2) return null;
+    const vals = series.map((p) => p.value);
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
+    const range = max - min || 1;
+    const pts = series.map((p, i) => {
+        const x = (i / (series.length - 1)) * w;
+        const y = h - 6 - ((p.value - min) / range) * (h - 12);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    return (
+        <svg className="lr-spark" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" role="img" aria-label="Account value over time">
+            <polyline points={pts.join(' ')} fill="none" stroke="#8B5CF6" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+        </svg>
+    );
+}
+
+function AccountBlock({ a, delay }: { a: PublicAccountRecord; delay: number }) {
+    const hasData = a.value != null;
+    return (
+        <section className="lr-section">
+            <h2 className="lr-h2">{a.name}</h2>
+            <p className="lr-p">
+                Virtual account started {a.startDate} with {money(a.startingValue)}.
+                {hasData
+                    ? ` Figures run through ${a.dataThrough}.`
+                    : a.firstVisibleOn
+                        ? ` Figures appear here from ${a.firstVisibleOn}, once the first daily value is ${delay} days old.`
+                        : ` Figures appear here once the first daily value is ${delay} days old.`}
+            </p>
+
+            {hasData && (
+                <>
+                    <div className="lr-metrics">
+                        <div className="lr-metric"><span className="lr-k">Account value</span><span className="lr-v">{money(a.value!, 0)}</span></div>
+                        <div className="lr-metric">
+                            <span className="lr-k">Change since start</span>
+                            <span className={`lr-v ${a.returnPct! >= 0 ? 'lr-pos' : 'lr-neg'}`}>{pct(a.returnPct!)}</span>
+                        </div>
+                        <div className="lr-metric">
+                            <span className="lr-k">Largest drop from a peak</span>
+                            <span className="lr-v">{a.worstDropPct != null ? `${a.worstDropPct.toFixed(2)}%` : 'Not enough days yet'}</span>
+                        </div>
+                    </div>
+                    <Spark series={a.series} />
+                </>
+            )}
+
+            {a.strategy === 'QQQ_LEAPS' && (
+                <>
+                    <h3 className="lr-h3">Positions</h3>
+                    {a.lots.length === 0 ? (
+                        <p className="lr-p">No position yet. The account buys only when the entry conditions pass, so waiting is part of the record.</p>
+                    ) : (
+                        <div className="lr-scroll">
+                            <table className="lr-table">
+                                <thead>
+                                    <tr><th>Contract</th><th>Qty</th><th>Bought</th><th>Price</th><th>Sold</th><th>Price</th><th>Why it closed</th></tr>
+                                </thead>
+                                <tbody>
+                                    {a.lots.map((l, i) => (
+                                        <tr key={i}>
+                                            <td>{l.contract}</td>
+                                            <td>{l.contracts}</td>
+                                            <td>{l.entryDate}</td>
+                                            <td>{money(l.entryPrice, 2)}</td>
+                                            <td>{l.open ? 'Still open' : l.exitDate}</td>
+                                            <td>{l.exitPrice != null ? money(l.exitPrice, 2) : ''}</td>
+                                            <td>{l.exitReason || ''}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </>
+            )}
+
+            {a.strategy !== 'QQQ_LEAPS' && (
+                <>
+                    <h3 className="lr-h3">Trades</h3>
+                    {a.trades.length === 0 ? (
+                        <p className="lr-p">No trades shown yet.</p>
+                    ) : (
+                        <div className="lr-scroll">
+                            <table className="lr-table">
+                                <thead><tr><th>Date</th><th>Action</th><th>Instrument</th><th>Qty</th><th>Price</th></tr></thead>
+                                <tbody>
+                                    {a.trades.map((t, i) => (
+                                        <tr key={i}><td>{t.date}</td><td>{t.side}</td><td>{t.instrument}</td><td>{t.quantity}</td><td>{money(t.price, 2)}</td></tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </>
+            )}
+
+            {a.heldBackEvents > 0 && (
+                <p className="lr-note">
+                    {a.heldBackEvents} newer {a.heldBackEvents === 1 ? 'trade is' : 'trades are'} held back until {a.heldBackEvents === 1 ? 'it is' : 'they are'} {delay} days old.
+                </p>
+            )}
+        </section>
+    );
+}
+
+export default async function LiveRecordPage() {
+    let record: Awaited<ReturnType<typeof getPublicRecord>> | null = null;
+    try {
+        record = await getPublicRecord();
+    } catch {
+        record = null;
+    }
+
+    return (
+        <main className="min-h-screen flex flex-col bg-[#0A0A0F] overflow-x-hidden pt-16">
+            <MarketingHeader />
+            <div className="lr-wrap">
+                <div className="lr-back-row"><Link href="/verify" className="lr-back">Back to verify the record</Link></div>
+                <header>
+                    <div className="lr-eyebrow">Live record</div>
+                    <h1 className="lr-h1">A real account, following the same signals you get.</h1>
+                    <p className="lr-sub">
+                        This is a TradeMind virtual account. It receives each signal at the same time as every member, takes the same
+                        simulated fill, and is checked by the same exit rules at 9:45 AM Eastern. It is not a backtest.</p>
+                </header>
+
+                {record ? (
+                    record.accounts.map((a) => <AccountBlock key={a.strategy} a={a} delay={record!.delayDays} />)
+                ) : (
+                    <p className="lr-p">The record is temporarily unavailable. Please try again in a few minutes.</p>
+                )}
+
+                <div className="lr-disclaimer">
+                    <p>
+                        This is a virtual account. TradeMind never connects to a brokerage or places an order. Each fill is simulated at the middle of the bid
+                        and ask when the signal is published. Commissions and slippage are not charged, so real fills at a broker will differ.
+                    </p>
+                    <p>
+                        Results are shown with a {record?.delayDays ?? 5} day delay. A short record says little about the future, and the first weeks of any
+                        account can look unusually good or bad. Past results do not predict future results. TradeMind provides educational analysis only, not
+                        personalized investment advice.
+                    </p>
+                </div>
+            </div>
+            <LegalFooter />
+        </main>
+    );
+}

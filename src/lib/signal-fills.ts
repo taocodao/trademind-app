@@ -11,6 +11,7 @@
  */
 
 import pool from '@/lib/db';
+import { syncPositionForSymbol } from '@/lib/option-lots';
 
 export interface SignalFillInput {
     activityId: number;
@@ -83,6 +84,7 @@ export async function confirmSignalFill(
                 `UPDATE account_activities SET price = $3, amount = $4, note = $5 WHERE id = $1 AND account_id = $2`,
                 [f.activityId, accountId, f.price, newAmount, stampedNote]
             );
+            await syncLotPrice(client, accountId, f.activityId, f.price, true);
             stored.push({
                 activityId: f.activityId,
                 symbol: row.symbol,
@@ -161,6 +163,7 @@ export async function clearSignalFillConfirmation(
                 `UPDATE account_activities SET price = $3, amount = $4, note = $5 WHERE id = $1 AND account_id = $2`,
                 [f.activityId, accountId, f.sysPrice, newAmount, f.note]
             );
+            await syncLotPrice(client, accountId, f.activityId, f.sysPrice, false);
         }
 
         if (cashDelta !== 0) {
@@ -185,6 +188,21 @@ export async function clearSignalFillConfirmation(
     } finally {
         client.release();
     }
+}
+
+/** Keep a QQQ LEAPS lot's own prices in step with the ledger row it points at. */
+async function syncLotPrice(client: any, accountId: number, activityId: number, price: number, adjusted: boolean): Promise<void> {
+    const entry = await client.query(
+        `UPDATE account_option_lots SET entry_price = $3, adjusted = CASE WHEN $4 THEN TRUE ELSE (member_note IS NOT NULL) END, updated_at = NOW()
+         WHERE account_id = $1 AND entry_activity_id = $2 RETURNING symbol`,
+        [accountId, activityId, price, adjusted]
+    );
+    for (const r of entry.rows) await syncPositionForSymbol(client, accountId, r.symbol);
+    await client.query(
+        `UPDATE account_option_lots SET exit_price = $3, adjusted = CASE WHEN $4 THEN TRUE ELSE (member_note IS NOT NULL) END, updated_at = NOW()
+         WHERE account_id = $1 AND exit_activity_id = $2`,
+        [accountId, activityId, price, adjusted]
+    );
 }
 
 class FillError extends Error {}

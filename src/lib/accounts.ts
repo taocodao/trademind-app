@@ -22,6 +22,7 @@
  */
 
 import pool, { query } from '@/lib/db';
+import { isOptionSymbol } from '@/lib/option-symbols';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -174,6 +175,55 @@ export function initializeAccountTables(): Promise<void> {
             await query(`ALTER TABLE account_signals ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ`);
             await query(`ALTER TABLE account_signals ADD COLUMN IF NOT EXISTS fill_details JSONB`);
             await query(`ALTER TABLE account_signals ADD COLUMN IF NOT EXISTS fill_note TEXT`);
+
+            // QQQ LEAPS lots: every call an account holds is its own lot so each
+            // one is managed (exit rules, member adjustments) on its own terms.
+            // account_positions stays the per-contract aggregate of the open lots.
+            await query(`
+                CREATE TABLE IF NOT EXISTS account_option_lots (
+                    id SERIAL PRIMARY KEY,
+                    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+                    underlying VARCHAR(16) NOT NULL DEFAULT 'QQQ',
+                    symbol VARCHAR(64) NOT NULL,
+                    strike DECIMAL(10, 2) NOT NULL,
+                    expiry DATE NOT NULL,
+                    contracts INTEGER NOT NULL,
+                    status VARCHAR(16) NOT NULL DEFAULT 'open',
+                    source VARCHAR(16) NOT NULL DEFAULT 'signal',
+                    entry_signal_id VARCHAR(128),
+                    entry_date DATE NOT NULL DEFAULT CURRENT_DATE,
+                    entry_activity_id INTEGER,
+                    model_entry_price DECIMAL(12, 4),
+                    entry_price DECIMAL(12, 4) NOT NULL,
+                    exit_signal_id VARCHAR(128),
+                    exit_date DATE,
+                    exit_activity_id INTEGER,
+                    model_exit_price DECIMAL(12, 4),
+                    exit_price DECIMAL(12, 4),
+                    exit_reason TEXT,
+                    still_holding BOOLEAN NOT NULL DEFAULT FALSE,
+                    adjusted BOOLEAN NOT NULL DEFAULT FALSE,
+                    member_note TEXT,
+                    created_at TIMESTAMPTZ DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ DEFAULT NOW(),
+                    CONSTRAINT valid_lot_status CHECK (status IN ('open', 'closed', 'expired', 'skipped'))
+                )
+            `);
+            await query(`CREATE INDEX IF NOT EXISTS idx_account_option_lots_account ON account_option_lots(account_id, status)`);
+
+            // Latest known mid per option contract (written by the lot manager at
+            // 9:45 AM and the daily valuation job) so account valuation is fast.
+            await query(`
+                CREATE TABLE IF NOT EXISTS option_marks (
+                    symbol VARCHAR(64) PRIMARY KEY,
+                    mid DECIMAL(12, 4) NOT NULL,
+                    bid DECIMAL(12, 4),
+                    ask DECIMAL(12, 4),
+                    delta DECIMAL(8, 4),
+                    source VARCHAR(32),
+                    as_of TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+            `);
         })().catch((err) => {
             // Reset so a transient failure doesn't permanently disable init.
             _initPromise = null;
@@ -396,7 +446,7 @@ export async function applyActivity(
         /** 'equity' (default) or 'option'. Options carry a 100× contract multiplier. */
         instrument_type?: string | null;
     }
-): Promise<void> {
+): Promise<number> {
     const qty = a.quantity != null ? Math.abs(Number(a.quantity)) : null;
     const price = a.price != null ? Number(a.price) : null;
     const instrumentType = a.instrument_type === 'option' ? 'option' : 'equity';
@@ -502,9 +552,9 @@ export async function applyActivity(
     }
 
     // 3. Activity row
-    await client.query(
+    const inserted = await client.query(
         `INSERT INTO account_activities (account_id, type, symbol, quantity, price, amount, signal_id, source, note)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
         [
             accountId,
             a.type,
@@ -517,6 +567,7 @@ export async function applyActivity(
             a.note ?? null,
         ]
     );
+    return Number(inserted.rows[0].id);
 }
 
 /**
@@ -539,7 +590,8 @@ export async function reverseActivity(accountId: number, activityId: number): Pr
         const a = res.rows[0];
         const qty = a.quantity != null ? Number(a.quantity) : null;
         const price = a.price != null ? Number(a.price) : null;
-        const notional = qty != null && price != null ? qty * price : 0;
+        const isOpt = isOptionSymbol(a.symbol);
+        const notional = qty != null && price != null ? qty * price * (isOpt ? 100 : 1) : 0;
 
         // Inverse cash
         let cashDelta = 0;
@@ -570,12 +622,12 @@ export async function reverseActivity(accountId: number, activityId: number): Pr
                 // undo a sell → add position back at the sale price
                 await client.query(
                     `INSERT INTO account_positions (account_id, symbol, quantity, avg_price, instrument_type, updated_at)
-                     VALUES ($1, $2, $3, $4, 'equity', NOW())
+                     VALUES ($1, $2, $3, $4, $5, NOW())
                      ON CONFLICT (account_id, symbol) DO UPDATE SET
                         quantity  = account_positions.quantity + $3,
                         avg_price = ((account_positions.quantity * account_positions.avg_price) + ($3 * $4)) / (account_positions.quantity + $3),
                         updated_at = NOW()`,
-                    [accountId, a.symbol, qty, price ?? 0]
+                    [accountId, a.symbol, qty, price ?? 0, isOpt ? 'option' : 'equity']
                 );
             }
         }
@@ -623,6 +675,7 @@ export async function editActivity(
             signal_id: o.signal_id,
             source: o.source,
             note: updated.note ?? o.note,
+            instrument_type: isOptionSymbol(updated.symbol ?? o.symbol) ? 'option' : 'equity',
         });
         await client.query('COMMIT');
         return true;

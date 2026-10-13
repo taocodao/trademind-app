@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAccount, reverseActivity, editActivity, type ActivityType } from '@/lib/accounts';
 import { getUserId } from '@/lib/auth';
+import { isLotLinkedActivity } from '@/lib/option-lots';
+
+const LOT_LOCK_MSG = 'This trade belongs to a QQQ call position. Change it from the signal card or the Positions tab so the position stays in step.';
 
 // PATCH /api/accounts/[id]/activities/[activityId], edit an activity (reverses + reapplies)
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string; activityId: string }> }) {
@@ -11,6 +14,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const account = await getAccount(accountId, userId);
     if (!account) return NextResponse.json({ error: 'Account not found' }, { status: 404 });
+    if (await isLotLinkedActivity(accountId, Number(activityId))) return NextResponse.json({ error: LOT_LOCK_MSG }, { status: 400 });
 
     try {
         const body = await req.json();
@@ -40,6 +44,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     const account = await getAccount(accountId, userId);
     if (!account) return NextResponse.json({ error: 'Account not found' }, { status: 404 });
 
+    if (await isLotLinkedActivity(accountId, Number(activityId))) return NextResponse.json({ error: LOT_LOCK_MSG }, { status: 400 });
     const ok = await reverseActivity(accountId, Number(activityId));
     if (!ok) return NextResponse.json({ error: 'Activity not found' }, { status: 404 });
     return NextResponse.json({ success: true });

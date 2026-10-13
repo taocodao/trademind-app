@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { getAccount } from '@/lib/accounts';
 import { getUserId } from '@/lib/auth';
+import { getLotsForSignals, isWithinEditWindow } from '@/lib/option-lots';
 
 // GET /api/accounts/[id]/signals — signals delivered to this account, newest
 // first, each with its per-account execution status. The account_signals row
@@ -70,6 +71,23 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
             }
         }
 
+        // QQQ call lots opened or closed by these signals (member adjustment actions).
+        const lots = await getLotsForSignals(accountId, signalIds);
+        const lotsBySignal = new Map<string, any[]>();
+        for (const l of lots) {
+            for (const sid of [l.entrySignalId, l.exitSignalId]) {
+                if (!sid) continue;
+                const list = lotsBySignal.get(sid) || [];
+                list.push({
+                    ...l,
+                    role: sid === l.entrySignalId ? 'entry' : 'exit',
+                    canEditEntry: l.status === 'open' && isWithinEditWindow(l.entryDate),
+                    canEditExit: l.status === 'closed' && isWithinEditWindow(l.exitDate),
+                });
+                lotsBySignal.set(sid, list);
+            }
+        }
+
         const signals = res.rows.map((r) => {
             let data: any = r.data;
             if (typeof data === 'string') {
@@ -84,6 +102,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
                 fills: r.fill_details ?? null,
                 fillNote: r.fill_note ?? null,
                 orders: ordersBySignal.get(r.signal_id) || [],
+                lots: lotsBySignal.get(r.signal_id) || [],
                 strategy: r.strategy,
                 symbol: r.symbol,
                 signalStatus: r.signal_status,

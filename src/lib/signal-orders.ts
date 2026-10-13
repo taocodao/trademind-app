@@ -46,6 +46,10 @@ export interface OptionsOrder {
     instrumentType: 'Equity Option' | 'Equity';
     priceEffect: 'Debit' | 'Credit';
     instruction: string;
+    /** QQQ LEAPS lot this order closes (manage signals). */
+    lotId?: number;
+    /** Plain-language reason shown to the member and stored on the lot. */
+    exitReason?: string;
 }
 
 export interface AccountOrders {

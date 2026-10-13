@@ -8,6 +8,7 @@ import Link from "next/link";
 import { getStrategy } from "@/lib/strategies";
 import { ActivityTab } from "@/components/accounts/ActivityTab";
 import { SignalCard, type SignalRow } from "@/components/accounts/SignalCard";
+import { LotsPanel } from "@/components/accounts/LotsPanel";
 import { AccountTab } from "@/components/console/AccountTab";
 
 type ConsoleTab = 'signals' | 'positions' | 'activity' | 'account' | 'refer';
@@ -318,10 +319,13 @@ export default function AccountDetailPage() {
             {/* Tab content */}
             <div className="px-6">
                 {tab === 'positions' ? (
+                    <>
+                    {account?.strategy === 'QQQ_LEAPS' && <LotsPanel accountId={accountId} onChanged={fetchPositions} />}
                     <PositionsTable positions={positions} loading={loading} strategy={account?.strategy || ''} switchToSignal={(sid) => {
                         setTab('signals');
                         router.replace(`/account/${accountId}?tab=signals&signal=${encodeURIComponent(sid)}`, { scroll: false });
                     }} />
+                    </>
                 ) : tab === 'signals' ? (
                     <SignalsTab accountId={accountId} />
                 ) : tab === 'activity' ? (

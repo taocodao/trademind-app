@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { BookOpen, CheckCircle2, ChevronDown, Undo2, Zap } from "lucide-react";
 import { parseOptionContract } from "@/lib/universal-order";
+import { LotActions, lotLabel, type LotInfo } from "@/components/accounts/LotActions";
 
 export interface SignalOrder {
     activityId: number;
@@ -24,6 +25,7 @@ export interface SignalRow {
     fills: { activityId: number; sysPrice: number; userPrice: number }[] | null;
     fillNote: string | null;
     orders: SignalOrder[];
+    lots?: LotInfo[];
     strategy: string | null;
     symbol: string | null;
     action: string | null;
@@ -189,6 +191,24 @@ export function SignalCard({
                             </div>
                         );
                     })}
+                </div>
+            )}
+
+            {/* QQQ call positions this signal opened or closed: adjust to match your broker */}
+            {(signal.lots || []).length > 0 && (
+                <div className="space-y-2 mb-3">
+                    {(signal.lots || []).map((l) => (
+                        <div key={`${l.id}-${l.role}`} className="rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2.5">
+                            <p className="text-[12px] font-semibold text-white">
+                                {l.role === 'exit' ? 'Closed' : 'Opened'}: {lotLabel(l)}
+                                {l.adjusted && <span className="ml-2 text-[10px] font-bold text-tm-muted">adjusted by you</span>}
+                            </p>
+                            {l.role === 'exit' && l.exitReason && (
+                                <p className="text-[11px] text-tm-muted mt-0.5">Reason: {l.exitReason}</p>
+                            )}
+                            <LotActions lot={l} accountId={accountId} onChanged={onChanged} />
+                        </div>
+                    ))}
                 </div>
             )}
 

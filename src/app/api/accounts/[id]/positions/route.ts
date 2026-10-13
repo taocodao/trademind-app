@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAccount, getAccountPositions } from '@/lib/accounts';
 import { phaseForNlv, getAccountPhase, getPhaseSpec } from '@/lib/account-phase';
 import { getUserId } from '@/lib/auth';
+import { getOptionMarks } from '@/lib/option-lots';
 
 // GET /api/accounts/[id]/positions, positions with live market value
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -17,7 +18,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
     // Fetch live quotes for equity symbols
     let prices: Record<string, number> = {};
-    const symbols = positions.map((p) => p.symbol);
+    const symbols = positions.filter((p) => p.instrument_type !== 'option').map((p) => p.symbol);
+    const optionMarks = await getOptionMarks(positions.filter((p) => p.instrument_type === 'option').map((p) => p.symbol)).catch(() => ({}));
     if (symbols.length > 0) {
         try {
             const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.trademind.bot';
@@ -29,7 +31,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const enriched = positions.map((p) => {
-        const live = prices[p.symbol] || p.avg_price;
+        // Options are valued at the latest stored mark (9:45 AM check / daily valuation), cost if none yet.
+        const live = p.instrument_type === 'option'
+            ? ((optionMarks as Record<string, { mid: number }>)[p.symbol]?.mid || p.avg_price)
+            : (prices[p.symbol] || p.avg_price);
         // Options settle per contract (100 shares); equity is 1×.
         const mult = p.instrument_type === 'option' ? 100 : 1;
         const marketValue = p.quantity * live * mult;

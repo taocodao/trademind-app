@@ -19,6 +19,10 @@ import { computeReserve, deltaCeiling, currentDeltaExposure, CASH_MGMT } from '@
 import { tierMultiplier, leapsMaxContracts } from '@/lib/risk-tiers';
 import type { GenericSignal, SignalLeg, DeltaOrder, OptionsOrder, AccountOrders } from '@/lib/signal-orders';
 import type { Account } from '@/lib/accounts';
+import {
+    countOpenLots, getLot, getOptionMarks, createLotFromBuy, closeLot, closeLotsForSell, MAX_LOTS_PER_ACCOUNT,
+} from '@/lib/option-lots';
+import { parseOptionSymbol } from '@/lib/option-symbols';
 
 // ─── Order Generation ────────────────────────────────────────────────────────
 
@@ -61,9 +65,15 @@ export async function generateAccountOrders(
     const prices = await fetchMarketPrices(symbols);
 
     // NLV (cash + positions at live prices). Options carry a 100× contract multiplier.
+    // Options are valued at the latest stored mark (written by the 9:45 AM lot
+    // manager and the daily valuation job) and fall back to cost when none exists.
+    const optionSymbolsHeld = Object.entries(posMap).filter(([, p]) => p.instrumentType === 'option').map(([sym]) => sym);
+    const optionMarks = await getOptionMarks(optionSymbolsHeld).catch(() => ({} as Record<string, { mid: number }>));
     let nlv = account.cash_balance;
     for (const [sym, pos] of Object.entries(posMap)) {
-        const px = prices[sym] || pos.avgPrice || 0;
+        const px = pos.instrumentType === 'option'
+            ? (optionMarks[sym]?.mid || pos.avgPrice || 0)
+            : (prices[sym] || pos.avgPrice || 0);
         const mult = pos.instrumentType === 'option' ? 100 : 1;
         nlv += pos.qty * px * mult;
     }
@@ -214,7 +224,7 @@ export async function executeAccountOrders(
             const qty = Math.abs(Math.round(oo.quantity));
             if (qty === 0) continue;
             const isBuy = oo.action.toLowerCase().startsWith('buy');
-            await applyActivity(client, accountId, {
+            const activityId = await applyActivity(client, accountId, {
                 type: isBuy ? 'buy' : 'sell',
                 symbol: oo.symbol,
                 quantity: qty,
@@ -224,6 +234,30 @@ export async function executeAccountOrders(
                 instrument_type: oo.instrumentType === 'Equity Option' ? 'option' : 'equity',
                 note: oo.instruction,
             });
+
+            // QQQ LEAPS lots: each long call is tracked on its own so it can be
+            // managed (exit rules, member adjustments) separately.
+            const parsed = oo.instrumentType === 'Equity Option' ? parseOptionSymbol(oo.symbol) : null;
+            if (parsed && parsed.right === 'C') {
+                if (oo.action === 'Buy to Open') {
+                    await createLotFromBuy(client, {
+                        accountId, symbol: oo.symbol, contracts: qty, price: oo.limitPrice,
+                        modelPrice: oo.limitPrice, signalId, activityId,
+                    });
+                } else if (oo.action === 'Sell to Close') {
+                    if (oo.lotId) {
+                        await closeLot(client, {
+                            lotId: oo.lotId, accountId, price: oo.limitPrice, modelPrice: oo.limitPrice,
+                            signalId, activityId, reason: oo.exitReason || 'Exit signal',
+                        });
+                    } else {
+                        await closeLotsForSell(client, {
+                            accountId, symbol: oo.symbol, contracts: qty, price: oo.limitPrice,
+                            signalId, activityId, reason: oo.exitReason || 'Exit signal',
+                        });
+                    }
+                }
+            }
         }
 
         // Record idempotency (unique constraint guards races)
@@ -292,7 +326,7 @@ const QUOTE_PROXY_BASES: string[] = Array.from(new Set(
 const optionQuoteCache = new Map<string, { at: number; promise: Promise<OptionQuote | null> }>();
 const OPTION_QUOTE_TTL_MS = 90_000;
 
-function fetchOptionQuote(symbol: string, expiry: string, strike: number, right: 'C' | 'P'): Promise<OptionQuote | null> {
+export function fetchOptionQuote(symbol: string, expiry: string, strike: number, right: 'C' | 'P'): Promise<OptionQuote | null> {
     const key = `${symbol}|${expiry}|${strike}|${right}`;
     const hit = optionQuoteCache.get(key);
     if (hit && Date.now() - hit.at < OPTION_QUOTE_TTL_MS) return hit.promise;
@@ -418,6 +452,46 @@ async function generateAccountOptionOrders(
         return { orders: exitOrders, skip: false };
     }
 
+    // ── MANAGE: close the specific lots the engine named for THIS account ───
+    // Published by the 9:45 AM lot manager after it applied the backtest exit
+    // rules to every open lot. Each close names the account, the lot and the
+    // reason; an account's own lots are the only thing it can ever close.
+    if (action === 'MANAGE') {
+        const closes = (Array.isArray((signal as any).closes) ? (signal as any).closes : [])
+            .filter((c: any) => Number(c?.account_id) === account.id);
+        if (closes.length === 0) {
+            return { orders: [], skip: true, reason: 'No position of this account needs action' };
+        }
+        const manageOrders: OptionsOrder[] = [];
+        for (const c of closes) {
+            const lot = await getLot(account.id, Number(c.lot_id));
+            if (!lot || lot.status !== 'open') continue; // already closed or adjusted by the member
+            let price = Number(c.ref_px) || 0;
+            let basis = 'engine mid at the 9:45 AM check';
+            if (!(price > 0)) {
+                const quote = await fetchOptionQuote(lot.underlying, lot.expiry, lot.strike, 'C');
+                if (quote) { price = quote.mid; basis = quote.basis; }
+            }
+            if (!(price > 0)) continue; // no usable price: skip rather than guess
+            const reason = String(c.reason_text || c.reason || 'Exit rule met');
+            manageOrders.push({
+                action: 'Sell to Close',
+                symbol: lot.symbol,
+                quantity: lot.contracts,
+                limitPrice: price,
+                instrumentType: 'Equity Option',
+                priceEffect: 'Credit',
+                lotId: lot.id,
+                exitReason: reason,
+                instruction: `Sell to Close ${lot.contracts} ${lot.underlying} $${lot.strike} Call exp ${lot.expiry} at ~$${price.toFixed(2)} (mid, ${basis}). Reason: ${reason}`,
+            });
+        }
+        if (manageOrders.length === 0) {
+            return { orders: [], skip: true, reason: 'No open position of this account needs action' };
+        }
+        return { orders: manageOrders, skip: false };
+    }
+
     if (action !== 'ENTER') {
         return { orders: [], skip: true, reason: `No entry (action=${action || 'none'})` };
     }
@@ -438,12 +512,11 @@ async function generateAccountOptionOrders(
         return { orders: [], skip: true, reason: 'Signal missing strike/expiry' };
     }
 
-    // Entry guard: skip if the account already holds an open LEAPS call on this underlying.
-    const hasOpenLeaps = Object.entries(posMap).some(
-        ([sym, p]) => p.instrumentType === 'option' && p.qty > 0 && sym.startsWith(`${underlying}_`) && sym.includes('C')
-    );
-    if (hasOpenLeaps) {
-        return { orders: [], skip: true, reason: `Already holding an open ${underlying} LEAPS call — no new entry` };
+    // Entry guard (matches the backtest's max_positions = 3): an account can hold
+    // up to three QQQ calls at once, each bought on its own entry signal.
+    const openLots = await countOpenLots(account.id);
+    if (openLots >= MAX_LOTS_PER_ACCOUNT) {
+        return { orders: [], skip: true, reason: `Already holding ${openLots} open ${underlying} calls (the maximum is ${MAX_LOTS_PER_ACCOUNT}), no new entry` };
     }
 
     // Live price for the contract (mid via IB-primary proxy).

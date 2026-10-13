@@ -286,7 +286,23 @@ const QUOTE_PROXY_BASES: string[] = Array.from(new Set(
 ));
 
 /** Fetch a live option quote (mid price) from the IB-primary 8002 proxy. */
-async function fetchOptionQuote(symbol: string, expiry: string, strike: number, right: 'C' | 'P'): Promise<OptionQuote | null> {
+// One quote per contract is shared by every account in a fan-out. The quote proxy
+// takes about 10 seconds per request, so fetching it once per account made a
+// fan-out to six accounts overrun the 60 second route limit.
+const optionQuoteCache = new Map<string, { at: number; promise: Promise<OptionQuote | null> }>();
+const OPTION_QUOTE_TTL_MS = 90_000;
+
+function fetchOptionQuote(symbol: string, expiry: string, strike: number, right: 'C' | 'P'): Promise<OptionQuote | null> {
+    const key = `${symbol}|${expiry}|${strike}|${right}`;
+    const hit = optionQuoteCache.get(key);
+    if (hit && Date.now() - hit.at < OPTION_QUOTE_TTL_MS) return hit.promise;
+    const promise = fetchOptionQuoteUncached(symbol, expiry, strike, right);
+    optionQuoteCache.set(key, { at: Date.now(), promise });
+    promise.then((q) => { if (!q) optionQuoteCache.delete(key); }).catch(() => optionQuoteCache.delete(key));
+    return promise;
+}
+
+async function fetchOptionQuoteUncached(symbol: string, expiry: string, strike: number, right: 'C' | 'P'): Promise<OptionQuote | null> {
     const ymd = expiry.replace(/-/g, '');
     const path = `/api/quote/option?symbol=${encodeURIComponent(symbol)}&expiry=${ymd}&strike=${strike}&right=${right}`;
     for (const base of QUOTE_PROXY_BASES) {

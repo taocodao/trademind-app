@@ -140,6 +140,12 @@ export function CoPilotHero() {
                     <Link href="/verify" className="tm-cta-hero tm-cta-secondary">{c.ctaSecondary}</Link>
                     <Link href="/verify/ledger" className="tm-cta-hero tm-cta-tertiary tm-cta-arrow">{c.ctaLedger}</Link>
                 </div>
+                <div className="tm-sim-wrap">
+                    <Link href="/simulated-record" className="tm-sim-link">
+                        <span className="tm-sim-tag">{c.simTag}</span>
+                        <span>{c.simLink}</span>
+                    </Link>
+                </div>
 
                 <div className="tm-herocards" ref={cardsRef}>
                     {c.cards.map((card, i) => (

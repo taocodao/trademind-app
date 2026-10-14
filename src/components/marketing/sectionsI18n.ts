@@ -17,7 +17,7 @@ export interface SectionsCopy {
         h1a: string; h1b: string;
         sub: string;
         plans: string;
-        ctaPrimary: string; ctaSecondary: string; ctaLedger: string; ledgerLink: string;
+        ctaPrimary: string; ctaSecondary: string; ctaLedger: string; ledgerLink: string; simTag: string; simLink: string;
         cards: { numeral: string; numSegs: ({ v: number; dec?: number } | { t: string })[]; label: string; body: string; link?: string }[];
         stats: { big: string; label: string; clarifier: string }[];
         play: string; calcCta: string; micro: string;
@@ -61,6 +61,7 @@ export interface SectionsCopy {
     };
     // QQQ Basic out-of-sample record block, shown under the QQQ LEAPS table.
     basicRecord: {
+        simIntro: string; simLink: string;
         kicker: string; title: string; p: string; tipTotal: string;
         cols: { total: string; cagr: string; sharpe: string; maxdd: string; calmar: string };
         basicName: string; qqqName: string;
@@ -96,6 +97,8 @@ const EN_SECTIONS: SectionsCopy = {
         ctaPrimary: 'Begin the story',
         ctaSecondary: 'Read the record',
         ledgerLink: 'Open the ledger \u2192',
+        simTag: 'Simulation',
+        simLink: 'Replay both strategies over two years. Hypothetical, not live trading. \u2192',
         cards: [
             {
                 numeral: '55.1%',
@@ -205,6 +208,8 @@ const EN_SECTIONS: SectionsCopy = {
         caption: '2021 to 2026 continuous window, 5.6 years, model-priced. Hypothetical backtested performance: not achieved by any actual account, not live trading, and not a prediction. The next drawdown could be deeper. Every entry, exit, and loss in this record is in the ledger below.',
     },
     basicRecord: {
+        simIntro: 'Want to see how both strategies would have traded over the last two years? A separate page replays that period as a clearly labeled simulation, with every trade and position listed. It is hypothetical and kept apart from the live record.',
+        simLink: 'Open the two-year simulation \u2192',
         kicker: 'QQQ Defensive',
         title: 'The ETF plan: no options permission, a shallower worst fall',
         p: 'QQQ Defensive holds only ETFs (QQQ, QLD, TQQQ and a cash-like fund, SGOV), so it works in any brokerage account and needs no options trading permission. It is built to keep the worst fall shallow, which makes it a steadier place to start for newer subscribers who are comfortable giving up some upside in strong years.',
@@ -262,6 +267,8 @@ const ES_SECTIONS: SectionsCopy = {
         ctaSecondary: 'Lee el expediente',
         ctaLedger: 'Explora cada operación \u2192',
         ledgerLink: 'Abre el libro mayor \u2192',
+        simTag: 'Simulación',
+        simLink: 'Repite ambas estrategias durante dos años (página en inglés). Hipotético, no es trading en vivo. \u2192',
         cards: [
             {
                 numeral: '55.1%',
@@ -371,6 +378,8 @@ const ES_SECTIONS: SectionsCopy = {
         caption: 'Ventana continua 2021 a 2026, 5,6 años, con precios de modelo. Rendimiento hipotético de backtest: no logrado por ninguna cuenta real, no es trading en vivo y no es una predicción. El próximo drawdown podría ser más profundo. Cada entrada, salida y pérdida de este historial está en el registro de abajo.',
     },
     basicRecord: {
+        simIntro: '¿Quieres ver cómo habrían operado ambas estrategias en los últimos dos años? Una página aparte (en inglés) repite ese periodo como una simulación claramente señalada, con cada operación y posición. Es hipotética y está separada del registro en vivo.',
+        simLink: 'Abrir la simulación de dos años \u2192',
         kicker: 'QQQ Defensive',
         title: 'El plan con ETFs: sin permiso de opciones y una peor caída menor',
         p: 'QQQ Defensive solo mantiene ETFs (QQQ, QLD, TQQQ y un fondo similar al efectivo, SGOV), por lo que funciona en cualquier cuenta de bróker y no requiere permiso para operar opciones. Está diseñado para mantener poco profunda la peor caída, lo que lo convierte en un punto de partida más estable para suscriptores nuevos que aceptan renunciar a parte del alza en los años fuertes.',
@@ -428,6 +437,8 @@ const ZH_SECTIONS: SectionsCopy = {
         ctaSecondary: '查看记录',
         ctaLedger: '浏览每一笔交易 \u2192',
         ledgerLink: '打开账本 \u2192',
+        simTag: '模拟',
+        simLink: '回放两种策略的两年历史（英文页面）。仅为假设，并非实盘交易。 \u2192',
         cards: [
             {
                 numeral: '55.1%',
@@ -537,6 +548,8 @@ const ZH_SECTIONS: SectionsCopy = {
         caption: '2021 到 2026 连续窗口,5.6 年,模型定价。假设性回测表现:没有任何真实账户实现过,不是实盘交易,也不是预测。下一次回撤可能更深。此记录中的每一次入场、出场和亏损,都记录在下方的账本里。',
     },
     basicRecord: {
+        simIntro: '想看两种策略在过去两年里会如何交易吗？另有一个页面（英文）把这段时间作为明确标注的模拟回放，列出每一笔交易和持仓。它只是假设性的，与实盘记录分开。',
+        simLink: '打开两年模拟 \u2192',
         kicker: 'QQQ Defensive',
         title: 'ETF 方案:无需期权权限,最差跌幅更浅',
         p: 'QQQ Defensive 只持有 ETF(QQQ、QLD、TQQQ 和类现金基金 SGOV),因此在任何券商账户里都能使用,不需要期权交易权限。它的设计目标是让最差跌幅保持较浅,适合愿意在强势年份放弃部分涨幅、希望起步更平稳的新订阅者。',

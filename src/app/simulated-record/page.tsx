@@ -187,7 +187,7 @@ export default function SimulatedRecordPage() {
             <MarketingHeader />
             <div className="sr-bar">Simulation. Hypothetical results. Not live trading.</div>
             <div className="sr-wrap">
-                <div className="sr-back-row"><Link href="/verify" className="sr-back">Back to verify the record</Link></div>
+                <div className="sr-back-row"><Link href="/" className="sr-back">Back to the home page</Link></div>
                 <header>
                     <div className="sr-eyebrow">Simulation <Badge /></div>
                     <h1 className="sr-h1">Two years of history, replayed as a simulation.</h1>

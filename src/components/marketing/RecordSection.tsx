@@ -129,6 +129,12 @@ export function RecordSection() {
                     </div>
                     <p className="tm-record-cap">{b.caption}</p>
                 </div>
+
+                <div className="tm-sim-card">
+                    <span className="tm-sim-tag">SIMULATION</span>
+                    <p>{b.simIntro}</p>
+                    <Link href="/simulated-record" className="tm-record-verify-link">{b.simLink}</Link>
+                </div>
             </div>
         </section>
     );

@@ -30,6 +30,7 @@ const ROOTS = [
     'src/app/creators/page.tsx',
     'src/app/verify/page.tsx',
     'src/app/live-record/page.tsx',
+    'src/app/simulated-record/page.tsx',
 ];
 
 /** Files whose "dashes" are inside opaque data (audio word timing, SQL, HTML

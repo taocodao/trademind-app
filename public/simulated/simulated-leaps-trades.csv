@@ -1,0 +1,131 @@
+record,date,time,action,instrument,quantity,price,amount,realized,cashAfter,why
+SIMULATION,2025-09-02,15:00,Buy to open,"QQQ $470.56 call, exp 2026-09-02 (LEAPS)",1,125.77,-12576.72,,12378.26,Entry conditions passed (strong uptrend)
+SIMULATION,2025-10-14,15:00,Sell to open,"QQQ $632.97 call, exp 2025-11-14 (short call)",1,5.34,533.71,,12907.76,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-10-17,10:00,Buy to close,"QQQ $632.97 call, exp 2025-11-14 (short call)",1,4.8,-479.92,49.91,12423.97,"Bought back the short call early, profit target reached"
+SIMULATION,2025-10-17,15:00,Sell to open,"QQQ $639.08 call, exp 2025-11-17 (short call)",1,5.38,538.16,,12957.9,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-10-21,10:00,Buy to close,"QQQ $639.08 call, exp 2025-11-17 (short call)",1,4.61,-460.92,74.63,12494.37,"Bought back the short call early, profit target reached"
+SIMULATION,2025-10-21,15:00,Sell to open,"QQQ $642.03 call, exp 2025-11-21 (short call)",1,4.71,470.74,,12962.46,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-10-22,15:00,Buy to close,"QQQ $642.03 call, exp 2025-11-21 (short call)",1,3.69,-369.04,98.48,12590.2,"Bought back the short call early, profit target reached"
+SIMULATION,2025-10-22,15:00,Sell to open,"QQQ $636.93 call, exp 2025-11-22 (short call)",1,4.85,484.6,,13070.89,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-10-27,15:00,Buy to close,"QQQ $636.93 call, exp 2025-11-22 (short call)",1,8.9,-890.0,-409.51,12176.78,"Bought back the short call, price moved close to its strike"
+SIMULATION,2025-11-10,15:00,Sell to open,"QQQ $653.92 call, exp 2025-12-12 (short call)",1,4.73,472.75,,12646.88,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-11-11,10:00,Buy to close,"QQQ $653.92 call, exp 2025-12-12 (short call)",1,3.37,-336.95,133.62,12307.75,"Bought back the short call early, profit target reached"
+SIMULATION,2025-11-11,15:00,Sell to open,"QQQ $651.62 call, exp 2025-12-13 (short call)",1,4.63,463.19,,12768.32,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-11-12,10:00,Buy to close,"QQQ $651.62 call, exp 2025-12-13 (short call)",1,4.13,-413.07,47.67,12352.8,"Bought back the short call early, profit target reached"
+SIMULATION,2025-11-12,15:00,Sell to open,"QQQ $651.51 call, exp 2025-12-14 (short call)",1,4.69,468.81,,12818.97,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-11-13,10:00,Buy to close,"QQQ $651.51 call, exp 2025-12-14 (short call)",1,4.12,-412.32,53.01,12403.17,"Bought back the short call early, profit target reached"
+SIMULATION,2025-11-13,15:00,Sell to open,"QQQ $642.51 call, exp 2025-12-15 (short call)",1,5.22,522.48,,12921.52,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-11-17,15:00,Buy to close,"QQQ $642.51 call, exp 2025-12-15 (short call)",1,4.69,-468.53,50.14,12449.18,"Bought back the short call early, profit target reached"
+SIMULATION,2025-11-17,15:00,Skipped,QQQ $501.73 call (LEAPS),0,158.8,0.0,,12449.18,Entry conditions passed but the account did not have enough cash for one contract
+SIMULATION,2025-11-17,15:00,Sell to open,"QQQ $641.54 call, exp 2025-12-19 (short call)",1,5.78,577.93,,13022.64,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-11-18,10:00,Buy to close,"QQQ $641.54 call, exp 2025-12-19 (short call)",1,4.71,-470.68,103.43,12548.14,"Bought back the short call early, profit target reached"
+SIMULATION,2025-11-18,15:00,Skipped,QQQ $487.17 call (LEAPS),0,168.59,0.0,,12548.14,Entry conditions passed but the account did not have enough cash for one contract
+SIMULATION,2025-11-18,15:00,Sell to open,"QQQ $637.75 call, exp 2025-12-20 (short call)",1,6.28,627.56,,13170.94,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-11-20,15:00,Buy to close,"QQQ $637.75 call, exp 2025-12-20 (short call)",1,4.58,-458.27,163.71,12707.09,"Bought back the short call early, profit target reached"
+SIMULATION,2025-11-20,15:00,Sell to open,"QQQ $629.32 call, exp 2025-12-22 (short call)",1,6.58,657.72,,13357.23,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-11-21,10:00,Buy to close,"QQQ $629.32 call, exp 2025-12-22 (short call)",1,4.18,-417.56,236.65,12936.17,"Bought back the short call early, profit target reached"
+SIMULATION,2025-11-21,15:00,Sell to open,"QQQ $628.98 call, exp 2025-12-23 (short call)",1,5.91,590.52,,13522.15,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-11-25,10:00,Buy to close,"QQQ $628.98 call, exp 2025-12-23 (short call)",1,5.09,-509.34,77.13,13008.75,"Bought back the short call early, profit target reached"
+SIMULATION,2025-11-25,15:00,Sell to open,"QQQ $640.54 call, exp 2025-12-27 (short call)",1,4.86,486.41,,13491.24,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-12-08,10:00,Buy to close,"QQQ $640.54 call, exp 2025-12-27 (short call)",1,4.78,-477.57,6.17,13011.0,Bought back the short call to manage risk
+SIMULATION,2025-12-08,15:00,Sell to open,"QQQ $647.64 call, exp 2026-01-09 (short call)",1,5.81,581.42,,13589.38,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2025-12-10,10:00,Buy to close,"QQQ $647.64 call, exp 2026-01-09 (short call)",1,4.26,-426.17,152.76,13160.73,"Bought back the short call early, profit target reached"
+SIMULATION,2025-12-10,15:00,Sell to open,"QQQ $649.89 call, exp 2026-01-11 (short call)",1,5.54,554.18,,13711.96,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2025-12-11,10:00,Buy to close,"QQQ $649.89 call, exp 2026-01-11 (short call)",1,3.26,-325.52,226.52,13384.31,"Bought back the short call early, profit target reached"
+SIMULATION,2025-12-11,15:00,Sell to open,"QQQ $646.64 call, exp 2026-01-12 (short call)",1,5.21,521.05,,13902.54,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2025-12-12,10:00,Buy to close,"QQQ $646.64 call, exp 2026-01-12 (short call)",1,3.02,-302.44,216.56,13598.04,"Bought back the short call early, profit target reached"
+SIMULATION,2025-12-12,15:00,Sell to open,"QQQ $635.35 call, exp 2026-01-13 (short call)",1,5.41,540.82,,14135.97,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2025-12-16,10:00,Buy to close,"QQQ $635.35 call, exp 2026-01-13 (short call)",1,4.32,-432.49,105.81,13700.97,"Bought back the short call early, profit target reached"
+SIMULATION,2025-12-16,15:00,Sell to open,"QQQ $634.51 call, exp 2026-01-17 (short call)",1,5.64,563.91,,14261.9,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2025-12-17,10:00,Buy to close,"QQQ $634.51 call, exp 2026-01-17 (short call)",1,4.35,-435.02,126.37,13824.36,"Bought back the short call early, profit target reached"
+SIMULATION,2025-12-17,15:00,Sell to open,"QQQ $624.16 call, exp 2026-01-18 (short call)",1,5.91,590.53,,14411.82,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2025-12-19,10:00,Buy to close,"QQQ $624.16 call, exp 2026-01-18 (short call)",1,8.43,-842.78,-256.2,13565.1,"Bought back the short call, price moved close to its strike"
+SIMULATION,2025-12-19,15:00,Sell to open,"QQQ $638.03 call, exp 2026-01-20 (short call)",1,5.16,516.1,,14078.39,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2025-12-29,10:00,Buy to close,"QQQ $638.03 call, exp 2026-01-20 (short call)",1,3.63,-363.26,150.57,13712.86,"Bought back the short call early, profit target reached"
+SIMULATION,2025-12-29,15:00,Sell to open,"QQQ $640.86 call, exp 2026-01-30 (short call)",1,4.95,495.0,,14205.12,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2025-12-31,15:00,Buy to close,"QQQ $640.86 call, exp 2026-01-30 (short call)",1,3.48,-347.83,144.95,13855.08,"Bought back the short call early, profit target reached"
+SIMULATION,2025-12-31,15:00,Sell to open,"QQQ $635.04 call, exp 2026-02-01 (short call)",1,5.15,514.97,,14367.25,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-01-02,10:00,Buy to close,"QQQ $635.04 call, exp 2026-02-01 (short call)",1,4.09,-409.45,103.09,13955.37,"Bought back the short call early, profit target reached"
+SIMULATION,2026-01-02,15:00,Sell to open,"QQQ $633.24 call, exp 2026-02-03 (short call)",1,4.99,499.24,,14451.86,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-01-07,10:00,Buy to close,"QQQ $633.24 call, exp 2026-02-03 (short call)",1,9.07,-907.12,-412.06,13540.56,"Bought back the short call, price moved close to its strike"
+SIMULATION,2026-01-07,15:00,Sell to open,"QQQ $645.68 call, exp 2026-02-08 (short call)",1,5.38,537.78,,14075.46,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-01-14,10:00,Buy to close,"QQQ $645.68 call, exp 2026-02-08 (short call)",1,3.1,-310.44,225.25,13762.93,"Bought back the short call early, profit target reached"
+SIMULATION,2026-01-14,15:00,Sell to open,"QQQ $643.03 call, exp 2026-02-15 (short call)",1,5.8,580.27,,14340.16,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-01-20,15:00,Buy to close,"QQQ $643.03 call, exp 2026-02-15 (short call)",1,3.84,-383.96,193.0,13952.9,"Bought back the short call early, profit target reached"
+SIMULATION,2026-01-20,15:00,Sell to open,"QQQ $635.51 call, exp 2026-02-21 (short call)",1,6.79,679.12,,14626.94,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-01-23,10:00,Buy to close,"QQQ $635.51 call, exp 2026-02-21 (short call)",1,8.85,-885.11,-210.09,13737.73,"Bought back the short call, price moved close to its strike"
+SIMULATION,2026-01-23,15:00,Sell to open,"QQQ $645.39 call, exp 2026-02-24 (short call)",1,5.61,560.84,,14295.61,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-01-29,10:00,Buy to close,"QQQ $645.39 call, exp 2026-02-24 (short call)",1,4.05,-404.57,153.86,13888.63,"Bought back the short call early, profit target reached"
+SIMULATION,2026-01-29,15:00,Sell to open,"QQQ $653.30 call, exp 2026-03-02 (short call)",1,5.94,593.77,,14479.32,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-01-30,15:00,Buy to close,"QQQ $653.30 call, exp 2026-03-02 (short call)",1,4.24,-424.31,166.98,14052.53,"Bought back the short call early, profit target reached"
+SIMULATION,2026-01-30,15:00,Sell to open,"QQQ $646.22 call, exp 2026-03-03 (short call)",1,6.06,605.56,,14654.97,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-02-03,15:00,Buy to close,"QQQ $646.22 call, exp 2026-03-03 (short call)",1,4.27,-426.58,175.43,14224.84,"Bought back the short call early, profit target reached"
+SIMULATION,2026-02-03,15:00,Sell to open,"QQQ $641.44 call, exp 2026-03-07 (short call)",1,6.19,619.06,,14839.19,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-02-04,10:00,Buy to close,"QQQ $641.44 call, exp 2026-03-07 (short call)",1,4.63,-462.7,152.58,14372.71,"Bought back the short call early, profit target reached"
+SIMULATION,2026-02-04,15:00,Sell to open,"QQQ $631.02 call, exp 2026-03-08 (short call)",1,6.29,629.13,,14997.06,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-02-12,15:00,Buy to close,"QQQ $631.02 call, exp 2026-03-08 (short call)",1,4.51,-451.31,174.11,14542.04,"Bought back the short call early, profit target reached"
+SIMULATION,2026-02-18,15:00,Sell to open,"QQQ $638.89 call, exp 2026-03-22 (short call)",1,5.11,510.59,,15048.57,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-02-23,10:00,Buy to close,"QQQ $638.89 call, exp 2026-03-22 (short call)",1,3.85,-384.83,122.45,14660.43,"Bought back the short call early, profit target reached"
+SIMULATION,2026-02-23,15:00,Sell to open,"QQQ $636.75 call, exp 2026-03-27 (short call)",1,5.42,541.75,,15197.93,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-02-26,10:00,Buy to close,"QQQ $636.75 call, exp 2026-03-27 (short call)",1,4.73,-473.42,64.49,14720.66,"Bought back the short call early, profit target reached"
+SIMULATION,2026-02-26,15:00,Sell to open,"QQQ $640.95 call, exp 2026-03-30 (short call)",1,4.88,488.47,,15205.2,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-03-03,10:00,Buy to close,"QQQ $640.95 call, exp 2026-03-30 (short call)",1,3.56,-355.76,129.57,14846.3,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-03,15:00,Sell to open,"QQQ $641.41 call, exp 2026-04-04 (short call)",1,6.06,605.51,,15447.17,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-03-09,10:00,Buy to close,"QQQ $641.41 call, exp 2026-04-04 (short call)",1,4.67,-467.21,132.62,14974.29,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-09,15:00,Sell to open,"QQQ $651.36 call, exp 2026-04-10 (short call)",1,6.6,659.75,,15626.44,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-03-11,10:00,Buy to close,"QQQ $651.36 call, exp 2026-04-10 (short call)",1,5.76,-576.08,79.21,15045.9,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-11,15:00,Sell to open,"QQQ $649.03 call, exp 2026-04-12 (short call)",1,6.28,628.1,,15669.23,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-03-12,15:00,Buy to close,"QQQ $649.03 call, exp 2026-04-12 (short call)",1,5.58,-558.3,63.21,15104.35,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-12,15:00,Sell to open,"QQQ $643.29 call, exp 2026-04-13 (short call)",1,6.92,691.96,,15788.39,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-03-13,15:00,Buy to close,"QQQ $643.29 call, exp 2026-04-13 (short call)",1,5.81,-580.98,104.17,15200.59,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-13,15:00,Sell to open,"QQQ $639.19 call, exp 2026-04-14 (short call)",1,6.85,685.33,,15878.07,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-03-16,10:00,Buy to close,"QQQ $639.19 call, exp 2026-04-14 (short call)",1,5.59,-558.97,122.01,15314.75,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-16,15:00,Sell to open,"QQQ $639.86 call, exp 2026-04-17 (short call)",1,6.03,602.65,,15912.79,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-03-18,15:00,Buy to close,"QQQ $639.86 call, exp 2026-04-17 (short call)",1,5.26,-525.9,70.49,15380.63,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-18,15:00,Sell to open,"QQQ $636.69 call, exp 2026-04-19 (short call)",1,6.36,635.64,,16008.91,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-03-19,10:00,Buy to close,"QQQ $636.69 call, exp 2026-04-19 (short call)",1,4.76,-475.61,156.17,15529.44,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-19,15:00,Sell to open,"QQQ $633.00 call, exp 2026-04-20 (short call)",1,6.09,608.74,,16133.53,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-03-20,15:00,Buy to close,"QQQ $633.00 call, exp 2026-04-20 (short call)",1,5.08,-508.25,94.4,15619.2,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-20,15:00,Sell to open,"QQQ $625.98 call, exp 2026-04-21 (short call)",1,6.62,662.19,,16273.77,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-03-25,15:00,Buy to close,"QQQ $625.98 call, exp 2026-04-21 (short call)",1,5.79,-579.11,76.3,15687.87,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-25,15:00,Sell to open,"QQQ $645.50 call, exp 2026-04-26 (short call)",1,3.7,369.66,,16052.83,Sold a short call against the LEAPS (price below long-term average)
+SIMULATION,2026-03-26,15:00,Buy to close,"QQQ $645.50 call, exp 2026-04-26 (short call)",1,2.57,-256.97,109.13,15792.3,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-26,15:00,Sell to open,"QQQ $635.06 call, exp 2026-04-27 (short call)",1,3.9,389.66,,16177.06,Sold a short call against the LEAPS (price below long-term average)
+SIMULATION,2026-03-30,10:00,Buy to close,"QQQ $635.06 call, exp 2026-04-27 (short call)",1,3.07,-306.59,79.0,15866.4,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-30,15:00,Sell to open,"QQQ $625.40 call, exp 2026-05-01 (short call)",1,4.21,421.11,,16282.3,Sold a short call against the LEAPS (price below long-term average)
+SIMULATION,2026-03-31,10:00,Buy to close,"QQQ $625.40 call, exp 2026-05-01 (short call)",1,2.77,-276.58,140.77,16001.96,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-31,15:00,Sell to open,"QQQ $633.67 call, exp 2026-05-02 (short call)",1,3.62,361.88,,16359.22,Sold a short call against the LEAPS (price below long-term average)
+SIMULATION,2026-04-07,10:00,Buy to close,"QQQ $633.67 call, exp 2026-05-02 (short call)",1,2.91,-290.96,67.01,16064.35,"Bought back the short call early, profit target reached"
+SIMULATION,2026-04-07,15:00,Sell to open,"QQQ $647.64 call, exp 2026-05-09 (short call)",1,3.77,376.57,,16436.15,Sold a short call against the LEAPS (price below long-term average)
+SIMULATION,2026-04-09,10:00,Buy to close,"QQQ $647.64 call, exp 2026-05-09 (short call)",1,3.01,-300.76,73.0,16132.59,"Bought back the short call early, profit target reached"
+SIMULATION,2026-04-27,15:00,Sell to open,"QQQ $697.70 call, exp 2026-05-29 (short call)",1,5.16,515.65,,16644.15,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-04-28,10:00,Buy to close,"QQQ $697.70 call, exp 2026-05-29 (short call)",1,3.2,-319.63,193.9,16322.4,"Bought back the short call early, profit target reached"
+SIMULATION,2026-04-29,15:00,Sell to open,"QQQ $696.35 call, exp 2026-05-31 (short call)",1,5.35,535.37,,16853.55,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-04-30,10:00,Buy to close,"QQQ $696.35 call, exp 2026-05-31 (short call)",1,4.08,-407.65,125.29,16443.48,"Bought back the short call early, profit target reached"
+SIMULATION,2026-04-30,15:00,Sell to open,"QQQ $699.09 call, exp 2026-06-01 (short call)",1,4.87,486.59,,16927.37,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-05-06,10:00,Buy to close,"QQQ $699.09 call, exp 2026-06-01 (short call)",1,11.59,-1158.52,-676.98,15763.79,"Bought back the short call, price moved close to its strike"
+SIMULATION,2026-06-05,10:00,Sell to close,"QQQ $470.56 call, exp 2026-09-02 (LEAPS)",1,259.26,25926.25,13192.97,41533.48,"Sold the LEAPS, exit rule: option moved too much like stock"
+SIMULATION,2026-07-28,15:00,Buy to open,"QQQ $581.20 call, exp 2028-01-18 (LEAPS)",1,151.78,-15178.2,,26263.22,Entry conditions passed (moderate uptrend)
+SIMULATION,2026-07-28,15:00,Sell to open,"QQQ $709.96 call, exp 2026-08-29 (short call)",1,5.3,529.7,,26788.74,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-07-29,15:00,Buy to close,"QQQ $709.96 call, exp 2026-08-29 (short call)",1,3.83,-383.11,143.3,26402.33,"Bought back the short call early, profit target reached"
+SIMULATION,2026-07-29,15:00,Sell to open,"QQQ $699.75 call, exp 2026-08-30 (short call)",1,5.86,586.27,,26984.09,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-07-31,15:00,Buy to close,"QQQ $699.75 call, exp 2026-08-30 (short call)",1,9.86,-985.5,-403.68,25994.14,"Bought back the short call, price moved close to its strike"
+SIMULATION,2026-08-26,15:30,Sell to open,"QQQ $741.64 call, exp 2026-09-27 (short call)",1,4.68,468.13,,26459.63,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-09-01,15:30,Buy to close,"QQQ $741.64 call, exp 2026-09-27 (short call)",1,3.51,-351.32,114.58,26106.08,"Bought back the short call early, profit target reached"
+SIMULATION,2026-09-01,15:30,Sell to open,"QQQ $733.86 call, exp 2026-10-03 (short call)",1,6.47,646.87,,26749.69,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-09-14,10:30,Buy to close,"QQQ $733.86 call, exp 2026-10-03 (short call)",1,3.86,-385.72,258.81,26361.63,"Bought back the short call early, profit target reached"
+SIMULATION,2026-09-14,15:30,Sell to open,"QQQ $736.71 call, exp 2026-10-16 (short call)",1,6.78,677.56,,27035.81,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-09-21,10:30,Buy to close,"QQQ $736.71 call, exp 2026-10-16 (short call)",1,13.75,-1374.72,-702.97,25655.28,"Bought back the short call, price moved close to its strike"
+SIMULATION,2026-09-21,15:30,Sell to open,"QQQ $766.67 call, exp 2026-10-23 (short call)",1,6.18,618.31,,26270.43,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-09-24,10:30,Buy to close,"QQQ $766.67 call, exp 2026-10-23 (short call)",1,4.59,-459.12,156.58,25808.7,"Bought back the short call early, profit target reached"
+SIMULATION,2026-09-24,15:30,Sell to open,"QQQ $767.61 call, exp 2026-10-26 (short call)",1,6.5,650.37,,26455.79,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-09-28,10:30,Buy to close,"QQQ $767.61 call, exp 2026-10-26 (short call)",1,4.41,-441.02,206.81,26012.23,"Bought back the short call early, profit target reached"
+SIMULATION,2026-09-28,15:30,Sell to open,"QQQ $763.57 call, exp 2026-10-30 (short call)",1,6.62,662.44,,26671.35,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-10-05,10:30,Buy to close,"QQQ $763.57 call, exp 2026-10-30 (short call)",1,10.13,-1013.15,-355.25,25653.66,"Bought back the short call, price moved close to its strike"
+SIMULATION,2026-10-05,15:30,Sell to open,"QQQ $782.91 call, exp 2026-11-05 (short call)",1,6.57,657.41,,26307.77,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-10-08,15:30,Buy to close,"QQQ $782.91 call, exp 2026-11-05 (short call)",1,3.85,-384.6,270.46,25920.82,"Bought back the short call early, profit target reached"
+SIMULATION,2026-10-08,15:30,Sell to open,"QQQ $773.92 call, exp 2026-11-08 (short call)",1,6.45,645.49,,26563.05,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-10-12,10:30,Buy to close,"QQQ $773.92 call, exp 2026-11-08 (short call)",1,4.96,-496.22,146.53,26064.09,"Bought back the short call early, profit target reached"
+SIMULATION,2026-10-12,15:30,Sell to open,"QQQ $771.99 call, exp 2026-11-12 (short call)",1,6.36,635.99,,26696.86,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-10-13,10:30,Buy to close,"QQQ $771.99 call, exp 2026-11-12 (short call)",1,4.78,-477.62,155.7,26216.56,"Bought back the short call early, profit target reached"
+SIMULATION,2026-10-13,15:30,Sell to open,"QQQ $769.62 call, exp 2026-11-13 (short call)",1,6.36,636.4,,26849.73,Sold a short call against the LEAPS (strong uptrend)

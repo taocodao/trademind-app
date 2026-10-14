@@ -1161,3 +1161,17 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
     .tm-herocard { padding: 11px 13px 10px; }
     .tm-herocard-body { font-size: 12.5px; line-height: 1.5; }
 }
+
+/* Hero title treatment: slogan is the page title, with an accent underline and room below. */
+.tm-hero2 .tm-slogan {
+    display: block; width: fit-content; max-width: 100%; margin: 0 auto 16px; padding-bottom: 9px; position: relative; font-weight: 600;
+}
+.tm-hero2 .tm-slogan::after {
+    content: ''; position: absolute; left: 6%; right: 6%; bottom: 0; height: 2px; border-radius: 2px;
+    background: linear-gradient(90deg, rgba(167,139,250,0), #A78BFA 25%, #e0a458 75%, rgba(224,164,88,0));
+}
+@media (min-width: 1024px) {
+    .tm-hero2 { padding-top: 12px; }
+    .tm-hero-ctapair { margin-top: 4px; }
+    .tm-hero2 .tm-sub.tm-sub-plans { margin-bottom: 0; }
+}

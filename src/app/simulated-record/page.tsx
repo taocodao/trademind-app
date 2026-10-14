@@ -192,7 +192,7 @@ export default function SimulatedRecordPage() {
                     <div className="sr-eyebrow">Simulation <Badge /></div>
                     <h1 className="sr-h1">Two years of history, replayed as a simulation.</h1>
                     <p className="sr-sub">
-                        This page replays {WINDOW} for both strategies with a default starting amount, using historical data and the same rules the strategies follow today.
+                        Live trading began on Oct 14, 2026. This page shows what both strategies would have done if they had started two years earlier, on Oct 14, 2024, with a default starting amount, using historical data and the same rules the strategies follow today.
                         Every number, chart and table row here is simulated. It is kept apart from the live record on purpose.
                     </p>
                 </header>

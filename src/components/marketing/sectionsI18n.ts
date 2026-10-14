@@ -58,6 +58,15 @@ export interface SectionsCopy {
         qqq: { total: string; cagr: string; sharpe: string; maxdd: string; calmar: string };
         footnote: string; callout: string; verifyIntro: string; verifyLink: string; caption: string;
     };
+    // QQQ Basic out-of-sample record block, shown under the QQQ LEAPS table.
+    basicRecord: {
+        kicker: string; title: string; p: string; tipTotal: string;
+        cols: { total: string; cagr: string; sharpe: string; maxdd: string; calmar: string };
+        basicName: string; qqqName: string;
+        basic: { total: string; cagr: string; sharpe: string; maxdd: string; calmar: string };
+        qqq: { total: string; cagr: string; sharpe: string; maxdd: string; calmar: string };
+        footnote: string; callout: string; verifyIntro: string; verifyLink: string; caption: string;
+    };
     // "Built around your life" band. Explicitly disclaims income promises
     // while delivering the freedom framing the owner asked for.
     life: {
@@ -191,6 +200,22 @@ const EN_SECTIONS: SectionsCopy = {
         verifyIntro: 'Every trade, every price, every assumption behind this table is published: the full ledger, the daily equity curve, and the complete methodology with its limitations, in the open.',
         verifyLink: 'Audit the record yourself →',
         caption: '2021 to 2026 continuous window, 5.6 years, model-priced. Hypothetical backtested performance: not achieved by any actual account, not live trading, and not a prediction. The next drawdown could be deeper. Every entry, exit, and loss in this record is in the ledger below.',
+    },
+    basicRecord: {
+        kicker: 'QQQ Basic',
+        title: 'The ETF plan: no options permission, a shallower worst fall',
+        p: 'QQQ Basic holds only ETFs (QQQ, QLD, TQQQ and a cash-like fund, SGOV), so it works in any brokerage account and needs no options trading permission. It is built to keep the worst fall shallow, which makes it a steadier place to start for newer subscribers who are comfortable giving up some upside in strong years.',
+        tipTotal: 'Cumulative growth across the 5.2-year window, before any taxes. It is the most flattering way to state a result, which is why it sits next to four risk measures rather than alone.',
+        cols: { total: 'Total return', cagr: 'CAGR', sharpe: 'Sharpe', maxdd: 'Max DD', calmar: 'Calmar' },
+        basicName: 'QQQ Basic (backtest)',
+        qqqName: 'QQQ buy & hold',
+        basic: { total: '+93.9%', cagr: '13.7%', sharpe: '1.05', maxdd: '-15.0%', calmar: '0.91' },
+        qqq: { total: '+119.7%', cagr: '16.5%', sharpe: '0.79', maxdd: '-36.8%', calmar: '0.45' },
+        footnote: 'Both rows cover the same dates, May 7, 2021 to June 30, 2026 (5.2 years). Worst drawdown period: QQQ Basic, July 2024 to June 2025. QQQ buy & hold, November 2021 to October 2022.',
+        callout: 'QQQ Basic earned less than QQQ in this window, with a worst fall of less than half the size. It trailed in strong years such as 2023, 2024 and 2025, and lost 3.4% in 2022 when QQQ lost 33.0%.',
+        verifyIntro: 'The method, year by year results, limitations and the downloadable data for this table are published, including the costs charged on every trade.',
+        verifyLink: 'See the QQQ Basic record in full →',
+        caption: 'Out-of-sample walk-forward backtest on real hourly ETF prices, May 2021 to June 2026, default risk level, after modeled trading costs (no commission, bid-ask spread charged). Hypothetical backtested performance: not achieved by any actual account, not live trading, and not a prediction. Past performance is not necessarily indicative of future results. The next drawdown could be deeper than -15.0%.',
     },
     life: {
         kicker: 'Built around your life, not the other way around',
@@ -338,6 +363,22 @@ const ES_SECTIONS: SectionsCopy = {
         verifyLink: 'Audita el registro tú mismo →',
         caption: 'Ventana continua 2021 a 2026, 5,6 años, con precios de modelo. Rendimiento hipotético de backtest: no logrado por ninguna cuenta real, no es trading en vivo y no es una predicción. El próximo drawdown podría ser más profundo. Cada entrada, salida y pérdida de este historial está en el registro de abajo.',
     },
+    basicRecord: {
+        kicker: 'QQQ Basic',
+        title: 'El plan con ETFs: sin permiso de opciones y una peor caída menor',
+        p: 'QQQ Basic solo mantiene ETFs (QQQ, QLD, TQQQ y un fondo similar al efectivo, SGOV), por lo que funciona en cualquier cuenta de bróker y no requiere permiso para operar opciones. Está diseñado para mantener poco profunda la peor caída, lo que lo convierte en un punto de partida más estable para suscriptores nuevos que aceptan renunciar a parte del alza en los años fuertes.',
+        tipTotal: 'Crecimiento acumulado durante la ventana de 5,2 años, antes de impuestos. Es la forma más favorecedora de presentar un resultado, y por eso aparece junto a cuatro medidas de riesgo en lugar de sola.',
+        cols: { total: 'Rendimiento total', cagr: 'CAGR', sharpe: 'Sharpe', maxdd: 'Max DD', calmar: 'Calmar' },
+        basicName: 'QQQ Basic (backtest)',
+        qqqName: 'QQQ buy & hold',
+        basic: { total: '+93.9%', cagr: '13.7%', sharpe: '1.05', maxdd: '-15.0%', calmar: '0.91' },
+        qqq: { total: '+119.7%', cagr: '16.5%', sharpe: '0.79', maxdd: '-36.8%', calmar: '0.45' },
+        footnote: 'Ambas filas cubren las mismas fechas, del 7 de mayo de 2021 al 30 de junio de 2026 (5,2 años). Peor período de drawdown: QQQ Basic, julio de 2024 a junio de 2025. QQQ buy & hold, noviembre de 2021 a octubre de 2022.',
+        callout: 'QQQ Basic ganó menos que QQQ en esta ventana, con una peor caída de menos de la mitad de tamaño. Se quedó atrás en años fuertes como 2023, 2024 y 2025, y perdió 3,4% en 2022 cuando QQQ perdió 33,0%.',
+        verifyIntro: 'El método, los resultados año por año, las limitaciones y los datos descargables de esta tabla están publicados, incluidos los costos cobrados en cada operación.',
+        verifyLink: 'Ver el historial completo de QQQ Basic →',
+        caption: 'Backtest walk-forward fuera de muestra con precios horarios reales de ETFs, de mayo de 2021 a junio de 2026, nivel de riesgo predeterminado, después de costos de trading modelados (sin comisión, con el spread comprador-vendedor). Rendimiento hipotético de backtest: no logrado por ninguna cuenta real, no es trading en vivo y no es una predicción. El rendimiento pasado no es necesariamente indicativo de resultados futuros. El próximo drawdown podría ser más profundo que -15,0%.',
+    },
     life: {
         kicker: 'Construido en torno a tu vida, no al revés',
         title: 'Exposición al mercado que no se vuelve un segundo trabajo.',
@@ -483,6 +524,22 @@ const ZH_SECTIONS: SectionsCopy = {
         verifyIntro: '这张表背后的每一笔交易、每一个价格、每一个假设都已公开:完整的账本、每日净值曲线,以及包含全部局限性的完整方法论。',
         verifyLink: '亲自审计这份记录 →',
         caption: '2021 到 2026 连续窗口,5.6 年,模型定价。假设性回测表现:没有任何真实账户实现过,不是实盘交易,也不是预测。下一次回撤可能更深。此记录中的每一次入场、出场和亏损,都记录在下方的账本里。',
+    },
+    basicRecord: {
+        kicker: 'QQQ Basic',
+        title: 'ETF 方案:无需期权权限,最差跌幅更浅',
+        p: 'QQQ Basic 只持有 ETF(QQQ、QLD、TQQQ 和类现金基金 SGOV),因此在任何券商账户里都能使用,不需要期权交易权限。它的设计目标是让最差跌幅保持较浅,适合愿意在强势年份放弃部分涨幅、希望起步更平稳的新订阅者。',
+        tipTotal: '整个 5.2 年窗口的累计增长,税前。这是对结果最有利的表述方式,所以它旁边并列着四项风险指标,而不是单独出现。',
+        cols: { total: '总回报', cagr: 'CAGR', sharpe: 'Sharpe', maxdd: '最大回撤', calmar: 'Calmar' },
+        basicName: 'QQQ Basic(回测)',
+        qqqName: 'QQQ 买入并持有',
+        basic: { total: '+93.9%', cagr: '13.7%', sharpe: '1.05', maxdd: '-15.0%', calmar: '0.91' },
+        qqq: { total: '+119.7%', cagr: '16.5%', sharpe: '0.79', maxdd: '-36.8%', calmar: '0.45' },
+        footnote: '两行使用相同日期,2021 年 5 月 7 日到 2026 年 6 月 30 日(5.2 年)。最差回撤区间:QQQ Basic,2024 年 7 月到 2025 年 6 月。QQQ 买入并持有,2021 年 11 月到 2022 年 10 月。',
+        callout: '在这个窗口里,QQQ Basic 的收益低于 QQQ,但最差跌幅不到后者的一半。它在 2023、2024 和 2025 这样的强势年份落后,在 2022 年 QQQ 下跌 33.0% 时只亏 3.4%。',
+        verifyIntro: '这张表背后的方法、逐年结果、局限性和可下载数据都已公开,包括每笔交易计入的成本。',
+        verifyLink: '查看 QQQ Basic 的完整记录 →',
+        caption: '基于真实小时级 ETF 价格的样本外滚动回测,2021 年 5 月到 2026 年 6 月,默认风险等级,已扣除模拟交易成本(无佣金,计入买卖价差)。假设性回测表现:没有任何真实账户实现过,不是实盘交易,也不是预测。过往表现不一定代表未来结果。下一次回撤可能比 -15.0% 更深。',
     },
     life: {
         kicker: '围绕你的生活,而不是相反',

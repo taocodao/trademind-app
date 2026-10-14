@@ -1,0 +1,47 @@
+{
+  "run": {
+    "name": "QQQ Basic regime allocator, out-of-sample walk-forward public record",
+    "window_start": "2021-05-07",
+    "window_end": "2026-06-30",
+    "initial_capital_usd": 25000,
+    "evaluation": "hourly bars during regular trading hours; first and last bar of each session skipped for order generation",
+    "nav_marking": "hourly bar close",
+    "universe": [
+      "QQQ",
+      "QLD",
+      "TQQQ",
+      "SGOV"
+    ],
+    "instruments_note": "ETFs only. No options, no shorting, no margin. Quotes are real hourly bars from Interactive Brokers market data, not model prices.",
+    "walk_forward": "11 folds, about 1.5 years of training then 6 months of out-of-sample test, stepped every 6 months; test windows concatenate into one continuous curve"
+  },
+  "costs": {
+    "commission_per_trade_usd": 0,
+    "round_trip_spread_bps": {
+      "QQQ": 1,
+      "QLD": 4,
+      "TQQQ": 4,
+      "SGOV": 1.5
+    },
+    "total_cost_paid_usd": 1997.41,
+    "fills": 2664,
+    "annualized_turnover_x": 104.32
+  },
+  "allocation_settings_moderate": {
+    "min_cash_like_floor_in_full_risk_on": 0.15,
+    "hysteresis_band": 0.05,
+    "drift_threshold_no_trade_band": 0.05,
+    "vix_ratio_entry_max": 1.0,
+    "vix_ratio_exit_max": 1.05,
+    "deep_crash_drawdown_trigger": -0.3,
+    "trend_gate": "graduated 200-day average gate",
+    "confidence_percentile_thresholds": {
+      "high": 0.7,
+      "low": 0.4
+    }
+  },
+  "files": {
+    "equity_curve": "trademind-basic-equity-curve.csv",
+    "metrics": "trademind-basic-metrics.json"
+  }
+}

@@ -18,6 +18,7 @@ export function RecordSection() {
     const base = (i18n.language || 'en').split('-')[0];
     const lang: SectionLang = base === 'es' ? 'es' : base === 'zh' ? 'zh' : 'en';
     const c = SECTIONS_I18N[lang].record;
+    const b = SECTIONS_I18N[lang].basicRecord;
 
     const tip = (label: string, text: string, side?: 'l' | 'r') => (
         <button
@@ -76,6 +77,58 @@ export function RecordSection() {
                     <Link href="/verify" className="tm-record-verify-link">{c.verifyLink}</Link>
                 </div>
                 <p className="tm-record-cap">{c.caption}</p>
+
+                {/* QQQ Basic out-of-sample record. Its own table, window and
+                    caption on purpose: the window differs from the LEAPS
+                    table above, so the two must never share a caption. The
+                    caption is the hypothetical-performance disclosure in
+                    immediate proximity to the numbers; do not shrink it. */}
+                <div id="basic-record" className="tm-basic-record">
+                    <div className="tm-eyebrow">{b.kicker}</div>
+                    <h3 className="tm-h2 tm-basic-title">{b.title}</h3>
+                    <p className="tm-basic-p">{b.p}</p>
+
+                    <div className="tm-record-wrap">
+                        <table className="tm-record">
+                            <thead>
+                                <tr>
+                                    <th scope="col" className="tm-record-namecol"></th>
+                                    <th scope="col">{tip(b.cols.total, b.tipTotal, 'l')}</th>
+                                    <th scope="col">{tip(b.cols.cagr, c.tips.cagr)}</th>
+                                    <th scope="col">{tip(b.cols.sharpe, c.tips.sharpe)}</th>
+                                    <th scope="col">{tip(b.cols.maxdd, c.tips.maxdd)}</th>
+                                    <th scope="col">{tip(b.cols.calmar, c.tips.calmar, 'r')}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr className="tm-record-v4">
+                                    <th scope="row">{b.basicName}</th>
+                                    <td>{b.basic.total}</td>
+                                    <td>{b.basic.cagr}</td>
+                                    <td>{b.basic.sharpe}</td>
+                                    <td>{b.basic.maxdd}</td>
+                                    <td>{b.basic.calmar}</td>
+                                </tr>
+                                <tr className="tm-record-qqq">
+                                    <th scope="row">{b.qqqName}</th>
+                                    <td>{b.qqq.total}</td>
+                                    <td>{b.qqq.cagr}</td>
+                                    <td>{b.qqq.sharpe}</td>
+                                    <td>{b.qqq.maxdd}</td>
+                                    <td>{b.qqq.calmar}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <p className="tm-record-foot">{b.footnote}</p>
+                    <p className="tm-record-callout">{b.callout}</p>
+                    <div className="tm-record-verify">
+                        <p>{b.verifyIntro}</p>
+                        <Link href="/verify#basic" className="tm-record-verify-link">{b.verifyLink}</Link>
+                    </div>
+                    <p className="tm-record-cap">{b.caption}</p>
+                </div>
             </div>
         </section>
     );

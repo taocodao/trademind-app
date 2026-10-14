@@ -36,7 +36,7 @@ export const PRICING = {
         turbocore_pro_bundle: {
             key: 'turbocore_pro_bundle',
             label: 'QQQ Basic',
-            description: 'QQQ Basic ML Signal + IV-Switching Composite Options Strategy',
+            description: 'ETF only, so no options trading permission is needed. Built to keep the worst fall shallow: a steadier place for newer subscribers to start.',
             monthly: 30,            // reference rate — not sold monthly
             regularAnnual: 360,     // anchor price shown before the newsletter offer
             annual: 252,            // price actually charged (30% off the anchor)

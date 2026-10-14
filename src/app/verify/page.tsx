@@ -18,7 +18,7 @@ import Link from 'next/link';
 import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import { LegalFooter } from '@/components/marketing/LegalFooter';
 import { VERIFY_COPY, VerifyLang } from '@/components/marketing/verify/verifyCopy';
-import { ARTIFACT_SHA256, HARNESS_COMMIT, HARNESS_TAG } from '@/components/marketing/verify/lineage';
+import { ARTIFACT_SHA256, BASIC_ARTIFACT_SHA256, HARNESS_COMMIT, HARNESS_TAG } from '@/components/marketing/verify/lineage';
 import './verify.css';
 
 export default function VerifyPage() {
@@ -26,6 +26,7 @@ export default function VerifyPage() {
     const base = (i18n.language || 'en').split('-')[0];
     const lang: VerifyLang = base === 'es' ? 'es' : base === 'zh' ? 'zh' : 'en';
     const c = VERIFY_COPY[lang];
+    const b = c.basic;
 
     return (
         <main className="min-h-screen flex flex-col bg-[#0A0A0F] overflow-x-hidden pt-16">
@@ -43,6 +44,7 @@ export default function VerifyPage() {
                     <p className="vf-sub">{c.heroSub}</p>
                     <div className="vf-hero-ctas">
                         <Link href="/verify/ledger" className="vf-cta-ledger">{c.ctaLedger}</Link>
+                        <a href="#basic" className="vf-inline-link vf-basic-jump">{b.jump}</a>
                     </div>
                 </header>
 
@@ -302,6 +304,113 @@ export default function VerifyPage() {
                     <p className="vf-homelink">
                         <Link href="/" className="vf-inline-link">{c.homeLink}</Link>
                     </p>
+                </section>
+
+                {/* 9. QQQ Basic record. Self-contained: its own table, years,
+                    method, limitations, downloads and disclaimer. COMPLIANCE:
+                    the disclaimer block stays directly under the numbers. */}
+                <section className="vf-section vf-basic" id="basic">
+                    <div className="vf-eyebrow">{b.eyebrow}</div>
+                    <h2 className="vf-h2">{b.title}</h2>
+                    <p className="vf-p">{b.intro}</p>
+                    <div className="vf-table-scroll">
+                        <table className="vf-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col" className="vf-namecol"></th>
+                                    {b.cols.map((col) => (
+                                        <th scope="col" key={col}>{col}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {b.rows.map((row, i) => (
+                                    <tr key={row.name} className={i === 0 ? 'vf-row-v4' : 'vf-row-qqq'}>
+                                        <th scope="row">{row.name}</th>
+                                        <td>{row.total}</td>
+                                        <td>{row.cagr}</td>
+                                        <td>{row.sharpe}</td>
+                                        <td>{row.maxdd}</td>
+                                        <td>{row.calmar}</td>
+                                        <td>{row.final}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <p className="vf-note">{b.note}</p>
+                    <p className="vf-note">{b.levels}</p>
+
+                    <h3 className="vf-h3">{b.calTitle}</h3>
+                    <div className="vf-table-scroll">
+                        <table className="vf-table">
+                            <thead>
+                                <tr>
+                                    {b.calCols.map((col, i) => (
+                                        <th scope="col" key={col} className={i === 0 ? 'vf-namecol' : undefined}>{col}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {b.cal.map((y) => (
+                                    <tr key={y.y}>
+                                        <th scope="row">{y.y}</th>
+                                        <td className={y.basic.startsWith('-') ? 'vf-neg' : 'vf-pos'}>{y.basic}</td>
+                                        <td className={y.qqq.startsWith('-') ? 'vf-neg' : 'vf-pos'}>{y.qqq}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <p className="vf-note">{b.calNote}</p>
+
+                    <div className="vf-disclaimer">
+                        {c.disclaimers.slice(0, 2).map((d, i) => (
+                            <p key={i}>{d}</p>
+                        ))}
+                        <p>{b.discl}</p>
+                    </div>
+
+                    <h3 className="vf-h3">{b.methodTitle}</h3>
+                    {b.steps.map((s, i) => (
+                        <div className="vf-step" key={i}>
+                            <div className="vf-step-n">{i + 1}</div>
+                            <div>
+                                <h4 className="vf-step-h">{s.h}</h4>
+                                <p className="vf-p">{s.p}</p>
+                            </div>
+                        </div>
+                    ))}
+
+                    <h3 className="vf-h3">{b.limitsTitle}</h3>
+                    <p className="vf-p">{b.limitsIntro}</p>
+                    {b.limits.map((l, i) => (
+                        <div className="vf-limit" key={i}>
+                            <h4 className="vf-step-h">{l.h}</h4>
+                            <p className="vf-p">{l.p}</p>
+                        </div>
+                    ))}
+                    <p className="vf-p vf-strong">{b.limitsClose}</p>
+
+                    <h3 className="vf-h3">{b.kitTitle}</h3>
+                    <p className="vf-p">{b.kitIntro}</p>
+                    <div className="vf-cards">
+                        {b.kit.map((k) => (
+                            <a className="vf-card" key={k.href} href={k.href} download>
+                                <div className="vf-card-t">{k.title}</div>
+                                <div className="vf-card-d">{k.desc}</div>
+                            </a>
+                        ))}
+                    </div>
+                    <h4 className="vf-h4">{b.sumsTitle}</h4>
+                    <div className="vf-sums">
+                        {BASIC_ARTIFACT_SHA256.map((a) => (
+                            <div className="vf-sum" key={a.file}>
+                                <span className="vf-sum-f">{a.file}</span>
+                                <code className="vf-sum-h">{a.sha256}</code>
+                            </div>
+                        ))}
+                    </div>
                 </section>
             </div>
             <LegalFooter />

@@ -9,5 +9,13 @@ export const ARTIFACT_SHA256: { file: string; sha256: string }[] = [
     { file: 'trademind-v4-ledger-detail.json', sha256: 'e9338bc11037eca59125e930bfe28d0df8520c7f1ff37e370e6990b4ba486765' },
 ];
 
+/* SHA-256 checksums of the QQQ Basic proof-kit artifacts in /public/verify.
+   Regenerate with sha256sum if any of these files change. */
+export const BASIC_ARTIFACT_SHA256: { file: string; sha256: string }[] = [
+    { file: 'trademind-basic-equity-curve.csv', sha256: '583df5bd4829fad6f414d07449129c10f3dc81cdbac016d46760df3f041a054a' },
+    { file: 'trademind-basic-metrics.json', sha256: '63975b46eef7c165a5493d1d476acfc3856c05a7ccbda5b5677e3150a93d2802' },
+    { file: 'trademind-basic-config.json', sha256: 'dc0c7a92de463dd52df2ad0ce95adf07c747b5a28beb38d26423ac245317509c' },
+];
+
 export const HARNESS_COMMIT = '2937348';
 export const HARNESS_TAG = 'v1.0.0-public-audit';

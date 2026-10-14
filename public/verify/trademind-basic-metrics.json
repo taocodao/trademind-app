@@ -1,0 +1,88 @@
+{
+  "strategy": "QQQ Basic (moderate risk level, v3.3 live configuration)",
+  "initial_capital": 25000.0,
+  "window_start": "2021-05-07",
+  "window_end": "2026-06-30",
+  "years": 5.15,
+  "method": "11-fold out-of-sample walk-forward, models refit on each training slice only, hourly bars, real ETF quotes",
+  "costs": {
+    "commission_per_trade_usd": 0,
+    "round_trip_spread_bps": {
+      "QQQ": 1,
+      "QLD": 4,
+      "TQQQ": 4,
+      "SGOV": 1.5
+    },
+    "total_cost_paid_usd": 1997.41,
+    "fills": 2664,
+    "annualized_turnover_x": 104.32
+  },
+  "qqq_basic": {
+    "final_nav": 48477.73,
+    "total_return_pct": 93.91,
+    "cagr_pct": 13.73,
+    "max_drawdown_pct": -15.01,
+    "sharpe": 1.048,
+    "calmar": 0.91,
+    "sortino": 1.08
+  },
+  "qqq_buy_and_hold_same_dates": {
+    "final_nav": 54917.15,
+    "total_return_pct": 119.67,
+    "cagr_pct": 16.52,
+    "max_drawdown_pct": -36.83,
+    "sharpe": 0.788,
+    "calmar": 0.45
+  },
+  "calendar_year_returns_pct": {
+    "qqq_basic": {
+      "2021": 17.8,
+      "2022": -3.4,
+      "2023": 22.3,
+      "2024": 10.7,
+      "2025": 4.5,
+      "2026": 20.6
+    },
+    "qqq_buy_and_hold": {
+      "2021": 18.7,
+      "2022": -33.0,
+      "2023": 53.7,
+      "2024": 24.8,
+      "2025": 20.2,
+      "2026": 19.8
+    }
+  },
+  "worst_drawdown": {
+    "qqq_basic": {
+      "peak": "2024-07-10",
+      "trough": "2025-06-05"
+    },
+    "qqq_buy_and_hold": {
+      "peak": "2021-11-22",
+      "trough": "2022-10-13"
+    }
+  },
+  "average_weights_pct": {
+    "QQQ": 35.2,
+    "QLD": 8.0,
+    "TQQQ": 4.0,
+    "SGOV": 52.8
+  },
+  "risk_levels_same_method": {
+    "conservative": {
+      "cagr_pct": 10.1,
+      "max_drawdown_pct": -12.65,
+      "sharpe": 0.946
+    },
+    "moderate": {
+      "cagr_pct": 13.73,
+      "max_drawdown_pct": -15.01,
+      "sharpe": 1.048
+    },
+    "aggressive": {
+      "cagr_pct": 17.75,
+      "max_drawdown_pct": -22.29,
+      "sharpe": 0.898
+    }
+  }
+}

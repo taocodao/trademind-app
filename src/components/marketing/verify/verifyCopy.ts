@@ -7,6 +7,17 @@
 export type VerifyLang = 'en' | 'es' | 'zh';
 
 export interface VerifyCopy {
+    basic: {
+        jump: string; eyebrow: string; title: string; intro: string;
+        cols: string[];
+        rows: { name: string; total: string; cagr: string; sharpe: string; maxdd: string; calmar: string; final: string }[];
+        note: string; levels: string;
+        calTitle: string; calCols: string[]; cal: { y: string; basic: string; qqq: string }[]; calNote: string;
+        methodTitle: string; steps: { h: string; p: string }[];
+        limitsTitle: string; limitsIntro: string; limits: { h: string; p: string }[]; limitsClose: string;
+        kitTitle: string; kitIntro: string; kit: { title: string; desc: string; href: string }[];
+        sumsTitle: string; discl: string;
+    };
     heroEyebrow: string;
     heroTitle: string;
     heroSub: string;
@@ -63,6 +74,150 @@ export interface VerifyCopy {
 }
 
 const EN: VerifyCopy = {
+    basic: {
+        "jump": "See the QQQ Basic record \u2193",
+        "eyebrow": "QQQ Basic",
+        "title": "QQQ Basic: the record, in full",
+        "intro": "QQQ Basic holds only ETFs: QQQ, QLD (2x QQQ), TQQQ (3x QQQ) and SGOV, a cash-like Treasury bill fund. It needs no options trading permission and works in any brokerage account. Below are its out of sample record, its method, its limitations, and the data to check it yourself.",
+        "cols": [
+                "Total return",
+                "CAGR",
+                "Sharpe",
+                "Max DD",
+                "Calmar",
+                "Final value"
+        ],
+        "rows": [
+                {
+                        "name": "QQQ Basic (backtest)",
+                        "total": "+93.9%",
+                        "cagr": "13.7%",
+                        "sharpe": "1.05",
+                        "maxdd": "-15.0%",
+                        "calmar": "0.91",
+                        "final": "$48,478"
+                },
+                {
+                        "name": "QQQ buy & hold",
+                        "total": "+119.7%",
+                        "cagr": "16.5%",
+                        "sharpe": "0.79",
+                        "maxdd": "-36.8%",
+                        "calmar": "0.45",
+                        "final": "$54,917"
+                }
+        ],
+        "note": "May 7, 2021 to June 30, 2026, 5.2 continuous out of sample years, starting from $25,000, default (moderate) risk level. QQQ buy & hold is measured on the same hourly bars. Worst drawdown period: QQQ Basic, July 10, 2024 to June 5, 2025. QQQ buy & hold, November 22, 2021 to October 13, 2022. QQQ Basic earned less than buy & hold here. What it gave up in return it traded for a shallower worst fall: -15.0% against -36.8%.",
+        "levels": "The same method at the other two risk levels: Conservative 10.10% CAGR with a -12.65% worst fall, and Aggressive 17.75% CAGR with a -22.29% worst fall. Each level is a fixed, published variant of the same model.",
+        "calTitle": "Calendar year returns",
+        "calCols": [
+                "Year",
+                "QQQ Basic",
+                "QQQ buy & hold"
+        ],
+        "cal": [
+                {
+                        "y": "2021",
+                        "basic": "+17.8%",
+                        "qqq": "+18.7%"
+                },
+                {
+                        "y": "2022",
+                        "basic": "-3.4%",
+                        "qqq": "-33.0%"
+                },
+                {
+                        "y": "2023",
+                        "basic": "+22.3%",
+                        "qqq": "+53.7%"
+                },
+                {
+                        "y": "2024",
+                        "basic": "+10.7%",
+                        "qqq": "+24.8%"
+                },
+                {
+                        "y": "2025",
+                        "basic": "+4.5%",
+                        "qqq": "+20.2%"
+                },
+                {
+                        "y": "2026",
+                        "basic": "+20.6%",
+                        "qqq": "+19.8%"
+                }
+        ],
+        "calNote": "2021 starts May 7 and 2026 ends June 30. QQQ Basic trailed buy & hold in 2021, 2023, 2024 and 2025, and was ahead in 2022 and 2026. This is a steadier record, not a smooth one, and 2024 and 2025 were modest.",
+        "methodTitle": "How QQQ Basic works",
+        "steps": [
+                {
+                        "h": "The data",
+                        "p": "Real hourly bars for QQQ, QLD, TQQQ and SGOV from Interactive Brokers market data, plus the VIX and a high yield bond fund as a credit stress reading. Training begins in December 2019 and the test begins on May 7, 2021. No prices are modeled."
+                },
+                {
+                        "h": "The decision",
+                        "p": "Every hour the model reads QQQ against its 200 day average, two regime models, a machine learning confidence score and the VIX term structure. In a bull regime it picks a mix of QQQ, QLD and TQQQ, always keeping at least 15% in SGOV, and the leveraged share rises and falls with the confidence score. In a bear regime, or when QQQ sits well under its long average, the account moves toward SGOV. A VIX guard and a crash drawdown rule adjust the leveraged part."
+                },
+                {
+                        "h": "The costs",
+                        "p": "Commission is zero, as at most US brokers today. The test still charges the bid ask spread on every trade: 1 basis point round trip for QQQ, 4 for QLD and TQQQ, 1.5 for SGOV. That came to $1,997 over 2,664 fills, and it lowered the CAGR by roughly two points. A 5% no trade band and a hysteresis rule keep the model from churning."
+                },
+                {
+                        "h": "The out of sample test",
+                        "p": "The history is cut into 11 folds. Each fold trains on about 1.5 years, then trades the next 6 months it has never seen, and the models are refit on training data only. The six month test windows join into one continuous equity curve."
+                }
+        ],
+        "limitsTitle": "What this record does not tell you",
+        "limitsIntro": "Every backtest has gaps. These are the ones we know about.",
+        "limits": [
+                {
+                        "h": "Only one bear market",
+                        "p": "The window holds one full bear market, 2022. The hourly data starts in 2019, so earlier declines such as 2008 or 2000 to 2002 have not been tested on this model. A different kind of decline could behave differently."
+                },
+                {
+                        "h": "Settings were chosen on this same window",
+                        "p": "The live settings were picked after earlier runs on these same dates. The folds are out of sample for the models, but not for the choice of settings, so this record is more flattering than a true forward test."
+                },
+                {
+                        "h": "Costs are assumptions",
+                        "p": "Spreads are modeled, not measured from real fills. Fills at your broker can be better or worse, especially in fast markets. Taxes are not included."
+                },
+                {
+                        "h": "The worst fall was slow",
+                        "p": "The deepest fall ran eleven months, from July 2024 to June 2025, with short rallies inside it. A shallower fall is not a quick one, and the next fall could be deeper than -15.0%."
+                },
+                {
+                        "h": "It lagged in strong years",
+                        "p": "In 2023, 2024 and 2025 buy & hold earned far more. That is the price of the shallower fall, and it is why this record leads with the drawdown and not the return."
+                },
+                {
+                        "h": "Models age",
+                        "p": "The live models are frozen between refits and can drift as markets change."
+                }
+        ],
+        "limitsClose": "Hypothetical results have many limitations. Read the notice above, then decide for yourself.",
+        "kitTitle": "QQQ Basic data downloads",
+        "kitIntro": "Check the arithmetic in a spreadsheet. A trade by trade ledger for QQQ Basic is not published yet, but the weights file shows every change in holdings at each daily close.",
+        "kit": [
+                {
+                        "title": "Daily equity curve",
+                        "desc": "1,292 daily marks: QQQ Basic account value, QQQ buy & hold value, the QQQ close, and the four ETF weights, May 2021 through June 2026.",
+                        "href": "/verify/trademind-basic-equity-curve.csv"
+                },
+                {
+                        "title": "Metrics summary",
+                        "desc": "Headline numbers, costs, calendar years, worst drawdown dates and the three risk levels, exactly as computed.",
+                        "href": "/verify/trademind-basic-metrics.json"
+                },
+                {
+                        "title": "Run configuration",
+                        "desc": "The window, universe, cost model and allocation settings behind the record.",
+                        "href": "/verify/trademind-basic-config.json"
+                }
+        ],
+        "sumsTitle": "Artifact checksums (SHA-256)",
+        "discl": "Past performance is not necessarily indicative of future results. This is a backtest: no actual account produced these results. The next drawdown could be deeper than -15.0%. TradeMind publishes signals for you to review and enter at your own broker; it never connects to or submits orders to your brokerage."
+    },
     heroEyebrow: 'Transparency',
     heroTitle: 'Don\u2019t take our word for it. Audit it.',
     heroSub:
@@ -254,6 +409,150 @@ const EN: VerifyCopy = {
 };
 
 const ES: VerifyCopy = {
+    basic: {
+        "jump": "Ver el historial de QQQ Basic \u2193",
+        "eyebrow": "QQQ Basic",
+        "title": "QQQ Basic: el historial, completo",
+        "intro": "QQQ Basic solo mantiene ETFs: QQQ, QLD (2x QQQ), TQQQ (3x QQQ) y SGOV, un fondo de letras del Tesoro similar al efectivo. No requiere permiso para operar opciones y funciona en cualquier cuenta de br\u00f3ker. A continuaci\u00f3n est\u00e1n su historial fuera de muestra, su m\u00e9todo, sus limitaciones y los datos para comprobarlo t\u00fa mismo.",
+        "cols": [
+                "Rendimiento total",
+                "CAGR",
+                "Sharpe",
+                "Max DD",
+                "Calmar",
+                "Valor final"
+        ],
+        "rows": [
+                {
+                        "name": "QQQ Basic (backtest)",
+                        "total": "+93.9%",
+                        "cagr": "13.7%",
+                        "sharpe": "1.05",
+                        "maxdd": "-15.0%",
+                        "calmar": "0.91",
+                        "final": "$48,478"
+                },
+                {
+                        "name": "QQQ buy & hold",
+                        "total": "+119.7%",
+                        "cagr": "16.5%",
+                        "sharpe": "0.79",
+                        "maxdd": "-36.8%",
+                        "calmar": "0.45",
+                        "final": "$54,917"
+                }
+        ],
+        "note": "Del 7 de mayo de 2021 al 30 de junio de 2026, 5,2 a\u00f1os continuos fuera de muestra, partiendo de $25,000, nivel de riesgo predeterminado (moderado). QQQ buy & hold se mide con las mismas barras horarias. Peor per\u00edodo de drawdown: QQQ Basic, del 10 de julio de 2024 al 5 de junio de 2025. QQQ buy & hold, del 22 de noviembre de 2021 al 13 de octubre de 2022. QQQ Basic gan\u00f3 menos que buy & hold en esta ventana. Lo que cedi\u00f3 en rendimiento lo cambi\u00f3 por una peor ca\u00edda menor: -15,0% frente a -36,8%.",
+        "levels": "El mismo m\u00e9todo en los otros dos niveles de riesgo: Conservador, 10,10% de CAGR con una peor ca\u00edda de -12,65%, y Agresivo, 17,75% de CAGR con una peor ca\u00edda de -22,29%. Cada nivel es una variante fija y publicada del mismo modelo.",
+        "calTitle": "Rendimiento por a\u00f1o calendario",
+        "calCols": [
+                "A\u00f1o",
+                "QQQ Basic",
+                "QQQ buy & hold"
+        ],
+        "cal": [
+                {
+                        "y": "2021",
+                        "basic": "+17.8%",
+                        "qqq": "+18.7%"
+                },
+                {
+                        "y": "2022",
+                        "basic": "-3.4%",
+                        "qqq": "-33.0%"
+                },
+                {
+                        "y": "2023",
+                        "basic": "+22.3%",
+                        "qqq": "+53.7%"
+                },
+                {
+                        "y": "2024",
+                        "basic": "+10.7%",
+                        "qqq": "+24.8%"
+                },
+                {
+                        "y": "2025",
+                        "basic": "+4.5%",
+                        "qqq": "+20.2%"
+                },
+                {
+                        "y": "2026",
+                        "basic": "+20.6%",
+                        "qqq": "+19.8%"
+                }
+        ],
+        "calNote": "2021 empieza el 7 de mayo y 2026 termina el 30 de junio. QQQ Basic qued\u00f3 por detr\u00e1s de buy & hold en 2021, 2023, 2024 y 2025, y por delante en 2022 y 2026. Es un historial m\u00e1s estable, no uno suave, y 2024 y 2025 fueron modestos.",
+        "methodTitle": "C\u00f3mo funciona QQQ Basic",
+        "steps": [
+                {
+                        "h": "Los datos",
+                        "p": "Barras horarias reales de QQQ, QLD, TQQQ y SGOV de los datos de mercado de Interactive Brokers, m\u00e1s el VIX y un fondo de bonos de alto rendimiento como lectura de estr\u00e9s crediticio. El entrenamiento empieza en diciembre de 2019 y la prueba el 7 de mayo de 2021. No se modela ning\u00fan precio."
+                },
+                {
+                        "h": "La decisi\u00f3n",
+                        "p": "Cada hora el modelo lee QQQ frente a su media de 200 d\u00edas, dos modelos de r\u00e9gimen, una puntuaci\u00f3n de confianza de aprendizaje autom\u00e1tico y la estructura temporal del VIX. En r\u00e9gimen alcista elige una mezcla de QQQ, QLD y TQQQ, manteniendo siempre al menos 15% en SGOV, y la parte apalancada sube y baja con la puntuaci\u00f3n de confianza. En r\u00e9gimen bajista, o cuando QQQ est\u00e1 muy por debajo de su media larga, la cuenta se mueve hacia SGOV. Una protecci\u00f3n con el VIX y una regla de ca\u00edda por crash ajustan la parte apalancada."
+                },
+                {
+                        "h": "Los costos",
+                        "p": "La comisi\u00f3n es cero, como en la mayor\u00eda de los br\u00f3keres de EE. UU. hoy. La prueba aun as\u00ed cobra el spread comprador-vendedor en cada operaci\u00f3n: 1 punto base de ida y vuelta para QQQ, 4 para QLD y TQQQ, 1,5 para SGOV. Eso sum\u00f3 $1,997 en 2,664 ejecuciones y redujo el CAGR en aproximadamente dos puntos. Una banda sin operaciones de 5% y una regla de hist\u00e9resis evitan que el modelo opere en exceso."
+                },
+                {
+                        "h": "La prueba fuera de muestra",
+                        "p": "La historia se divide en 11 tramos. Cada tramo entrena con cerca de 1,5 a\u00f1os y luego opera los 6 meses siguientes que nunca ha visto, y los modelos se reajustan solo con datos de entrenamiento. Las ventanas de prueba de seis meses se unen en una curva de capital continua."
+                }
+        ],
+        "limitsTitle": "Lo que este historial no te dice",
+        "limitsIntro": "Todo backtest tiene huecos. Estos son los que conocemos.",
+        "limits": [
+                {
+                        "h": "Solo un mercado bajista",
+                        "p": "La ventana contiene un mercado bajista completo, 2022. Los datos horarios empiezan en 2019, as\u00ed que ca\u00eddas anteriores como 2008 o 2000 a 2002 no se han probado en este modelo. Un tipo de ca\u00edda distinto podr\u00eda comportarse distinto."
+                },
+                {
+                        "h": "Los ajustes se eligieron en esta misma ventana",
+                        "p": "Los ajustes en vivo se escogieron tras pruebas anteriores en estas mismas fechas. Los tramos est\u00e1n fuera de muestra para los modelos, pero no para la elecci\u00f3n de ajustes, as\u00ed que este historial es m\u00e1s favorecedor que una prueba real hacia adelante."
+                },
+                {
+                        "h": "Los costos son supuestos",
+                        "p": "Los spreads est\u00e1n modelados, no medidos en ejecuciones reales. Las ejecuciones en tu br\u00f3ker pueden ser mejores o peores, sobre todo en mercados r\u00e1pidos. No se incluyen impuestos."
+                },
+                {
+                        "h": "La peor ca\u00edda fue lenta",
+                        "p": "La ca\u00edda m\u00e1s profunda dur\u00f3 once meses, de julio de 2024 a junio de 2025, con repuntes cortos en medio. Una ca\u00edda menor no es una ca\u00edda r\u00e1pida, y la pr\u00f3xima podr\u00eda ser m\u00e1s profunda que -15,0%."
+                },
+                {
+                        "h": "Se qued\u00f3 atr\u00e1s en a\u00f1os fuertes",
+                        "p": "En 2023, 2024 y 2025 buy & hold gan\u00f3 mucho m\u00e1s. Ese es el precio de la ca\u00edda menor, y por eso este historial empieza por el drawdown y no por el rendimiento."
+                },
+                {
+                        "h": "Los modelos envejecen",
+                        "p": "Los modelos en vivo est\u00e1n congelados entre reajustes y pueden desviarse a medida que cambia el mercado."
+                }
+        ],
+        "limitsClose": "Los resultados hipot\u00e9ticos tienen muchas limitaciones. Lee el aviso de arriba y decide por ti mismo.",
+        "kitTitle": "Descargas de datos de QQQ Basic",
+        "kitIntro": "Comprueba la aritm\u00e9tica en una hoja de c\u00e1lculo. A\u00fan no se publica un libro mayor operaci\u00f3n por operaci\u00f3n de QQQ Basic, pero el archivo de pesos muestra cada cambio de posiciones en cada cierre diario.",
+        "kit": [
+                {
+                        "title": "Curva de capital diaria",
+                        "desc": "1,292 marcas diarias: valor de la cuenta QQQ Basic, valor de QQQ buy & hold, el cierre de QQQ y los cuatro pesos de ETFs, de mayo de 2021 a junio de 2026.",
+                        "href": "/verify/trademind-basic-equity-curve.csv"
+                },
+                {
+                        "title": "Resumen de m\u00e9tricas",
+                        "desc": "Cifras principales, costos, a\u00f1os calendario, fechas del peor drawdown y los tres niveles de riesgo, tal como se calcularon.",
+                        "href": "/verify/trademind-basic-metrics.json"
+                },
+                {
+                        "title": "Configuraci\u00f3n de la ejecuci\u00f3n",
+                        "desc": "La ventana, el universo, el modelo de costos y los ajustes de asignaci\u00f3n detr\u00e1s del historial.",
+                        "href": "/verify/trademind-basic-config.json"
+                }
+        ],
+        "sumsTitle": "Sumas de verificaci\u00f3n (SHA-256)",
+        "discl": "El rendimiento pasado no es necesariamente indicativo de resultados futuros. Esto es un backtest: ninguna cuenta real produjo estos resultados. El pr\u00f3ximo drawdown podr\u00eda ser m\u00e1s profundo que -15,0%. TradeMind publica se\u00f1ales para que las revises y las ingreses en tu propio br\u00f3ker; nunca se conecta a tu br\u00f3ker ni env\u00eda \u00f3rdenes a \u00e9l."
+    },
     heroEyebrow: 'Transparencia',
     heroTitle: 'No te f\u00edes de nuestra palabra. Aud\u00edtalo.',
     heroSub:
@@ -445,6 +744,150 @@ const ES: VerifyCopy = {
 };
 
 const ZH: VerifyCopy = {
+    basic: {
+        "jump": "\u67e5\u770b QQQ Basic \u8bb0\u5f55 \u2193",
+        "eyebrow": "QQQ Basic",
+        "title": "QQQ Basic:\u5b8c\u6574\u8bb0\u5f55",
+        "intro": "QQQ Basic \u53ea\u6301\u6709 ETF:QQQ\u3001QLD(2 \u500d QQQ)\u3001TQQQ(3 \u500d QQQ)\u548c SGOV(\u7c7b\u73b0\u91d1\u7684\u77ed\u671f\u56fd\u503a\u57fa\u91d1)\u3002\u5b83\u4e0d\u9700\u8981\u671f\u6743\u4ea4\u6613\u6743\u9650,\u5728\u4efb\u4f55\u5238\u5546\u8d26\u6237\u91cc\u90fd\u80fd\u4f7f\u7528\u3002\u4e0b\u9762\u662f\u5b83\u7684\u6837\u672c\u5916\u8bb0\u5f55\u3001\u65b9\u6cd5\u3001\u5c40\u9650\u6027,\u4ee5\u53ca\u4f9b\u4f60\u81ea\u884c\u6838\u5bf9\u7684\u6570\u636e\u3002",
+        "cols": [
+                "\u603b\u56de\u62a5",
+                "CAGR",
+                "Sharpe",
+                "\u6700\u5927\u56de\u64a4",
+                "Calmar",
+                "\u671f\u672b\u4ef7\u503c"
+        ],
+        "rows": [
+                {
+                        "name": "QQQ Basic(\u56de\u6d4b)",
+                        "total": "+93.9%",
+                        "cagr": "13.7%",
+                        "sharpe": "1.05",
+                        "maxdd": "-15.0%",
+                        "calmar": "0.91",
+                        "final": "$48,478"
+                },
+                {
+                        "name": "QQQ \u4e70\u5165\u5e76\u6301\u6709",
+                        "total": "+119.7%",
+                        "cagr": "16.5%",
+                        "sharpe": "0.79",
+                        "maxdd": "-36.8%",
+                        "calmar": "0.45",
+                        "final": "$54,917"
+                }
+        ],
+        "note": "2021 \u5e74 5 \u6708 7 \u65e5\u5230 2026 \u5e74 6 \u6708 30 \u65e5,\u8fde\u7eed 5.2 \u5e74\u6837\u672c\u5916,\u8d77\u59cb\u8d44\u91d1 $25,000,\u9ed8\u8ba4(\u4e2d\u7b49)\u98ce\u9669\u7b49\u7ea7\u3002QQQ \u4e70\u5165\u5e76\u6301\u6709\u4f7f\u7528\u540c\u6837\u7684\u5c0f\u65f6\u7ea7\u6570\u636e\u8861\u91cf\u3002\u6700\u5dee\u56de\u64a4\u533a\u95f4:QQQ Basic,2024 \u5e74 7 \u6708 10 \u65e5\u5230 2025 \u5e74 6 \u6708 5 \u65e5\u3002QQQ \u4e70\u5165\u5e76\u6301\u6709,2021 \u5e74 11 \u6708 22 \u65e5\u5230 2022 \u5e74 10 \u6708 13 \u65e5\u3002\u5728\u8fd9\u4e2a\u7a97\u53e3\u91cc QQQ Basic \u7684\u6536\u76ca\u4f4e\u4e8e\u4e70\u5165\u5e76\u6301\u6709,\u5b83\u653e\u5f03\u7684\u56de\u62a5\u6362\u6765\u4e86\u66f4\u6d45\u7684\u6700\u5dee\u8dcc\u5e45:-15.0% \u5bf9 -36.8%\u3002",
+        "levels": "\u540c\u6837\u7684\u65b9\u6cd5\u5728\u53e6\u5916\u4e24\u4e2a\u98ce\u9669\u7b49\u7ea7\u4e0b\u7684\u7ed3\u679c:\u4fdd\u5b88\u578b CAGR 10.10%,\u6700\u5dee\u8dcc\u5e45 -12.65%;\u8fdb\u53d6\u578b CAGR 17.75%,\u6700\u5dee\u8dcc\u5e45 -22.29%\u3002\u6bcf\u4e2a\u7b49\u7ea7\u90fd\u662f\u540c\u4e00\u6a21\u578b\u7684\u56fa\u5b9a\u3001\u516c\u5f00\u7684\u53d8\u4f53\u3002",
+        "calTitle": "\u65e5\u5386\u5e74\u5ea6\u56de\u62a5",
+        "calCols": [
+                "\u5e74\u4efd",
+                "QQQ Basic",
+                "QQQ \u4e70\u5165\u5e76\u6301\u6709"
+        ],
+        "cal": [
+                {
+                        "y": "2021",
+                        "basic": "+17.8%",
+                        "qqq": "+18.7%"
+                },
+                {
+                        "y": "2022",
+                        "basic": "-3.4%",
+                        "qqq": "-33.0%"
+                },
+                {
+                        "y": "2023",
+                        "basic": "+22.3%",
+                        "qqq": "+53.7%"
+                },
+                {
+                        "y": "2024",
+                        "basic": "+10.7%",
+                        "qqq": "+24.8%"
+                },
+                {
+                        "y": "2025",
+                        "basic": "+4.5%",
+                        "qqq": "+20.2%"
+                },
+                {
+                        "y": "2026",
+                        "basic": "+20.6%",
+                        "qqq": "+19.8%"
+                }
+        ],
+        "calNote": "2021 \u5e74\u4ece 5 \u6708 7 \u65e5\u5f00\u59cb,2026 \u5e74\u5230 6 \u6708 30 \u65e5\u7ed3\u675f\u3002QQQ Basic \u5728 2021\u30012023\u30012024 \u548c 2025 \u5e74\u843d\u540e\u4e8e\u4e70\u5165\u5e76\u6301\u6709,\u5728 2022 \u548c 2026 \u5e74\u9886\u5148\u3002\u8fd9\u662f\u66f4\u5e73\u7a33\u7684\u8bb0\u5f55,\u4f46\u5e76\u4e0d\u5e73\u6ed1,2024 \u548c 2025 \u5e74\u7684\u8868\u73b0\u4e00\u822c\u3002",
+        "methodTitle": "QQQ Basic \u5982\u4f55\u8fd0\u4f5c",
+        "steps": [
+                {
+                        "h": "\u6570\u636e",
+                        "p": "\u6765\u81ea Interactive Brokers \u884c\u60c5\u7684 QQQ\u3001QLD\u3001TQQQ \u548c SGOV \u771f\u5b9e\u5c0f\u65f6\u7ea7\u6570\u636e,\u5916\u52a0 VIX \u548c\u4e00\u53ea\u9ad8\u6536\u76ca\u503a\u57fa\u91d1\u4f5c\u4e3a\u4fe1\u7528\u538b\u529b\u8bfb\u6570\u3002\u8bad\u7ec3\u4ece 2019 \u5e74 12 \u6708\u5f00\u59cb,\u6d4b\u8bd5\u4ece 2021 \u5e74 5 \u6708 7 \u65e5\u5f00\u59cb\u3002\u6ca1\u6709\u4efb\u4f55\u4ef7\u683c\u662f\u6a21\u578b\u63a8\u7b97\u7684\u3002"
+                },
+                {
+                        "h": "\u51b3\u7b56",
+                        "p": "\u6a21\u578b\u6bcf\u5c0f\u65f6\u8bfb\u53d6 QQQ \u76f8\u5bf9 200 \u65e5\u5747\u7ebf\u7684\u4f4d\u7f6e\u3001\u4e24\u4e2a\u5e02\u573a\u72b6\u6001\u6a21\u578b\u3001\u4e00\u4e2a\u673a\u5668\u5b66\u4e60\u7f6e\u4fe1\u5206\u6570\u548c VIX \u671f\u9650\u7ed3\u6784\u3002\u5728\u725b\u5e02\u72b6\u6001\u4e0b,\u5b83\u9009\u62e9 QQQ\u3001QLD \u548c TQQQ \u7684\u7ec4\u5408,\u59cb\u7ec8\u81f3\u5c11\u4fdd\u7559 15% \u5728 SGOV,\u6760\u6746\u90e8\u5206\u968f\u7f6e\u4fe1\u5206\u6570\u5347\u964d\u3002\u5728\u718a\u5e02\u72b6\u6001\u4e0b,\u6216 QQQ \u8fdc\u4f4e\u4e8e\u957f\u671f\u5747\u7ebf\u65f6,\u8d26\u6237\u4f1a\u5411 SGOV \u8f6c\u79fb\u3002VIX \u4fdd\u62a4\u548c\u66b4\u8dcc\u56de\u64a4\u89c4\u5219\u4f1a\u8c03\u6574\u6760\u6746\u90e8\u5206\u3002"
+                },
+                {
+                        "h": "\u6210\u672c",
+                        "p": "\u4f63\u91d1\u4e3a\u96f6,\u4e0e\u5982\u4eca\u5927\u591a\u6570\u7f8e\u56fd\u5238\u5546\u4e00\u81f4\u3002\u6d4b\u8bd5\u4ecd\u7136\u5bf9\u6bcf\u7b14\u4ea4\u6613\u8ba1\u5165\u4e70\u5356\u4ef7\u5dee:QQQ \u5f80\u8fd4 1 \u4e2a\u57fa\u70b9,QLD \u548c TQQQ \u4e3a 4 \u4e2a\u57fa\u70b9,SGOV \u4e3a 1.5 \u4e2a\u57fa\u70b9\u30022,664 \u7b14\u6210\u4ea4\u5171\u8ba1 $1,997,\u4f7f CAGR \u964d\u4f4e\u7ea6\u4e24\u4e2a\u767e\u5206\u70b9\u30025% \u7684\u514d\u4ea4\u6613\u533a\u95f4\u548c\u6ede\u540e\u89c4\u5219\u907f\u514d\u6a21\u578b\u8fc7\u5ea6\u4ea4\u6613\u3002"
+                },
+                {
+                        "h": "\u6837\u672c\u5916\u6d4b\u8bd5",
+                        "p": "\u5386\u53f2\u88ab\u5207\u6210 11 \u6bb5\u3002\u6bcf\u6bb5\u7528\u7ea6 1.5 \u5e74\u8bad\u7ec3,\u7136\u540e\u4ea4\u6613\u63a5\u4e0b\u6765\u4ece\u672a\u89c1\u8fc7\u7684 6 \u4e2a\u6708,\u6a21\u578b\u53ea\u7528\u8bad\u7ec3\u6570\u636e\u91cd\u65b0\u62df\u5408\u3002\u8fd9\u4e9b\u516d\u4e2a\u6708\u7684\u6d4b\u8bd5\u7a97\u53e3\u8fde\u63a5\u6210\u4e00\u6761\u8fde\u7eed\u7684\u51c0\u503c\u66f2\u7ebf\u3002"
+                }
+        ],
+        "limitsTitle": "\u8fd9\u4efd\u8bb0\u5f55\u6ca1\u6709\u544a\u8bc9\u4f60\u7684\u4e8b",
+        "limitsIntro": "\u6bcf\u4e2a\u56de\u6d4b\u90fd\u6709\u7f3a\u53e3\u3002\u4ee5\u4e0b\u662f\u6211\u4eec\u5df2\u77e5\u7684\u3002",
+        "limits": [
+                {
+                        "h": "\u53ea\u6709\u4e00\u4e2a\u718a\u5e02",
+                        "p": "\u7a97\u53e3\u91cc\u53ea\u6709\u4e00\u4e2a\u5b8c\u6574\u7684\u718a\u5e02,\u5373 2022 \u5e74\u3002\u5c0f\u65f6\u7ea7\u6570\u636e\u4ece 2019 \u5e74\u5f00\u59cb,\u6240\u4ee5 2008 \u5e74\u6216 2000 \u5230 2002 \u5e74\u8fd9\u6837\u66f4\u65e9\u7684\u4e0b\u8dcc\u6ca1\u6709\u5728\u8be5\u6a21\u578b\u4e0a\u6d4b\u8bd5\u8fc7\u3002\u4e0d\u540c\u7c7b\u578b\u7684\u4e0b\u8dcc\u53ef\u80fd\u8868\u73b0\u4e0d\u540c\u3002"
+                },
+                {
+                        "h": "\u53c2\u6570\u662f\u5728\u540c\u4e00\u7a97\u53e3\u4e0a\u9009\u5b9a\u7684",
+                        "p": "\u5b9e\u76d8\u53c2\u6570\u662f\u5728\u8fd9\u4e9b\u76f8\u540c\u65e5\u671f\u4e0a\u505a\u8fc7\u591a\u6b21\u6d4b\u8bd5\u540e\u9009\u5b9a\u7684\u3002\u5404\u6bb5\u5bf9\u6a21\u578b\u800c\u8a00\u662f\u6837\u672c\u5916,\u4f46\u53c2\u6570\u7684\u9009\u62e9\u5e76\u4e0d\u662f,\u6240\u4ee5\u8fd9\u4efd\u8bb0\u5f55\u6bd4\u771f\u6b63\u7684\u524d\u77bb\u6d4b\u8bd5\u66f4\u597d\u770b\u3002"
+                },
+                {
+                        "h": "\u6210\u672c\u662f\u5047\u8bbe",
+                        "p": "\u4ef7\u5dee\u662f\u6a21\u578b\u63a8\u7b97\u7684,\u4e0d\u662f\u771f\u5b9e\u6210\u4ea4\u6d4b\u5f97\u7684\u3002\u4f60\u5728\u5238\u5546\u7684\u6210\u4ea4\u53ef\u80fd\u66f4\u597d\u6216\u66f4\u5dee,\u5c24\u5176\u662f\u5728\u884c\u60c5\u5feb\u901f\u65f6\u3002\u4e0d\u542b\u7a0e\u8d39\u3002"
+                },
+                {
+                        "h": "\u6700\u5dee\u7684\u4e0b\u8dcc\u5f88\u7f13\u6162",
+                        "p": "\u6700\u6df1\u7684\u4e0b\u8dcc\u6301\u7eed\u4e86\u5341\u4e00\u4e2a\u6708,\u4ece 2024 \u5e74 7 \u6708\u5230 2025 \u5e74 6 \u6708,\u671f\u95f4\u6709\u77ed\u6682\u53cd\u5f39\u3002\u66f4\u6d45\u7684\u4e0b\u8dcc\u5e76\u4e0d\u610f\u5473\u7740\u66f4\u5feb,\u4e0b\u4e00\u6b21\u4e0b\u8dcc\u4e5f\u53ef\u80fd\u6bd4 -15.0% \u66f4\u6df1\u3002"
+                },
+                {
+                        "h": "\u5f3a\u52bf\u5e74\u4efd\u843d\u540e",
+                        "p": "\u5728 2023\u30012024 \u548c 2025 \u5e74,\u4e70\u5165\u5e76\u6301\u6709\u8d5a\u5f97\u591a\u5f97\u591a\u3002\u8fd9\u5c31\u662f\u66f4\u6d45\u4e0b\u8dcc\u7684\u4ee3\u4ef7,\u4e5f\u662f\u8fd9\u4efd\u8bb0\u5f55\u4ee5\u56de\u64a4\u800c\u4e0d\u662f\u56de\u62a5\u5f00\u5934\u7684\u539f\u56e0\u3002"
+                },
+                {
+                        "h": "\u6a21\u578b\u4f1a\u8001\u5316",
+                        "p": "\u5b9e\u76d8\u6a21\u578b\u5728\u4e24\u6b21\u91cd\u65b0\u62df\u5408\u4e4b\u95f4\u662f\u51bb\u7ed3\u7684,\u4f1a\u968f\u5e02\u573a\u53d8\u5316\u800c\u504f\u79bb\u3002"
+                }
+        ],
+        "limitsClose": "\u5047\u8bbe\u6027\u7ed3\u679c\u6709\u8bb8\u591a\u5c40\u9650\u3002\u8bf7\u9605\u8bfb\u4e0a\u9762\u7684\u58f0\u660e,\u7136\u540e\u81ea\u884c\u5224\u65ad\u3002",
+        "kitTitle": "QQQ Basic \u6570\u636e\u4e0b\u8f7d",
+        "kitIntro": "\u53ef\u4ee5\u5728\u7535\u5b50\u8868\u683c\u91cc\u6838\u5bf9\u8ba1\u7b97\u3002QQQ Basic \u7684\u9010\u7b14\u4ea4\u6613\u8d26\u672c\u5c1a\u672a\u516c\u5f00,\u4f46\u6743\u91cd\u6587\u4ef6\u663e\u793a\u4e86\u6bcf\u4e2a\u4ea4\u6613\u65e5\u6536\u76d8\u65f6\u6301\u4ed3\u7684\u6bcf\u4e00\u6b21\u53d8\u5316\u3002",
+        "kit": [
+                {
+                        "title": "\u6bcf\u65e5\u51c0\u503c\u66f2\u7ebf",
+                        "desc": "1,292 \u4e2a\u6bcf\u65e5\u6570\u636e\u70b9:QQQ Basic \u8d26\u6237\u4ef7\u503c\u3001QQQ \u4e70\u5165\u5e76\u6301\u6709\u4ef7\u503c\u3001QQQ \u6536\u76d8\u4ef7,\u4ee5\u53ca\u56db\u53ea ETF \u7684\u6743\u91cd,2021 \u5e74 5 \u6708\u5230 2026 \u5e74 6 \u6708\u3002",
+                        "href": "/verify/trademind-basic-equity-curve.csv"
+                },
+                {
+                        "title": "\u6307\u6807\u6458\u8981",
+                        "desc": "\u4e3b\u8981\u6570\u5b57\u3001\u6210\u672c\u3001\u65e5\u5386\u5e74\u5ea6\u3001\u6700\u5dee\u56de\u64a4\u65e5\u671f\u548c\u4e09\u4e2a\u98ce\u9669\u7b49\u7ea7,\u4e0e\u8ba1\u7b97\u7ed3\u679c\u5b8c\u5168\u4e00\u81f4\u3002",
+                        "href": "/verify/trademind-basic-metrics.json"
+                },
+                {
+                        "title": "\u8fd0\u884c\u914d\u7f6e",
+                        "desc": "\u8fd9\u4efd\u8bb0\u5f55\u80cc\u540e\u7684\u7a97\u53e3\u3001\u6295\u8d44\u8303\u56f4\u3001\u6210\u672c\u6a21\u578b\u548c\u914d\u7f6e\u53c2\u6570\u3002",
+                        "href": "/verify/trademind-basic-config.json"
+                }
+        ],
+        "sumsTitle": "\u6587\u4ef6\u6821\u9a8c\u503c(SHA-256)",
+        "discl": "\u8fc7\u5f80\u8868\u73b0\u4e0d\u4e00\u5b9a\u4ee3\u8868\u672a\u6765\u7ed3\u679c\u3002\u8fd9\u662f\u56de\u6d4b:\u6ca1\u6709\u4efb\u4f55\u771f\u5b9e\u8d26\u6237\u4ea7\u751f\u8fc7\u8fd9\u4e9b\u7ed3\u679c\u3002\u4e0b\u4e00\u6b21\u56de\u64a4\u53ef\u80fd\u6bd4 -15.0% \u66f4\u6df1\u3002TradeMind \u53d1\u5e03\u4fe1\u53f7\u4f9b\u4f60\u5ba1\u9605\u5e76\u5728\u81ea\u5df1\u7684\u5238\u5546\u4e0b\u5355;\u5b83\u4ece\u4e0d\u8fde\u63a5\u4f60\u7684\u5238\u5546,\u4e5f\u4ece\u4e0d\u5411\u4f60\u7684\u5238\u5546\u63d0\u4ea4\u8ba2\u5355\u3002"
+    },
     heroEyebrow: '\u900f\u660e\u5ea6',
     heroTitle: '\u522b\u542c\u6211\u4eec\u7684\u4e00\u9762\u4e4b\u8bcd\uff0c\u4eb2\u81ea\u5ba1\u8ba1\u3002',
     heroSub:

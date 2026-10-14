@@ -198,7 +198,7 @@ function unixToIso(value: number | null | undefined): string | null {
 const PRODUCT_COPY: Record<'basic' | 'leaps', { name: string; description: string }> = {
     basic: {
         name: 'TradeMind QQQ Defensive (annual)',
-        description: 'Signal service only, no auto trading. Signals are processed at 3:30 PM ET each trading day; when one fires you get emailed order instructions to enter at your own broker, and your TradeMind virtual account mirrors the order. No options approval needed. Cancel within your first month for a full refund.',
+        description: 'Signal service only, no auto trading. Signals are processed at 3:00 PM ET each trading day; when one fires you get emailed order instructions to enter at your own broker, and your TradeMind virtual account mirrors the order. No options approval needed. Cancel within your first month for a full refund.',
     },
     leaps: {
         name: 'TradeMind QQQ LEAPS (annual)',

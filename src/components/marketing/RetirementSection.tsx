@@ -26,6 +26,7 @@ export function RetirementSection() {
                 <h2 className="tm-h2">{c.title}</h2>
                 <p className="tm-band-lede">{c.p}</p>
                 <p className="tm-retire-mech">{c.mech}</p>
+                <p className="tm-retire-mech tm-retire-defensive">{c.defensive}</p>
                 <div className="tm-retire-links">
                     <Link href="/verify" className="tm-retire-link">
                         {c.ctaVerify}

@@ -75,10 +75,10 @@ export interface VerifyCopy {
 
 const EN: VerifyCopy = {
     basic: {
-        "jump": "See the QQQ Basic record \u2193",
-        "eyebrow": "QQQ Basic",
-        "title": "QQQ Basic: the record, in full",
-        "intro": "QQQ Basic holds only ETFs: QQQ, QLD (2x QQQ), TQQQ (3x QQQ) and SGOV, a cash-like Treasury bill fund. It needs no options trading permission and works in any brokerage account. Below are its out of sample record, its method, its limitations, and the data to check it yourself.",
+        "jump": "See the QQQ Defensive record \u2193",
+        "eyebrow": "QQQ Defensive",
+        "title": "QQQ Defensive: the record, in full",
+        "intro": "QQQ Defensive holds only ETFs: QQQ, QLD (2x QQQ), TQQQ (3x QQQ) and SGOV, a cash-like Treasury bill fund. It needs no options trading permission and works in any brokerage account. Below are its out of sample record, its method, its limitations, and the data to check it yourself.",
         "cols": [
                 "Total return",
                 "CAGR",
@@ -89,7 +89,7 @@ const EN: VerifyCopy = {
         ],
         "rows": [
                 {
-                        "name": "QQQ Basic (backtest)",
+                        "name": "QQQ Defensive (backtest)",
                         "total": "+93.9%",
                         "cagr": "13.7%",
                         "sharpe": "1.05",
@@ -107,12 +107,12 @@ const EN: VerifyCopy = {
                         "final": "$54,917"
                 }
         ],
-        "note": "May 7, 2021 to June 30, 2026, 5.2 continuous out of sample years, starting from $25,000, default (moderate) risk level. QQQ buy & hold is measured on the same hourly bars. Worst drawdown period: QQQ Basic, July 10, 2024 to June 5, 2025. QQQ buy & hold, November 22, 2021 to October 13, 2022. QQQ Basic earned less than buy & hold here. What it gave up in return it traded for a shallower worst fall: -15.0% against -36.8%.",
+        "note": "May 7, 2021 to June 30, 2026, 5.2 continuous out of sample years, starting from $25,000, default (moderate) risk level. QQQ buy & hold is measured on the same hourly bars. Worst drawdown period: QQQ Defensive, July 10, 2024 to June 5, 2025. QQQ buy & hold, November 22, 2021 to October 13, 2022. QQQ Defensive earned less than buy & hold here. What it gave up in return it traded for a shallower worst fall: -15.0% against -36.8%.",
         "levels": "The same method at the other two risk levels: Conservative 10.10% CAGR with a -12.65% worst fall, and Aggressive 17.75% CAGR with a -22.29% worst fall. Each level is a fixed, published variant of the same model.",
         "calTitle": "Calendar year returns",
         "calCols": [
                 "Year",
-                "QQQ Basic",
+                "QQQ Defensive",
                 "QQQ buy & hold"
         ],
         "cal": [
@@ -147,8 +147,8 @@ const EN: VerifyCopy = {
                         "qqq": "+19.8%"
                 }
         ],
-        "calNote": "2021 starts May 7 and 2026 ends June 30. QQQ Basic trailed buy & hold in 2021, 2023, 2024 and 2025, and was ahead in 2022 and 2026. This is a steadier record, not a smooth one, and 2024 and 2025 were modest.",
-        "methodTitle": "How QQQ Basic works",
+        "calNote": "2021 starts May 7 and 2026 ends June 30. QQQ Defensive trailed buy & hold in 2021, 2023, 2024 and 2025, and was ahead in 2022 and 2026. This is a steadier record, not a smooth one, and 2024 and 2025 were modest.",
+        "methodTitle": "How QQQ Defensive works",
         "steps": [
                 {
                         "h": "The data",
@@ -196,12 +196,12 @@ const EN: VerifyCopy = {
                 }
         ],
         "limitsClose": "Hypothetical results have many limitations. Read the notice above, then decide for yourself.",
-        "kitTitle": "QQQ Basic data downloads",
-        "kitIntro": "Check the arithmetic in a spreadsheet. A trade by trade ledger for QQQ Basic is not published yet, but the weights file shows every change in holdings at each daily close.",
+        "kitTitle": "QQQ Defensive data downloads",
+        "kitIntro": "Check the arithmetic in a spreadsheet. A trade by trade ledger for QQQ Defensive is not published yet, but the weights file shows every change in holdings at each daily close.",
         "kit": [
                 {
                         "title": "Daily equity curve",
-                        "desc": "1,292 daily marks: QQQ Basic account value, QQQ buy & hold value, the QQQ close, and the four ETF weights, May 2021 through June 2026.",
+                        "desc": "1,292 daily marks: QQQ Defensive account value, QQQ buy & hold value, the QQQ close, and the four ETF weights, May 2021 through June 2026.",
                         "href": "/verify/trademind-basic-equity-curve.csv"
                 },
                 {
@@ -410,10 +410,10 @@ const EN: VerifyCopy = {
 
 const ES: VerifyCopy = {
     basic: {
-        "jump": "Ver el historial de QQQ Basic \u2193",
-        "eyebrow": "QQQ Basic",
-        "title": "QQQ Basic: el historial, completo",
-        "intro": "QQQ Basic solo mantiene ETFs: QQQ, QLD (2x QQQ), TQQQ (3x QQQ) y SGOV, un fondo de letras del Tesoro similar al efectivo. No requiere permiso para operar opciones y funciona en cualquier cuenta de br\u00f3ker. A continuaci\u00f3n est\u00e1n su historial fuera de muestra, su m\u00e9todo, sus limitaciones y los datos para comprobarlo t\u00fa mismo.",
+        "jump": "Ver el historial de QQQ Defensive \u2193",
+        "eyebrow": "QQQ Defensive",
+        "title": "QQQ Defensive: el historial, completo",
+        "intro": "QQQ Defensive solo mantiene ETFs: QQQ, QLD (2x QQQ), TQQQ (3x QQQ) y SGOV, un fondo de letras del Tesoro similar al efectivo. No requiere permiso para operar opciones y funciona en cualquier cuenta de br\u00f3ker. A continuaci\u00f3n est\u00e1n su historial fuera de muestra, su m\u00e9todo, sus limitaciones y los datos para comprobarlo t\u00fa mismo.",
         "cols": [
                 "Rendimiento total",
                 "CAGR",
@@ -424,7 +424,7 @@ const ES: VerifyCopy = {
         ],
         "rows": [
                 {
-                        "name": "QQQ Basic (backtest)",
+                        "name": "QQQ Defensive (backtest)",
                         "total": "+93.9%",
                         "cagr": "13.7%",
                         "sharpe": "1.05",
@@ -442,12 +442,12 @@ const ES: VerifyCopy = {
                         "final": "$54,917"
                 }
         ],
-        "note": "Del 7 de mayo de 2021 al 30 de junio de 2026, 5,2 a\u00f1os continuos fuera de muestra, partiendo de $25,000, nivel de riesgo predeterminado (moderado). QQQ buy & hold se mide con las mismas barras horarias. Peor per\u00edodo de drawdown: QQQ Basic, del 10 de julio de 2024 al 5 de junio de 2025. QQQ buy & hold, del 22 de noviembre de 2021 al 13 de octubre de 2022. QQQ Basic gan\u00f3 menos que buy & hold en esta ventana. Lo que cedi\u00f3 en rendimiento lo cambi\u00f3 por una peor ca\u00edda menor: -15,0% frente a -36,8%.",
+        "note": "Del 7 de mayo de 2021 al 30 de junio de 2026, 5,2 a\u00f1os continuos fuera de muestra, partiendo de $25,000, nivel de riesgo predeterminado (moderado). QQQ buy & hold se mide con las mismas barras horarias. Peor per\u00edodo de drawdown: QQQ Defensive, del 10 de julio de 2024 al 5 de junio de 2025. QQQ buy & hold, del 22 de noviembre de 2021 al 13 de octubre de 2022. QQQ Defensive gan\u00f3 menos que buy & hold en esta ventana. Lo que cedi\u00f3 en rendimiento lo cambi\u00f3 por una peor ca\u00edda menor: -15,0% frente a -36,8%.",
         "levels": "El mismo m\u00e9todo en los otros dos niveles de riesgo: Conservador, 10,10% de CAGR con una peor ca\u00edda de -12,65%, y Agresivo, 17,75% de CAGR con una peor ca\u00edda de -22,29%. Cada nivel es una variante fija y publicada del mismo modelo.",
         "calTitle": "Rendimiento por a\u00f1o calendario",
         "calCols": [
                 "A\u00f1o",
-                "QQQ Basic",
+                "QQQ Defensive",
                 "QQQ buy & hold"
         ],
         "cal": [
@@ -482,8 +482,8 @@ const ES: VerifyCopy = {
                         "qqq": "+19.8%"
                 }
         ],
-        "calNote": "2021 empieza el 7 de mayo y 2026 termina el 30 de junio. QQQ Basic qued\u00f3 por detr\u00e1s de buy & hold en 2021, 2023, 2024 y 2025, y por delante en 2022 y 2026. Es un historial m\u00e1s estable, no uno suave, y 2024 y 2025 fueron modestos.",
-        "methodTitle": "C\u00f3mo funciona QQQ Basic",
+        "calNote": "2021 empieza el 7 de mayo y 2026 termina el 30 de junio. QQQ Defensive qued\u00f3 por detr\u00e1s de buy & hold en 2021, 2023, 2024 y 2025, y por delante en 2022 y 2026. Es un historial m\u00e1s estable, no uno suave, y 2024 y 2025 fueron modestos.",
+        "methodTitle": "C\u00f3mo funciona QQQ Defensive",
         "steps": [
                 {
                         "h": "Los datos",
@@ -531,12 +531,12 @@ const ES: VerifyCopy = {
                 }
         ],
         "limitsClose": "Los resultados hipot\u00e9ticos tienen muchas limitaciones. Lee el aviso de arriba y decide por ti mismo.",
-        "kitTitle": "Descargas de datos de QQQ Basic",
-        "kitIntro": "Comprueba la aritm\u00e9tica en una hoja de c\u00e1lculo. A\u00fan no se publica un libro mayor operaci\u00f3n por operaci\u00f3n de QQQ Basic, pero el archivo de pesos muestra cada cambio de posiciones en cada cierre diario.",
+        "kitTitle": "Descargas de datos de QQQ Defensive",
+        "kitIntro": "Comprueba la aritm\u00e9tica en una hoja de c\u00e1lculo. A\u00fan no se publica un libro mayor operaci\u00f3n por operaci\u00f3n de QQQ Defensive, pero el archivo de pesos muestra cada cambio de posiciones en cada cierre diario.",
         "kit": [
                 {
                         "title": "Curva de capital diaria",
-                        "desc": "1,292 marcas diarias: valor de la cuenta QQQ Basic, valor de QQQ buy & hold, el cierre de QQQ y los cuatro pesos de ETFs, de mayo de 2021 a junio de 2026.",
+                        "desc": "1,292 marcas diarias: valor de la cuenta QQQ Defensive, valor de QQQ buy & hold, el cierre de QQQ y los cuatro pesos de ETFs, de mayo de 2021 a junio de 2026.",
                         "href": "/verify/trademind-basic-equity-curve.csv"
                 },
                 {
@@ -745,10 +745,10 @@ const ES: VerifyCopy = {
 
 const ZH: VerifyCopy = {
     basic: {
-        "jump": "\u67e5\u770b QQQ Basic \u8bb0\u5f55 \u2193",
-        "eyebrow": "QQQ Basic",
-        "title": "QQQ Basic:\u5b8c\u6574\u8bb0\u5f55",
-        "intro": "QQQ Basic \u53ea\u6301\u6709 ETF:QQQ\u3001QLD(2 \u500d QQQ)\u3001TQQQ(3 \u500d QQQ)\u548c SGOV(\u7c7b\u73b0\u91d1\u7684\u77ed\u671f\u56fd\u503a\u57fa\u91d1)\u3002\u5b83\u4e0d\u9700\u8981\u671f\u6743\u4ea4\u6613\u6743\u9650,\u5728\u4efb\u4f55\u5238\u5546\u8d26\u6237\u91cc\u90fd\u80fd\u4f7f\u7528\u3002\u4e0b\u9762\u662f\u5b83\u7684\u6837\u672c\u5916\u8bb0\u5f55\u3001\u65b9\u6cd5\u3001\u5c40\u9650\u6027,\u4ee5\u53ca\u4f9b\u4f60\u81ea\u884c\u6838\u5bf9\u7684\u6570\u636e\u3002",
+        "jump": "\u67e5\u770b QQQ Defensive \u8bb0\u5f55 \u2193",
+        "eyebrow": "QQQ Defensive",
+        "title": "QQQ Defensive:\u5b8c\u6574\u8bb0\u5f55",
+        "intro": "QQQ Defensive \u53ea\u6301\u6709 ETF:QQQ\u3001QLD(2 \u500d QQQ)\u3001TQQQ(3 \u500d QQQ)\u548c SGOV(\u7c7b\u73b0\u91d1\u7684\u77ed\u671f\u56fd\u503a\u57fa\u91d1)\u3002\u5b83\u4e0d\u9700\u8981\u671f\u6743\u4ea4\u6613\u6743\u9650,\u5728\u4efb\u4f55\u5238\u5546\u8d26\u6237\u91cc\u90fd\u80fd\u4f7f\u7528\u3002\u4e0b\u9762\u662f\u5b83\u7684\u6837\u672c\u5916\u8bb0\u5f55\u3001\u65b9\u6cd5\u3001\u5c40\u9650\u6027,\u4ee5\u53ca\u4f9b\u4f60\u81ea\u884c\u6838\u5bf9\u7684\u6570\u636e\u3002",
         "cols": [
                 "\u603b\u56de\u62a5",
                 "CAGR",
@@ -759,7 +759,7 @@ const ZH: VerifyCopy = {
         ],
         "rows": [
                 {
-                        "name": "QQQ Basic(\u56de\u6d4b)",
+                        "name": "QQQ Defensive(\u56de\u6d4b)",
                         "total": "+93.9%",
                         "cagr": "13.7%",
                         "sharpe": "1.05",
@@ -777,12 +777,12 @@ const ZH: VerifyCopy = {
                         "final": "$54,917"
                 }
         ],
-        "note": "2021 \u5e74 5 \u6708 7 \u65e5\u5230 2026 \u5e74 6 \u6708 30 \u65e5,\u8fde\u7eed 5.2 \u5e74\u6837\u672c\u5916,\u8d77\u59cb\u8d44\u91d1 $25,000,\u9ed8\u8ba4(\u4e2d\u7b49)\u98ce\u9669\u7b49\u7ea7\u3002QQQ \u4e70\u5165\u5e76\u6301\u6709\u4f7f\u7528\u540c\u6837\u7684\u5c0f\u65f6\u7ea7\u6570\u636e\u8861\u91cf\u3002\u6700\u5dee\u56de\u64a4\u533a\u95f4:QQQ Basic,2024 \u5e74 7 \u6708 10 \u65e5\u5230 2025 \u5e74 6 \u6708 5 \u65e5\u3002QQQ \u4e70\u5165\u5e76\u6301\u6709,2021 \u5e74 11 \u6708 22 \u65e5\u5230 2022 \u5e74 10 \u6708 13 \u65e5\u3002\u5728\u8fd9\u4e2a\u7a97\u53e3\u91cc QQQ Basic \u7684\u6536\u76ca\u4f4e\u4e8e\u4e70\u5165\u5e76\u6301\u6709,\u5b83\u653e\u5f03\u7684\u56de\u62a5\u6362\u6765\u4e86\u66f4\u6d45\u7684\u6700\u5dee\u8dcc\u5e45:-15.0% \u5bf9 -36.8%\u3002",
+        "note": "2021 \u5e74 5 \u6708 7 \u65e5\u5230 2026 \u5e74 6 \u6708 30 \u65e5,\u8fde\u7eed 5.2 \u5e74\u6837\u672c\u5916,\u8d77\u59cb\u8d44\u91d1 $25,000,\u9ed8\u8ba4(\u4e2d\u7b49)\u98ce\u9669\u7b49\u7ea7\u3002QQQ \u4e70\u5165\u5e76\u6301\u6709\u4f7f\u7528\u540c\u6837\u7684\u5c0f\u65f6\u7ea7\u6570\u636e\u8861\u91cf\u3002\u6700\u5dee\u56de\u64a4\u533a\u95f4:QQQ Defensive,2024 \u5e74 7 \u6708 10 \u65e5\u5230 2025 \u5e74 6 \u6708 5 \u65e5\u3002QQQ \u4e70\u5165\u5e76\u6301\u6709,2021 \u5e74 11 \u6708 22 \u65e5\u5230 2022 \u5e74 10 \u6708 13 \u65e5\u3002\u5728\u8fd9\u4e2a\u7a97\u53e3\u91cc QQQ Defensive \u7684\u6536\u76ca\u4f4e\u4e8e\u4e70\u5165\u5e76\u6301\u6709,\u5b83\u653e\u5f03\u7684\u56de\u62a5\u6362\u6765\u4e86\u66f4\u6d45\u7684\u6700\u5dee\u8dcc\u5e45:-15.0% \u5bf9 -36.8%\u3002",
         "levels": "\u540c\u6837\u7684\u65b9\u6cd5\u5728\u53e6\u5916\u4e24\u4e2a\u98ce\u9669\u7b49\u7ea7\u4e0b\u7684\u7ed3\u679c:\u4fdd\u5b88\u578b CAGR 10.10%,\u6700\u5dee\u8dcc\u5e45 -12.65%;\u8fdb\u53d6\u578b CAGR 17.75%,\u6700\u5dee\u8dcc\u5e45 -22.29%\u3002\u6bcf\u4e2a\u7b49\u7ea7\u90fd\u662f\u540c\u4e00\u6a21\u578b\u7684\u56fa\u5b9a\u3001\u516c\u5f00\u7684\u53d8\u4f53\u3002",
         "calTitle": "\u65e5\u5386\u5e74\u5ea6\u56de\u62a5",
         "calCols": [
                 "\u5e74\u4efd",
-                "QQQ Basic",
+                "QQQ Defensive",
                 "QQQ \u4e70\u5165\u5e76\u6301\u6709"
         ],
         "cal": [
@@ -817,8 +817,8 @@ const ZH: VerifyCopy = {
                         "qqq": "+19.8%"
                 }
         ],
-        "calNote": "2021 \u5e74\u4ece 5 \u6708 7 \u65e5\u5f00\u59cb,2026 \u5e74\u5230 6 \u6708 30 \u65e5\u7ed3\u675f\u3002QQQ Basic \u5728 2021\u30012023\u30012024 \u548c 2025 \u5e74\u843d\u540e\u4e8e\u4e70\u5165\u5e76\u6301\u6709,\u5728 2022 \u548c 2026 \u5e74\u9886\u5148\u3002\u8fd9\u662f\u66f4\u5e73\u7a33\u7684\u8bb0\u5f55,\u4f46\u5e76\u4e0d\u5e73\u6ed1,2024 \u548c 2025 \u5e74\u7684\u8868\u73b0\u4e00\u822c\u3002",
-        "methodTitle": "QQQ Basic \u5982\u4f55\u8fd0\u4f5c",
+        "calNote": "2021 \u5e74\u4ece 5 \u6708 7 \u65e5\u5f00\u59cb,2026 \u5e74\u5230 6 \u6708 30 \u65e5\u7ed3\u675f\u3002QQQ Defensive \u5728 2021\u30012023\u30012024 \u548c 2025 \u5e74\u843d\u540e\u4e8e\u4e70\u5165\u5e76\u6301\u6709,\u5728 2022 \u548c 2026 \u5e74\u9886\u5148\u3002\u8fd9\u662f\u66f4\u5e73\u7a33\u7684\u8bb0\u5f55,\u4f46\u5e76\u4e0d\u5e73\u6ed1,2024 \u548c 2025 \u5e74\u7684\u8868\u73b0\u4e00\u822c\u3002",
+        "methodTitle": "QQQ Defensive \u5982\u4f55\u8fd0\u4f5c",
         "steps": [
                 {
                         "h": "\u6570\u636e",
@@ -866,12 +866,12 @@ const ZH: VerifyCopy = {
                 }
         ],
         "limitsClose": "\u5047\u8bbe\u6027\u7ed3\u679c\u6709\u8bb8\u591a\u5c40\u9650\u3002\u8bf7\u9605\u8bfb\u4e0a\u9762\u7684\u58f0\u660e,\u7136\u540e\u81ea\u884c\u5224\u65ad\u3002",
-        "kitTitle": "QQQ Basic \u6570\u636e\u4e0b\u8f7d",
-        "kitIntro": "\u53ef\u4ee5\u5728\u7535\u5b50\u8868\u683c\u91cc\u6838\u5bf9\u8ba1\u7b97\u3002QQQ Basic \u7684\u9010\u7b14\u4ea4\u6613\u8d26\u672c\u5c1a\u672a\u516c\u5f00,\u4f46\u6743\u91cd\u6587\u4ef6\u663e\u793a\u4e86\u6bcf\u4e2a\u4ea4\u6613\u65e5\u6536\u76d8\u65f6\u6301\u4ed3\u7684\u6bcf\u4e00\u6b21\u53d8\u5316\u3002",
+        "kitTitle": "QQQ Defensive \u6570\u636e\u4e0b\u8f7d",
+        "kitIntro": "\u53ef\u4ee5\u5728\u7535\u5b50\u8868\u683c\u91cc\u6838\u5bf9\u8ba1\u7b97\u3002QQQ Defensive \u7684\u9010\u7b14\u4ea4\u6613\u8d26\u672c\u5c1a\u672a\u516c\u5f00,\u4f46\u6743\u91cd\u6587\u4ef6\u663e\u793a\u4e86\u6bcf\u4e2a\u4ea4\u6613\u65e5\u6536\u76d8\u65f6\u6301\u4ed3\u7684\u6bcf\u4e00\u6b21\u53d8\u5316\u3002",
         "kit": [
                 {
                         "title": "\u6bcf\u65e5\u51c0\u503c\u66f2\u7ebf",
-                        "desc": "1,292 \u4e2a\u6bcf\u65e5\u6570\u636e\u70b9:QQQ Basic \u8d26\u6237\u4ef7\u503c\u3001QQQ \u4e70\u5165\u5e76\u6301\u6709\u4ef7\u503c\u3001QQQ \u6536\u76d8\u4ef7,\u4ee5\u53ca\u56db\u53ea ETF \u7684\u6743\u91cd,2021 \u5e74 5 \u6708\u5230 2026 \u5e74 6 \u6708\u3002",
+                        "desc": "1,292 \u4e2a\u6bcf\u65e5\u6570\u636e\u70b9:QQQ Defensive \u8d26\u6237\u4ef7\u503c\u3001QQQ \u4e70\u5165\u5e76\u6301\u6709\u4ef7\u503c\u3001QQQ \u6536\u76d8\u4ef7,\u4ee5\u53ca\u56db\u53ea ETF \u7684\u6743\u91cd,2021 \u5e74 5 \u6708\u5230 2026 \u5e74 6 \u6708\u3002",
                         "href": "/verify/trademind-basic-equity-curve.csv"
                 },
                 {

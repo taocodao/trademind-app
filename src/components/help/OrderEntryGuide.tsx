@@ -202,7 +202,7 @@ export default function OrderEntryGuide() {
                             {typeInfo?.example}
                         </p>
                         {signals && (
-                            <p className="text-[11px] text-tm-muted mt-2">QQQ Basic emails contain only share orders like this one, no options approval needed.</p>
+                            <p className="text-[11px] text-tm-muted mt-2">QQQ Defensive emails contain only share orders like this one, no options approval needed.</p>
                         )}
                     </div>
 

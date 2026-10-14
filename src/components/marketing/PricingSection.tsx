@@ -6,7 +6,7 @@ import { PRICING } from '@/lib/pricing-config';
 
 /**
  * Pricing (Sep 2026 model):
- * - Signals only. Processed once per trading day at 3:30 PM ET; when a signal
+ * - Signals only. Processed once per trading day (3:00 PM ET Defensive, 3:30 PM ET LEAPS); when a signal
  *   fires, the exact order instructions go out by email and the account's
  *   virtual portfolio mirrors the same order.
  * - Regular list prices ($360 Basic / $480 LEAPS) are the default display.
@@ -51,14 +51,14 @@ export function PricingSection() {
             id: 'qqq_basic',
             plan: 'basic' as const,
             name: basic.label,
-            tagline: t('pricing.turbocore.tagline'),
+            tagline: t('pricing.qqq_basic.tagline'),
             regular: basic.regularAnnual,
             price: basic.annual,
             perMonth: basic.annualPerMonth,
             description: basic.description,
             features: basic.features as unknown as string[],
             permissionNote: 'No options approval needed. Any brokerage account works.',
-            button: 'Start QQQ Basic',
+            button: 'Start QQQ Defensive',
             popular: false,
             accentColor: '#4f8ef7',
         },
@@ -169,7 +169,7 @@ export function PricingSection() {
                 {/* What you actually get: signals by email, orders placed by you */}
                 <p className="text-sm text-gray-300 leading-relaxed max-w-3xl mx-auto">
                     TradeMind is a signal service, not auto-trading. Every trading day we process the
-                    signal at 3:30 PM ET and email you the exact order instructions to enter at your own
+                    signal (3:00 PM ET for QQQ Defensive, 3:30 PM ET for QQQ LEAPS) and email you the exact order instructions to enter at your own
                     broker. Your TradeMind virtual account mirrors each order so your record matches the signal.
                 </p>
 
@@ -281,7 +281,7 @@ export function PricingSection() {
                                 <p className="text-base font-bold text-white mb-1">Subscribers pay 30% less</p>
                                 <p className="text-xs text-tm-muted mb-4">
                                     Enter your email to subscribe to The AI Systematic Investor newsletter. The first
-                                    issue arrives right away and the subscriber price ($252 QQQ Basic, $336 QQQ LEAPS)
+                                    issue arrives right away and the subscriber price ($252 QQQ Defensive, $336 QQQ LEAPS)
                                     applies to your first annual term automatically.
                                 </p>
                                 <form onSubmit={handleUnlock} className="flex flex-col gap-3">
@@ -317,7 +317,7 @@ export function PricingSection() {
                                         }}
                                         className="mt-3 text-[11px] text-tm-muted underline hover:text-white"
                                     >
-                                        No thanks, continue {pendingPlan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Basic'} at the regular ${pendingPlan === 'leaps' ? 480 : 360} price
+                                        No thanks, continue {pendingPlan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Defensive'} at the regular ${pendingPlan === 'leaps' ? 480 : 360} price
                                     </button>
                                 )}
                             </>
@@ -339,7 +339,7 @@ export function PricingSection() {
                                         }}
                                         className="w-full rounded-lg bg-tm-purple px-5 py-3 text-sm font-bold text-white hover:bg-tm-purple/90"
                                     >
-                                        Continue with {pendingPlan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Basic'} at the subscriber price
+                                        Continue with {pendingPlan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Defensive'} at the subscriber price
                                     </button>
                                 )}
                                 <button

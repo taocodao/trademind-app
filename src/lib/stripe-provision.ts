@@ -59,7 +59,7 @@ export async function provisionCheckoutSession(session: Stripe.Checkout.Session,
             const plan = metadataPlan as MembershipPlan;
             const strategy = plan === 'leaps' ? 'QQQ_LEAPS' : 'TQQQ_TURBOCORE_PRO';
             const principal = plan === 'leaps' ? 25000 : 10000;
-            const name = plan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Basic';
+            const name = plan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Defensive';
             const emailRow = await query(
                 `SELECT COALESCE(login_email, email) AS e FROM user_settings WHERE user_id = $1`,
                 [userId]
@@ -149,7 +149,7 @@ export async function provisionCheckoutSession(session: Stripe.Checkout.Session,
                             : undefined;
                         void sendRedemptionReceiptEmail({
                             to,
-                            planLabel: metadataPlan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Basic',
+                            planLabel: metadataPlan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Defensive',
                             renewalDate: renewal,
                         });
                     }
@@ -197,7 +197,7 @@ function unixToIso(value: number | null | undefined): string | null {
  */
 const PRODUCT_COPY: Record<'basic' | 'leaps', { name: string; description: string }> = {
     basic: {
-        name: 'TradeMind QQQ Basic (annual)',
+        name: 'TradeMind QQQ Defensive (annual)',
         description: 'Signal service only, no auto trading. Signals are processed at 3:30 PM ET each trading day; when one fires you get emailed order instructions to enter at your own broker, and your TradeMind virtual account mirrors the order. No options approval needed. Cancel within your first month for a full refund.',
     },
     leaps: {

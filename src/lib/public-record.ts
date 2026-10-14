@@ -23,7 +23,7 @@ const SOURCE_ACCOUNT_ID = Number(process.env.PUBLIC_RECORD_ACCOUNT_ID || 18);
 
 const STRATEGIES: Array<{ key: string; name: string }> = [
     { key: 'QQQ_LEAPS', name: 'QQQ LEAPS' },
-    { key: 'TQQQ_TURBOCORE_PRO', name: 'QQQ Basic' },
+    { key: 'TQQQ_TURBOCORE_PRO', name: 'QQQ Defensive' },
 ];
 
 export interface PublicLot {

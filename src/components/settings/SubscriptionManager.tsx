@@ -17,7 +17,7 @@ interface AccountMembership {
     entitled: boolean;
 }
 
-const planLabel = (plan: AccountMembership['plan']) => plan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Basic';
+const planLabel = (plan: AccountMembership['plan']) => plan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Defensive';
 const formatDate = (date: string | null) => date
     ? new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : null;

@@ -21,7 +21,7 @@ export async function emailInvoiceForSession(session: Stripe.Checkout.Session): 
         const claim = await query('INSERT INTO invoice_emails (invoice_id, email) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING invoice_id', [inv.id, to]);
         if (!claim.rows.length) return;
 
-        const plan = /leaps/i.test(session.metadata?.plan ?? '') ? 'QQQ LEAPS' : session.metadata?.plan ? 'QQQ Basic' : 'TradeMind';
+        const plan = /leaps/i.test(session.metadata?.plan ?? '') ? 'QQQ LEAPS' : session.metadata?.plan ? 'QQQ Defensive' : 'TradeMind';
         const periodEnd = (sub as unknown as { current_period_end?: number }).current_period_end;
         const ok = await sendInvoiceEmail({
             to,

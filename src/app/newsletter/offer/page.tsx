@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 const TERMS = [
     'Available to confirmed newsletter subscribers only.',
-    '30% off the first year of a one-year TradeMind subscription (QQQ Basic or QQQ LEAPS).',
+    '30% off the first year of a one-year TradeMind subscription (QQQ Defensive or QQQ LEAPS).',
     'Redeem within 90 days of your first confirmation. Changing your newsletter email never restarts this window.',
     'The discount applies to the same confirmed email address, or its replacement through the official change-email flow.',
     'One redemption per subscriber identity. Plus-address and Gmail-dot variants of an address count as the same identity.',

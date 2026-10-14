@@ -147,13 +147,13 @@ function UpgradePageInner() {
                 <p className="mt-4 text-gray-400">Your account is created automatically when checkout completes, with signal defaults you can adjust afterward. Each plan is its own annual membership.</p>
                 <div className="mt-7 flex flex-col sm:flex-row gap-3 justify-center">
                     <a href="/upgrade?plan=basic" className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#4f8ef7]/50 px-5 py-3 font-bold hover:bg-[#4f8ef7]/10">
-                        QQQ Basic ${PRICING.plans.turbocore_pro_bundle.annual}/yr <ArrowRight className="h-4 w-4" />
+                        QQQ Defensive ${PRICING.plans.turbocore_pro_bundle.annual}/yr <ArrowRight className="h-4 w-4" />
                     </a>
                     <a href="/upgrade?plan=leaps" className="inline-flex items-center justify-center gap-2 rounded-xl bg-tm-purple px-5 py-3 font-bold hover:bg-tm-purple/80">
                         QQQ LEAPS ${PRICING.plans.qqq_leaps.annual}/yr <ArrowRight className="h-4 w-4" />
                     </a>
                 </div>
-                <p className="mt-5 text-xs text-gray-500">Signals process at 3:30 PM ET each trading day and arrive by email. Your card is charged today; cancel within your first month for a full refund. Yearly auto renew starts on by default.</p>
+                <p className="mt-5 text-xs text-gray-500">Signals process each trading day (3:00 PM ET for QQQ Defensive, 3:30 PM ET for QQQ LEAPS) and arrive by email. Your card is charged today; cancel within your first month for a full refund. Yearly auto renew starts on by default.</p>
             </section>
         </main>
     );

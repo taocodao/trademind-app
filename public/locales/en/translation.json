@@ -46,61 +46,13 @@
     "description": "We are a software platform, not a hedge fund. We don't take a percentage of your wealth, and we never hold it. Your money stays at your broker, in your name, under your control. You keep 100 percent of whatever it compounds to.",
     "popular": "Most Popular",
     "billed": "Billed annually. Your card is charged at checkout; cancel within the first month for a full refund. Cancel anytime online.",
-    "monthly_tab": "Monthly",
-    "annual_tab": "Annually",
-    "save_badge": "SAVE 30%",
-    "trial_notice": "ALL TIERS INCLUDE A 14-DAY FREE TRIAL",
-    "trial_notice_sub": "All plans include a 14-day free trial. Cancel anytime.",
     "loading": "Redirecting...",
-    "turbocore": {
-      "name": "TurboCore",
-      "description": "ML-powered foundation for steady compounding.",
-      "btn": "Start Compounding",
-      "billed_monthly": "Billed monthly",
-      "billed_annually": "Billed $249 annually",
-      "save_text": "Save 28% (3.5 months free)",
-      "save_short": "Save 28%",
-      "features": [
-        "TQQQ Core Model Access",
-        "SMA200 Capital Preservation Gate",
-        "Automated Signal Delivery",
-        "Standard UI Experience"
-      ],
-      "tagline": "The regime-aware ML foundation"
-    },
-    "turbocore_pro": {
-      "name": "TurboCore Pro",
-      "description": "Advanced capabilities with 39.3% historical CAGR.",
-      "btn": "Go Pro",
-      "billed_monthly": "Billed monthly",
-      "billed_annually": "Billed $399 annually",
-      "save_text": "Save 32% (4 months free)",
-      "save_short": "Save 32%",
-      "features": [
-        "Enhanced ML Regime Detection",
-        "Dynamic VIX-Adjusted Positioning",
-        "Early Signal Access",
-        "Priority Slack Support"
-      ]
-    },
-    "both_bundle": {
-      "name": "Both Bundle",
-      "description": "Get the ultimate edge with the full multi-strategy engine.",
-      "btn": "Get Everything",
-      "billed_monthly": "Billed monthly",
-      "billed_annually": "Billed $549 annually",
-      "save_text": "Save 33% (4 months free)",
-      "save_short": "Save 33%",
-      "features": [
-        "TurboCore & TurboCore Pro Models",
-        "TurboBounce Mean-Reversion Alpha",
-        "Custom Portfolio Allocation Tooling",
-        "Direct Founder Office Hours"
-      ]
-    },
     "annual_only": "Annual billing only",
     "qqq_leaps": {
       "tagline": "ML-powered long-term options on QQQ"
+    },
+    "qqq_basic": {
+      "tagline": "ETF only, built for a shallower worst fall"
     }
   },
   "education": {
@@ -401,7 +353,7 @@
       "cmdCenterP2": ", TurboCore's AI engine evaluates volatility conditions and generates a rebalancing signal for your portfolio.",
       "cmdCenterP3": "Use the ",
       "cmdCenterCorePro": "Core / Pro",
-      "cmdCenterP4": " tabs to switch between QQQ Basic (equity-only) and QQQ LEAPS (LEAPS + PMCC overlay). ",
+      "cmdCenterP4": " tabs to switch between QQQ Defensive (equity-only) and QQQ LEAPS (LEAPS + PMCC overlay). ",
       "cmdCenterAutoApprove": "",
       "cmdCenterP5": "Every signal is delivered by email — you enter each order yourself in your own broker.",
       "activeSub": "Active Subscription",

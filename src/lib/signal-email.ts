@@ -358,7 +358,7 @@ function closeInstruction(order: CloseLeg, accountName?: string): UniversalOrder
 
 function strategyLabelFor(strategy: string): string {
     const strategyUpper = strategy.toUpperCase();
-    return strategyUpper.includes('LEAPS') ? 'QQQ LEAPS' : 'QQQ Basic';
+    return strategyUpper.includes('LEAPS') ? 'QQQ LEAPS' : 'QQQ Defensive';
 }
 
 function escHtml(str: string): string {

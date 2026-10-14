@@ -1111,3 +1111,8 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
         opacity: 1 !important;
     }
 }
+
+/* Second line under the hero subtitle (names both plans) and the QQQ
+   Defensive note in the retirement band. */
+.tm-hero2 .tm-sub.tm-sub-plans { margin-top: 14px; font-size: 15.5px; color: var(--s-ink2); opacity: .92; }
+.tm-band-retire .tm-retire-mech.tm-retire-defensive { margin-top: 14px; }

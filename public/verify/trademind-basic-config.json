@@ -1,6 +1,6 @@
 {
   "run": {
-    "name": "QQQ Basic regime allocator, out-of-sample walk-forward public record",
+    "name": "QQQ Defensive regime allocator, out-of-sample walk-forward public record",
     "window_start": "2021-05-07",
     "window_end": "2026-06-30",
     "initial_capital_usd": 25000,

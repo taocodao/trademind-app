@@ -13,8 +13,8 @@ export const ARTIFACT_SHA256: { file: string; sha256: string }[] = [
    Regenerate with sha256sum if any of these files change. */
 export const BASIC_ARTIFACT_SHA256: { file: string; sha256: string }[] = [
     { file: 'trademind-basic-equity-curve.csv', sha256: '583df5bd4829fad6f414d07449129c10f3dc81cdbac016d46760df3f041a054a' },
-    { file: 'trademind-basic-metrics.json', sha256: '63975b46eef7c165a5493d1d476acfc3856c05a7ccbda5b5677e3150a93d2802' },
-    { file: 'trademind-basic-config.json', sha256: 'dc0c7a92de463dd52df2ad0ce95adf07c747b5a28beb38d26423ac245317509c' },
+    { file: 'trademind-basic-metrics.json', sha256: '035ffe3d85d81ac9e2b9fc1291b5078fce8e8a4294dddb31cb35bdde61920ddc' },
+    { file: 'trademind-basic-config.json', sha256: '636ec6a2836ad1c1c6e6c631b3ccb6a2f22e8bbacdada32cce44b24da469985d' },
 ];
 
 export const HARNESS_COMMIT = '2937348';

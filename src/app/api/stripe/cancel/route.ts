@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
                         }
                     }
                     if (to) {
-                        const planMeta = result.membership.plan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Basic';
+                        const planMeta = result.membership.plan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Defensive';
                         await sendRefundEmail({
                             to,
                             planLabel: planMeta,

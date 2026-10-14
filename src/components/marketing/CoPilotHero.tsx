@@ -133,6 +133,7 @@ export function CoPilotHero() {
                     </span>
                 </h1>
                 <p className="tm-sub">{c.sub}</p>
+                <p className="tm-sub tm-sub-plans">{c.plans}</p>
 
                 <div className="tm-hero-ctapair">
                     <button className="tm-play tm-cta-hero" onClick={beginStory}>{c.ctaPrimary}</button>

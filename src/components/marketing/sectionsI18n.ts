@@ -16,6 +16,7 @@ export interface SectionsCopy {
         eyebrow: string;
         h1a: string; h1b: string;
         sub: string;
+        plans: string;
         ctaPrimary: string; ctaSecondary: string; ctaLedger: string; ledgerLink: string;
         cards: { numeral: string; numSegs: ({ v: number; dec?: number } | { t: string })[]; label: string; body: string; link?: string }[];
         stats: { big: string; label: string; clarifier: string }[];
@@ -73,11 +74,12 @@ export interface SectionsCopy {
         kicker: string; title: string; p: string; close: string;
     };
     retire: {
-        kicker: string; title: string; p: string; mech: string; ctaVerify: string; ctaLedger: string;
+        kicker: string; title: string; p: string; mech: string; defensive: string; ctaVerify: string; ctaLedger: string;
     };
     rateCalc: {
         kicker: string; title: string; sub: string;
         lblAmount: string; lblRate: string; lblYears: string;
+        chipDefensive: string; chipLeaps: string;
         outLabel: string; disc: string; ctaVerify: string;
     };
 }
@@ -89,6 +91,7 @@ const EN_SECTIONS: SectionsCopy = {
         h1a: 'Your account is on autopilot',
         h1b: 'It is time for a co-pilot to fly it higher',
         sub: 'Most investors are either on autopilot with no way to adjust for risk, or chasing headlines with no flight plan. More information will not fix that. Structure will. TradeMind never touches your account. It gives you a repeatable process: every decision checks market regime, model evidence, and portfolio risk first, and the reasoning is logged before you act. You still fly the plane. We give you the instruments to fly it with discipline.',
+        plans: 'Two plans, one process. QQQ LEAPS uses options and needs options permission. QQQ Defensive holds only ETFs, needs no options permission, and is built to keep the worst fall shallow.',
         ctaLedger: 'Browse every trade \u2192',
         ctaPrimary: 'Begin the story',
         ctaSecondary: 'Read the record',
@@ -202,19 +205,19 @@ const EN_SECTIONS: SectionsCopy = {
         caption: '2021 to 2026 continuous window, 5.6 years, model-priced. Hypothetical backtested performance: not achieved by any actual account, not live trading, and not a prediction. The next drawdown could be deeper. Every entry, exit, and loss in this record is in the ledger below.',
     },
     basicRecord: {
-        kicker: 'QQQ Basic',
+        kicker: 'QQQ Defensive',
         title: 'The ETF plan: no options permission, a shallower worst fall',
-        p: 'QQQ Basic holds only ETFs (QQQ, QLD, TQQQ and a cash-like fund, SGOV), so it works in any brokerage account and needs no options trading permission. It is built to keep the worst fall shallow, which makes it a steadier place to start for newer subscribers who are comfortable giving up some upside in strong years.',
+        p: 'QQQ Defensive holds only ETFs (QQQ, QLD, TQQQ and a cash-like fund, SGOV), so it works in any brokerage account and needs no options trading permission. It is built to keep the worst fall shallow, which makes it a steadier place to start for newer subscribers who are comfortable giving up some upside in strong years.',
         tipTotal: 'Cumulative growth across the 5.2-year window, before any taxes. It is the most flattering way to state a result, which is why it sits next to four risk measures rather than alone.',
         cols: { total: 'Total return', cagr: 'CAGR', sharpe: 'Sharpe', maxdd: 'Max DD', calmar: 'Calmar' },
-        basicName: 'QQQ Basic (backtest)',
+        basicName: 'QQQ Defensive (backtest)',
         qqqName: 'QQQ buy & hold',
         basic: { total: '+93.9%', cagr: '13.7%', sharpe: '1.05', maxdd: '-15.0%', calmar: '0.91' },
         qqq: { total: '+119.7%', cagr: '16.5%', sharpe: '0.79', maxdd: '-36.8%', calmar: '0.45' },
-        footnote: 'Both rows cover the same dates, May 7, 2021 to June 30, 2026 (5.2 years). Worst drawdown period: QQQ Basic, July 2024 to June 2025. QQQ buy & hold, November 2021 to October 2022.',
-        callout: 'QQQ Basic earned less than QQQ in this window, with a worst fall of less than half the size. It trailed in strong years such as 2023, 2024 and 2025, and lost 3.4% in 2022 when QQQ lost 33.0%.',
+        footnote: 'Both rows cover the same dates, May 7, 2021 to June 30, 2026 (5.2 years). Worst drawdown period: QQQ Defensive, July 2024 to June 2025. QQQ buy & hold, November 2021 to October 2022.',
+        callout: 'QQQ Defensive earned less than QQQ in this window, with a worst fall of less than half the size. It trailed in strong years such as 2023, 2024 and 2025, and lost 3.4% in 2022 when QQQ lost 33.0%.',
         verifyIntro: 'The method, year by year results, limitations and the downloadable data for this table are published, including the costs charged on every trade.',
-        verifyLink: 'See the QQQ Basic record in full →',
+        verifyLink: 'See the QQQ Defensive record in full →',
         caption: 'Out-of-sample walk-forward backtest on real hourly ETF prices, May 2021 to June 2026, default risk level, after modeled trading costs (no commission, bid-ask spread charged). Hypothetical backtested performance: not achieved by any actual account, not live trading, and not a prediction. Past performance is not necessarily indicative of future results. The next drawdown could be deeper than -15.0%.',
     },
     life: {
@@ -228,19 +231,22 @@ const EN_SECTIONS: SectionsCopy = {
         title: 'On autopilot or chasing headlines. Neither is a process.',
         p: 'The gap is not savings. It is activation. That retirement balance is yours, it is growing, and it sits inside the one account type built for exactly this kind of patient, long-horizon strategy.',
         mech: 'Buying long-dated calls and selling covered calls against them are permitted in most IRAs and Roth IRAs, subject to your broker\'s approval. Standard employer 401(k) plans usually do not offer options at all. TradeMind works with the IRA you already have, or one you can open in a day.',
+        defensive: 'No options permission in your IRA, or just starting out? QQQ Defensive trades only ETFs (QQQ, QLD, TQQQ and a cash-like fund), so it works in any brokerage account, including an IRA or Roth IRA, with no options approval.',
         ctaVerify: 'See the full audited record \u2192',
         ctaLedger: 'Browse every trade \u2192',
     },
     rateCalc: {
         kicker: 'Run the arithmetic yourself',
         title: 'What does a different rate do to the same $10,000?',
-        sub: 'Move the rate. Watch the ending balance. The 55% default is our backtested, model-priced CAGR rounded down.',
+        sub: "Move the rate, or pick a strategy. Each button is that strategy's backtested, model-priced CAGR rounded down, and each covers a different window. The default is the QQQ LEAPS button.",
+        chipDefensive: 'QQQ Defensive 13%',
+        chipLeaps: 'QQQ LEAPS 55%',
         lblAmount: 'Starting amount',
         lblRate: 'Annual rate (%)',
         lblYears: 'Years',
         outLabel: 'Ending balance',
         ctaVerify: 'See the full audited record \u2192',
-        disc: 'Compounding math for a rate you choose. The 55% default matches our backtested, model-priced result over one 5.6-year window that included a near-flat 2022 and a -14.5% drawdown in late 2023. Sustained 55% CAGR over 15 years would far exceed almost any verified long-horizon public track record. No rate is guaranteed to persist.',
+        disc: 'Compounding math for a rate you choose. QQQ LEAPS 55%: our backtested, model-priced result over one 5.6-year window (Jan 2021 to Aug 2026) that included a near-flat 2022 and a -14.5% drawdown in late 2023. QQQ Defensive 13%: our out-of-sample backtest on real hourly ETF prices (May 2021 to June 2026, 5.2 years, trading costs charged) with a -15.0% worst fall. Sustained 55% CAGR over 15 years would far exceed almost any verified long-horizon public track record. No rate is guaranteed to persist.',
     },
 };
 
@@ -251,6 +257,7 @@ const ES_SECTIONS: SectionsCopy = {
         h1a: 'Tu cuenta va en piloto automático',
         h1b: 'Es hora de un copiloto que la vuele más alto',
         sub: 'La mayoría de los inversores están en piloto automático sin forma de ajustar el riesgo, o persiguiendo titulares sin un plan de vuelo. Más información no arregla eso. La estructura sí. TradeMind nunca toca tu cuenta. Te da un proceso repetible: cada decisión primero revisa el régimen de mercado, la evidencia del modelo y el riesgo del portafolio, y el razonamiento queda registrado antes de que actúes. Tú sigues pilotando el avión. Nosotros te damos los instrumentos para volarlo con disciplina.',
+        plans: 'Dos planes, un solo proceso. QQQ LEAPS usa opciones y requiere permiso de opciones. QQQ Defensive solo mantiene ETFs, no requiere permiso de opciones y está pensado para mantener la peor caída poco profunda.',
         ctaPrimary: 'Comienza la historia',
         ctaSecondary: 'Lee el expediente',
         ctaLedger: 'Explora cada operación \u2192',
@@ -319,7 +326,7 @@ const ES_SECTIONS: SectionsCopy = {
             },
             {
                 t: 'Las pérdidas también están en el registro',
-                p: 'El capítulo del overlay admite dónde la venta de prima devolvió sus ganancias. El capítulo del drawdown muestra la peor caída por completo: una baja de 30,4 por ciento que tardó seis semanas en tocar fondo en la ventana de 15 meses verificada con la cinta, y una caída más suave de 17,8 por ciento en el backtest del modelo de 5 años. Ambas están en el registro. Mostrarte cuándo el modelo se equivocó es la única forma de que confíes cuando acierta.',
+                p: 'El capítulo del overlay admite dónde la venta de prima devolvió sus ganancias. El capítulo del drawdown muestra la peor caída por completo: una baja de 30,4 por ciento que tardó seis semanas en tocar fondo en la ventana de 15 meses verificada con la cinta, y una caída más suave de 14,5 por ciento en el backtest del modelo de 5 años. Ambas están en el registro. Mostrarte cuándo el modelo se equivocó es la única forma de que confíes cuando acierta.',
             },
         ],
     },
@@ -329,7 +336,7 @@ const ES_SECTIONS: SectionsCopy = {
         p1: 'Un copiloto no agarra los controles cada vez que hay turbulencia. Espera el momento en que los instrumentos coinciden, y entonces actúa con decisión.',
         p2: 'En cinco años y medio, el modelo encontró once entradas que valían la pena, unas dos al año. Ha pasado semanas enteras en efectivo, sin una sola entrada que cruzara los filtros. No es un mal funcionamiento. Es la disciplina.',
         cap: 'Once entradas en cinco años y medio. Cada una está en el registro de abajo.',
-        window: 'Esta gráfica cubre la ventana verificada con la cinta de 2021 a 2026, 11 entradas reales. El 36,3 por ciento de la calculadora de abajo es el backtest con precios de modelo sobre la misma ventana. Mismos años, dos motores, cada uno etiquetado donde aparece.',
+        window: 'Esta gráfica cubre la ventana de backtest del modelo de 2021 a 2026, 1,570 ejecuciones entre entradas LEAPS, calls cortas y put spreads semanales de SMH. El 55,1 por ciento de la calculadora de abajo es el backtest con precios de modelo sobre la misma ventana.',
         legendEntry: 'Entrada tomada',
         legendWait: 'Esperando en efectivo, ningún setup cruzó los filtros',
         yAxis: 'Duración de la posición (meses)',
@@ -355,28 +362,28 @@ const ES_SECTIONS: SectionsCopy = {
         },
         v4Name: 'QQQ LEAPS (backtest)',
         qqqName: 'QQQ buy & hold',
-        v4: { total: '+464.2%', cagr: '36.3%', sharpe: '1.475', maxdd: '-17.8%', calmar: '2.04' },
-        qqq: { total: '+136.4%', cagr: '16.6%', sharpe: '0.795', maxdd: '-35.6%', calmar: '0.47' },
-        footnote: 'Peor período de drawdown: TradeMind, sep a oct 2023. QQQ buy & hold, nov 2021 a dic 2022.',
+        v4: { total: '+1,070.7%', cagr: '55.1%', sharpe: '1.83', maxdd: '-14.5%', calmar: '3.79' },
+        qqq: { total: '+136.4%', cagr: '16.6%', sharpe: '0.79', maxdd: '-35.6%', calmar: '0.47' },
+        footnote: 'Peor período de drawdown: TradeMind, oct 2023. QQQ buy & hold, nov 2021 a dic 2022.',
         callout: 'Nuestro hoyo más profundo tardó dos meses en cavarse. El de buy and hold tardó catorce.',
         verifyIntro: 'Cada operación, cada precio y cada supuesto detrás de esta tabla está publicado: el libro mayor completo, la curva de capital diaria y la metodología completa con sus limitaciones, a la vista.',
         verifyLink: 'Audita el registro tú mismo →',
         caption: 'Ventana continua 2021 a 2026, 5,6 años, con precios de modelo. Rendimiento hipotético de backtest: no logrado por ninguna cuenta real, no es trading en vivo y no es una predicción. El próximo drawdown podría ser más profundo. Cada entrada, salida y pérdida de este historial está en el registro de abajo.',
     },
     basicRecord: {
-        kicker: 'QQQ Basic',
+        kicker: 'QQQ Defensive',
         title: 'El plan con ETFs: sin permiso de opciones y una peor caída menor',
-        p: 'QQQ Basic solo mantiene ETFs (QQQ, QLD, TQQQ y un fondo similar al efectivo, SGOV), por lo que funciona en cualquier cuenta de bróker y no requiere permiso para operar opciones. Está diseñado para mantener poco profunda la peor caída, lo que lo convierte en un punto de partida más estable para suscriptores nuevos que aceptan renunciar a parte del alza en los años fuertes.',
+        p: 'QQQ Defensive solo mantiene ETFs (QQQ, QLD, TQQQ y un fondo similar al efectivo, SGOV), por lo que funciona en cualquier cuenta de bróker y no requiere permiso para operar opciones. Está diseñado para mantener poco profunda la peor caída, lo que lo convierte en un punto de partida más estable para suscriptores nuevos que aceptan renunciar a parte del alza en los años fuertes.',
         tipTotal: 'Crecimiento acumulado durante la ventana de 5,2 años, antes de impuestos. Es la forma más favorecedora de presentar un resultado, y por eso aparece junto a cuatro medidas de riesgo en lugar de sola.',
         cols: { total: 'Rendimiento total', cagr: 'CAGR', sharpe: 'Sharpe', maxdd: 'Max DD', calmar: 'Calmar' },
-        basicName: 'QQQ Basic (backtest)',
+        basicName: 'QQQ Defensive (backtest)',
         qqqName: 'QQQ buy & hold',
         basic: { total: '+93.9%', cagr: '13.7%', sharpe: '1.05', maxdd: '-15.0%', calmar: '0.91' },
         qqq: { total: '+119.7%', cagr: '16.5%', sharpe: '0.79', maxdd: '-36.8%', calmar: '0.45' },
-        footnote: 'Ambas filas cubren las mismas fechas, del 7 de mayo de 2021 al 30 de junio de 2026 (5,2 años). Peor período de drawdown: QQQ Basic, julio de 2024 a junio de 2025. QQQ buy & hold, noviembre de 2021 a octubre de 2022.',
-        callout: 'QQQ Basic ganó menos que QQQ en esta ventana, con una peor caída de menos de la mitad de tamaño. Se quedó atrás en años fuertes como 2023, 2024 y 2025, y perdió 3,4% en 2022 cuando QQQ perdió 33,0%.',
+        footnote: 'Ambas filas cubren las mismas fechas, del 7 de mayo de 2021 al 30 de junio de 2026 (5,2 años). Peor período de drawdown: QQQ Defensive, julio de 2024 a junio de 2025. QQQ buy & hold, noviembre de 2021 a octubre de 2022.',
+        callout: 'QQQ Defensive ganó menos que QQQ en esta ventana, con una peor caída de menos de la mitad de tamaño. Se quedó atrás en años fuertes como 2023, 2024 y 2025, y perdió 3,4% en 2022 cuando QQQ perdió 33,0%.',
         verifyIntro: 'El método, los resultados año por año, las limitaciones y los datos descargables de esta tabla están publicados, incluidos los costos cobrados en cada operación.',
-        verifyLink: 'Ver el historial completo de QQQ Basic →',
+        verifyLink: 'Ver el historial completo de QQQ Defensive →',
         caption: 'Backtest walk-forward fuera de muestra con precios horarios reales de ETFs, de mayo de 2021 a junio de 2026, nivel de riesgo predeterminado, después de costos de trading modelados (sin comisión, con el spread comprador-vendedor). Rendimiento hipotético de backtest: no logrado por ninguna cuenta real, no es trading en vivo y no es una predicción. El rendimiento pasado no es necesariamente indicativo de resultados futuros. El próximo drawdown podría ser más profundo que -15,0%.',
     },
     life: {
@@ -390,19 +397,22 @@ const ES_SECTIONS: SectionsCopy = {
         title: 'En piloto automático o persiguiendo titulares. Ninguno es un proceso.',
         p: 'La brecha no es el ahorro. Es la activación. Ese saldo de retiro es tuyo, está creciendo, y vive dentro del único tipo de cuenta pensado exactamente para este tipo de estrategia paciente y de largo plazo.',
         mech: 'Comprar calls de largo plazo y vender calls cubiertas contra ellos está permitido en la mayoría de las IRA y Roth IRA, sujeto a la aprobación de tu bróker. Los planes 401(k) de empleador estándar normalmente no ofrecen opciones en absoluto. TradeMind funciona con la IRA que ya tienes, o con una que puedes abrir en un día.',
+        defensive: '¿Sin permiso de opciones en tu IRA, o recién empezando? QQQ Defensive opera solo ETFs (QQQ, QLD, TQQQ y un fondo similar al efectivo), así que funciona en cualquier cuenta de bróker, incluida una IRA o Roth IRA, sin aprobación de opciones.',
         ctaVerify: 'Ver el registro auditado completo \u2192',
         ctaLedger: 'Explora cada operación \u2192',
     },
     rateCalc: {
         kicker: 'Haz la aritmética tú mismo',
         title: '¿Qué hace una tasa distinta con los mismos $10,000?',
-        sub: 'Mueve la tasa. Observa el saldo final. El 36% por defecto es nuestro CAGR de backtest con precio de modelo, redondeado hacia abajo.',
+        sub: 'Mueve la tasa o elige una estrategia. Cada botón es el CAGR de backtest con precio de modelo de esa estrategia, redondeado hacia abajo, y cada uno cubre una ventana distinta. El valor por defecto es el botón de QQQ LEAPS.',
+        chipDefensive: 'QQQ Defensive 13%',
+        chipLeaps: 'QQQ LEAPS 55%',
         lblAmount: 'Monto inicial',
         lblRate: 'Tasa anual (%)',
         lblYears: 'Años',
         outLabel: 'Saldo final',
         ctaVerify: 'Ver el registro auditado completo \u2192',
-        disc: 'Aritmética de capitalización para una tasa que eliges tú. El 36% por defecto coincide con nuestro resultado de backtest con precio de modelo en una ventana de 5.6 años que incluyó un año perdedor del -9.5% y un 2025 casi plano. Un CAGR sostenido del 36% durante 15 años superaría con mucho casi cualquier registro público verificado de largo plazo. Ninguna tasa está garantizada a persistir.',
+        disc: 'Aritmética de capitalización para una tasa que eliges tú. QQQ LEAPS 55%: nuestro resultado de backtest con precio de modelo en una ventana de 5.6 años (enero 2021 a agosto 2026) que incluyó un 2022 casi plano y un drawdown de -14.5% a finales de 2023. QQQ Defensive 13%: nuestro backtest fuera de muestra con precios horarios reales de ETFs (mayo 2021 a junio 2026, 5.2 años, con costos de trading) y una peor caída de -15.0%. Un CAGR sostenido del 55% durante 15 años superaría con mucho casi cualquier registro público verificado de largo plazo. Ninguna tasa está garantizada a persistir.',
     },
 };
 
@@ -413,6 +423,7 @@ const ZH_SECTIONS: SectionsCopy = {
         h1a: '你的账户在自动驾驶',
         h1b: '是时候让副驾驶带你飞得更高',
         sub: '大多数投资者要么处于自动驾驶状态、无法调整风险,要么追着新闻头条、毫无飞行计划。更多信息解决不了这个问题,结构才可以。TradeMind 从不触碰你的账户。它给你一个可重复的流程:每个决策先检查市场状态、模型证据和组合风险,推理过程在你行动前就已记录。飞机仍由你驾驶,我们给你仪表,让你带着纪律飞行。',
+        plans: '两个方案,同一套流程。QQQ LEAPS 使用期权,需要期权权限。QQQ Defensive 只持有 ETF,不需要期权权限,旨在让最差跌幅保持较浅。',
         ctaPrimary: '开始了解',
         ctaSecondary: '查看记录',
         ctaLedger: '浏览每一笔交易 \u2192',
@@ -481,7 +492,7 @@ const ZH_SECTIONS: SectionsCopy = {
             },
             {
                 t: '亏损同样记在账本里',
-                p: '叠加策略那一章坦然写出卖权利金在哪些行情里吐回了收益。回撤那一章完整展示最坏一幕:在 15 个月行情核验窗口里一次 30.4% 的下跌,花了六周才见底;在 5 年模型回测里则是更温和的 17.8% 低点。两个都在账本里。让你看到模型错的时候,你才能信任它对的时候。',
+                p: '叠加策略那一章坦然写出卖权利金在哪些行情里吐回了收益。回撤那一章完整展示最坏一幕:在 15 个月行情核验窗口里一次 30.4% 的下跌,花了六周才见底;在 5 年模型回测里则是更温和的 14.5% 低点。两个都在账本里。让你看到模型错的时候,你才能信任它对的时候。',
             },
         ],
     },
@@ -491,7 +502,7 @@ const ZH_SECTIONS: SectionsCopy = {
         p1: '副驾驶不会一遇到颠簸就抢操纵杆。它等待所有仪表一致的瞬间,然后果断行动。',
         p2: '五年半里,模型只找到十一次值得出手的入场,大约每年两次。它曾一连数周空仓等待,没有任何一次入场通过全部闸门。这不是故障,而是纪律。',
         cap: '五年半,十一次入场。每一次都记录在下面的账本中。',
-        window: '此图覆盖 2021 到 2026 的行情核验窗口,共 11 次真实入场。下方计算器里的 36.3%,是同一窗口上的模型定价回测。年份相同,引擎不同,各自标注在出现的位置。',
+        window: '此图覆盖 2021 到 2026 的模型回测窗口,共 1,570 笔成交,包括 LEAPS 入场、短期看涨期权和每周 SMH 看跌价差。下方计算器里的 55.1%,是同一窗口上的模型定价回测。',
         legendEntry: '实际入场',
         legendWait: '空仓等待,无任何 setup 通过闸门',
         yAxis: '持仓时长(月)',
@@ -517,28 +528,28 @@ const ZH_SECTIONS: SectionsCopy = {
         },
         v4Name: 'QQQ LEAPS (backtest)',
         qqqName: 'QQQ 买入并持有',
-        v4: { total: '+464.2%', cagr: '36.3%', sharpe: '1.475', maxdd: '-17.8%', calmar: '2.04' },
-        qqq: { total: '+136.4%', cagr: '16.6%', sharpe: '0.795', maxdd: '-35.6%', calmar: '0.47' },
-        footnote: '最差回撤区间:TradeMind,2023 年 9 月到 10 月。QQQ 买入并持有,2021 年 11 月到 2022 年 12 月。',
+        v4: { total: '+1,070.7%', cagr: '55.1%', sharpe: '1.83', maxdd: '-14.5%', calmar: '3.79' },
+        qqq: { total: '+136.4%', cagr: '16.6%', sharpe: '0.79', maxdd: '-35.6%', calmar: '0.47' },
+        footnote: '最差回撤区间:TradeMind,2023 年 10 月。QQQ 买入并持有,2021 年 11 月到 2022 年 12 月。',
         callout: '我们最深的坑,两个月挖成。买入并持有的那个,花了十四个月。',
         verifyIntro: '这张表背后的每一笔交易、每一个价格、每一个假设都已公开:完整的账本、每日净值曲线,以及包含全部局限性的完整方法论。',
         verifyLink: '亲自审计这份记录 →',
         caption: '2021 到 2026 连续窗口,5.6 年,模型定价。假设性回测表现:没有任何真实账户实现过,不是实盘交易,也不是预测。下一次回撤可能更深。此记录中的每一次入场、出场和亏损,都记录在下方的账本里。',
     },
     basicRecord: {
-        kicker: 'QQQ Basic',
+        kicker: 'QQQ Defensive',
         title: 'ETF 方案:无需期权权限,最差跌幅更浅',
-        p: 'QQQ Basic 只持有 ETF(QQQ、QLD、TQQQ 和类现金基金 SGOV),因此在任何券商账户里都能使用,不需要期权交易权限。它的设计目标是让最差跌幅保持较浅,适合愿意在强势年份放弃部分涨幅、希望起步更平稳的新订阅者。',
+        p: 'QQQ Defensive 只持有 ETF(QQQ、QLD、TQQQ 和类现金基金 SGOV),因此在任何券商账户里都能使用,不需要期权交易权限。它的设计目标是让最差跌幅保持较浅,适合愿意在强势年份放弃部分涨幅、希望起步更平稳的新订阅者。',
         tipTotal: '整个 5.2 年窗口的累计增长,税前。这是对结果最有利的表述方式,所以它旁边并列着四项风险指标,而不是单独出现。',
         cols: { total: '总回报', cagr: 'CAGR', sharpe: 'Sharpe', maxdd: '最大回撤', calmar: 'Calmar' },
-        basicName: 'QQQ Basic(回测)',
+        basicName: 'QQQ Defensive(回测)',
         qqqName: 'QQQ 买入并持有',
         basic: { total: '+93.9%', cagr: '13.7%', sharpe: '1.05', maxdd: '-15.0%', calmar: '0.91' },
         qqq: { total: '+119.7%', cagr: '16.5%', sharpe: '0.79', maxdd: '-36.8%', calmar: '0.45' },
-        footnote: '两行使用相同日期,2021 年 5 月 7 日到 2026 年 6 月 30 日(5.2 年)。最差回撤区间:QQQ Basic,2024 年 7 月到 2025 年 6 月。QQQ 买入并持有,2021 年 11 月到 2022 年 10 月。',
-        callout: '在这个窗口里,QQQ Basic 的收益低于 QQQ,但最差跌幅不到后者的一半。它在 2023、2024 和 2025 这样的强势年份落后,在 2022 年 QQQ 下跌 33.0% 时只亏 3.4%。',
+        footnote: '两行使用相同日期,2021 年 5 月 7 日到 2026 年 6 月 30 日(5.2 年)。最差回撤区间:QQQ Defensive,2024 年 7 月到 2025 年 6 月。QQQ 买入并持有,2021 年 11 月到 2022 年 10 月。',
+        callout: '在这个窗口里,QQQ Defensive 的收益低于 QQQ,但最差跌幅不到后者的一半。它在 2023、2024 和 2025 这样的强势年份落后,在 2022 年 QQQ 下跌 33.0% 时只亏 3.4%。',
         verifyIntro: '这张表背后的方法、逐年结果、局限性和可下载数据都已公开,包括每笔交易计入的成本。',
-        verifyLink: '查看 QQQ Basic 的完整记录 →',
+        verifyLink: '查看 QQQ Defensive 的完整记录 →',
         caption: '基于真实小时级 ETF 价格的样本外滚动回测,2021 年 5 月到 2026 年 6 月,默认风险等级,已扣除模拟交易成本(无佣金,计入买卖价差)。假设性回测表现:没有任何真实账户实现过,不是实盘交易,也不是预测。过往表现不一定代表未来结果。下一次回撤可能比 -15.0% 更深。',
     },
     life: {
@@ -552,19 +563,22 @@ const ZH_SECTIONS: SectionsCopy = {
         title: '自动驾驶,或追逐头条。两者都不是流程。',
         p: '缺口不在储蓄,而在激活。那笔退休账户余额是你的,还在增长,而它所在的账户类型,恰恰最适合这种耐心的长期策略。',
         mech: '在大多数 IRA 和 Roth IRA 中,买入长期看涨期权并备兑卖出看涨期权是允许的,具体以券商批准为准。标准的雇主 401(k) 计划通常完全不提供期权交易。TradeMind 适用于你已有的 IRA,或者当天就能开好的新 IRA。',
+        defensive: 'IRA 里没有期权权限,或者刚刚起步?QQQ Defensive 只交易 ETF(QQQ、QLD、TQQQ 和一只类现金基金),因此在任何券商账户里都能使用,包括 IRA 或 Roth IRA,无需期权审批。',
         ctaVerify: '查看完整审计记录 \u2192',
         ctaLedger: '浏览每一笔交易 \u2192',
     },
     rateCalc: {
         kicker: '自己动手算一算',
         title: '换一个利率,同样的 1 万美元会怎样?',
-        sub: '移动利率,看最终余额。默认的 36% 来自我们回测的模型定价年化收益,向下取整。',
+        sub: '移动利率,或选择一个策略。每个按钮是该策略回测、模型定价的年化收益(向下取整),各自覆盖不同的窗口。默认值是 QQQ LEAPS 按钮。',
+        chipDefensive: 'QQQ Defensive 13%',
+        chipLeaps: 'QQQ LEAPS 55%',
         lblAmount: '初始金额',
         lblRate: '年利率 (%)',
         lblYears: '年数',
         outLabel: '最终余额',
         ctaVerify: '查看完整审计记录 \u2192',
-        disc: '这是你选择的利率下的复利算术。默认 36% 对应我们回测的模型定价结果,该 5.6 年窗口包含一个 -9.5% 的亏损年份和近乎持平的 2025 年。若 36% 的年化收益持续 15 年,将远超几乎所有经过验证的长期公开业绩记录。没有任何利率能保证持续。',
+        disc: '这是你选择的利率下的复利算术。QQQ LEAPS 55%:我们回测的模型定价结果,覆盖一个 5.6 年窗口(2021 年 1 月到 2026 年 8 月),其中包含近乎持平的 2022 年和 2023 年末 -14.5% 的回撤。QQQ Defensive 13%:基于真实小时级 ETF 价格的样本外回测(2021 年 5 月到 2026 年 6 月,5.2 年,已计入交易成本),最差跌幅 -15.0%。若 55% 的年化收益持续 15 年,将远超几乎所有经过验证的长期公开业绩记录。没有任何利率保证会持续。',
     },
 };
 

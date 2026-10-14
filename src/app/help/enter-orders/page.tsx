@@ -8,7 +8,7 @@ import { LegalFooter } from '@/components/marketing/LegalFooter';
 export const metadata: Metadata = {
     title: 'How to Enter Your Orders | TradeMind@bot',
     description:
-        'Step-by-step order entry walkthroughs for QQQ LEAPS and QQQ Basic signals at Charles Schwab, tastytrade, Fidelity, Robinhood, and Interactive Brokers, including the approval level each order type requires.',
+        'Step-by-step order entry walkthroughs for QQQ LEAPS and QQQ Defensive signals at Charles Schwab, tastytrade, Fidelity, Robinhood, and Interactive Brokers, including the approval level each order type requires.',
 };
 
 export default function EnterOrdersHelpPage() {
@@ -91,7 +91,7 @@ export default function EnterOrdersHelpPage() {
                     <h2 className="text-xl font-bold text-white mb-4">Getting the right trading permissions</h2>
                     <div className="space-y-4 text-sm text-white/80 leading-relaxed">
                         <p>
-                            QQQ Basic (ETF rebalances) needs no options approval at all. Any brokerage account can
+                            QQQ Defensive (ETF rebalances) needs no options approval at all. Any brokerage account can
                             follow it.
                         </p>
                         <p>

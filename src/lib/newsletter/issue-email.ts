@@ -125,7 +125,7 @@ function offerBlock(sub: SubscriberForEmail, daysLeft: number | null): string {
             ${btn('Open my TradeMind account', `${BASE_URL}/accounts`)}`);
     }
     return wrap(`<p style="margin:0;font-size:15px;color:#111827"><strong>Every address that received this newsletter carries 30% off a first-year plan.</strong></p>
-        <p style="margin:8px 0 0;font-size:13.5px;color:#4b5563">It is already built in: log in at trademind.bot with ${esc(sub.email)} and the discount applies automatically. QQQ Basic and QQQ LEAPS, annual billing, every signal verified in the public ledger. <a href="${BASE_URL}/newsletter/offer" style="color:#8B5CF6">Offer terms</a></p>
+        <p style="margin:8px 0 0;font-size:13.5px;color:#4b5563">It is already built in: log in at trademind.bot with ${esc(sub.email)} and the discount applies automatically. QQQ Defensive and QQQ LEAPS, annual billing, every signal verified in the public ledger. <a href="${BASE_URL}/newsletter/offer" style="color:#8B5CF6">Offer terms</a></p>
         ${btn('Claim 30% off annual plan', `${BASE_URL}/plans?email=${encodeURIComponent(sub.email)}`)}`);
 }
 

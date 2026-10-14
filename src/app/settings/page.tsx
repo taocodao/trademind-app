@@ -69,7 +69,7 @@ export default function SettingsPage() {
                         <div>
                             <h3 className="font-semibold text-yellow-400 mb-1 text-sm">Risk Warning</h3>
                             <p className="text-xs text-tm-muted leading-relaxed">
-                                QQQ Basic can hold leveraged ETFs such as TQQQ and QLD in bull regimes, which
+                                QQQ Defensive can hold leveraged ETFs such as TQQQ and QLD in bull regimes, which
                                 increases loss exposure during market reversals. QQQ LEAPS options carry
                                 leverage, time decay, and volatility risk.
                             </p>

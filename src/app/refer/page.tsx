@@ -117,8 +117,8 @@ export function ReferDashboard() {
 
             <section className="mb-6 overflow-hidden rounded-2xl border border-tm-purple/30 bg-gradient-to-br from-tm-purple/15 to-transparent p-6">
                 <div className="mb-4 flex items-center gap-3"><Gift className="h-6 w-6 text-purple-300" /><h2 className="text-xl font-bold">Give a friend extra time. Earn your own.</h2></div>
-                <p className="max-w-2xl text-sm leading-relaxed text-zinc-300">Your friend starts with the same free month. When they subscribe, we add about two extra months to their plan, a $50 grant in subscription days ({program?.refereeDaysBasic ?? 71} days on QQQ Basic or {program?.refereeDaysLeaps ?? 53} on QQQ LEAPS).</p>
-                <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-300">Once they stay active for {program?.vestingDays ?? 14} days, you get a $100 grant in subscription days, about four months ({program?.referrerDaysBasic ?? 142} days on QQQ Basic or {program?.referrerDaysLeaps ?? 107} on QQQ LEAPS). Apply any amount of it to any of your accounts, whenever you like.</p>
+                <p className="max-w-2xl text-sm leading-relaxed text-zinc-300">Your friend starts with the same free month. When they subscribe, we add about two extra months to their plan, a $50 grant in subscription days ({program?.refereeDaysBasic ?? 71} days on QQQ Defensive or {program?.refereeDaysLeaps ?? 53} on QQQ LEAPS).</p>
+                <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-300">Once they stay active for {program?.vestingDays ?? 14} days, you get a $100 grant in subscription days, about four months ({program?.referrerDaysBasic ?? 142} days on QQQ Defensive or {program?.referrerDaysLeaps ?? 107} on QQQ LEAPS). Apply any amount of it to any of your accounts, whenever you like.</p>
             </section>
 
             {data?.code ? <div className="mb-6"><ShareSection promoCode={data.code} referralLink={data.shareLink} userTier="member" isCreator={false} />
@@ -199,7 +199,7 @@ export function ReferDashboard() {
                                                         <option value="">Apply to account...</option>
                                                         {accounts.map((account) => (
                                                             <option key={account.id} value={account.id}>
-                                                                {account.name} ({account.membership?.plan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Basic'})
+                                                                {account.name} ({account.membership?.plan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Defensive'})
                                                             </option>
                                                         ))}
                                                     </select>

@@ -97,14 +97,14 @@ export function OnboardingWelcomeModal() {
                         <div className="animate-in slide-in-from-right-4 duration-300 fade-in">
                             <h3 className="font-semibold mb-3 text-tm-purple">Choose Your Plan</h3>
                             <p className="text-sm text-zinc-300 mb-4">
-                                Your virtual account is created automatically at checkout: QQQ Basic starts with $10,000, QQQ LEAPS with $25,000. You can adjust the principal, name, and alert email afterward.
+                                Your virtual account is created automatically at checkout: QQQ Defensive starts with $10,000, QQQ LEAPS with $25,000. You can adjust the principal, name, and alert email afterward.
                             </p>
 
                             <button
                                 onClick={() => { handleComplete(); router.push('/upgrade?plan=basic'); }}
                                 className="w-full py-3 mb-3 rounded-lg font-bold border border-[#4f8ef7]/50 hover:bg-[#4f8ef7]/10 text-white transition flex items-center justify-between px-4"
                             >
-                                <span>QQQ Basic</span>
+                                <span>QQQ Defensive</span>
                                 <span className="text-sm text-tm-muted">${PRICING.plans.turbocore_pro_bundle.annual}/yr · no options approval needed</span>
                             </button>
                             <button
@@ -116,7 +116,7 @@ export function OnboardingWelcomeModal() {
                             </button>
 
                             <p className="mt-4 text-[11px] text-tm-muted">
-                                Signals process at 3:30 PM ET each trading day and arrive by email. Your card is charged at checkout; cancel within your first month and the payment is refunded in full.
+                                Signals process each trading day (3:00 PM ET for QQQ Defensive, 3:30 PM ET for QQQ LEAPS) and arrive by email. Your card is charged at checkout; cancel within your first month and the payment is refunded in full.
                             </p>
                             <button
                                 onClick={() => { handleComplete(); router.push('/accounts'); }}

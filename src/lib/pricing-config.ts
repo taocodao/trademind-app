@@ -35,7 +35,7 @@ export const PRICING = {
     plans: {
         turbocore_pro_bundle: {
             key: 'turbocore_pro_bundle',
-            label: 'QQQ Basic',
+            label: 'QQQ Defensive',
             description: 'ETF only, so no options trading permission is needed. Built to keep the worst fall shallow: a steadier place for newer subscribers to start.',
             monthly: 30,            // reference rate — not sold monthly
             regularAnnual: 360,     // anchor price shown before the newsletter offer
@@ -43,7 +43,7 @@ export const PRICING = {
             annualPerMonth: 21,
             annualSavingsPct: 30,
             features: [
-                'QQQ Basic signal processed at 3:30 PM ET each trading day',
+                'QQQ Defensive signal processed at 3:00 PM ET each trading day',
                 'Email order instructions you enter at your own broker',
                 'Virtual account mirrors every signal order',
                 'No options approval needed at your broker',
@@ -72,7 +72,7 @@ export const PRICING = {
         full_access: {
             key: 'full_access',
             label: 'Full Access',
-            description: 'Both strategies: QQQ Basic + QQQ LEAPS',
+            description: 'Both strategies: QQQ Defensive + QQQ LEAPS',
             internal: true,         // trials/grants only — not offered for sale
             monthly: 70,            // reference: sum of the two reference rates
             annual: 588,            // reference: 252 + 336

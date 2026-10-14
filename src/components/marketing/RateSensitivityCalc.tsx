@@ -3,8 +3,8 @@
 /* RateSensitivityCalc — v3 hero plan §7.5. A sensitivity tool, not a wish
    machine: the visitor moves the annual rate and watches the same $10,000
    end somewhere very different. Defaults mirror the Card 1 arithmetic
-   ($10,000 at 36% for 15 years), presets show the honest collapse at lower
-   rates. Disclosure renders adjacent, always visible, per plan. No URL
+   ($10,000 at 55% for 15 years); the two presets are the QQQ Defensive and
+   QQQ LEAPS backtest CAGRs, rounded down. Disclosure renders adjacent, always visible, per plan. No URL
    prefill: inputs are user-driven only. */
 
 import { useMemo, useState } from 'react';
@@ -12,7 +12,8 @@ import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import { SECTIONS_I18N, SectionLang } from './sectionsI18n';
 
-const PRESETS = [8, 15, 25, 36];
+const DEFENSIVE_RATE = 13; // QQQ Defensive backtest CAGR 13.7%, rounded down
+const LEAPS_RATE = 55; // QQQ LEAPS backtest CAGR 55.1%, rounded down
 
 function fmt(n: number): string {
     return '$' + Math.round(n).toLocaleString('en-US');
@@ -25,7 +26,7 @@ export function RateSensitivityCalc() {
     const c = SECTIONS_I18N[lang].rateCalc;
 
     const [amount, setAmount] = useState(10000);
-    const [rate, setRate] = useState(36);
+    const [rate, setRate] = useState(LEAPS_RATE);
     const [years, setYears] = useState(15);
 
     const result = useMemo(
@@ -75,13 +76,16 @@ export function RateSensitivityCalc() {
                             />
                         </label>
                         <div className="tm-rc-presets">
-                            {PRESETS.map((p) => (
+                            {[
+                                { rate: DEFENSIVE_RATE, label: c.chipDefensive },
+                                { rate: LEAPS_RATE, label: c.chipLeaps },
+                            ].map((p) => (
                                 <button
-                                    key={p}
-                                    className={`tm-rc-preset ${rate === p ? 'tm-rc-preset-on' : ''}`}
-                                    onClick={() => setRate(p)}
+                                    key={p.rate}
+                                    className={`tm-rc-preset ${rate === p.rate ? 'tm-rc-preset-on' : ''}`}
+                                    onClick={() => setRate(p.rate)}
                                 >
-                                    {p}%
+                                    {p.label}
                                 </button>
                             ))}
                         </div>

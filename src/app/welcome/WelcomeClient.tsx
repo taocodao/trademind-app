@@ -24,7 +24,7 @@ export default function WelcomeClient() {
     }, [sessionId]);
 
     const payEmail = info?.valid && info.paid ? (info.email ?? '') : '';
-    const planName = info?.plan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Basic';
+    const planName = info?.plan === 'leaps' ? 'QQQ LEAPS' : 'QQQ Defensive';
     const balance = info?.plan === 'leaps' ? '$25,000' : '$10,000';
     const mismatch = authenticated && !!payEmail && !!signedEmail && !sameEmail(payEmail, signedEmail);
 

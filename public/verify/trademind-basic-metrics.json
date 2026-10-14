@@ -1,5 +1,5 @@
 {
-  "strategy": "QQQ Basic (moderate risk level, v3.3 live configuration)",
+  "strategy": "QQQ Defensive (moderate risk level, v3.3 live configuration)",
   "initial_capital": 25000.0,
   "window_start": "2021-05-07",
   "window_end": "2026-06-30",

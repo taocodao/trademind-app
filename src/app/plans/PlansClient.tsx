@@ -13,7 +13,7 @@ const CARDS: Array<{ plan: Plan; name: string; blurb: string; regular: number; p
         plan: 'basic', name: PRICING.plans.turbocore_pro_bundle.label, blurb: 'Regime-aware ML signal. Any brokerage account works.',
         regular: PRICING.plans.turbocore_pro_bundle.regularAnnual, price: PRICING.plans.turbocore_pro_bundle.annual,
         start: '$10,000',
-        points: ['Signal processed at 3:30 PM ET each trading day', 'Email order instructions you enter at your own broker', 'No options approval needed'],
+        points: ['Signal processed at 3:00 PM ET each trading day', 'Email order instructions you enter at your own broker', 'No options approval needed'],
     },
     {
         plan: 'leaps', name: PRICING.plans.qqq_leaps.label, blurb: 'ML-powered long-term options on QQQ.',
@@ -27,7 +27,7 @@ const STEPS = [
     ['Confirm your email', 'This address becomes your TradeMind login. There is no password. Your signals are emailed to it too.'],
     ['Pay securely with Stripe', 'Annual plan, charged today at the 30% subscriber price. Cancel within your first month and the payment is refunded in full.'],
     ['Sign in with the same email', 'Right after payment you land on the sign in screen with your email already filled in. Enter the one-time code we send to that address.'],
-    ['Your account opens automatically', 'Your virtual account is created for you, $25,000 for QQQ LEAPS or $10,000 for QQQ Basic, and signals arrive by email from the next trading day.'],
+    ['Your account opens automatically', 'Your virtual account is created for you, $25,000 for QQQ LEAPS or $10,000 for QQQ Defensive, and signals arrive by email from the next trading day.'],
 ];
 
 export default function PlansClient({ linkEmail, justSubscribed = false }: { linkEmail: string; justSubscribed?: boolean }) {
@@ -93,7 +93,7 @@ export default function PlansClient({ linkEmail, justSubscribed = false }: { lin
                 <p style={{ fontSize: 12, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#a78bfa', fontWeight: 700 }}>TradeMind plans</p>
                 <h1 style={{ fontSize: 34, margin: '10px 0 8px', fontWeight: 800 }}>Choose your plan</h1>
                 <p style={{ color: '#94a3b8', fontSize: 15, lineHeight: 1.6, maxWidth: 660 }}>
-                    TradeMind is a signal service, not auto-trading. Each trading day we process the signal at 3:30 PM ET and email you the exact order to enter at your own broker.
+                    TradeMind is a signal service, not auto-trading. Each trading day we process the signal (3:00 PM ET for QQQ Defensive, 3:30 PM ET for QQQ LEAPS) and email you the exact order to enter at your own broker.
                 </p>
 
                 <ol style={{ listStyle: 'none', padding: 0, margin: '22px 0', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12 }}>

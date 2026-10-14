@@ -255,7 +255,7 @@ function AccountsPageInner() {
                         href="/upgrade?plan=basic"
                         className="flex items-center justify-center gap-2 py-3 rounded-xl font-bold border border-[#4f8ef7]/50 text-white transition hover:bg-[#4f8ef7]/10"
                     >
-                        Start QQQ Basic - $252/yr
+                        Start QQQ Defensive - $252/yr
                     </Link>
                 )}
                 {!accounts.some((a) => a.membership?.plan === 'leaps') && (

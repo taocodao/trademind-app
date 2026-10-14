@@ -16,9 +16,9 @@ function buildEmailHtml(referralUrl: string): string {
     <p><a href="${referralUrl}" style="color:#c4b5fd;word-break:break-all">${referralUrl}</a></p>
     <h2>How the day grants work</h2>
     <ul>
-      <li>Your friend receives a $50 subscription day grant at their first payment. That is about 71 days on QQQ Basic or 53 days on QQQ LEAPS.</li>
+      <li>Your friend receives a $50 subscription day grant at their first payment. That is about 71 days on QQQ Defensive or 53 days on QQQ LEAPS.</li>
       <li>Referred friends skip the free month and pay when they subscribe.</li>
-      <li>You receive a $100 subscription day grant on your designated reward account after your friend stays active for 14 days. That is about 142 days on QQQ Basic or 107 days on QQQ LEAPS.</li>
+      <li>You receive a $100 subscription day grant on your designated reward account after your friend stays active for 14 days. That is about 142 days on QQQ Defensive or 107 days on QQQ LEAPS.</li>
     </ul>
     <p style="color:#a1a1aa;font-size:13px">Day grants are subscription benefits, not cash and cannot be redeemed for cash.</p>
   </main>

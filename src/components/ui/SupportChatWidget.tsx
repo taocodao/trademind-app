@@ -10,7 +10,7 @@ type Message = { role: 'user' | 'assistant'; content: string };
 
 const APP_CHIPS = [
     'How do TradeMind signals reach my broker?',
-    'What is QQQ Basic?',
+    'What is QQQ Defensive?',
     'How do I enter a signal at my broker?',
     'How does the shadow ledger work?',
 ];

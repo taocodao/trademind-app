@@ -39,7 +39,7 @@ export const ORDER_TYPES: OrderTypeInfo[] = [
         key: 'etf',
         label: 'ETF rebalance',
         example: 'Buy 35 shares of QQQ, limit $707.50',
-        strategies: 'QQQ Basic',
+        strategies: 'QQQ Defensive',
     },
 ];
 

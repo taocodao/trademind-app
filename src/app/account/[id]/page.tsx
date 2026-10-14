@@ -151,7 +151,7 @@ export default function AccountDetailPage() {
             ? new Date(membership.current_period_end).toLocaleDateString()
             : 'the end of the paid period';
         const msg = refundDaysLeft !== null
-            ? `Cancel now? You are inside the first month, so the full payment is refunded and ${membership.plan === 'LEAPS' ? 'QQQ LEAPS' : 'QQQ Basic'} signal access ends today.`
+            ? `Cancel now? You are inside the first month, so the full payment is refunded and ${membership.plan === 'LEAPS' ? 'QQQ LEAPS' : 'QQQ Defensive'} signal access ends today.`
             : `Cancel now? Access continues until ${until} and the plan does not renew.`;
         if (!confirm(msg)) return;
         setBillingBusy(true);

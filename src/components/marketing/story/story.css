@@ -1135,3 +1135,29 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
     margin-top: 40px; padding: 18px 20px; border: 1px solid rgba(245,158,11,.45); border-radius: 12px; background: rgba(245,158,11,.06);
 }
 .tm-sim-card p { font-size: 15px; line-height: 1.65; margin: 10px 0 10px; opacity: .92; }
+
+/* Hero v4: one-line slogan, no eyebrow, no gap between headline lines, everything on one screen. */
+@media (min-width: 700px) {
+    .tm-hero2 .tm-slogan { max-width: none; white-space: nowrap; font-size: clamp(1.3rem, 0.7rem + 1.9vw, 1.9rem); }
+}
+.tm-hero2 .tm-h1 br { display: none; }
+.tm-hero2 .tm-slogan { margin-bottom: 2px; }
+.tm-hero2 .tm-h1 { margin: 4px 0 10px; line-height: 1.04; }
+.tm-hero2 .tm-h1-line:last-of-type { margin-top: 2px; }
+.tm-hero2 { padding-top: 18px; padding-bottom: 24px; }
+.tm-hero-ctapair { margin-top: 16px; }
+.tm-sim-wrap { margin-top: 12px; }
+.tm-sim-link { padding: 8px 14px; font-size: 13.5px; }
+.tm-herocards { margin-top: 18px; }
+@media (min-width: 1024px) {
+    .tm-hero2 .tm-sub + .tm-sub { margin-top: 8px; }
+}
+@media (min-width: 1024px) {
+    .tm-hero2 .tm-sub { font-size: 14.5px; line-height: 1.5; }
+    .tm-hero2 .tm-sub.tm-sub-plans { margin-top: 8px; font-size: 14.5px; }
+    .tm-hero-ctapair { margin-top: 12px; }
+    .tm-hero2 .tm-h1 { margin: 2px 0 6px; }
+    .tm-herocards { margin-top: 12px; }
+    .tm-herocard { padding: 11px 13px 10px; }
+    .tm-herocard-body { font-size: 12.5px; line-height: 1.5; }
+}

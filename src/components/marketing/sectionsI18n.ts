@@ -98,7 +98,7 @@ const EN_SECTIONS: SectionsCopy = {
         ctaSecondary: 'Read the record',
         ledgerLink: 'Open the ledger \u2192',
         simTag: 'Simulation',
-        simLink: 'Replay both strategies over two years. Hypothetical, not live trading. \u2192',
+        simLink: 'Past 2 years traded as if live: every trade and position. Simulation, not real trading. \u2192',
         cards: [
             {
                 numeral: '55.1%',
@@ -208,7 +208,7 @@ const EN_SECTIONS: SectionsCopy = {
         caption: '2021 to 2026 continuous window, 5.6 years, model-priced. Hypothetical backtested performance: not achieved by any actual account, not live trading, and not a prediction. The next drawdown could be deeper. Every entry, exit, and loss in this record is in the ledger below.',
     },
     basicRecord: {
-        simIntro: 'Want to see how both strategies would have traded over the last two years? A separate page replays that period as a clearly labeled simulation, with every trade and position listed. It is hypothetical and kept apart from the live record.',
+        simIntro: 'See the past two years traded as if live, with every trade and position listed. It is a simulation: hypothetical, not real trading, and kept apart from the live record.',
         simLink: 'Open the two-year simulation \u2192',
         kicker: 'QQQ Defensive',
         title: 'The ETF plan: no options permission, a shallower worst fall',
@@ -268,7 +268,7 @@ const ES_SECTIONS: SectionsCopy = {
         ctaLedger: 'Explora cada operación \u2192',
         ledgerLink: 'Abre el libro mayor \u2192',
         simTag: 'Simulación',
-        simLink: 'Repite ambas estrategias durante dos años (página en inglés). Hipotético, no es trading en vivo. \u2192',
+        simLink: 'Los últimos 2 años operados como en vivo: cada operación y posición. Simulación (página en inglés), no es trading real. \u2192',
         cards: [
             {
                 numeral: '55.1%',
@@ -378,7 +378,7 @@ const ES_SECTIONS: SectionsCopy = {
         caption: 'Ventana continua 2021 a 2026, 5,6 años, con precios de modelo. Rendimiento hipotético de backtest: no logrado por ninguna cuenta real, no es trading en vivo y no es una predicción. El próximo drawdown podría ser más profundo. Cada entrada, salida y pérdida de este historial está en el registro de abajo.',
     },
     basicRecord: {
-        simIntro: '¿Quieres ver cómo habrían operado ambas estrategias en los últimos dos años? Una página aparte (en inglés) repite ese periodo como una simulación claramente señalada, con cada operación y posición. Es hipotética y está separada del registro en vivo.',
+        simIntro: 'Mira los últimos dos años operados como en vivo, con cada operación y posición. Es una simulación (página en inglés): hipotética, no es trading real y está separada del registro en vivo.',
         simLink: 'Abrir la simulación de dos años \u2192',
         kicker: 'QQQ Defensive',
         title: 'El plan con ETFs: sin permiso de opciones y una peor caída menor',
@@ -438,7 +438,7 @@ const ZH_SECTIONS: SectionsCopy = {
         ctaLedger: '浏览每一笔交易 \u2192',
         ledgerLink: '打开账本 \u2192',
         simTag: '模拟',
-        simLink: '回放两种策略的两年历史（英文页面）。仅为假设，并非实盘交易。 \u2192',
+        simLink: '过去两年按实盘方式交易：每一笔交易和持仓（英文页面）。仅为模拟，并非真实交易。 \u2192',
         cards: [
             {
                 numeral: '55.1%',
@@ -548,7 +548,7 @@ const ZH_SECTIONS: SectionsCopy = {
         caption: '2021 到 2026 连续窗口,5.6 年,模型定价。假设性回测表现:没有任何真实账户实现过,不是实盘交易,也不是预测。下一次回撤可能更深。此记录中的每一次入场、出场和亏损,都记录在下方的账本里。',
     },
     basicRecord: {
-        simIntro: '想看两种策略在过去两年里会如何交易吗？另有一个页面（英文）把这段时间作为明确标注的模拟回放，列出每一笔交易和持仓。它只是假设性的，与实盘记录分开。',
+        simIntro: '查看过去两年按实盘方式交易的情况，列出每一笔交易和持仓。这是模拟（英文页面）：仅为假设，并非真实交易，与实盘记录分开。',
         simLink: '打开两年模拟 \u2192',
         kicker: 'QQQ Defensive',
         title: 'ETF 方案:无需期权权限,最差跌幅更浅',

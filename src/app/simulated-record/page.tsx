@@ -29,7 +29,7 @@ type Strat = {
 };
 
 const WINDOW = 'Oct 14, 2024 to Oct 13, 2026';
-const strategies = data.strategies as unknown as Strat[];
+const strategies = [...(data.strategies as unknown as Strat[])].sort((x, y) => (x.key === 'QQQ_LEAPS' ? -1 : 0) - (y.key === 'QQQ_LEAPS' ? -1 : 0));
 
 function money(n: number, digits = 0) {
     const s = Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits });
@@ -211,8 +211,8 @@ export default function SimulatedRecordPage() {
                 <section className="sr-section">
                     <h2 className="sr-h2">How the simulation was built <Badge /></h2>
                     <ul className="sr-list">
-                        <li><strong>QQQ Defensive.</strong> Starting amount $10,000, whole shares only. The rules decide on hourly bars, so one day can hold several simulated trades, while the live signal email goes out once a day at 3:00 PM Eastern. Trades fill on the next bar. Modeled costs are small bid and ask half spreads, with no commission. Through Jun 30, 2026 the simulation follows the published out-of-sample walk-forward record. For Jul 1 to Oct 13, 2026 the models were refit on the most recent data and run forward in the same way.</li>
                         <li><strong>QQQ LEAPS.</strong> Starting amount $25,000. Options are priced with a model (Black-Scholes) from QQQ prices, volatility and interest rates, not from real quotes, and strikes and expiries are theoretical rather than the listed ones. Costs include $1 per contract and a volatility scaled slippage allowance. The simulation covers the LEAPS and the short call overlay. It leaves out the SMH put spread sleeve that appears in the published record, so these figures are not comparable with that record.</li>
+                        <li><strong>QQQ Defensive.</strong> Starting amount $10,000, whole shares only. The rules decide on hourly bars, so one day can hold several simulated trades, while the live signal email goes out once a day at 3:00 PM Eastern. Trades fill on the next bar. Modeled costs are small bid and ask half spreads, with no commission. Through Jun 30, 2026 the simulation follows the published out-of-sample walk-forward record. For Jul 1 to Oct 13, 2026 the models were refit on the most recent data and run forward in the same way.</li>
                         <li><strong>Benchmark.</strong> QQQ buy and hold uses the same starting dollars and window, with dividend adjusted closing prices. It is shown for context only.</li>
                         <li><strong>Data.</strong> Historical QQQ, volatility and interest rate data from public and broker data feeds. Data errors and revisions would change the results.</li>
                     </ul>
@@ -243,6 +243,7 @@ export default function SimulatedRecordPage() {
                         TradeMind never connects to a brokerage or places an order. Options can lose their entire value, and leveraged funds can lose money quickly. TradeMind provides educational analysis only, not personalized investment advice.
                     </p>
                 </div>
+                <div className="sr-back-row sr-back-bottom"><Link href="/" className="sr-back">Back to the home page</Link></div>
             </div>
             <LegalFooter />
         </main>

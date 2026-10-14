@@ -103,7 +103,6 @@ export function CoPilotHero() {
         <section id="hero" className="tm-story tm-hero2">
             <div className="tm-hero2-inner">
                 <p role="doc-subtitle" className="tm-slogan">{c.slogan}</p>
-                <div className="tm-eyebrow">{c.eyebrow}</div>
                 <h1 className="tm-h1" ref={h1Ref}>
                     <span className="tm-h1-line">
                         {lines[0].map((word, i) => (

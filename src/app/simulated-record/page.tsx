@@ -231,7 +231,7 @@ export default function SimulatedRecordPage() {
                 <section className="sr-section">
                     <h2 className="sr-h2">Live accounts start from here</h2>
                     <p className="sr-p">
-                        The QQQ Defensive virtual account began on Oct 14, 2026 holding the cash and positions its simulation ended with. The QQQ LEAPS virtual account was seeded earlier from a version of the simulation without the SMH put spread sleeve, so it holds the LEAPS and the short call but no SMH spreads, and it started at a lower value than the simulation above ends with. The SMH sleeve is not part of the live LEAPS account yet. Cost basis is the simulated closing value, so live profit and loss starts at zero on that date. From then on, results come from the daily signals and are reported separately on the live record.
+                        The TradeMind virtual accounts for these two strategies begin holding the cash and positions the simulation ended with, with the QQQ Defensive account starting on Oct 14, 2026 and the QQQ LEAPS account including its 4 SMH put spreads from Oct 15, 2026. Positions are mapped to listed contracts, and their cost basis is the simulated closing value, so live profit and loss starts at zero. From then on, results come from the daily signals and are reported separately on the live record. The SMH sleeve is still in a test phase: it has never traded in a real account.
                     </p>
                 </section>
 

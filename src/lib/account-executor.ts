@@ -606,7 +606,7 @@ async function generateAccountOptionOrders(
 // $25k-$300k):
 //   * 0.25-delta short put, $30-wide long-put wing, 14 DTE
 //   * collateral $3,000 per spread (width x 100), capped at 30% of NLV
-//   * contract cap scales UP with principal only: 3 base, +3 per $20k NLV
+//   * contract cap scales UP with principal only: 3 base, +3 per $20k principal
 //     (a $30k account gets 3, a $100k account gets 15); the account's cash
 //     constraint skips entries it cannot afford collateral for
 //   * sells at live mid (limit-at-mid execution policy, per owner)
@@ -702,7 +702,11 @@ async function generateAccountSmhSpreadOrders(
 
     // Shared-ledger sizing: cap scales up with principal (3 base per $20k),
     // collateral ceiling 30% of NLV, hard cash constraint with partial sizing.
-    const scaledCap = Math.max(3, Math.round(3 * (nlv / 20000)));
+    // Cap scales with the account's principal (starting capital plus net deposits), as in the
+    // simulation (CAP_REF 20,000), not with current value, so a growing account does not take
+    // larger positions than the validated record did. Collateral ceiling and cash use live values.
+    const capBasis = Number((account as any).initial_principal) > 0 ? Number((account as any).initial_principal) : nlv;
+    const scaledCap = Math.max(3, Math.round(3 * (capBasis / 20000)));
     const byCollatPct = Math.floor((nlv * 0.30 - open.collateral) / collateralPer);
     const byCash = Math.floor(account.cash_balance / collateralPer);
     const contracts = Math.min(scaledCap, byCollatPct, byCash);

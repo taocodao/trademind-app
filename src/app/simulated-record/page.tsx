@@ -12,7 +12,7 @@ import './simulated-record.css';
 
 export const metadata: Metadata = {
     title: 'Simulated record | TradeMind',
-    description: 'A clearly labeled historical simulation of QQQ LEAPS and QQQ Defensive. Not live trading.',
+    description: 'A clearly labeled historical simulation of QQQ LEAPS (with its SMH put spread sleeve) and QQQ Defensive. Not live trading.',
     robots: { index: false, follow: false },
 };
 
@@ -24,7 +24,7 @@ type Strat = {
     key: string; name: string; principal: number; start: string; end: string; finalValue: number; pnl: number; pnlPct: number;
     maxDrawdownPct: number; benchmarkFinal: number; benchmarkPct: number; benchmarkMaxDrawdownPct: number;
     realizedPnl: number; unrealizedPnl: number; tradeCount: number; buys: number; sells: number; modeledCosts: number; cashEnd: number;
-    skippedCount?: number; firstEntryDate?: string; splitJun30?: { valueJun30: number; returnToJun30Pct: number; returnAfterPct: number };
+    skippedCount?: number; firstEntryDate?: string; smh?: { closed: number; wins: number; realized: number; realizedQ2Q3_2026: number }; splitJun30?: { valueJun30: number; returnToJun30Pct: number; returnAfterPct: number };
     openPositions: OpenPos[]; daily: Pt[]; trades: Trade[]; positionHistory: Hist[];
 };
 
@@ -114,7 +114,7 @@ function Block({ s }: { s: Strat }) {
 
             {s.key === 'QQQ_LEAPS' ? (
                 <div className="sr-adj">
-                    The simulated account held only cash until {s.firstEntryDate}, because the entry conditions did not pass earlier. Its value stayed at {money(s.principal)} for about eleven months. Waiting is part of the record. Two later entry signals on Nov 17 and 18, 2025 were skipped because one contract cost more than the cash available.
+                    This simulation has two parts. The weekly SMH put spread sleeve started on Oct 14, 2024. The QQQ LEAPS and short call part waited until {s.firstEntryDate}, because its entry conditions did not pass earlier. Two later LEAPS entry signals on Nov 17 and 18, 2025 were skipped because one contract cost more than the cash available. The SMH sleeve closed {s.smh?.closed} spreads, {s.smh?.wins} at a profit, for {money(s.smh?.realized ?? 0, 2)} in total. About {money(s.smh?.realizedQ2Q3_2026 ?? 0, 0)} of that came between April and September 2026, while SMH itself more than doubled over the window. The SMH sleeve has never traded in a real or paper account.
                 </div>
             ) : (
                 s.splitJun30 && (
@@ -211,7 +211,7 @@ export default function SimulatedRecordPage() {
                 <section className="sr-section">
                     <h2 className="sr-h2">How the simulation was built <Badge /></h2>
                     <ul className="sr-list">
-                        <li><strong>QQQ LEAPS.</strong> Starting amount $25,000. Options are priced with a model (Black-Scholes) from QQQ prices, volatility and interest rates, not from real quotes, and strikes and expiries are theoretical rather than the listed ones. Costs include $1 per contract and a volatility scaled slippage allowance. The simulation covers the LEAPS and the short call overlay. It leaves out the SMH put spread sleeve that appears in the published record, so these figures are not comparable with that record.</li>
+                        <li><strong>QQQ LEAPS.</strong> Starting amount $25,000. Options are priced with a model (Black-Scholes) from prices, volatility and interest rates, not from real quotes, and strikes and expiries are theoretical rather than the listed ones. The simulation covers the LEAPS, the short call overlay and a weekly SMH put spread sleeve: sell a put near 0.25 delta, buy a put $30 lower, about 14 days to expiry, close at half the credit, after 14 days, or at a loss limit of twice the credit, using at most 30% of the account as collateral and at most 4 spreads at this account size. SMH option prices are modeled from SMH volatility with a skew markup and were never checked against real SMH quotes. Fills are at the model mid price, with commissions of $1 per QQQ contract and $0.65 per SMH leg. Same engine and settings as the published combined record, run on a fresh $25,000 start.</li>
                         <li><strong>QQQ Defensive.</strong> Starting amount $10,000, whole shares only. The rules decide on hourly bars, so one day can hold several simulated trades, while the live signal email goes out once a day at 3:00 PM Eastern. Trades fill on the next bar. Modeled costs are small bid and ask half spreads, with no commission. Through Jun 30, 2026 the simulation follows the published out-of-sample walk-forward record. For Jul 1 to Oct 13, 2026 the models were refit on the most recent data and run forward in the same way.</li>
                         <li><strong>Benchmark.</strong> QQQ buy and hold uses the same starting dollars and window, with dividend adjusted closing prices. It is shown for context only.</li>
                         <li><strong>Data.</strong> Historical QQQ, volatility and interest rate data from public and broker data feeds. Data errors and revisions would change the results.</li>
@@ -222,7 +222,7 @@ export default function SimulatedRecordPage() {
                     <h2 className="sr-h2">Limits to keep in mind <Badge /></h2>
                     <ul className="sr-list">
                         <li>Simulated trading has no real market impact, no missed fills, no rejected orders and no emotions. Real accounts face all of these.</li>
-                        <li>One path through one two year window says little about other periods. QQQ rose strongly across this window, which flatters strategies that hold QQQ calls.</li>
+                        <li>One path through one two year window says little about other periods. QQQ rose strongly across this window, which flatters strategies that hold QQQ calls, and semiconductors rose even more, which flatters the SMH sleeve.</li>
                         <li>Option prices from a model can differ from real quotes by a wide margin, especially for long dated contracts and in fast markets.</li>
                         <li>Small starting amounts force whole share and whole contract rounding that larger accounts would not face.</li>
                     </ul>
@@ -231,7 +231,7 @@ export default function SimulatedRecordPage() {
                 <section className="sr-section">
                     <h2 className="sr-h2">Live accounts start from here</h2>
                     <p className="sr-p">
-                        The TradeMind virtual accounts for these two strategies begin on Oct 14, 2026 holding the cash and positions the simulation ended with. Their cost basis is the simulated closing value, so live profit and loss starts at zero on that date. From then on, results come from the daily signals and are reported separately on the live record.
+                        The QQQ Defensive virtual account began on Oct 14, 2026 holding the cash and positions its simulation ended with. The QQQ LEAPS virtual account was seeded earlier from a version of the simulation without the SMH put spread sleeve, so it holds the LEAPS and the short call but no SMH spreads, and it started at a lower value than the simulation above ends with. The SMH sleeve is not part of the live LEAPS account yet. Cost basis is the simulated closing value, so live profit and loss starts at zero on that date. From then on, results come from the daily signals and are reported separately on the live record.
                     </p>
                 </section>
 

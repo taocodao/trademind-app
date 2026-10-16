@@ -1,131 +1,280 @@
 record,date,time,action,instrument,quantity,price,amount,realized,cashAfter,why
-SIMULATION,2025-09-02,15:00,Buy to open,"QQQ $470.56 call, exp 2026-09-02 (LEAPS)",1,125.77,-12576.72,,12378.26,Entry conditions passed (strong uptrend)
-SIMULATION,2025-10-14,15:00,Sell to open,"QQQ $632.97 call, exp 2025-11-14 (short call)",1,5.34,533.71,,12907.76,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2025-10-17,10:00,Buy to close,"QQQ $632.97 call, exp 2025-11-14 (short call)",1,4.8,-479.92,49.91,12423.97,"Bought back the short call early, profit target reached"
-SIMULATION,2025-10-17,15:00,Sell to open,"QQQ $639.08 call, exp 2025-11-17 (short call)",1,5.38,538.16,,12957.9,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2025-10-21,10:00,Buy to close,"QQQ $639.08 call, exp 2025-11-17 (short call)",1,4.61,-460.92,74.63,12494.37,"Bought back the short call early, profit target reached"
-SIMULATION,2025-10-21,15:00,Sell to open,"QQQ $642.03 call, exp 2025-11-21 (short call)",1,4.71,470.74,,12962.46,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2025-10-22,15:00,Buy to close,"QQQ $642.03 call, exp 2025-11-21 (short call)",1,3.69,-369.04,98.48,12590.2,"Bought back the short call early, profit target reached"
-SIMULATION,2025-10-22,15:00,Sell to open,"QQQ $636.93 call, exp 2025-11-22 (short call)",1,4.85,484.6,,13070.89,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2025-10-27,15:00,Buy to close,"QQQ $636.93 call, exp 2025-11-22 (short call)",1,8.9,-890.0,-409.51,12176.78,"Bought back the short call, price moved close to its strike"
-SIMULATION,2025-11-10,15:00,Sell to open,"QQQ $653.92 call, exp 2025-12-12 (short call)",1,4.73,472.75,,12646.88,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2025-11-11,10:00,Buy to close,"QQQ $653.92 call, exp 2025-12-12 (short call)",1,3.37,-336.95,133.62,12307.75,"Bought back the short call early, profit target reached"
-SIMULATION,2025-11-11,15:00,Sell to open,"QQQ $651.62 call, exp 2025-12-13 (short call)",1,4.63,463.19,,12768.32,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2025-11-12,10:00,Buy to close,"QQQ $651.62 call, exp 2025-12-13 (short call)",1,4.13,-413.07,47.67,12352.8,"Bought back the short call early, profit target reached"
-SIMULATION,2025-11-12,15:00,Sell to open,"QQQ $651.51 call, exp 2025-12-14 (short call)",1,4.69,468.81,,12818.97,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2025-11-13,10:00,Buy to close,"QQQ $651.51 call, exp 2025-12-14 (short call)",1,4.12,-412.32,53.01,12403.17,"Bought back the short call early, profit target reached"
-SIMULATION,2025-11-13,15:00,Sell to open,"QQQ $642.51 call, exp 2025-12-15 (short call)",1,5.22,522.48,,12921.52,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2025-11-17,15:00,Buy to close,"QQQ $642.51 call, exp 2025-12-15 (short call)",1,4.69,-468.53,50.14,12449.18,"Bought back the short call early, profit target reached"
-SIMULATION,2025-11-17,15:00,Skipped,QQQ $501.73 call (LEAPS),0,158.8,0.0,,12449.18,Entry conditions passed but the account did not have enough cash for one contract
-SIMULATION,2025-11-17,15:00,Sell to open,"QQQ $641.54 call, exp 2025-12-19 (short call)",1,5.78,577.93,,13022.64,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2025-11-18,10:00,Buy to close,"QQQ $641.54 call, exp 2025-12-19 (short call)",1,4.71,-470.68,103.43,12548.14,"Bought back the short call early, profit target reached"
-SIMULATION,2025-11-18,15:00,Skipped,QQQ $487.17 call (LEAPS),0,168.59,0.0,,12548.14,Entry conditions passed but the account did not have enough cash for one contract
-SIMULATION,2025-11-18,15:00,Sell to open,"QQQ $637.75 call, exp 2025-12-20 (short call)",1,6.28,627.56,,13170.94,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2025-11-20,15:00,Buy to close,"QQQ $637.75 call, exp 2025-12-20 (short call)",1,4.58,-458.27,163.71,12707.09,"Bought back the short call early, profit target reached"
-SIMULATION,2025-11-20,15:00,Sell to open,"QQQ $629.32 call, exp 2025-12-22 (short call)",1,6.58,657.72,,13357.23,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2025-11-21,10:00,Buy to close,"QQQ $629.32 call, exp 2025-12-22 (short call)",1,4.18,-417.56,236.65,12936.17,"Bought back the short call early, profit target reached"
-SIMULATION,2025-11-21,15:00,Sell to open,"QQQ $628.98 call, exp 2025-12-23 (short call)",1,5.91,590.52,,13522.15,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2025-11-25,10:00,Buy to close,"QQQ $628.98 call, exp 2025-12-23 (short call)",1,5.09,-509.34,77.13,13008.75,"Bought back the short call early, profit target reached"
-SIMULATION,2025-11-25,15:00,Sell to open,"QQQ $640.54 call, exp 2025-12-27 (short call)",1,4.86,486.41,,13491.24,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2025-12-08,10:00,Buy to close,"QQQ $640.54 call, exp 2025-12-27 (short call)",1,4.78,-477.57,6.17,13011.0,Bought back the short call to manage risk
-SIMULATION,2025-12-08,15:00,Sell to open,"QQQ $647.64 call, exp 2026-01-09 (short call)",1,5.81,581.42,,13589.38,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2025-12-10,10:00,Buy to close,"QQQ $647.64 call, exp 2026-01-09 (short call)",1,4.26,-426.17,152.76,13160.73,"Bought back the short call early, profit target reached"
-SIMULATION,2025-12-10,15:00,Sell to open,"QQQ $649.89 call, exp 2026-01-11 (short call)",1,5.54,554.18,,13711.96,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2025-12-11,10:00,Buy to close,"QQQ $649.89 call, exp 2026-01-11 (short call)",1,3.26,-325.52,226.52,13384.31,"Bought back the short call early, profit target reached"
-SIMULATION,2025-12-11,15:00,Sell to open,"QQQ $646.64 call, exp 2026-01-12 (short call)",1,5.21,521.05,,13902.54,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2025-12-12,10:00,Buy to close,"QQQ $646.64 call, exp 2026-01-12 (short call)",1,3.02,-302.44,216.56,13598.04,"Bought back the short call early, profit target reached"
-SIMULATION,2025-12-12,15:00,Sell to open,"QQQ $635.35 call, exp 2026-01-13 (short call)",1,5.41,540.82,,14135.97,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2025-12-16,10:00,Buy to close,"QQQ $635.35 call, exp 2026-01-13 (short call)",1,4.32,-432.49,105.81,13700.97,"Bought back the short call early, profit target reached"
-SIMULATION,2025-12-16,15:00,Sell to open,"QQQ $634.51 call, exp 2026-01-17 (short call)",1,5.64,563.91,,14261.9,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2025-12-17,10:00,Buy to close,"QQQ $634.51 call, exp 2026-01-17 (short call)",1,4.35,-435.02,126.37,13824.36,"Bought back the short call early, profit target reached"
-SIMULATION,2025-12-17,15:00,Sell to open,"QQQ $624.16 call, exp 2026-01-18 (short call)",1,5.91,590.53,,14411.82,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2025-12-19,10:00,Buy to close,"QQQ $624.16 call, exp 2026-01-18 (short call)",1,8.43,-842.78,-256.2,13565.1,"Bought back the short call, price moved close to its strike"
-SIMULATION,2025-12-19,15:00,Sell to open,"QQQ $638.03 call, exp 2026-01-20 (short call)",1,5.16,516.1,,14078.39,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2025-12-29,10:00,Buy to close,"QQQ $638.03 call, exp 2026-01-20 (short call)",1,3.63,-363.26,150.57,13712.86,"Bought back the short call early, profit target reached"
-SIMULATION,2025-12-29,15:00,Sell to open,"QQQ $640.86 call, exp 2026-01-30 (short call)",1,4.95,495.0,,14205.12,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2025-12-31,15:00,Buy to close,"QQQ $640.86 call, exp 2026-01-30 (short call)",1,3.48,-347.83,144.95,13855.08,"Bought back the short call early, profit target reached"
-SIMULATION,2025-12-31,15:00,Sell to open,"QQQ $635.04 call, exp 2026-02-01 (short call)",1,5.15,514.97,,14367.25,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2026-01-02,10:00,Buy to close,"QQQ $635.04 call, exp 2026-02-01 (short call)",1,4.09,-409.45,103.09,13955.37,"Bought back the short call early, profit target reached"
-SIMULATION,2026-01-02,15:00,Sell to open,"QQQ $633.24 call, exp 2026-02-03 (short call)",1,4.99,499.24,,14451.86,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2026-01-07,10:00,Buy to close,"QQQ $633.24 call, exp 2026-02-03 (short call)",1,9.07,-907.12,-412.06,13540.56,"Bought back the short call, price moved close to its strike"
-SIMULATION,2026-01-07,15:00,Sell to open,"QQQ $645.68 call, exp 2026-02-08 (short call)",1,5.38,537.78,,14075.46,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2026-01-14,10:00,Buy to close,"QQQ $645.68 call, exp 2026-02-08 (short call)",1,3.1,-310.44,225.25,13762.93,"Bought back the short call early, profit target reached"
-SIMULATION,2026-01-14,15:00,Sell to open,"QQQ $643.03 call, exp 2026-02-15 (short call)",1,5.8,580.27,,14340.16,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2026-01-20,15:00,Buy to close,"QQQ $643.03 call, exp 2026-02-15 (short call)",1,3.84,-383.96,193.0,13952.9,"Bought back the short call early, profit target reached"
-SIMULATION,2026-01-20,15:00,Sell to open,"QQQ $635.51 call, exp 2026-02-21 (short call)",1,6.79,679.12,,14626.94,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2026-01-23,10:00,Buy to close,"QQQ $635.51 call, exp 2026-02-21 (short call)",1,8.85,-885.11,-210.09,13737.73,"Bought back the short call, price moved close to its strike"
-SIMULATION,2026-01-23,15:00,Sell to open,"QQQ $645.39 call, exp 2026-02-24 (short call)",1,5.61,560.84,,14295.61,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2026-01-29,10:00,Buy to close,"QQQ $645.39 call, exp 2026-02-24 (short call)",1,4.05,-404.57,153.86,13888.63,"Bought back the short call early, profit target reached"
-SIMULATION,2026-01-29,15:00,Sell to open,"QQQ $653.30 call, exp 2026-03-02 (short call)",1,5.94,593.77,,14479.32,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2026-01-30,15:00,Buy to close,"QQQ $653.30 call, exp 2026-03-02 (short call)",1,4.24,-424.31,166.98,14052.53,"Bought back the short call early, profit target reached"
-SIMULATION,2026-01-30,15:00,Sell to open,"QQQ $646.22 call, exp 2026-03-03 (short call)",1,6.06,605.56,,14654.97,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2026-02-03,15:00,Buy to close,"QQQ $646.22 call, exp 2026-03-03 (short call)",1,4.27,-426.58,175.43,14224.84,"Bought back the short call early, profit target reached"
-SIMULATION,2026-02-03,15:00,Sell to open,"QQQ $641.44 call, exp 2026-03-07 (short call)",1,6.19,619.06,,14839.19,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2026-02-04,10:00,Buy to close,"QQQ $641.44 call, exp 2026-03-07 (short call)",1,4.63,-462.7,152.58,14372.71,"Bought back the short call early, profit target reached"
-SIMULATION,2026-02-04,15:00,Sell to open,"QQQ $631.02 call, exp 2026-03-08 (short call)",1,6.29,629.13,,14997.06,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2026-02-12,15:00,Buy to close,"QQQ $631.02 call, exp 2026-03-08 (short call)",1,4.51,-451.31,174.11,14542.04,"Bought back the short call early, profit target reached"
-SIMULATION,2026-02-18,15:00,Sell to open,"QQQ $638.89 call, exp 2026-03-22 (short call)",1,5.11,510.59,,15048.57,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2026-02-23,10:00,Buy to close,"QQQ $638.89 call, exp 2026-03-22 (short call)",1,3.85,-384.83,122.45,14660.43,"Bought back the short call early, profit target reached"
-SIMULATION,2026-02-23,15:00,Sell to open,"QQQ $636.75 call, exp 2026-03-27 (short call)",1,5.42,541.75,,15197.93,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2026-02-26,10:00,Buy to close,"QQQ $636.75 call, exp 2026-03-27 (short call)",1,4.73,-473.42,64.49,14720.66,"Bought back the short call early, profit target reached"
-SIMULATION,2026-02-26,15:00,Sell to open,"QQQ $640.95 call, exp 2026-03-30 (short call)",1,4.88,488.47,,15205.2,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2026-03-03,10:00,Buy to close,"QQQ $640.95 call, exp 2026-03-30 (short call)",1,3.56,-355.76,129.57,14846.3,"Bought back the short call early, profit target reached"
-SIMULATION,2026-03-03,15:00,Sell to open,"QQQ $641.41 call, exp 2026-04-04 (short call)",1,6.06,605.51,,15447.17,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2026-03-09,10:00,Buy to close,"QQQ $641.41 call, exp 2026-04-04 (short call)",1,4.67,-467.21,132.62,14974.29,"Bought back the short call early, profit target reached"
-SIMULATION,2026-03-09,15:00,Sell to open,"QQQ $651.36 call, exp 2026-04-10 (short call)",1,6.6,659.75,,15626.44,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2026-03-11,10:00,Buy to close,"QQQ $651.36 call, exp 2026-04-10 (short call)",1,5.76,-576.08,79.21,15045.9,"Bought back the short call early, profit target reached"
-SIMULATION,2026-03-11,15:00,Sell to open,"QQQ $649.03 call, exp 2026-04-12 (short call)",1,6.28,628.1,,15669.23,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2026-03-12,15:00,Buy to close,"QQQ $649.03 call, exp 2026-04-12 (short call)",1,5.58,-558.3,63.21,15104.35,"Bought back the short call early, profit target reached"
-SIMULATION,2026-03-12,15:00,Sell to open,"QQQ $643.29 call, exp 2026-04-13 (short call)",1,6.92,691.96,,15788.39,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2026-03-13,15:00,Buy to close,"QQQ $643.29 call, exp 2026-04-13 (short call)",1,5.81,-580.98,104.17,15200.59,"Bought back the short call early, profit target reached"
-SIMULATION,2026-03-13,15:00,Sell to open,"QQQ $639.19 call, exp 2026-04-14 (short call)",1,6.85,685.33,,15878.07,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2026-03-16,10:00,Buy to close,"QQQ $639.19 call, exp 2026-04-14 (short call)",1,5.59,-558.97,122.01,15314.75,"Bought back the short call early, profit target reached"
-SIMULATION,2026-03-16,15:00,Sell to open,"QQQ $639.86 call, exp 2026-04-17 (short call)",1,6.03,602.65,,15912.79,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2026-03-18,15:00,Buy to close,"QQQ $639.86 call, exp 2026-04-17 (short call)",1,5.26,-525.9,70.49,15380.63,"Bought back the short call early, profit target reached"
-SIMULATION,2026-03-18,15:00,Sell to open,"QQQ $636.69 call, exp 2026-04-19 (short call)",1,6.36,635.64,,16008.91,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2026-03-19,10:00,Buy to close,"QQQ $636.69 call, exp 2026-04-19 (short call)",1,4.76,-475.61,156.17,15529.44,"Bought back the short call early, profit target reached"
-SIMULATION,2026-03-19,15:00,Sell to open,"QQQ $633.00 call, exp 2026-04-20 (short call)",1,6.09,608.74,,16133.53,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2026-03-20,15:00,Buy to close,"QQQ $633.00 call, exp 2026-04-20 (short call)",1,5.08,-508.25,94.4,15619.2,"Bought back the short call early, profit target reached"
-SIMULATION,2026-03-20,15:00,Sell to open,"QQQ $625.98 call, exp 2026-04-21 (short call)",1,6.62,662.19,,16273.77,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2026-03-25,15:00,Buy to close,"QQQ $625.98 call, exp 2026-04-21 (short call)",1,5.79,-579.11,76.3,15687.87,"Bought back the short call early, profit target reached"
-SIMULATION,2026-03-25,15:00,Sell to open,"QQQ $645.50 call, exp 2026-04-26 (short call)",1,3.7,369.66,,16052.83,Sold a short call against the LEAPS (price below long-term average)
-SIMULATION,2026-03-26,15:00,Buy to close,"QQQ $645.50 call, exp 2026-04-26 (short call)",1,2.57,-256.97,109.13,15792.3,"Bought back the short call early, profit target reached"
-SIMULATION,2026-03-26,15:00,Sell to open,"QQQ $635.06 call, exp 2026-04-27 (short call)",1,3.9,389.66,,16177.06,Sold a short call against the LEAPS (price below long-term average)
-SIMULATION,2026-03-30,10:00,Buy to close,"QQQ $635.06 call, exp 2026-04-27 (short call)",1,3.07,-306.59,79.0,15866.4,"Bought back the short call early, profit target reached"
-SIMULATION,2026-03-30,15:00,Sell to open,"QQQ $625.40 call, exp 2026-05-01 (short call)",1,4.21,421.11,,16282.3,Sold a short call against the LEAPS (price below long-term average)
-SIMULATION,2026-03-31,10:00,Buy to close,"QQQ $625.40 call, exp 2026-05-01 (short call)",1,2.77,-276.58,140.77,16001.96,"Bought back the short call early, profit target reached"
-SIMULATION,2026-03-31,15:00,Sell to open,"QQQ $633.67 call, exp 2026-05-02 (short call)",1,3.62,361.88,,16359.22,Sold a short call against the LEAPS (price below long-term average)
-SIMULATION,2026-04-07,10:00,Buy to close,"QQQ $633.67 call, exp 2026-05-02 (short call)",1,2.91,-290.96,67.01,16064.35,"Bought back the short call early, profit target reached"
-SIMULATION,2026-04-07,15:00,Sell to open,"QQQ $647.64 call, exp 2026-05-09 (short call)",1,3.77,376.57,,16436.15,Sold a short call against the LEAPS (price below long-term average)
-SIMULATION,2026-04-09,10:00,Buy to close,"QQQ $647.64 call, exp 2026-05-09 (short call)",1,3.01,-300.76,73.0,16132.59,"Bought back the short call early, profit target reached"
-SIMULATION,2026-04-27,15:00,Sell to open,"QQQ $697.70 call, exp 2026-05-29 (short call)",1,5.16,515.65,,16644.15,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2026-04-28,10:00,Buy to close,"QQQ $697.70 call, exp 2026-05-29 (short call)",1,3.2,-319.63,193.9,16322.4,"Bought back the short call early, profit target reached"
-SIMULATION,2026-04-29,15:00,Sell to open,"QQQ $696.35 call, exp 2026-05-31 (short call)",1,5.35,535.37,,16853.55,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2026-04-30,10:00,Buy to close,"QQQ $696.35 call, exp 2026-05-31 (short call)",1,4.08,-407.65,125.29,16443.48,"Bought back the short call early, profit target reached"
-SIMULATION,2026-04-30,15:00,Sell to open,"QQQ $699.09 call, exp 2026-06-01 (short call)",1,4.87,486.59,,16927.37,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2026-05-06,10:00,Buy to close,"QQQ $699.09 call, exp 2026-06-01 (short call)",1,11.59,-1158.52,-676.98,15763.79,"Bought back the short call, price moved close to its strike"
-SIMULATION,2026-06-05,10:00,Sell to close,"QQQ $470.56 call, exp 2026-09-02 (LEAPS)",1,259.26,25926.25,13192.97,41533.48,"Sold the LEAPS, exit rule: option moved too much like stock"
-SIMULATION,2026-07-28,15:00,Buy to open,"QQQ $581.20 call, exp 2028-01-18 (LEAPS)",1,151.78,-15178.2,,26263.22,Entry conditions passed (moderate uptrend)
-SIMULATION,2026-07-28,15:00,Sell to open,"QQQ $709.96 call, exp 2026-08-29 (short call)",1,5.3,529.7,,26788.74,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2026-07-29,15:00,Buy to close,"QQQ $709.96 call, exp 2026-08-29 (short call)",1,3.83,-383.11,143.3,26402.33,"Bought back the short call early, profit target reached"
-SIMULATION,2026-07-29,15:00,Sell to open,"QQQ $699.75 call, exp 2026-08-30 (short call)",1,5.86,586.27,,26984.09,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2026-07-31,15:00,Buy to close,"QQQ $699.75 call, exp 2026-08-30 (short call)",1,9.86,-985.5,-403.68,25994.14,"Bought back the short call, price moved close to its strike"
-SIMULATION,2026-08-26,15:30,Sell to open,"QQQ $741.64 call, exp 2026-09-27 (short call)",1,4.68,468.13,,26459.63,Sold a short call against the LEAPS (moderate uptrend)
-SIMULATION,2026-09-01,15:30,Buy to close,"QQQ $741.64 call, exp 2026-09-27 (short call)",1,3.51,-351.32,114.58,26106.08,"Bought back the short call early, profit target reached"
-SIMULATION,2026-09-01,15:30,Sell to open,"QQQ $733.86 call, exp 2026-10-03 (short call)",1,6.47,646.87,,26749.69,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2026-09-14,10:30,Buy to close,"QQQ $733.86 call, exp 2026-10-03 (short call)",1,3.86,-385.72,258.81,26361.63,"Bought back the short call early, profit target reached"
-SIMULATION,2026-09-14,15:30,Sell to open,"QQQ $736.71 call, exp 2026-10-16 (short call)",1,6.78,677.56,,27035.81,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2026-09-21,10:30,Buy to close,"QQQ $736.71 call, exp 2026-10-16 (short call)",1,13.75,-1374.72,-702.97,25655.28,"Bought back the short call, price moved close to its strike"
-SIMULATION,2026-09-21,15:30,Sell to open,"QQQ $766.67 call, exp 2026-10-23 (short call)",1,6.18,618.31,,26270.43,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2026-09-24,10:30,Buy to close,"QQQ $766.67 call, exp 2026-10-23 (short call)",1,4.59,-459.12,156.58,25808.7,"Bought back the short call early, profit target reached"
-SIMULATION,2026-09-24,15:30,Sell to open,"QQQ $767.61 call, exp 2026-10-26 (short call)",1,6.5,650.37,,26455.79,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2026-09-28,10:30,Buy to close,"QQQ $767.61 call, exp 2026-10-26 (short call)",1,4.41,-441.02,206.81,26012.23,"Bought back the short call early, profit target reached"
-SIMULATION,2026-09-28,15:30,Sell to open,"QQQ $763.57 call, exp 2026-10-30 (short call)",1,6.62,662.44,,26671.35,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2026-10-05,10:30,Buy to close,"QQQ $763.57 call, exp 2026-10-30 (short call)",1,10.13,-1013.15,-355.25,25653.66,"Bought back the short call, price moved close to its strike"
-SIMULATION,2026-10-05,15:30,Sell to open,"QQQ $782.91 call, exp 2026-11-05 (short call)",1,6.57,657.41,,26307.77,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2026-10-08,15:30,Buy to close,"QQQ $782.91 call, exp 2026-11-05 (short call)",1,3.85,-384.6,270.46,25920.82,"Bought back the short call early, profit target reached"
-SIMULATION,2026-10-08,15:30,Sell to open,"QQQ $773.92 call, exp 2026-11-08 (short call)",1,6.45,645.49,,26563.05,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2026-10-12,10:30,Buy to close,"QQQ $773.92 call, exp 2026-11-08 (short call)",1,4.96,-496.22,146.53,26064.09,"Bought back the short call early, profit target reached"
-SIMULATION,2026-10-12,15:30,Sell to open,"QQQ $771.99 call, exp 2026-11-12 (short call)",1,6.36,635.99,,26696.86,Sold a short call against the LEAPS (strong uptrend)
-SIMULATION,2026-10-13,10:30,Buy to close,"QQQ $771.99 call, exp 2026-11-12 (short call)",1,4.78,-477.62,155.7,26216.56,"Bought back the short call early, profit target reached"
-SIMULATION,2026-10-13,15:30,Sell to open,"QQQ $769.62 call, exp 2026-11-13 (short call)",1,6.36,636.4,,26849.73,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2024-10-14,Close,Sell to open,"SMH $248.50 / $218.50 put spread, exp 2024-10-28 (SMH sleeve)",2,2.71,541.65,,24997.4,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2024-10-15,Close,Buy to close,"SMH $248.50 / $218.50 put spread, exp 2024-10-28 (SMH sleeve)",2,8.78,-1755.74,-1219.29,23778.11,"Closed the SMH put spread, SMH gapped down through the loss limit"
+SIMULATION,2025-09-02,15:00,Buy to open,"QQQ $470.56 call, exp 2026-09-02 (LEAPS)",1,125.77,-12576.72,,11200.38,Entry conditions passed (strong uptrend)
+SIMULATION,2025-09-12,Close,Sell to open,"SMH $294.00 / $264.00 put spread, exp 2025-09-26 (SMH sleeve)",2,2.44,488.32,,11197.78,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2025-09-15,Close,Buy to close,"SMH $294.00 / $264.00 put spread, exp 2025-09-26 (SMH sleeve)",2,1.14,-227.68,255.44,11453.22,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2025-09-15,Close,Sell to open,"SMH $297.00 / $267.00 put spread, exp 2025-09-29 (SMH sleeve)",2,2.19,437.05,,11450.62,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2025-09-18,Close,Buy to close,"SMH $297.00 / $267.00 put spread, exp 2025-09-29 (SMH sleeve)",2,0.72,-143.7,288.16,11738.77,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2025-09-18,Close,Sell to open,"SMH $305.50 / $275.50 put spread, exp 2025-10-02 (SMH sleeve)",2,2.57,513.57,,11736.17,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2025-09-22,Close,Buy to close,"SMH $305.50 / $275.50 put spread, exp 2025-10-02 (SMH sleeve)",2,0.97,-194.44,313.93,12050.1,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2025-09-22,Close,Sell to open,"SMH $310.50 / $280.50 put spread, exp 2025-10-06 (SMH sleeve)",2,2.56,512.14,,12047.5,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2025-09-29,Close,Buy to close,"SMH $310.50 / $280.50 put spread, exp 2025-10-06 (SMH sleeve)",2,0.62,-123.58,383.36,12430.86,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2025-09-29,Close,Sell to open,"SMH $313.00 / $283.00 put spread, exp 2025-10-13 (SMH sleeve)",2,2.15,429.0,,12428.26,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2025-09-30,Close,Buy to close,"SMH $313.00 / $283.00 put spread, exp 2025-10-13 (SMH sleeve)",2,1.03,-206.63,217.18,12645.44,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2025-09-30,Close,Sell to open,"SMH $317.50 / $287.50 put spread, exp 2025-10-14 (SMH sleeve)",2,2.05,410.6,,12642.84,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2025-10-01,Close,Buy to close,"SMH $317.50 / $287.50 put spread, exp 2025-10-14 (SMH sleeve)",2,0.85,-169.35,236.04,12878.88,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2025-10-01,Close,Sell to open,"SMH $324.00 / $294.00 put spread, exp 2025-10-15 (SMH sleeve)",2,2.13,426.78,,12876.28,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2025-10-06,Close,Buy to close,"SMH $324.00 / $294.00 put spread, exp 2025-10-15 (SMH sleeve)",2,0.37,-73.84,347.74,13224.02,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2025-10-06,Close,Sell to open,"SMH $333.00 / $303.00 put spread, exp 2025-10-20 (SMH sleeve)",2,2.39,477.81,,13221.42,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2025-10-10,Close,Buy to close,"SMH $333.00 / $303.00 put spread, exp 2025-10-20 (SMH sleeve)",2,11.8,-2359.82,-1887.21,11334.21,"Closed the SMH put spread, SMH gapped down through the loss limit"
+SIMULATION,2025-10-10,Close,Sell to open,"SMH $308.50 / $278.50 put spread, exp 2025-10-24 (SMH sleeve)",2,3.91,782.62,,11331.61,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2025-10-13,Close,Buy to close,"SMH $308.50 / $278.50 put spread, exp 2025-10-24 (SMH sleeve)",2,1.74,-348.19,429.22,11760.84,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2025-10-13,Close,Sell to open,"SMH $320.50 / $290.50 put spread, exp 2025-10-27 (SMH sleeve)",2,4.37,873.56,,11758.24,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2025-10-14,15:00,Sell to open,"QQQ $632.97 call, exp 2025-11-14 (short call)",1,5.34,533.71,,12290.94,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-10-17,10:00,Buy to close,"QQQ $632.97 call, exp 2025-11-14 (short call)",1,4.8,-479.92,52.79,11810.03,"Bought back the short call early, profit target reached"
+SIMULATION,2025-10-17,15:00,Sell to open,"QQQ $639.08 call, exp 2025-11-17 (short call)",1,5.38,538.16,,12347.19,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-10-20,Close,Buy to close,"SMH $320.50 / $290.50 put spread, exp 2025-10-27 (SMH sleeve)",2,1.16,-231.66,636.7,12983.89,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2025-10-20,Close,Sell to open,"SMH $328.00 / $298.00 put spread, exp 2025-11-03 (SMH sleeve)",2,4.29,857.81,,12981.29,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2025-10-21,10:00,Buy to close,"QQQ $639.08 call, exp 2025-11-17 (short call)",1,4.61,-460.92,76.24,12519.37,"Bought back the short call early, profit target reached"
+SIMULATION,2025-10-21,15:00,Sell to open,"QQQ $642.03 call, exp 2025-11-21 (short call)",1,4.71,470.74,,12989.12,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-10-22,15:00,Buy to close,"QQQ $642.03 call, exp 2025-11-21 (short call)",1,3.69,-369.04,100.7,12619.07,"Bought back the short call early, profit target reached"
+SIMULATION,2025-10-22,15:00,Sell to open,"QQQ $636.93 call, exp 2025-11-22 (short call)",1,4.85,484.6,,13102.67,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-10-27,Close,Buy to close,"SMH $328.00 / $298.00 put spread, exp 2025-11-03 (SMH sleeve)",2,1.1,-219.59,633.02,13735.69,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2025-10-27,15:00,Buy to close,"QQQ $636.93 call, exp 2025-11-22 (short call)",1,8.9,-890.0,-406.4,12844.7,"Bought back the short call, price moved close to its strike"
+SIMULATION,2025-10-27,Close,Sell to open,"SMH $338.50 / $308.50 put spread, exp 2025-11-10 (SMH sleeve)",3,4.64,1390.67,,12840.8,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2025-11-03,Close,Buy to close,"SMH $338.50 / $308.50 put spread, exp 2025-11-10 (SMH sleeve)",3,1.54,-462.84,920.03,13760.82,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2025-11-03,Close,Sell to open,"SMH $344.50 / $314.50 put spread, exp 2025-11-17 (SMH sleeve)",3,4.62,1386.68,,13756.92,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2025-11-10,15:00,Sell to open,"QQQ $653.92 call, exp 2025-12-12 (short call)",1,4.73,472.75,,14228.67,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-11-11,10:00,Buy to close,"QQQ $653.92 call, exp 2025-12-12 (short call)",1,3.37,-336.95,134.8,13890.73,"Bought back the short call early, profit target reached"
+SIMULATION,2025-11-11,15:00,Sell to open,"QQQ $651.62 call, exp 2025-12-13 (short call)",1,4.63,463.19,,14352.92,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-11-12,10:00,Buy to close,"QQQ $651.62 call, exp 2025-12-13 (short call)",1,4.13,-413.07,49.12,13938.85,"Bought back the short call early, profit target reached"
+SIMULATION,2025-11-12,15:00,Sell to open,"QQQ $651.51 call, exp 2025-12-14 (short call)",1,4.69,468.81,,14406.65,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-11-13,10:00,Buy to close,"QQQ $651.51 call, exp 2025-12-14 (short call)",1,4.12,-412.32,55.49,13993.33,"Bought back the short call early, profit target reached"
+SIMULATION,2025-11-13,15:00,Sell to open,"QQQ $642.51 call, exp 2025-12-15 (short call)",1,5.22,522.48,,14514.81,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-11-17,Close,Buy to close,"SMH $344.50 / $314.50 put spread, exp 2025-11-17 (SMH sleeve)",3,5.26,-1576.68,-197.81,14317.01,SMH put spread reached expiry
+SIMULATION,2025-11-17,15:00,Buy to close,"QQQ $642.51 call, exp 2025-12-15 (short call)",1,4.69,-468.53,52.96,13847.48,"Bought back the short call early, profit target reached"
+SIMULATION,2025-11-17,15:00,Skipped,QQQ $501.73 call (LEAPS),0,158.8,0.0,,13847.48,Entry conditions passed but the account did not have enough cash for one contract
+SIMULATION,2025-11-17,15:00,Sell to open,"QQQ $641.54 call, exp 2025-12-19 (short call)",1,5.78,577.93,,14424.41,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-11-17,Close,Sell to open,"SMH $322.50 / $292.50 put spread, exp 2025-12-01 (SMH sleeve)",2,3.91,782.39,,14421.81,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2025-11-18,10:00,Buy to close,"QQQ $641.54 call, exp 2025-12-19 (short call)",1,4.71,-470.68,106.25,13950.13,"Bought back the short call early, profit target reached"
+SIMULATION,2025-11-18,15:00,Skipped,QQQ $487.17 call (LEAPS),0,168.59,0.0,,7950.13,Entry conditions passed but the account did not have enough cash for one contract
+SIMULATION,2025-11-18,15:00,Sell to open,"QQQ $637.75 call, exp 2025-12-20 (short call)",1,6.28,627.56,,14576.69,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-11-20,Close,Buy to close,"SMH $322.50 / $292.50 put spread, exp 2025-12-01 (SMH sleeve)",2,7.84,-1567.62,-790.43,13786.26,"Closed the SMH put spread, loss limit reached"
+SIMULATION,2025-11-20,15:00,Buy to close,"QQQ $637.75 call, exp 2025-12-20 (short call)",1,4.58,-458.27,168.29,13327.0,"Bought back the short call early, profit target reached"
+SIMULATION,2025-11-20,15:00,Sell to open,"QQQ $629.32 call, exp 2025-12-22 (short call)",1,6.58,657.72,,13983.72,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-11-20,Close,Sell to open,"SMH $306.50 / $276.50 put spread, exp 2025-12-04 (SMH sleeve)",2,4.17,833.52,,13981.12,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2025-11-21,10:00,Buy to close,"QQQ $629.32 call, exp 2025-12-22 (short call)",1,4.18,-417.56,239.16,13562.56,"Bought back the short call early, profit target reached"
+SIMULATION,2025-11-21,15:00,Sell to open,"QQQ $628.98 call, exp 2025-12-23 (short call)",1,5.91,590.52,,14152.08,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-11-24,Close,Buy to close,"SMH $306.50 / $276.50 put spread, exp 2025-12-04 (SMH sleeve)",2,1.5,-300.15,528.17,14680.25,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2025-11-24,Close,Sell to open,"SMH $319.00 / $289.00 put spread, exp 2025-12-08 (SMH sleeve)",2,4.39,878.12,,14677.65,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2025-11-25,10:00,Buy to close,"QQQ $628.98 call, exp 2025-12-23 (short call)",1,5.09,-509.34,80.18,14167.31,"Bought back the short call early, profit target reached"
+SIMULATION,2025-11-25,15:00,Sell to open,"QQQ $640.54 call, exp 2025-12-27 (short call)",1,4.86,486.41,,14652.72,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2025-11-28,Close,Buy to close,"SMH $319.00 / $289.00 put spread, exp 2025-12-08 (SMH sleeve)",2,1.69,-338.63,534.29,15187.01,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2025-11-28,Close,Sell to open,"SMH $331.00 / $301.00 put spread, exp 2025-12-12 (SMH sleeve)",3,4.55,1364.22,,15183.11,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2025-12-03,Close,Buy to close,"SMH $331.00 / $301.00 put spread, exp 2025-12-12 (SMH sleeve)",3,1.35,-406.17,950.25,16133.36,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2025-12-03,Close,Sell to open,"SMH $343.50 / $313.50 put spread, exp 2025-12-17 (SMH sleeve)",3,4.51,1352.02,,16129.46,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2025-12-08,Close,Buy to close,"SMH $343.50 / $313.50 put spread, exp 2025-12-17 (SMH sleeve)",3,2.12,-636.27,707.95,16837.41,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2025-12-08,10:00,Buy to close,"QQQ $640.54 call, exp 2025-12-27 (short call)",1,4.78,-477.57,7.84,16358.84,Bought back the short call to manage risk
+SIMULATION,2025-12-08,15:00,Sell to open,"QQQ $647.64 call, exp 2026-01-09 (short call)",1,5.81,581.42,,16939.26,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2025-12-08,Close,Sell to open,"SMH $348.50 / $318.50 put spread, exp 2025-12-22 (SMH sleeve)",3,4.38,1314.86,,16935.36,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2025-12-10,10:00,Buy to close,"QQQ $647.64 call, exp 2026-01-09 (short call)",1,4.26,-426.17,154.25,16508.19,"Bought back the short call early, profit target reached"
+SIMULATION,2025-12-10,15:00,Sell to open,"QQQ $649.89 call, exp 2026-01-11 (short call)",1,5.54,554.18,,17061.37,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2025-12-11,10:00,Buy to close,"QQQ $649.89 call, exp 2026-01-11 (short call)",1,3.26,-325.52,227.66,16734.85,"Bought back the short call early, profit target reached"
+SIMULATION,2025-12-11,15:00,Sell to open,"QQQ $646.64 call, exp 2026-01-12 (short call)",1,5.21,521.05,,17254.91,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2025-12-12,10:00,Buy to close,"QQQ $646.64 call, exp 2026-01-12 (short call)",1,3.02,-302.44,217.62,16951.47,"Bought back the short call early, profit target reached"
+SIMULATION,2025-12-12,15:00,Sell to open,"QQQ $635.35 call, exp 2026-01-13 (short call)",1,5.41,540.82,,17491.29,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2025-12-16,10:00,Buy to close,"QQQ $635.35 call, exp 2026-01-13 (short call)",1,4.32,-432.49,107.33,17057.8,"Bought back the short call early, profit target reached"
+SIMULATION,2025-12-16,15:00,Sell to open,"QQQ $634.51 call, exp 2026-01-17 (short call)",1,5.64,563.91,,17620.71,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2025-12-17,Close,Buy to close,"SMH $348.50 / $318.50 put spread, exp 2025-12-22 (SMH sleeve)",3,12.16,-3648.6,-2341.54,15279.17,"Closed the SMH put spread, loss limit reached"
+SIMULATION,2025-12-17,10:00,Buy to close,"QQQ $634.51 call, exp 2026-01-17 (short call)",1,4.35,-435.02,127.89,14843.15,"Bought back the short call early, profit target reached"
+SIMULATION,2025-12-17,15:00,Sell to open,"QQQ $624.16 call, exp 2026-01-18 (short call)",1,5.91,590.53,,15432.68,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2025-12-17,Close,Sell to open,"SMH $320.00 / $290.00 put spread, exp 2025-12-31 (SMH sleeve)",2,4.28,856.74,,15430.08,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2025-12-19,Close,Buy to close,"SMH $320.00 / $290.00 put spread, exp 2025-12-31 (SMH sleeve)",2,1.23,-246.99,604.55,16034.63,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2025-12-19,10:00,Buy to close,"QQQ $624.16 call, exp 2026-01-18 (short call)",1,8.43,-842.78,-253.25,15190.86,"Bought back the short call, price moved close to its strike"
+SIMULATION,2025-12-19,15:00,Sell to open,"QQQ $638.03 call, exp 2026-01-20 (short call)",1,5.16,516.1,,15705.96,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2025-12-19,Close,Sell to open,"SMH $337.50 / $307.50 put spread, exp 2026-01-02 (SMH sleeve)",3,4.14,1241.25,,15702.06,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2025-12-23,Close,Buy to close,"SMH $337.50 / $307.50 put spread, exp 2026-01-02 (SMH sleeve)",3,1.47,-442.21,791.24,16493.3,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2025-12-23,Close,Sell to open,"SMH $346.50 / $316.50 put spread, exp 2026-01-06 (SMH sleeve)",3,3.9,1168.77,,16489.4,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2025-12-29,Close,Buy to close,"SMH $346.50 / $316.50 put spread, exp 2026-01-06 (SMH sleeve)",3,1.89,-565.51,595.47,17084.86,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2025-12-29,10:00,Buy to close,"QQQ $638.03 call, exp 2026-01-20 (short call)",1,3.63,-363.26,151.84,16720.6,"Bought back the short call early, profit target reached"
+SIMULATION,2025-12-29,15:00,Sell to open,"QQQ $640.86 call, exp 2026-01-30 (short call)",1,4.95,495.0,,17214.6,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2025-12-29,Close,Sell to open,"SMH $348.00 / $318.00 put spread, exp 2026-01-12 (SMH sleeve)",3,3.76,1129.37,,17210.7,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2025-12-31,15:00,Buy to close,"QQQ $640.86 call, exp 2026-01-30 (short call)",1,3.48,-347.83,146.17,16861.87,"Bought back the short call early, profit target reached"
+SIMULATION,2025-12-31,15:00,Sell to open,"QQQ $635.04 call, exp 2026-02-01 (short call)",1,5.15,514.97,,17375.85,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-01-02,Close,Buy to close,"SMH $348.00 / $318.00 put spread, exp 2026-01-12 (SMH sleeve)",3,1.82,-545.87,575.71,17951.55,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-01-02,10:00,Buy to close,"QQQ $635.04 call, exp 2026-02-01 (short call)",1,4.09,-409.45,104.53,17541.11,"Bought back the short call early, profit target reached"
+SIMULATION,2026-01-02,15:00,Sell to open,"QQQ $633.24 call, exp 2026-02-03 (short call)",1,4.99,499.24,,18039.34,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-01-02,Close,Sell to open,"SMH $355.50 / $325.50 put spread, exp 2026-01-16 (SMH sleeve)",3,4.09,1226.84,,18035.44,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-01-06,Close,Buy to close,"SMH $355.50 / $325.50 put spread, exp 2026-01-16 (SMH sleeve)",3,1.42,-424.8,794.25,18829.69,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-01-06,Close,Sell to open,"SMH $368.50 / $338.50 put spread, exp 2026-01-20 (SMH sleeve)",3,4.34,1300.63,,18825.79,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-01-07,10:00,Buy to close,"QQQ $633.24 call, exp 2026-02-03 (short call)",1,9.07,-907.12,-408.89,17917.66,"Bought back the short call, price moved close to its strike"
+SIMULATION,2026-01-07,15:00,Sell to open,"QQQ $645.68 call, exp 2026-02-08 (short call)",1,5.38,537.78,,18454.44,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-01-13,Close,Buy to close,"SMH $368.50 / $338.50 put spread, exp 2026-01-20 (SMH sleeve)",3,1.09,-325.84,966.98,19421.43,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-01-13,Close,Sell to open,"SMH $375.00 / $345.00 put spread, exp 2026-01-27 (SMH sleeve)",3,3.99,1196.12,,19417.53,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-01-14,10:00,Buy to close,"QQQ $645.68 call, exp 2026-02-08 (short call)",1,3.1,-310.44,226.34,19106.08,"Bought back the short call early, profit target reached"
+SIMULATION,2026-01-14,15:00,Sell to open,"QQQ $643.03 call, exp 2026-02-15 (short call)",1,5.8,580.27,,19685.35,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-01-16,Close,Buy to close,"SMH $375.00 / $345.00 put spread, exp 2026-01-27 (SMH sleeve)",3,1.04,-311.95,876.37,20561.72,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-01-16,Close,Sell to open,"SMH $386.00 / $356.00 put spread, exp 2026-01-30 (SMH sleeve)",3,3.39,1016.85,,20557.82,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-01-20,15:00,Buy to close,"QQQ $643.03 call, exp 2026-02-15 (short call)",1,3.84,-383.96,195.31,20172.86,"Bought back the short call early, profit target reached"
+SIMULATION,2026-01-20,15:00,Sell to open,"QQQ $635.51 call, exp 2026-02-21 (short call)",1,6.79,679.12,,20850.97,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-01-23,10:00,Buy to close,"QQQ $635.51 call, exp 2026-02-21 (short call)",1,8.85,-885.11,-206.99,19964.87,"Bought back the short call, price moved close to its strike"
+SIMULATION,2026-01-23,15:00,Sell to open,"QQQ $645.39 call, exp 2026-02-24 (short call)",1,5.61,560.84,,20524.71,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-01-26,Close,Buy to close,"SMH $386.00 / $356.00 put spread, exp 2026-01-30 (SMH sleeve)",3,1.32,-395.0,614.04,21138.75,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-01-26,Close,Sell to open,"SMH $382.50 / $352.50 put spread, exp 2026-02-09 (SMH sleeve)",3,3.81,1143.44,,21134.85,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-01-28,Close,Buy to close,"SMH $382.50 / $352.50 put spread, exp 2026-02-09 (SMH sleeve)",3,1.28,-384.82,750.82,21885.68,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-01-28,Close,Sell to open,"SMH $399.00 / $369.00 put spread, exp 2026-02-11 (SMH sleeve)",3,4.09,1227.27,,21881.78,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-01-29,10:00,Buy to close,"QQQ $645.39 call, exp 2026-02-24 (short call)",1,4.05,-404.57,155.28,21476.21,"Bought back the short call early, profit target reached"
+SIMULATION,2026-01-29,15:00,Sell to open,"QQQ $653.30 call, exp 2026-03-02 (short call)",1,5.94,593.77,,22068.98,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-01-30,15:00,Buy to close,"QQQ $653.30 call, exp 2026-03-02 (short call)",1,4.24,-424.31,168.46,21643.67,"Bought back the short call early, profit target reached"
+SIMULATION,2026-01-30,15:00,Sell to open,"QQQ $646.22 call, exp 2026-03-03 (short call)",1,6.06,605.56,,22248.23,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-02-03,Close,Buy to close,"SMH $399.00 / $369.00 put spread, exp 2026-02-11 (SMH sleeve)",3,8.4,-2520.89,-1301.43,20946.81,"Closed the SMH put spread, loss limit reached"
+SIMULATION,2026-02-03,15:00,Buy to close,"QQQ $646.22 call, exp 2026-03-03 (short call)",1,4.27,-426.58,177.99,20519.23,"Bought back the short call early, profit target reached"
+SIMULATION,2026-02-03,15:00,Sell to open,"QQQ $641.44 call, exp 2026-03-07 (short call)",1,6.19,619.06,,21137.29,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-02-03,Close,Sell to open,"SMH $379.00 / $349.00 put spread, exp 2026-02-17 (SMH sleeve)",3,4.24,1271.48,,21133.39,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-02-04,10:00,Buy to close,"QQQ $641.44 call, exp 2026-03-07 (short call)",1,4.63,-462.7,155.36,20669.69,"Bought back the short call early, profit target reached"
+SIMULATION,2026-02-04,15:00,Sell to open,"QQQ $631.02 call, exp 2026-03-08 (short call)",1,6.29,629.13,,21297.82,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-02-11,Close,Buy to close,"SMH $379.00 / $349.00 put spread, exp 2026-02-17 (SMH sleeve)",3,0.99,-296.66,967.02,22264.84,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-02-11,Close,Sell to open,"SMH $391.00 / $361.00 put spread, exp 2026-02-25 (SMH sleeve)",3,5.11,1532.48,,22260.94,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-02-12,15:00,Buy to close,"QQQ $631.02 call, exp 2026-03-08 (short call)",1,4.51,-451.31,176.82,21808.63,"Bought back the short call early, profit target reached"
+SIMULATION,2026-02-18,15:00,Sell to open,"QQQ $638.89 call, exp 2026-03-22 (short call)",1,5.11,510.59,,22318.22,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-02-20,Close,Buy to close,"SMH $391.00 / $361.00 put spread, exp 2026-02-25 (SMH sleeve)",3,1.47,-441.82,1082.86,23401.07,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-02-20,Close,Sell to open,"SMH $392.50 / $362.50 put spread, exp 2026-03-06 (SMH sleeve)",3,4.87,1460.21,,23397.17,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-02-23,10:00,Buy to close,"QQQ $638.89 call, exp 2026-03-22 (short call)",1,3.85,-384.83,124.76,23011.34,"Bought back the short call early, profit target reached"
+SIMULATION,2026-02-23,15:00,Sell to open,"QQQ $636.75 call, exp 2026-03-27 (short call)",1,5.42,541.75,,23552.09,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-02-25,Close,Buy to close,"SMH $392.50 / $362.50 put spread, exp 2026-03-06 (SMH sleeve)",3,1.93,-579.06,873.35,24425.44,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-02-25,Close,Sell to open,"SMH $403.00 / $373.00 put spread, exp 2026-03-11 (SMH sleeve)",3,4.92,1476.2,,24421.54,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-02-26,10:00,Buy to close,"QQQ $636.75 call, exp 2026-03-27 (short call)",1,4.73,-473.42,67.33,23947.12,"Bought back the short call early, profit target reached"
+SIMULATION,2026-02-26,15:00,Sell to open,"QQQ $640.95 call, exp 2026-03-30 (short call)",1,4.88,488.47,,24434.58,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-03-03,Close,Buy to close,"SMH $403.00 / $373.00 put spread, exp 2026-03-11 (SMH sleeve)",3,13.85,-4154.74,-2686.34,21748.24,"Closed the SMH put spread, loss limit reached"
+SIMULATION,2026-03-03,10:00,Buy to close,"QQQ $640.95 call, exp 2026-03-30 (short call)",1,3.56,-355.76,131.7,21391.48,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-03,15:00,Sell to open,"QQQ $641.41 call, exp 2026-04-04 (short call)",1,6.06,605.51,,21995.98,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-03-03,Close,Sell to open,"SMH $369.00 / $339.00 put spread, exp 2026-03-17 (SMH sleeve)",3,4.92,1477.25,,21992.08,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-03-09,Close,Buy to close,"SMH $369.00 / $339.00 put spread, exp 2026-03-17 (SMH sleeve)",3,1.95,-583.95,885.5,22877.58,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-03-09,10:00,Buy to close,"QQQ $641.41 call, exp 2026-04-04 (short call)",1,4.67,-467.21,137.29,22409.37,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-09,15:00,Sell to open,"QQQ $651.36 call, exp 2026-04-10 (short call)",1,6.6,659.75,,23068.12,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-03-09,Close,Sell to open,"SMH $374.00 / $344.00 put spread, exp 2026-03-23 (SMH sleeve)",3,4.54,1362.99,,23064.22,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-03-11,10:00,Buy to close,"QQQ $651.36 call, exp 2026-04-10 (short call)",1,5.76,-576.08,82.67,22487.14,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-11,15:00,Sell to open,"QQQ $649.03 call, exp 2026-04-12 (short call)",1,6.28,628.1,,23114.24,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-03-12,15:00,Buy to close,"QQQ $649.03 call, exp 2026-04-12 (short call)",1,5.58,-558.3,68.79,22554.93,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-12,15:00,Sell to open,"QQQ $643.29 call, exp 2026-04-13 (short call)",1,6.92,691.96,,23245.9,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-03-13,15:00,Buy to close,"QQQ $643.29 call, exp 2026-04-13 (short call)",1,5.81,-580.98,109.98,22663.91,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-13,15:00,Sell to open,"QQQ $639.19 call, exp 2026-04-14 (short call)",1,6.85,685.33,,23348.24,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-03-16,10:00,Buy to close,"QQQ $639.19 call, exp 2026-04-14 (short call)",1,5.59,-558.97,125.37,22788.28,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-16,15:00,Sell to open,"QQQ $639.86 call, exp 2026-04-17 (short call)",1,6.03,602.65,,23389.93,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-03-17,Close,Buy to close,"SMH $374.00 / $344.00 put spread, exp 2026-03-23 (SMH sleeve)",3,1.68,-502.77,852.42,24242.35,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-03-17,Close,Sell to open,"SMH $376.00 / $346.00 put spread, exp 2026-03-31 (SMH sleeve)",3,4.61,1382.93,,24238.45,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-03-18,15:00,Buy to close,"QQQ $639.86 call, exp 2026-04-17 (short call)",1,5.26,-525.9,75.75,23711.54,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-18,15:00,Sell to open,"QQQ $636.69 call, exp 2026-04-19 (short call)",1,6.36,635.64,,24346.18,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-03-19,10:00,Buy to close,"QQQ $636.69 call, exp 2026-04-19 (short call)",1,4.76,-475.61,159.03,23869.57,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-19,15:00,Sell to open,"QQQ $633.00 call, exp 2026-04-20 (short call)",1,6.09,608.74,,24477.31,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-03-20,15:00,Buy to close,"QQQ $633.00 call, exp 2026-04-20 (short call)",1,5.08,-508.25,99.49,23968.06,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-20,15:00,Sell to open,"QQQ $625.98 call, exp 2026-04-21 (short call)",1,6.62,662.19,,24629.25,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-03-25,Close,Buy to close,"SMH $376.00 / $346.00 put spread, exp 2026-03-31 (SMH sleeve)",3,1.74,-522.23,852.9,25482.15,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-03-25,15:00,Buy to close,"QQQ $625.98 call, exp 2026-04-21 (short call)",1,5.79,-579.11,82.09,24902.04,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-25,15:00,Sell to open,"QQQ $645.50 call, exp 2026-04-26 (short call)",1,3.7,369.66,,25270.7,Sold a short call against the LEAPS (price below long-term average)
+SIMULATION,2026-03-25,Close,Sell to open,"SMH $378.00 / $348.00 put spread, exp 2026-04-08 (SMH sleeve)",3,4.71,1412.75,,25266.8,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-03-26,15:00,Buy to close,"QQQ $645.50 call, exp 2026-04-26 (short call)",1,2.57,-256.97,111.69,25008.84,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-26,15:00,Sell to open,"QQQ $635.06 call, exp 2026-04-27 (short call)",1,3.9,389.66,,25397.49,Sold a short call against the LEAPS (price below long-term average)
+SIMULATION,2026-03-27,Close,Buy to close,"SMH $378.00 / $348.00 put spread, exp 2026-04-08 (SMH sleeve)",3,10.95,-3284.24,-1879.3,23518.2,"Closed the SMH put spread, loss limit reached"
+SIMULATION,2026-03-27,Close,Sell to open,"SMH $353.50 / $323.50 put spread, exp 2026-04-10 (SMH sleeve)",3,4.73,1418.53,,23514.3,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-03-30,10:00,Buy to close,"QQQ $635.06 call, exp 2026-04-27 (short call)",1,3.07,-306.59,82.06,23206.7,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-30,15:00,Sell to open,"QQQ $625.40 call, exp 2026-05-01 (short call)",1,4.21,421.11,,23626.82,Sold a short call against the LEAPS (price below long-term average)
+SIMULATION,2026-03-31,10:00,Buy to close,"QQQ $625.40 call, exp 2026-05-01 (short call)",1,2.77,-276.58,143.54,23349.24,"Bought back the short call early, profit target reached"
+SIMULATION,2026-03-31,15:00,Sell to open,"QQQ $633.67 call, exp 2026-05-02 (short call)",1,3.62,361.88,,23710.12,Sold a short call against the LEAPS (price below long-term average)
+SIMULATION,2026-04-01,Close,Buy to close,"SMH $353.50 / $323.50 put spread, exp 2026-04-10 (SMH sleeve)",3,2.16,-649.02,761.71,24471.83,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-04-01,Close,Sell to open,"SMH $366.00 / $336.00 put spread, exp 2026-04-15 (SMH sleeve)",3,5.37,1609.63,,24467.93,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-04-06,Close,Buy to close,"SMH $366.00 / $336.00 put spread, exp 2026-04-15 (SMH sleeve)",3,2.67,-802.0,799.83,25267.76,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-04-06,Close,Sell to open,"SMH $372.00 / $342.00 put spread, exp 2026-04-20 (SMH sleeve)",3,5.16,1547.31,,25263.86,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-04-07,10:00,Buy to close,"QQQ $633.67 call, exp 2026-05-02 (short call)",1,2.91,-290.96,69.92,24971.9,"Bought back the short call early, profit target reached"
+SIMULATION,2026-04-07,15:00,Sell to open,"QQQ $647.64 call, exp 2026-05-09 (short call)",1,3.77,376.57,,25347.47,Sold a short call against the LEAPS (price below long-term average)
+SIMULATION,2026-04-08,Close,Buy to close,"SMH $372.00 / $342.00 put spread, exp 2026-04-20 (SMH sleeve)",3,2.43,-728.71,810.8,26158.27,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-04-08,Close,Sell to open,"SMH $394.50 / $364.50 put spread, exp 2026-04-22 (SMH sleeve)",4,5.62,2248.11,,26153.07,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-04-09,10:00,Buy to close,"QQQ $647.64 call, exp 2026-05-09 (short call)",1,3.01,-300.76,74.81,25851.31,"Bought back the short call early, profit target reached"
+SIMULATION,2026-04-09,15:00,Sell to open,"QQQ $655.73 call, exp 2026-05-11 (short call)",1,2.98,297.69,,26147.99,Sold a short call against the LEAPS (price below long-term average)
+SIMULATION,2026-04-13,Close,Buy to close,"SMH $394.50 / $364.50 put spread, exp 2026-04-22 (SMH sleeve)",4,1.57,-628.27,1609.44,27757.44,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-04-13,10:00,Buy to close,"QQQ $655.73 call, exp 2026-05-11 (short call)",1,2.59,-258.82,37.87,27497.62,"Bought back the short call early, profit target reached"
+SIMULATION,2026-04-13,15:00,Sell to open,"QQQ $650.28 call, exp 2026-05-15 (short call)",1,5.08,507.55,,28004.17,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-04-13,Close,Sell to open,"SMH $415.50 / $385.50 put spread, exp 2026-04-27 (SMH sleeve)",4,5.55,2219.18,,27998.97,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-04-16,10:00,Buy to close,"QQQ $650.28 call, exp 2026-05-15 (short call)",1,10.06,-1005.63,-499.08,26992.34,"Bought back the short call, price moved close to its strike"
+SIMULATION,2026-04-16,15:00,Sell to open,"QQQ $672.50 call, exp 2026-05-18 (short call)",1,4.95,494.94,,27486.28,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-04-17,Close,Buy to close,"SMH $415.50 / $385.50 put spread, exp 2026-04-27 (SMH sleeve)",4,2.11,-842.73,1366.05,28852.33,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-04-17,Close,Sell to open,"SMH $435.00 / $405.00 put spread, exp 2026-05-01 (SMH sleeve)",4,5.66,2262.31,,28847.13,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-04-22,Close,Buy to close,"SMH $435.00 / $405.00 put spread, exp 2026-05-01 (SMH sleeve)",4,2.35,-939.42,1312.49,30159.62,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-04-22,Close,Sell to open,"SMH $448.00 / $418.00 put spread, exp 2026-05-06 (SMH sleeve)",4,5.61,2244.66,,30154.42,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-04-24,Close,Buy to close,"SMH $448.00 / $418.00 put spread, exp 2026-05-06 (SMH sleeve)",4,1.61,-645.65,1588.61,31743.04,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-04-24,15:00,Buy to close,"QQQ $672.50 call, exp 2026-05-18 (short call)",1,11.08,-1108.49,-614.54,30633.55,"Bought back the short call, price moved close to its strike"
+SIMULATION,2026-04-24,15:00,Sell to open,"QQQ $698.61 call, exp 2026-05-26 (short call)",1,5.34,534.48,,31167.03,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-04-24,Close,Sell to open,"SMH $478.50 / $448.50 put spread, exp 2026-05-08 (SMH sleeve)",4,5.48,2192.87,,31161.83,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-04-27,10:00,Buy to close,"QQQ $698.61 call, exp 2026-05-26 (short call)",1,3.98,-398.04,135.43,30762.78,"Bought back the short call early, profit target reached"
+SIMULATION,2026-04-27,15:00,Sell to open,"QQQ $697.70 call, exp 2026-05-29 (short call)",1,5.16,515.65,,31277.43,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-04-28,10:00,Buy to close,"QQQ $697.70 call, exp 2026-05-29 (short call)",1,3.2,-319.63,195.02,30956.8,"Bought back the short call early, profit target reached"
+SIMULATION,2026-04-28,15:00,Sell to open,"QQQ $690.31 call, exp 2026-05-30 (short call)",1,5.05,505.17,,31460.97,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-04-30,Close,Buy to close,"SMH $478.50 / $448.50 put spread, exp 2026-05-08 (SMH sleeve)",4,2.26,-902.13,1280.34,32741.31,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-04-30,Close,Sell to open,"SMH $483.50 / $453.50 put spread, exp 2026-05-14 (SMH sleeve)",4,4.89,1957.03,,32736.11,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-05-05,Close,Buy to close,"SMH $483.50 / $453.50 put spread, exp 2026-05-14 (SMH sleeve)",4,1.75,-699.66,1246.97,33983.09,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-05-05,10:00,Buy to close,"QQQ $690.31 call, exp 2026-05-30 (short call)",1,10.24,-1024.46,-520.29,32957.63,"Bought back the short call, price moved close to its strike"
+SIMULATION,2026-05-05,Close,Sell to open,"SMH $497.50 / $467.50 put spread, exp 2026-05-19 (SMH sleeve)",4,5.07,2028.9,,32952.43,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-05-06,Close,Buy to close,"SMH $497.50 / $467.50 put spread, exp 2026-05-19 (SMH sleeve)",4,1.69,-676.86,1341.64,34294.06,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-05-06,Close,Sell to open,"SMH $524.50 / $494.50 put spread, exp 2026-05-20 (SMH sleeve)",4,5.14,2057.0,,34288.86,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-05-11,Close,Buy to close,"SMH $524.50 / $494.50 put spread, exp 2026-05-20 (SMH sleeve)",4,1.77,-709.03,1337.57,35626.43,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-05-11,Close,Sell to open,"SMH $545.50 / $515.50 put spread, exp 2026-05-25 (SMH sleeve)",4,5.69,2274.56,,35621.23,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-05-22,Close,Buy to close,"SMH $545.50 / $515.50 put spread, exp 2026-05-25 (SMH sleeve)",4,1.64,-655.46,1608.7,37229.93,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-05-22,Close,Sell to open,"SMH $540.50 / $510.50 put spread, exp 2026-06-05 (SMH sleeve)",4,6.16,2464.92,,37224.73,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-05-26,Close,Buy to close,"SMH $540.50 / $510.50 put spread, exp 2026-06-05 (SMH sleeve)",4,3.04,-1216.3,1238.22,38462.95,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-05-26,Close,Sell to open,"SMH $562.00 / $532.00 put spread, exp 2026-06-09 (SMH sleeve)",4,6.46,2582.33,,38457.75,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-06-02,Close,Buy to close,"SMH $562.00 / $532.00 put spread, exp 2026-06-09 (SMH sleeve)",4,1.53,-612.61,1959.32,40417.07,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-06-02,Close,Sell to open,"SMH $590.50 / $560.50 put spread, exp 2026-06-16 (SMH sleeve)",4,6.47,2588.91,,40411.87,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-06-05,Close,Buy to close,"SMH $590.50 / $560.50 put spread, exp 2026-06-16 (SMH sleeve)",4,16.57,-6629.92,-4051.41,36360.46,"Closed the SMH put spread, SMH gapped down through the loss limit"
+SIMULATION,2026-06-05,10:00,Sell to close,"QQQ $470.56 call, exp 2026-09-02 (LEAPS)",1,259.26,25926.25,13348.52,62285.71,"Sold the LEAPS, exit rule: option moved too much like stock"
+SIMULATION,2026-06-05,Close,Sell to open,"SMH $523.00 / $493.00 put spread, exp 2026-06-19 (SMH sleeve)",4,7.01,2804.13,,62280.51,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-06-11,Close,Buy to close,"SMH $523.00 / $493.00 put spread, exp 2026-06-19 (SMH sleeve)",4,2.88,-1151.0,1642.73,63923.24,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-06-11,Close,Sell to open,"SMH $554.50 / $524.50 put spread, exp 2026-06-25 (SMH sleeve)",4,7.47,2986.22,,63918.04,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-06-15,Close,Buy to close,"SMH $554.50 / $524.50 put spread, exp 2026-06-25 (SMH sleeve)",4,3.67,-1466.89,1508.93,65426.97,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-06-15,Close,Sell to open,"SMH $589.00 / $559.00 put spread, exp 2026-06-29 (SMH sleeve)",4,7.51,3005.22,,65421.77,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-06-29,Close,Buy to close,"SMH $589.00 / $559.00 put spread, exp 2026-06-29 (SMH sleeve)",4,0.0,-0.0,2994.82,68416.59,SMH put spread reached expiry
+SIMULATION,2026-06-29,Close,Sell to open,"SMH $564.00 / $534.00 put spread, exp 2026-07-13 (SMH sleeve)",4,8.12,3249.83,,68411.39,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-07-10,Close,Buy to close,"SMH $564.00 / $534.00 put spread, exp 2026-07-13 (SMH sleeve)",4,3.15,-1259.97,1979.46,70390.84,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-07-10,Close,Sell to open,"SMH $550.00 / $520.00 put spread, exp 2026-07-24 (SMH sleeve)",4,7.79,3117.41,,70385.64,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-07-21,Close,Buy to close,"SMH $550.00 / $520.00 put spread, exp 2026-07-24 (SMH sleeve)",4,3.48,-1391.81,1715.2,72100.85,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-07-21,Close,Sell to open,"SMH $532.50 / $502.50 put spread, exp 2026-08-04 (SMH sleeve)",4,7.33,2930.94,,72095.65,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-07-28,15:00,Buy to open,"QQQ $581.20 call, exp 2028-01-18 (LEAPS)",1,151.78,-15178.2,,44916.45,Entry conditions passed (moderate uptrend)
+SIMULATION,2026-07-28,15:00,Sell to open,"QQQ $709.96 call, exp 2026-08-29 (short call)",1,5.3,529.7,,57445.15,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-07-29,Close,Buy to close,"SMH $532.50 / $502.50 put spread, exp 2026-08-04 (SMH sleeve)",4,19.27,-7706.05,-4785.51,52659.64,"Closed the SMH put spread, SMH gapped down through the loss limit"
+SIMULATION,2026-07-29,15:00,Buy to close,"QQQ $709.96 call, exp 2026-08-29 (short call)",1,3.83,-383.11,145.59,52275.54,"Bought back the short call early, profit target reached"
+SIMULATION,2026-07-29,15:00,Sell to open,"QQQ $699.75 call, exp 2026-08-30 (short call)",1,5.86,586.27,,52860.81,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-07-29,Close,Sell to open,"SMH $466.50 / $436.50 put spread, exp 2026-08-12 (SMH sleeve)",4,6.41,2564.87,,52855.61,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-07-31,15:00,Buy to close,"QQQ $699.75 call, exp 2026-08-30 (short call)",1,9.86,-985.5,-400.23,51869.11,"Bought back the short call, price moved close to its strike"
+SIMULATION,2026-08-03,Close,Buy to close,"SMH $466.50 / $436.50 put spread, exp 2026-08-12 (SMH sleeve)",4,2.13,-850.56,1703.91,53573.02,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-08-03,Close,Sell to open,"SMH $502.50 / $472.50 put spread, exp 2026-08-17 (SMH sleeve)",4,6.83,2730.11,,53567.82,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-08-07,Close,Buy to close,"SMH $502.50 / $472.50 put spread, exp 2026-08-17 (SMH sleeve)",4,3.05,-1221.27,1498.44,55066.25,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-08-07,Close,Sell to open,"SMH $535.00 / $505.00 put spread, exp 2026-08-21 (SMH sleeve)",4,7.06,2824.96,,55061.05,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-08-14,Close,Buy to close,"SMH $535.00 / $505.00 put spread, exp 2026-08-21 (SMH sleeve)",4,3.2,-1278.13,1536.43,56597.48,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-08-14,Close,Sell to open,"SMH $544.00 / $514.00 put spread, exp 2026-08-28 (SMH sleeve)",4,6.76,2705.63,,56592.28,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-08-26,15:30,Sell to open,"QQQ $741.64 call, exp 2026-09-27 (short call)",1,4.68,468.13,,57059.41,Sold a short call against the LEAPS (moderate uptrend)
+SIMULATION,2026-08-27,Close,Buy to close,"SMH $544.00 / $514.00 put spread, exp 2026-08-28 (SMH sleeve)",4,0.06,-24.37,2670.86,59730.28,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-08-27,Close,Sell to open,"SMH $543.00 / $513.00 put spread, exp 2026-09-10 (SMH sleeve)",4,5.6,2241.94,,59725.08,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-09-01,15:30,Buy to close,"QQQ $741.64 call, exp 2026-09-27 (short call)",1,3.51,-351.32,115.81,59372.76,"Bought back the short call early, profit target reached"
+SIMULATION,2026-09-01,15:30,Sell to open,"QQQ $733.86 call, exp 2026-10-03 (short call)",1,6.47,646.87,,60018.63,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-09-08,Close,Buy to close,"SMH $543.00 / $513.00 put spread, exp 2026-09-10 (SMH sleeve)",4,0.23,-93.11,2138.44,62157.07,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-09-08,Close,Sell to open,"SMH $546.00 / $516.00 put spread, exp 2026-09-22 (SMH sleeve)",4,5.28,2112.52,,62151.87,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-09-14,Close,Buy to close,"SMH $546.00 / $516.00 put spread, exp 2026-09-22 (SMH sleeve)",4,11.72,-4688.83,-2586.71,59565.16,"Closed the SMH put spread, SMH gapped down through the loss limit"
+SIMULATION,2026-09-14,10:30,Buy to close,"QQQ $733.86 call, exp 2026-10-03 (short call)",1,3.86,-385.72,260.16,59178.44,"Bought back the short call early, profit target reached"
+SIMULATION,2026-09-14,15:30,Sell to open,"QQQ $736.71 call, exp 2026-10-16 (short call)",1,6.78,677.56,,59855.0,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-09-14,Close,Sell to open,"SMH $511.50 / $481.50 put spread, exp 2026-09-28 (SMH sleeve)",4,5.59,2236.0,,59849.8,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-09-17,Close,Buy to close,"SMH $511.50 / $481.50 put spread, exp 2026-09-28 (SMH sleeve)",4,2.28,-910.84,1314.76,61164.56,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-09-17,Close,Sell to open,"SMH $531.50 / $501.50 put spread, exp 2026-10-01 (SMH sleeve)",4,5.56,2224.79,,61159.36,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-09-21,Close,Buy to close,"SMH $531.50 / $501.50 put spread, exp 2026-10-01 (SMH sleeve)",4,1.77,-707.65,1506.74,62666.09,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-09-21,10:30,Buy to close,"QQQ $736.71 call, exp 2026-10-16 (short call)",1,13.75,-1374.72,-698.16,61290.37,"Bought back the short call, price moved close to its strike"
+SIMULATION,2026-09-21,15:30,Sell to open,"QQQ $766.67 call, exp 2026-10-23 (short call)",1,6.18,618.31,,61907.68,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-09-21,Close,Sell to open,"SMH $561.50 / $531.50 put spread, exp 2026-10-05 (SMH sleeve)",4,5.97,2386.4,,61902.48,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-09-24,10:30,Buy to close,"QQQ $766.67 call, exp 2026-10-23 (short call)",1,4.59,-459.12,158.19,61442.36,"Bought back the short call early, profit target reached"
+SIMULATION,2026-09-24,15:30,Sell to open,"QQQ $767.61 call, exp 2026-10-26 (short call)",1,6.5,650.37,,62091.73,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-09-28,Close,Buy to close,"SMH $561.50 / $531.50 put spread, exp 2026-10-05 (SMH sleeve)",4,2.1,-839.33,1536.67,63628.4,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-09-28,10:30,Buy to close,"QQQ $767.61 call, exp 2026-10-26 (short call)",1,4.41,-441.02,208.35,63186.38,"Bought back the short call early, profit target reached"
+SIMULATION,2026-09-28,15:30,Sell to open,"QQQ $763.57 call, exp 2026-10-30 (short call)",1,6.62,662.44,,63847.83,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-09-28,Close,Sell to open,"SMH $570.00 / $540.00 put spread, exp 2026-10-12 (SMH sleeve)",4,5.59,2237.19,,63842.63,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-10-01,Close,Buy to close,"SMH $570.00 / $540.00 put spread, exp 2026-10-12 (SMH sleeve)",4,2.47,-988.7,1238.09,65080.72,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-10-01,Close,Sell to open,"SMH $588.00 / $558.00 put spread, exp 2026-10-15 (SMH sleeve)",4,5.54,2217.73,,65075.52,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-10-05,Close,Buy to close,"SMH $588.00 / $558.00 put spread, exp 2026-10-15 (SMH sleeve)",4,2.42,-967.87,1239.46,66314.98,"Closed the SMH put spread, half of the credit captured"
+SIMULATION,2026-10-05,10:30,Buy to close,"QQQ $763.57 call, exp 2026-10-30 (short call)",1,10.13,-1013.15,-351.71,65300.83,"Bought back the short call, price moved close to its strike"
+SIMULATION,2026-10-05,15:30,Sell to open,"QQQ $782.91 call, exp 2026-11-05 (short call)",1,6.57,657.41,,65957.24,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-10-05,Close,Sell to open,"SMH $603.50 / $573.50 put spread, exp 2026-10-19 (SMH sleeve)",4,5.53,2211.36,,65952.04,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-10-08,15:30,Buy to close,"QQQ $782.91 call, exp 2026-11-05 (short call)",1,3.85,-384.6,271.81,65566.44,"Bought back the short call early, profit target reached"
+SIMULATION,2026-10-08,15:30,Sell to open,"QQQ $773.92 call, exp 2026-11-08 (short call)",1,6.45,645.49,,66210.93,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-10-12,Close,Buy to close,"SMH $603.50 / $573.50 put spread, exp 2026-10-19 (SMH sleeve)",4,14.0,-5601.11,-3400.15,62810.78,"Closed the SMH put spread, loss limit reached"
+SIMULATION,2026-10-12,10:30,Buy to close,"QQQ $773.92 call, exp 2026-11-08 (short call)",1,4.96,-496.22,148.27,62313.56,"Bought back the short call early, profit target reached"
+SIMULATION,2026-10-12,15:30,Sell to open,"QQQ $771.99 call, exp 2026-11-12 (short call)",1,6.36,635.99,,62948.55,Sold a short call against the LEAPS (strong uptrend)
+SIMULATION,2026-10-12,Close,Sell to open,"SMH $566.00 / $536.00 put spread, exp 2026-10-26 (SMH sleeve)",4,4.98,1991.18,,62943.35,Opened the weekly SMH put spread (sleeve entry)
+SIMULATION,2026-10-13,10:30,Buy to close,"QQQ $771.99 call, exp 2026-11-12 (short call)",1,4.78,-477.62,157.37,62464.72,"Bought back the short call early, profit target reached"
+SIMULATION,2026-10-13,15:30,Sell to open,"QQQ $769.62 call, exp 2026-11-13 (short call)",1,6.36,636.4,,63100.12,Sold a short call against the LEAPS (strong uptrend)

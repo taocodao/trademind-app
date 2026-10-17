@@ -81,7 +81,7 @@ function v6Html(main: string, o: V6Opts, subject: string, unsubUrl: string): str
         const flushLinks = () => { if (linkLines.length) { parts.push(`<p class="t" style="margin:0 0 18px;font-size:15px;line-height:1.8;color:#e5e7eb;">${linkLines.join('<br>')}</p>`); linkLines.length = 0; } };
         for (const l of lines) {
             const sub = l.match(/^Or subscribe free: (https:\/\/\S+)$/);
-            const lab = l.match(/^(Preview an issue|What each issue covers): (https:\/\/\S+)$/);
+            const lab = l.match(/^(Preview an issue|What each issue covers|See the full simulated record): (https:\/\/\S+)$/);
             if (sub) {
                 flush(); flushLinks();
                 parts.push(`<table role="presentation" cellpadding="0" cellspacing="0" style="margin:4px 0 14px;"><tr><td style="border-radius:8px;background:#2f6bff;"><a href="${escH(sub[1])}" style="display:inline-block;padding:13px 26px;${FONT}font-size:16px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;">Subscribe free</a></td></tr></table>`);
@@ -109,6 +109,7 @@ export function renderV6(o: V6Opts): { subject: string; text: string; html: stri
         subscribe_link: `${o.baseUrl}/r/${o.token}/s?s=${o.step}`,
         unsubscribe_link: `${o.baseUrl}/u/${o.token}`,
         mailing_address: o.mailingAddress,
+        sim_link: `${o.baseUrl}/r/${o.token}/v?s=${o.step}`,
         inside_link: `${o.baseUrl}/r/${o.token}/i?s=${o.step}`,
         original_subject: o.origSubject ?? '',
         sig_sep: o.sigSep,

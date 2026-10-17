@@ -16,6 +16,7 @@ import { INVITE_TEMPLATES } from './templates';
 import { INVITE_TEMPLATES_V5 } from './templates-v5';
 import { processRecaps } from './recap';
 import { FOLLOWUPS_V5 } from './followups-v5';
+import { renderV6, isV6Control, hasV6 } from './copy-v6';
 import { STAGE_BY_STEP, STEP_DAYS, PREVIEW_VARIANT, followupFooterText, followupHtml } from './followup';
 import { BASE_URL, CAMPAIGN, ensureOutreachTables, getSettings, setSetting } from './db';
 
@@ -430,10 +431,31 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
         branch = ck.rowCount || c.status === 'clicked' ? 'C' : 'N';
     }
     const tmplStep: number = row.step >= 100 ? 1 : row.step;
-    const msg = renderInvite({
+    const baseOpts = {
         template: c.template, step: tmplStep, token: c.token, firstName: c.first_name,
         senderName: s.sender_name || 'Eric Huang', useHtml: s.html_enabled === 'true', branch, seqV2,
-    });
+    };
+    // Copy v6 (short plain-text notes with spintax) applies to emails sent from copy_v6_start onward, except the
+    // control group, which keeps the earlier copy. Emails already sent are never touched.
+    const v6Start = s.copy_v6_start ? Date.parse(s.copy_v6_start) : NaN;
+    const useV6 = Number.isFinite(v6Start) && Date.now() >= v6Start && !isV6Control(c.token)
+        && (tmplStep === 1 || (seqV2 && !!stage)) && hasV6(c.template, tmplStep, branch);
+    let msg: { subject: string; text: string; html: string | null; unsubUrl: string };
+    if (useV6) {
+        let origSubject: string | undefined;
+        if (tmplStep !== 1) {
+            // The follow-up subject "re: ..." repeats the subject of the first email this person actually received.
+            const f = await query(`SELECT sent_at FROM outreach_sends WHERE token = $1 AND step = 1`, [row.token]);
+            const firstAt = f.rows[0]?.sent_at ? new Date(f.rows[0].sent_at).getTime() : NaN;
+            const first = Number.isFinite(firstAt) && firstAt >= v6Start
+                ? renderV6({ template: c.template, step: 1, branch, token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, sigSep: '-'.repeat(2) })
+                : renderInvite({ ...baseOpts, step: 1, branch: undefined, seqV2: false });
+            origSubject = first.subject;
+        }
+        msg = renderV6({ template: c.template, step: tmplStep, branch, token: c.token, firstName: c.first_name, origSubject, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, sigSep: '-'.repeat(2) });
+    } else {
+        msg = renderInvite(baseOpts);
+    }
     const from = `${s.from_display || 'Eric Huang From AI Investor Copilot'} <${fromLocal}@${row.domain}>`;
     let resp: Response;
     try {

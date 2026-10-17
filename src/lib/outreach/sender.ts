@@ -452,7 +452,7 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
                 : renderInvite({ ...baseOpts, step: 1, branch: undefined, seqV2: false });
             origSubject = first.subject;
         }
-        msg = renderV6({ template: c.template, step: tmplStep, branch, token: c.token, firstName: c.first_name, origSubject, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, sigSep: '-'.repeat(2) });
+        msg = renderV6({ template: c.template, step: tmplStep, branch, token: c.token, firstName: c.first_name, origSubject, useHtml: s.html_enabled === 'true', baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, sigSep: '-'.repeat(2) });
     } else {
         msg = renderInvite(baseOpts);
     }

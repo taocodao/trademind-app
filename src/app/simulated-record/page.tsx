@@ -81,7 +81,6 @@ function Chart({ s }: { s: Strat }) {
 function Metric({ k, v, cls }: { k: string; v: string; cls?: string }) {
     return (
         <div className="sr-metric">
-            <span className="sr-tag">Simulated, {WINDOW}</span>
             <span className="sr-k">{k}</span>
             <span className={`sr-v ${cls || ''}`}>{v}</span>
         </div>
@@ -100,6 +99,7 @@ function Block({ s }: { s: Strat }) {
             </div>
 
             <div className="sr-metrics">
+                <Metric k="Starting amount" v={money(s.principal, 2)} />
                 <Metric k="Simulated value at the end of the window" v={money(s.finalValue, 2)} />
                 <Metric k="Simulated profit or loss over the window" v={`${money(s.pnl, 2)} (${pct(s.pnlPct)})`} cls={s.pnl >= 0 ? 'sr-pos' : 'sr-neg'} />
                 <Metric k="Largest simulated drop from a peak" v={`${s.maxDrawdownPct.toFixed(1)}%`} />

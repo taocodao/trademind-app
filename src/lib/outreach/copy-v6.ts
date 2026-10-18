@@ -1,5 +1,5 @@
 /**
- * Invitation copy v6: short plain-text notes with spintax. Applies only while outreach_settings.copy_v6_start is set,
+ * Invitation copy (v7 text): sample first, risk first. Branded HTML plus plain text. Applies only while outreach_settings.copy_v6_start is set,
  * and never to the control group (1 in 5 contacts keep the earlier copy, picked by a hash of the token).
  * Spintax choices are seeded by token and step, so a retry or a re-render gives the identical email.
  */
@@ -10,7 +10,7 @@ import { INVITE_TEMPLATES_V5 } from './templates-v5';
 const FIRST_STEP_KEY = 'FIRST';
 const STAGE_KEY: Record<number, string> = { 1: FIRST_STEP_KEY, 2: 'FU1', 5: 'FU2', 6: 'FU3', 7: 'FINAL' };
 /** Follow-up stage 2 sends the reader straight to a published issue for these templates. */
-export const V6_PREVIEW_VARIANT: Record<string, 'ml' | 'bt'> = { T2: 'bt', T6: 'ml' };
+export const V6_PREVIEW_VARIANT: Record<string, 'ml' | 'bt'> = { T1: 'ml', T2: 'ml', T3: 'ml', T4: 'ml', T5: 'ml', T6: 'ml' };
 
 /** One contact in five stays on the earlier copy so the two versions can be compared. */
 export function isV6Control(token: string): boolean {
@@ -67,31 +67,42 @@ function v6Html(main: string, o: V6Opts, subject: string, unsubUrl: string): str
         /You(?:’|&rsquo;|')re receiving this invitation because[\s\S]*?Unsubscribe in one click<\/a>\./,
         `You’re getting this invite because you subscribed to an investing publication. <a href="${unsubUrl}" class="t" style="color:#aab4c5;text-decoration:underline;">Unsubscribe or snooze</a>.`
     );
-    const nice = (u: string) => (/\/s\?/.test(u) ? 'sign up free' : /\/p\?/.test(u) ? 'read the issue' : /\/i\?/.test(u) ? 'see what is inside' : u);
     const anchor = (u: string, label: string) => `<a href="${escH(u)}" class="pl" style="color:#8fb3ff;">${escH(label)}</a>`;
-    const prose = (l: string) => escH(l).replace(/https:\/\/[^\s<]+?(?=[.,]?(?:\s|$|<))/g, (u) => { const raw = u.replace(/&amp;/g, '&'); return anchor(raw, nice(raw)); });
+    const bigBtn = (u: string, label: string, caption: string) =>
+        `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:4px 0 8px;"><tr><td style="border-radius:8px;background:#2f6bff;"><a href="${escH(u)}" style="display:inline-block;padding:14px 32px;${FONT}font-size:17px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:8px;">${escH(label)}</a></td></tr></table>`
+        + `<p class="t2" style="margin:0 0 20px;font-size:12px;color:#aab4c5;">${escH(caption)}</p>`;
+    const outlineBtn = (u: string) =>
+        `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:4px 0 18px;"><tr><td style="border-radius:8px;border:2px solid #2f6bff;"><a href="${escH(u)}" style="display:inline-block;padding:11px 24px;${FONT}font-size:15px;font-weight:600;color:#8fb3ff;text-decoration:none;border-radius:8px;">Subscribe free</a></td></tr></table>`;
+    const textLink = (u: string, label: string) => `<p style="margin:0 0 18px;${FONT}font-size:15px;"><a href="${escH(u)}" class="pl" style="color:#8fb3ff;">${escH(label)}</a></p>`;
+    const strip = () => {
+        const items: [string, string, string][] = [['weather', 'Market weather', 'regime read'], ['readout', 'Copilot readout', 'ML in plain English'], ['flight', 'Flight plan', 'one strategy idea'], ['turbulence', 'Turbulence test', 'what could go wrong']];
+        const tds = items.map(([k, n, d]) => `<td width="25%" valign="top" style="padding:12px 6px;${FONT}font-size:12px;line-height:1.4;"><a href="${escH(`${o.baseUrl}/r/${o.token}/i?s=${o.step}&a=${k}`)}" class="pl" style="display:block;color:#8fb3ff;font-size:13px;font-weight:700;text-decoration:none;">${n} &rsaquo;</a><span class="t2" style="color:#aab4c5;">${d}</span></td>`).join('');
+        return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 6px;border-top:1px solid #273449;border-bottom:1px solid #273449;"><tr>${tds}</tr></table><p class="t2" style="margin:0 0 18px;font-size:12px;color:#aab4c5;">Tap any part to see what it covers.</p>`;
+    };
     const out: string[] = [];
-    for (const block of main.split(/\n\s*\n/)) {
+    const blocks = main.split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
+    blocks.forEach((block, bi) => {
         const lines = block.split('\n').map((l) => l.trim()).filter(Boolean);
-        if (!lines.length) continue;
-        const parts: string[] = [];
-        let plain: string[] = [];
-        const flush = () => { if (plain.length) { parts.push(`<p class="t" style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#e5e7eb;">${plain.join('<br>')}</p>`); plain = []; } };
-        const linkLines: string[] = [];
-        const flushLinks = () => { if (linkLines.length) { parts.push(`<p class="t" style="margin:0 0 18px;font-size:15px;line-height:1.8;color:#e5e7eb;">${linkLines.join('<br>')}</p>`); linkLines.length = 0; } };
-        for (const l of lines) {
-            const sub = l.match(/^Or subscribe free: (https:\/\/\S+)$/);
-            const lab = l.match(/^(Preview an issue|What each issue covers|See the full simulated record): (https:\/\/\S+)$/);
-            if (sub) {
-                flush(); flushLinks();
-                parts.push(`<table role="presentation" cellpadding="0" cellspacing="0" style="margin:4px 0 14px;"><tr><td style="border-radius:8px;background:#2f6bff;"><a href="${escH(sub[1])}" style="display:inline-block;padding:13px 26px;${FONT}font-size:16px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;">Subscribe free</a></td></tr></table>`);
-            } else if (lab) {
-                flush(); linkLines.push(anchor(lab[2], lab[1]));
-            } else { flushLinks(); plain.push(prose(l)); }
+        if (bi === blocks.length - 1 && lines.length === 1 && /^(Best, Eric|Thanks, Eric|Eric)$/.test(lines[0])) {
+            out.push(`<p class="t" style="margin:0 0 4px;font-size:16px;color:#e5e7eb;">Eric Huang</p><p class="t2" style="margin:0 0 24px;font-size:13px;color:#aab4c5;">Founder, TradeMind &middot; New York</p>`);
+            return;
         }
-        flush(); flushLinks();
-        out.push(...parts);
-    }
+        let plain: string[] = [];
+        const flush = () => { if (plain.length) { out.push(`<p class="t" style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#e5e7eb;">${plain.map(escH).join('<br>')}</p>`); plain = []; } };
+        for (const l of lines) {
+            const m = l.match(/^(Preview an issue|Read another sample|Subscribe free|Or subscribe free|See a sample issue first|What each issue covers): (https:\/\/\S+)$/);
+            if (!m) { plain.push(l); continue; }
+            flush();
+            const [, label, url] = m;
+            if (label === 'Preview an issue') out.push(bigBtn(url, 'Preview', 'See a real issue first. No sign-up needed.'));
+            else if (label === 'Read another sample') out.push(bigBtn(url, 'Read another sample', 'A different issue. No sign-up needed.'));
+            else if (label === 'Subscribe free') out.push(bigBtn(url, 'Subscribe free', 'Free weekly brief. Unsubscribe any time.'));
+            else if (label === 'Or subscribe free') out.push(outlineBtn(url));
+            else if (label === 'See a sample issue first') out.push(textLink(url, label));
+            else out.push(strip());
+        }
+        flush();
+    });
     return (head + out.join('\n') + tail).replace(/\{\{mailing_address\}\}/g, escH(o.mailingAddress));
 }
 

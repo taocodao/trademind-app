@@ -89,6 +89,7 @@ export async function ensureOutreachTables(): Promise<void> {
             human_confirmed BOOLEAN NOT NULL DEFAULT FALSE,
             bot_reason      TEXT
         )`);
+    await query(`ALTER TABLE outreach_click_events ADD COLUMN IF NOT EXISTS interacted BOOLEAN NOT NULL DEFAULT FALSE`);
     await query(`CREATE INDEX IF NOT EXISTS outreach_click_token_idx ON outreach_click_events (token, ts)`);
     await query(`
         CREATE TABLE IF NOT EXISTS outreach_domains (
@@ -251,6 +252,19 @@ export async function confirmHuman(token: string): Promise<boolean> {
         }
     }
     return confirmed;
+}
+
+/** A trusted scroll, tap or key press after the 3 second check: the latest human confirmed visit also counts as interacted. */
+export async function markInteracted(token: string): Promise<boolean> {
+    await ensureOutreachTables();
+    if (!validToken(token)) return false;
+    const r = await query(
+        `UPDATE outreach_click_events SET interacted = TRUE
+         WHERE id = (SELECT id FROM outreach_click_events WHERE token = $1 AND is_bot = FALSE AND human_confirmed
+                     AND ts > NOW() - INTERVAL '3 hours' ORDER BY ts DESC LIMIT 1)
+         RETURNING id`, [token]
+    );
+    return !!r.rowCount;
 }
 
 /** One-click unsubscribe: suppress the address, cancel pending sends. */

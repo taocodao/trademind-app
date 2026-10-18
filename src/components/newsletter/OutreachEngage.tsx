@@ -34,7 +34,24 @@ export default function OutreachEngage() {
                 window.clearInterval(timer);
             }
         }, 500);
-        return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', onVis); };
+        // A real person also scrolls, taps, or types. Scanners that run scripts rarely do. Reported once, after the 3 second check.
+        const t0 = Date.now();
+        let interacted = false;
+        const onUser = (e: Event) => {
+            if (interacted || !e.isTrusted) return;
+            interacted = true;
+            window.setTimeout(() => {
+                void fetch('/api/engage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ t, interacted: true }),
+                    keepalive: true,
+                });
+            }, Math.max(0, 3800 - (Date.now() - t0)));
+        };
+        const evts = ['scroll', 'pointerdown', 'keydown', 'touchstart', 'wheel'];
+        evts.forEach((n) => window.addEventListener(n, onUser, { passive: true }));
+        return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', onVis); evts.forEach((n) => window.removeEventListener(n, onUser)); };
     }, []);
     return null;
 }

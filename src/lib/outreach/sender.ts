@@ -9,7 +9,7 @@
  * Pilot wave first; each segment's rollout (W2) is released by the confirmed-rate gate.
  * Nothing sends while outreach_settings.paused = 'true'.
  */
-import { randomInt } from 'crypto';
+import { randomInt, createHash } from 'crypto';
 import { query } from '@/lib/db';
 import { MAILING_ADDRESS } from '@/lib/newsletter/email';
 import { INVITE_TEMPLATES } from './templates';
@@ -53,6 +53,17 @@ export function zonedInstant(date: string, hhmm: string, tz: string): Date {
         guess.setTime(guess.getTime() + (want - shown));
     }
     return guess;
+}
+
+/** New follow-up timing (days after the first email) for the sample-first copy: FU1 about 4 business days, FINAL about 5 to 7 business days later. */
+const STEP_DAYS_V7: Record<number, number> = { 2: 5, 7: 13 };
+/** Contacts who qualify for the previewer follow-ups are split 50/50 into triggered and unchanged, by a hash of the token. */
+export function isPreviewTriggered(token: string): boolean {
+    return parseInt(createHash('sha256').update(`${token}:preview-trigger`).digest('hex').slice(0, 8), 16) % 2 === 0;
+}
+/** Business day in Eastern time (Monday to Friday, not a listed holiday). */
+function isBusinessDay(date: string, dow: number): boolean {
+    return dow >= 1 && dow <= 5 && !HOLIDAYS.has(date);
 }
 
 /** Sends run seven days a week; only the listed holidays are skipped. */
@@ -206,7 +217,7 @@ export async function planToday(now = new Date()): Promise<PlanResult | null> {
                 FROM outreach_contacts c
                 JOIN outreach_sends s1 ON s1.token = c.token AND s1.step = 1 AND s1.status IN ('sent','delivered')
                 WHERE c.status IN ('sent','clicked') AND c.wave <> 'seed'
-                  AND (s1.sent_at AT TIME ZONE 'America/New_York')::date <= ($1::date - 7)
+                  AND (s1.sent_at AT TIME ZONE 'America/New_York')::date <= ($1::date - 4)
                   AND NOT EXISTS (SELECT 1 FROM outreach_sends x WHERE x.token = c.token AND x.step = 7)
                   AND NOT EXISTS (SELECT 1 FROM newsletter_suppression ns WHERE ns.email = c.email)
                   AND NOT EXISTS (SELECT 1 FROM newsletter_subscribers sub WHERE sub.status IN ('confirmed','pending') AND sub.email IN (c.email, COALESCE(c.subscriber_email, c.email)))
@@ -228,8 +239,65 @@ export async function planToday(now = new Date()): Promise<PlanResult | null> {
         const dayDiff = (a: string, b: string) => Math.round((Date.parse(a) - Date.parse(b)) / 86_400_000);
         const dstr = (v: unknown) => (v instanceof Date ? v.toISOString().slice(0, 10) : String(v).slice(0, 10));
         const fuRows: { token: string; tz: string; domain: string; step: number }[] = [];
+
+        // Previewer follow-ups: a person who viewed the preview page and scrolled, tapped or typed (confirmed by the page script)
+        // gets one neutral email the next business morning (step 5, "another sample") and one more 7 days later (step 6).
+        // Half of eligible previewers are triggered; the rest stay on the unchanged schedule. Anyone who already received the
+        // closing email, signed up, or opted out gets nothing. One acquisition email per 24 hours, at most two follow-ups in 7 days.
+        const treated = new Set<string>();
+        const previewRows: { token: string; tz: string; domain: string; step: number; morning: boolean }[] = [];
+        if (seqV2 && s.preview_trigger !== 'off') {
+            const pv = await query(`
+                SELECT c.token, c.tz, s1.domain, MIN(e.ts) AS first_ts,
+                       COALESCE((SELECT array_agg(x.step) FROM outreach_sends x WHERE x.token = c.token), '{}') AS sent_steps,
+                       COALESCE((SELECT array_agg(q.step) FROM outreach_queue q WHERE q.token = c.token AND q.state = 'pending'), '{}') AS queued_steps,
+                       (SELECT MAX(x.sent_at) FROM outreach_sends x WHERE x.token = c.token AND x.step < 100) AS last_sent,
+                       (SELECT MAX(x.sent_at) FROM outreach_sends x WHERE x.token = c.token AND x.step = 5) AS s5_at,
+                       (SELECT COUNT(*)::int FROM outreach_sends x WHERE x.token = c.token AND x.step IN (2,5,6,7) AND x.sent_at > NOW() - INTERVAL '7 days') AS fu_7d
+                FROM outreach_contacts c
+                JOIN outreach_sends s1 ON s1.token = c.token AND s1.step = 1 AND s1.status IN ('sent','delivered')
+                JOIN outreach_click_events e ON e.token = c.token AND e.link_type = 'preview' AND NOT e.is_bot AND e.human_confirmed AND e.interacted
+                WHERE c.status IN ('sent','clicked') AND c.wave <> 'seed'
+                  AND NOT EXISTS (SELECT 1 FROM newsletter_suppression ns WHERE ns.email = c.email)
+                  AND NOT EXISTS (SELECT 1 FROM newsletter_subscribers sub WHERE sub.status IN ('confirmed','pending') AND sub.email IN (c.email, COALESCE(c.subscriber_email, c.email)))
+                GROUP BY c.token, c.tz, s1.domain
+                LIMIT 3000`);
+            const nowMs0 = now.getTime();
+            for (const row of pv.rows) {
+                if (isV6Control(row.token) || !isPreviewTriggered(row.token)) continue;
+                treated.add(row.token);
+                const sent = new Set<number>(row.sent_steps);
+                const queued = new Set<number>(row.queued_steps);
+                if (sent.has(7)) continue;
+                if (!isBusinessDay(et.date, et.dow)) continue;
+                if (row.last_sent && nowMs0 - new Date(row.last_sent).getTime() < 24 * 3600_000) continue;
+                if (Number(row.fu_7d) >= 2) continue;
+                const next = !sent.has(5) ? 5 : !sent.has(6) ? 6 : undefined;
+                if (next === undefined || queued.has(next)) continue;
+                if (next === 5) {
+                    const clickDay = etParts(new Date(row.first_ts)).date;
+                    if (!(clickDay < et.date) || nowMs0 - new Date(row.first_ts).getTime() < 6 * 3600_000) continue;
+                } else {
+                    if (!row.s5_at || nowMs0 - new Date(row.s5_at).getTime() < 7 * 86_400_000 - 3 * 3600_000) continue;
+                }
+                previewRows.push({ token: row.token, tz: row.tz, domain: row.domain, step: next, morning: true });
+            }
+        }
+
         for (const row of fu.rows) {
             if (!seqV2) { fuRows.push({ token: row.token, tz: row.tz, domain: row.domain, step: 2 }); continue; }
+            if (treated.has(row.token)) continue;
+            if (!isV6Control(row.token)) {
+                // Sample-first sequence: FU1 then the close-out, for everyone not in the previewer path.
+                const sentV7 = new Set<number>(row.sent_steps);
+                const queuedV7 = new Set<number>(row.queued_steps);
+                const nextV7 = [2, 7].find((st) => !sentV7.has(st));
+                if (nextV7 === undefined || queuedV7.has(nextV7)) continue;
+                if (dayDiff(et.date, dstr(row.first_day)) < STEP_DAYS_V7[nextV7]) continue;
+                if (row.last_day && dayDiff(et.date, dstr(row.last_day)) < 4) continue;
+                fuRows.push({ token: row.token, tz: row.tz, domain: row.domain, step: nextV7 });
+                continue;
+            }
             const sentSteps = new Set<number>(row.sent_steps);
             const queued = new Set<number>(row.queued_steps);
             const seq = row.has_click || midOn ? [2, 5, 6, 7] : [2, 7];
@@ -240,7 +308,7 @@ export async function planToday(now = new Date()): Promise<PlanResult | null> {
             fuRows.push({ token: row.token, tz: row.tz, domain: row.domain, step: next });
         }
 
-        const picks: { token: string; tz: string; domain: string; step: number }[] = [];
+        const picks: { token: string; tz: string; domain: string; step: number; morning?: boolean }[] = [];
         const used = new Map<string, number>();
         const room = (d: string) => (cap.get(d) ?? 0) - (used.get(d) ?? 0);
         // Check-ins: people who asked to be contacted again after 3 or 6 months (one email, then done).
@@ -255,6 +323,13 @@ export async function planToday(now = new Date()): Promise<PlanResult | null> {
             const d = doms.map((x) => x.domain).sort((a, b) => room(b) - room(a))[0];
             if (room(d) <= 0) break;
             picks.push({ token: row.token, tz: row.tz, domain: d, step: 3 });
+            used.set(d, (used.get(d) ?? 0) + 1);
+        }
+        for (const row of previewRows) {
+            let d = String(row.domain);
+            if (!cap.has(d)) d = doms.map((x) => x.domain).sort((a, b) => room(b) - room(a))[0];
+            if (room(d) <= 0) continue;
+            picks.push({ token: row.token, tz: row.tz, domain: d, step: row.step, morning: true });
             used.set(d, (used.get(d) ?? 0) + 1);
         }
         const fuCap = Math.floor(budget * 0.55);
@@ -312,12 +387,13 @@ export async function planToday(now = new Date()): Promise<PlanResult | null> {
             const startEt = zonedInstant(et.date, '08:00', ET).getTime();
             const startLocal = zonedInstant(et.date, '07:00', p.tz || ET).getTime();
             const start = Math.max(startEt, startLocal);
-            const spanSec = Math.max(Math.floor((windowEnd - start) / 1000), 60);
+            const endForPick = p.morning ? Math.min(Math.max(zonedInstant(et.date, '11:00', ET).getTime(), nowMs + 30 * 60_000), windowEnd) : windowEnd;
+            const spanSec = Math.max(Math.floor((endForPick - start) / 1000), 60);
             let at = start + randomInt(0, spanSec) * 1000;
             if (at < nowMs) at = nowMs + randomInt(0, 20) * 60_000;
             await query(
                 `INSERT INTO outreach_queue (plan_date, token, step, domain, scheduled_at) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (token, step) DO NOTHING`,
-                [et.date, p.token, p.step, p.domain, new Date(Math.min(at, windowEnd))]
+                [et.date, p.token, p.step, p.domain, new Date(Math.min(at, endForPick))]
             );
         }
         for (const sd of seedRows) {
@@ -438,21 +514,14 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
     // Copy v6 (short plain-text notes with spintax) applies to emails sent from copy_v6_start onward, except the
     // control group, which keeps the earlier copy. Emails already sent are never touched.
     const v6Start = s.copy_v6_start ? Date.parse(s.copy_v6_start) : NaN;
-    const useV6 = Number.isFinite(v6Start) && Date.now() >= v6Start && !isV6Control(c.token)
-        && (tmplStep === 1 || (seqV2 && !!stage)) && hasV6(c.template, tmplStep, branch);
+    // Sample-first copy: steps 5 and 6 are the previewer emails (branch C), steps 2 and 7 the standard follow-ups (branch N).
+    const v6Branch: 'C' | 'N' = row.step === 5 || row.step === 6 ? 'C' : 'N';
+    const v6Live = Number.isFinite(v6Start) && Date.now() >= v6Start && !isV6Control(c.token);
+    if (v6Live && stage && (row.step === 5 || row.step === 6) && !hasV6(c.template, tmplStep, 'C')) return skip('no copy');
+    const useV6 = v6Live && (tmplStep === 1 || (seqV2 && !!stage)) && hasV6(c.template, tmplStep, tmplStep === 1 ? 'N' : v6Branch);
     let msg: { subject: string; text: string; html: string | null; unsubUrl: string };
     if (useV6) {
-        let origSubject: string | undefined;
-        if (tmplStep !== 1) {
-            // The follow-up subject "re: ..." repeats the subject of the first email this person actually received.
-            const f = await query(`SELECT sent_at FROM outreach_sends WHERE token = $1 AND step = 1`, [row.token]);
-            const firstAt = f.rows[0]?.sent_at ? new Date(f.rows[0].sent_at).getTime() : NaN;
-            const first = Number.isFinite(firstAt) && firstAt >= v6Start
-                ? renderV6({ template: c.template, step: 1, branch, token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, sigSep: '-'.repeat(2) })
-                : renderInvite({ ...baseOpts, step: 1, branch: undefined, seqV2: false });
-            origSubject = first.subject;
-        }
-        msg = renderV6({ template: c.template, step: tmplStep, branch, token: c.token, firstName: c.first_name, origSubject, useHtml: s.html_enabled === 'true', baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, sigSep: '-'.repeat(2) });
+        msg = renderV6({ template: c.template, step: tmplStep, branch: tmplStep === 1 ? 'N' : v6Branch, token: c.token, firstName: c.first_name, useHtml: s.html_enabled === 'true', baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, sigSep: '-'.repeat(2) });
     } else {
         msg = renderInvite(baseOpts);
     }

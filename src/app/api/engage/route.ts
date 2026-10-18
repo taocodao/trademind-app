@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { confirmHuman } from '@/lib/outreach/db';
+import { confirmHuman, markInteracted } from '@/lib/outreach/db';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const ok = await confirmHuman(String(body.t ?? ''));
+        const ok = body.interacted === true ? await markInteracted(String(body.t ?? '')) : await confirmHuman(String(body.t ?? ''));
         return NextResponse.json({ ok });
     } catch {
         return NextResponse.json({ ok: false }, { status: 400 });

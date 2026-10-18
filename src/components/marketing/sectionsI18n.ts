@@ -98,7 +98,7 @@ const EN_SECTIONS: SectionsCopy = {
         ctaSecondary: 'Read the record',
         ledgerLink: 'Open the ledger \u2192',
         simTag: 'Simulation',
-        simLink: 'QQQ LEAPS, simulated over the past 2 years: +229.48% vs +49.46% for QQQ buy and hold. Largest drop -14.6% vs -22.9%. Not live trading. \u2192',
+        simLink: 'QQQ LEAPS, simulated over the past 2 years: +229.48% vs +49.46% for QQQ buy and hold.|Largest drop -14.6% vs -22.9%. Not live trading. \u2192',
         cards: [
             {
                 numeral: '55.1%',
@@ -268,7 +268,7 @@ const ES_SECTIONS: SectionsCopy = {
         ctaLedger: 'Explora cada operación \u2192',
         ledgerLink: 'Abre el libro mayor \u2192',
         simTag: 'Simulación',
-        simLink: 'QQQ LEAPS, simulado en los últimos 2 años: +229,48% vs +49,46% de QQQ comprar y mantener. Mayor caída -14,6% vs -22,9%. No es trading en vivo. \u2192',
+        simLink: 'QQQ LEAPS, simulado en los últimos 2 años: +229,48% vs +49,46% de QQQ comprar y mantener.|Mayor caída -14,6% vs -22,9%. No es trading en vivo. \u2192',
         cards: [
             {
                 numeral: '55.1%',
@@ -438,7 +438,7 @@ const ZH_SECTIONS: SectionsCopy = {
         ctaLedger: '浏览每一笔交易 \u2192',
         ledgerLink: '打开账本 \u2192',
         simTag: '模拟',
-        simLink: 'QQQ LEAPS 过去两年模拟：收益 +229.48%，QQQ 买入持有 +49.46%。最大回撤 -14.6%，QQQ 为 -22.9%。非实盘交易。 \u2192',
+        simLink: 'QQQ LEAPS 过去两年模拟：收益 +229.48%，QQQ 买入持有 +49.46%。|最大回撤 -14.6%，QQQ 为 -22.9%。非实盘交易。 \u2192',
         cards: [
             {
                 numeral: '55.1%',

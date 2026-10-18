@@ -141,8 +141,11 @@ export function CoPilotHero() {
                 </div>
                 <div className="tm-sim-wrap">
                     <Link href="/simulated-record" className="tm-sim-link">
-                        <span className="tm-sim-tag">{c.simTag}</span>
-                        <span>{c.simLink}</span>
+                        <span className="tm-sim-line">{c.simLink.split('|')[0]}</span>
+                        <span className="tm-sim-line">
+                            <span className="tm-sim-tag">{c.simTag}</span>
+                            <span>{c.simLink.split('|')[1] ?? ''}</span>
+                        </span>
                     </Link>
                 </div>
 

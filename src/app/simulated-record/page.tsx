@@ -100,14 +100,14 @@ function Block({ s }: { s: Strat }) {
 
             <div className="sr-metrics">
                 <Metric k="Starting amount" v={money(s.principal, 2)} />
-                <Metric k="Simulated value at the end of the window" v={money(s.finalValue, 2)} />
-                <Metric k="Simulated profit or loss over the window" v={`${money(s.pnl, 2)} (${pct(s.pnlPct)})`} cls={s.pnl >= 0 ? 'sr-pos' : 'sr-neg'} />
-                <Metric k="Largest simulated drop from a peak" v={`${s.maxDrawdownPct.toFixed(1)}%`} />
-                <Metric k={`QQQ buy and hold over the same window, same starting dollars`} v={`${money(s.benchmarkFinal, 2)} (${pct(s.benchmarkPct)})`} cls={s.benchmarkPct >= 0 ? 'sr-pos' : 'sr-neg'} />
-                <Metric k="Largest drop from a peak, QQQ buy and hold" v={`${s.benchmarkMaxDrawdownPct.toFixed(1)}%`} />
-                <Metric k="Of the profit or loss: realized by closed trades" v={money(s.realizedPnl, 2)} />
-                <Metric k="Of the profit or loss: unrealized on open positions" v={money(s.unrealizedPnl, 2)} />
-                <Metric k="Modeled trading costs included above" v={money(s.modeledCosts, 2)} />
+                <Metric k="Simulated value at end" v={money(s.finalValue, 2)} />
+                <Metric k="Simulated profit or loss" v={`${money(s.pnl, 2)} (${pct(s.pnlPct)})`} cls={s.pnl >= 0 ? 'sr-pos' : 'sr-neg'} />
+                <Metric k="Largest simulated drop" v={`${s.maxDrawdownPct.toFixed(1)}%`} />
+                <Metric k="QQQ buy and hold, same start" v={`${money(s.benchmarkFinal, 2)} (${pct(s.benchmarkPct)})`} cls={s.benchmarkPct >= 0 ? 'sr-pos' : 'sr-neg'} />
+                <Metric k="QQQ largest drop" v={`${s.benchmarkMaxDrawdownPct.toFixed(1)}%`} />
+                <Metric k="Realized by closed trades" v={money(s.realizedPnl, 2)} />
+                <Metric k="Unrealized on open positions" v={money(s.unrealizedPnl, 2)} />
+                <Metric k="Modeled trading costs" v={money(s.modeledCosts, 2)} />
             </div>
             <Chart s={s} />
             <p className="sr-note">SIMULATION. {WINDOW}. Values are end of day. The grey line is a comparison, not a recommendation, and uses dividend adjusted QQQ closing prices.</p>

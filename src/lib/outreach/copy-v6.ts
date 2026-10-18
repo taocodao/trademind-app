@@ -12,8 +12,9 @@ const STAGE_KEY: Record<number, string> = { 1: FIRST_STEP_KEY, 2: 'FU1', 5: 'FU2
 /** Follow-up stage 2 sends the reader straight to a published issue for these templates. */
 export const V6_PREVIEW_VARIANT: Record<string, 'ml' | 'bt'> = { T1: 'ml', T2: 'ml', T3: 'ml', T4: 'ml', T5: 'ml', T6: 'ml' };
 
-/** One contact in five stays on the earlier copy so the two versions can be compared. */
+/** The old-copy comparison group (1 in 5) was switched off on Oct 18 2026: every contact gets the current copy. */
 export function isV6Control(token: string): boolean {
+    if (token) return false;
     return parseInt(createHash('sha256').update(`${token}:copy-v6`).digest('hex').slice(0, 8), 16) % 5 === 0;
 }
 

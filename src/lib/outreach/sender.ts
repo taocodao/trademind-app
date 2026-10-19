@@ -17,6 +17,7 @@ import { INVITE_TEMPLATES_V5 } from './templates-v5';
 import { processRecaps } from './recap';
 import { FOLLOWUPS_V5 } from './followups-v5';
 import { renderV6, isV6Control, hasV6 } from './copy-v6';
+import { renderV8 } from './copy-v8';
 import { STAGE_BY_STEP, STEP_DAYS, PREVIEW_VARIANT, followupFooterText, followupHtml } from './followup';
 import { BASE_URL, CAMPAIGN, ensureOutreachTables, getSettings, setSetting } from './db';
 
@@ -520,7 +521,13 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
     if (v6Live && stage && (row.step === 5 || row.step === 6) && !hasV6(c.template, tmplStep, 'C')) return skip('no copy');
     const useV6 = v6Live && (tmplStep === 1 || (seqV2 && !!stage)) && hasV6(c.template, tmplStep, tmplStep === 1 ? 'N' : v6Branch);
     let msg: { subject: string; text: string; html: string | null; unsubUrl: string };
-    if (useV6) {
+    // Copy v8 (result block next to Subscribe, variants A and B) applies only to first emails sent after copy_v8_start. Unset means off.
+    const v8Start = s.copy_v8_start ? Date.parse(s.copy_v8_start) : NaN;
+    const v8Force = s.copy_v8_force === 'A' || s.copy_v8_force === 'B' ? (s.copy_v8_force as 'A' | 'B') : undefined;
+    const useV8 = tmplStep === 1 && !stage && Number.isFinite(v8Start) && Date.now() >= v8Start;
+    if (useV8) {
+        msg = renderV8({ token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, sigSep: '-'.repeat(2), useHtml: s.html_enabled === 'true', force: isSeed ? v8Force : undefined });
+    } else if (useV6) {
         msg = renderV6({ template: c.template, step: tmplStep, branch: tmplStep === 1 ? 'N' : v6Branch, token: c.token, firstName: c.first_name, useHtml: s.html_enabled === 'true', baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, sigSep: '-'.repeat(2) });
     } else {
         msg = renderInvite(baseOpts);

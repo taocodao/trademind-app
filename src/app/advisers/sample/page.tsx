@@ -23,11 +23,11 @@ const dd = (n: number) => `${n.toFixed(1)}%`;
 const CAL = 'https://calendar.app.google/iybGJcd2AC1Wr7Tk7';
 
 const CHIPS: [string, string, string][] = [
-    ['market-weather', 'Market weather', 'regime read'],
-    ['copilot-readout', 'Copilot readout', 'why a signal changes'],
-    ['flight-plan', 'Flight plan', 'the two strategies'],
-    ['turbulence-test', 'Turbulence test', 'worst stretch, simulated'],
-    ['track-record', 'Track record', 'simulated record and ledger'],
+    ['regime-snapshot', 'Regime snapshot', 'model classification and timestamp'],
+    ['signal-rationale', 'Signal rationale', 'what changed and what did not'],
+    ['strategy-framework', 'Strategy framework', 'rules, instruments, intended use'],
+    ['risk-limitations', 'Risk and limitations', 'stress periods and model weaknesses'],
+    ['simulated-results', 'Simulated results', 'hypothetical backtest and assumptions'],
 ];
 
 export default function AdviserSample() {
@@ -36,9 +36,9 @@ export default function AdviserSample() {
             <Tracker />
             <div className="adv-strip">Adviser sample. Research reference only. TradeMind publishes signals for self-directed investors. It does not manage money, connect to brokerage accounts or place trades.</div>
             <div className="adv-wrap">
-                <p className="adv-eyebrow">AI INVESTOR COPILOT <span>by TradeMind</span></p>
-                <h1>How TradeMind reads the QQQ market, on one page</h1>
-                <p className="adv-lead">Two rules-based strategies, the reasons behind each signal, and a simulated record you can check against a public ledger.</p>
+                <p className="adv-eyebrow">TRADEMIND RESEARCH <span>QQQ market regimes and signal rationale</span></p>
+                <h1>A research sample: how the model reads QQQ</h1>
+                <p className="adv-lead">The model's regime classification, what changes a signal, where the interpretation can be wrong, and a hypothetical backtest shown with its assumptions.</p>
 
                 <nav className="adv-chips" aria-label="Sections">
                     {CHIPS.map(([id, name, d]) => (
@@ -47,20 +47,20 @@ export default function AdviserSample() {
                 </nav>
                 <p className="adv-hint">Tap any part to see what it covers.</p>
 
-                <section id="market-weather" className="adv-sec">
-                    <h2>Market weather</h2>
-                    <p>A plain-English read of current QQQ conditions: trend, volatility and the other inputs the rules watch, and the conditions that would move the read to the next state. It describes conditions. It is not a forecast.</p>
-                    <p>The live read and its time stamp are on each day&rsquo;s signal. Every signal is recorded in the public ledger: <a href="/verify/ledger" data-track="ledger-weather" data-kind="link">open the public ledger</a>.</p>
+                <section id="regime-snapshot" className="adv-sec">
+                    <h2>Regime snapshot</h2>
+                    <p>The model's classification of current QQQ conditions: trend, volatility and the other inputs the rules watch, and what would move the classification to the next state. It describes conditions. It is not a forecast.</p>
+                    <p>The classification and its time stamp are on each day&rsquo;s signal. Every signal is recorded in the public ledger: <a href="/verify/ledger" data-track="ledger-weather" data-kind="link">open the public ledger</a>.</p>
                 </section>
 
-                <section id="copilot-readout" className="adv-sec">
-                    <h2>Copilot readout</h2>
-                    <p>Each signal comes with its reasons in plain English: what changed, which rule fired, what would reverse it. The text only restates reasons the rules actually recorded. It never adds new ones.</p>
+                <section id="signal-rationale" className="adv-sec">
+                    <h2>Signal rationale</h2>
+                    <p>Each signal comes with its rationale: what changed, which rule fired, what would reverse it. The explanation text only restates reasons the rules actually recorded.</p>
                     <p>See how a signal is time-stamped and checked: <a href="/verify" data-track="verify" data-kind="link">how verification works</a>.</p>
                 </section>
 
-                <section id="flight-plan" className="adv-sec">
-                    <h2>Flight plan: the two strategies</h2>
+                <section id="strategy-framework" className="adv-sec">
+                    <h2>Strategy framework: the two strategies</h2>
                     <h3>QQQ Defensive</h3>
                     <p><b>What it holds.</b> QQQ, QLD (2x), TQQQ (3x) and SGOV, a Treasury bill ETF used as cash. Whole shares only, no options permission needed.</p>
                     <p><b>What triggers a change.</b> The rules read market conditions. The published signal goes out once a day at 3:00 PM ET and on most days says hold. When conditions change, the target mix moves toward more or less leverage, or more SGOV.</p>
@@ -74,19 +74,19 @@ export default function AdviserSample() {
                     <p className="adv-note">The SMH put spread sleeve is still in a test phase and has never traded in a real account.</p>
                 </section>
 
-                <section id="turbulence-test" className="adv-sec">
-                    <h2>Turbulence test <span className="adv-badge">SIMULATED</span></h2>
+                <section id="risk-limitations" className="adv-sec">
+                    <h2>Risk and limitations <span className="adv-badge">SIMULATED</span></h2>
                     <p className="adv-window">{WINDOW}</p>
                     <div className="adv-grid">
                         <div><span>QQQ LEAPS (simulated)</span><b>{dd(leaps.maxDrawdownPct)}</b></div>
                         <div><span>QQQ Defensive (simulated)</span><b>{dd(def.maxDrawdownPct)}</b></div>
                         <div><span>QQQ buy and hold</span><b>{dd(leaps.benchmarkMaxDrawdownPct)}</b></div>
                     </div>
-                    <p className="adv-note">Largest peak-to-trough drop in each window. The next drop could be deeper than any shown here.</p>
+                    <p className="adv-note">Largest peak-to-trough drop in each simulated window. The next drop could be deeper than any shown here, and a model can be wrong in ways its own history does not show.</p>
                 </section>
 
-                <section id="track-record" className="adv-sec">
-                    <h2>Track record <span className="adv-badge">SIMULATED</span></h2>
+                <section id="simulated-results" className="adv-sec">
+                    <h2>Simulated results <span className="adv-badge">SIMULATED</span></h2>
                     <p className="adv-window">{WINDOW}</p>
                     <div className="adv-grid">
                         <div><span>QQQ LEAPS (simulated, from ${leaps.principal.toLocaleString('en-US')})</span><b>{pct(leaps.pnlPct)}</b></div>
@@ -107,8 +107,8 @@ export default function AdviserSample() {
                 </section>
 
                 <section className="adv-sec">
-                    <h2>How advisers use this</h2>
-                    <p>Some advisers read it as a second view on Nasdaq conditions, or as background for client questions about QQQ and leveraged ETFs. It is general research, not advice for any specific client.</p>
+                    <h2>Who this may be relevant to</h2>
+                    <p>If QQQ or Nasdaq exposure comes up in your work, it may serve as a second view on market conditions. It is general research, not advice for any specific client.</p>
                 </section>
 
                 <section className="adv-sec adv-next">

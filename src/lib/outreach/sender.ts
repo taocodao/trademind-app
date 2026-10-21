@@ -523,10 +523,12 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
     let msg: { subject: string; text: string; html: string | null; unsubUrl: string };
     // Copy v8 (result block next to Subscribe, variants A and B) applies only to first emails sent after copy_v8_start. Unset means off.
     const v8Start = s.copy_v8_start ? Date.parse(s.copy_v8_start) : NaN;
-    const v8Force = s.copy_v8_force === 'A' || s.copy_v8_force === 'B' ? (s.copy_v8_force as 'A' | 'B') : undefined;
+    const v8Force = s.copy_v8_force === 'A' || s.copy_v8_force === 'B' || s.copy_v8_force === 'C' ? (s.copy_v8_force as 'A' | 'B' | 'C') : undefined;
+    const v8cStart = s.copy_v8c_start ? Date.parse(s.copy_v8c_start) : NaN;
+    const useC = Number.isFinite(v8cStart) && Date.now() >= v8cStart;
     const useV8 = tmplStep === 1 && !stage && Number.isFinite(v8Start) && Date.now() >= v8Start;
     if (useV8) {
-        msg = renderV8({ token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, sigSep: '-'.repeat(2), useHtml: s.html_enabled === 'true', force: isSeed ? v8Force : undefined });
+        msg = renderV8({ token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, sigSep: '-'.repeat(2), useHtml: s.html_enabled === 'true', force: isSeed ? v8Force : undefined, useC });
     } else if (useV6) {
         msg = renderV6({ template: c.template, step: tmplStep, branch: tmplStep === 1 ? 'N' : v6Branch, token: c.token, firstName: c.first_name, useHtml: s.html_enabled === 'true', baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, sigSep: '-'.repeat(2) });
     } else {

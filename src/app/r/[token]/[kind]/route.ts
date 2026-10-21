@@ -16,13 +16,13 @@ export const runtime = 'nodejs';
 async function handle(req: NextRequest, params: Promise<{ token: string; kind: string }>, method: string) {
     const { token, kind } = await params;
     const fallback = NextResponse.redirect(new URL('/newsletter', BASE_URL), 302);
-    if (!validToken(token) || !['p', 's', 'i', 'h', 'n', 'v'].includes(kind)) return fallback;
+    if (!validToken(token) || !['p', 's', 'i', 'h', 'n', 'v', 'c'].includes(kind)) return fallback;
     const sParam = Number(req.nextUrl.searchParams.get('s') ?? '1');
     const step = sParam >= 1 && sParam <= 9 ? sParam : 1;
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
     const ua = req.headers.get('user-agent');
     const { known, isBot } = await recordClick({
-        token, linkType: kind === 'p' ? 'preview' : kind === 's' ? 'subscribe' : kind === 'i' ? 'inside' : kind === 'h' ? 'home' : kind === 'v' ? 'record' : 'issue', step, method, ip, ua,
+        token, linkType: kind === 'p' ? 'preview' : kind === 's' ? 'subscribe' : kind === 'i' ? 'inside' : kind === 'h' ? 'home' : kind === 'v' ? 'record' : kind === 'c' ? 'check' : 'issue', step, method, ip, ua,
     });
     if (!known) return fallback;
     if (method === 'HEAD') return new NextResponse(null, { status: 200 });
@@ -39,6 +39,7 @@ async function handle(req: NextRequest, params: Promise<{ token: string; kind: s
         dest = `/newsletter/inside?t=${token}&${utm}${['weather', 'readout', 'flight', 'turbulence'].includes(a) ? `#${a}` : ''}`;
     } else if (kind === 'h') dest = `/?t=${token}&${utm}`;
     else if (kind === 'v') dest = `/simulated-record?t=${token}&${utm}`;
+    else if (kind === 'c') dest = `/newsletter/verify?t=${token}&${utm}`;
     else {
         const u = req.nextUrl.searchParams.get('u') ?? '';
         if (!/^\/newsletter\/(issues|guides|research)\/[a-z0-9-]+$/.test(u)) return fallback;

@@ -70,9 +70,9 @@ function isBusinessDay(date: string, dow: number): boolean {
     return dow >= 1 && dow <= 5 && !HOLIDAYS.has(date);
 }
 
-/** Sends run seven days a week; only the listed holidays are skipped. */
-export function isSendDay(date: string, _dow: number): boolean {
-    return !HOLIDAYS.has(date);
+/** Sends run seven days a week, including holidays. */
+export function isSendDay(_date: string, _dow: number): boolean {
+    return true; // every day, including weekends and holidays
 }
 
 // ---------- rendering ----------
@@ -418,10 +418,10 @@ export async function planToday(now = new Date()): Promise<PlanResult | null> {
         await query(`UPDATE outreach_plan_days SET planned = $2 WHERE plan_date = $1`, [et.date, picks.length]);
 
         const nowMs = now.getTime();
-        // Send window: 8:00 AM to 8:00 PM ET. Contacts in earlier time zones start no earlier than 7:00 AM local.
-        const windowEnd = zonedInstant(et.date, '20:00', ET).getTime();
+        // Send window: 7:00 AM to 11:30 PM ET, every day. Contacts in later time zones start no earlier than 7:00 AM local.
+        const windowEnd = zonedInstant(et.date, '23:30', ET).getTime();
         for (const p of picks) {
-            const startEt = zonedInstant(et.date, '08:00', ET).getTime();
+            const startEt = zonedInstant(et.date, '07:00', ET).getTime();
             const startLocal = zonedInstant(et.date, '07:00', p.tz || ET).getTime();
             const start = Math.max(startEt, startLocal);
             const endForPick = p.morning ? Math.min(Math.max(zonedInstant(et.date, '11:00', ET).getTime(), nowMs + 30 * 60_000), windowEnd) : windowEnd;

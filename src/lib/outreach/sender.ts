@@ -18,6 +18,7 @@ import { INVITE_TEMPLATES_V5 } from './templates-v5';
 import { processRecaps } from './recap';
 import { FOLLOWUPS_V5 } from './followups-v5';
 import { renderV6, isV6Control, hasV6 } from './copy-v6';
+import { renderWS } from './copy-ws';
 import { renderV8 } from './copy-v8';
 import { STAGE_BY_STEP, STEP_DAYS, PREVIEW_VARIANT, followupFooterText, followupHtml } from './followup';
 import { BASE_URL, CAMPAIGN, ensureOutreachTables, getSettings, setSetting } from './db';
@@ -570,8 +571,21 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
     const v8cStart = s.copy_v8c_start ? Date.parse(s.copy_v8c_start) : NaN;
     const useC = Number.isFinite(v8cStart) && Date.now() >= v8cStart;
     const useV8 = tmplStep === 1 && !stage && Number.isFinite(v8Start) && Date.now() >= v8Start;
+    // Waiting-story follow-up (chart image). Off unless copy_ws_start is set. Step 2 for people who got the new first email through
+    // SendGrid and have not clicked; step 7 for people whose step 2 was the re-introduced first email.
+    const wsStart = s.copy_ws_start ? Date.parse(s.copy_ws_start) : NaN;
+    let useWS = false;
+    if (Number.isFinite(wsStart) && Date.now() >= wsStart && stage && seqV2 && branch === 'N' && !reintro) {
+        if (row.step === 2) useWS = true;
+        else if (row.step === 7) {
+            const s2 = await query(`SELECT template FROM outreach_sends WHERE token = $1 AND step = 2`, [row.token]);
+            useWS = String(s2.rows[0]?.template ?? '').startsWith('RE_');
+        }
+    }
     let reVariant: string | null = null;
-    if (reintro) {
+    if (useWS) {
+        msg = renderWS({ token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, sigSep: '-'.repeat(2), useHtml: s.html_enabled === 'true', step: row.step, last: row.step === 7 });
+    } else if (reintro) {
         const m8 = renderV8({ token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, sigSep: '-'.repeat(2), useHtml: s.html_enabled === 'true', useC });
         reVariant = m8.variant; msg = m8;
     } else if (useV8) {
@@ -600,7 +614,7 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
     const data = { id: res.id ?? undefined };
     await query(
         `INSERT INTO outreach_sends (token, step, template, domain, from_addr, message_id) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (token, step) DO NOTHING`,
-        [row.token, row.step, tmplStep === 3 ? 'CHECKIN' : reVariant ? `RE_${reVariant}` : stage ? (seqV2 ? `${stage}_${branch}` : 'FU') : c.template, row.domain, from, data.id ?? null]
+        [row.token, row.step, tmplStep === 3 ? 'CHECKIN' : reVariant ? `RE_${reVariant}` : useWS ? 'WS' : stage ? (seqV2 ? `${stage}_${branch}` : 'FU') : c.template, row.domain, from, data.id ?? null]
     );
     await query(`UPDATE outreach_queue SET state = 'sent' WHERE id = $1`, [row.id]);
     if (!isSeed) {

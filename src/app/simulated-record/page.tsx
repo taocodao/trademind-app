@@ -114,7 +114,7 @@ function Block({ s }: { s: Strat }) {
 
             {s.key === 'QQQ_LEAPS' ? (
                 <div className="sr-adj">
-                    This simulation has two parts. The weekly SMH put spread sleeve started on Oct 14, 2024. The QQQ LEAPS and short call part waited until {s.firstEntryDate}, because its entry conditions did not pass earlier. Two later LEAPS entry signals on Nov 17 and 18, 2025 were skipped because one contract cost more than the cash available. The SMH sleeve closed {s.smh?.closed} spreads, {s.smh?.wins} at a profit, for {money(s.smh?.realized ?? 0, 2)} in total. About {money(s.smh?.realizedQ2Q3_2026 ?? 0, 0)} of that came between April and September 2026, while SMH itself more than doubled over the window. The SMH sleeve has never traded in a real or paper account.
+                    This simulation has two parts. The SMH put spread sleeve opened its first spread on Oct 14, 2024 and closed it the next day at a loss. The simulation then held no positions until {s.firstEntryDate}, almost 11 months later, when the QQQ LEAPS and short call part entered because its entry conditions had not passed earlier. On the entry date the simulation was down about 5% from its start, while QQQ buy and hold was up about 14%. Two later LEAPS entry signals on Nov 17 and 18, 2025 were skipped because one contract cost more than the cash available. The SMH sleeve closed {s.smh?.closed} spreads, {s.smh?.wins} at a profit, for {money(s.smh?.realized ?? 0, 2)} in total. About {money(s.smh?.realizedQ2Q3_2026 ?? 0, 0)} of that came between April and September 2026, while SMH itself more than doubled over the window. The SMH sleeve has never traded in a real or paper account.
                 </div>
             ) : (
                 s.splitJun30 && (

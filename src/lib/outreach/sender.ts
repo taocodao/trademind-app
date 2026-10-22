@@ -537,6 +537,14 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
             if (sub.rowCount) return skip('already subscribed');
         }
     }
+    // Re-introduction: a person whose first email went out through Resend and who has not responded gets the new first
+    // email (variant A or C, sent through SendGrid) in place of the old first follow-up. People who clicked keep the normal path.
+    let reintro = false;
+    if (!isSeed && row.step === 2 && transport === 'sendgrid' && c.status === 'sent') {
+        const f1 = await query(`SELECT d.transport FROM outreach_sends s1 LEFT JOIN outreach_domains d ON d.domain = s1.domain WHERE s1.token = $1 AND s1.step = 1`, [row.token]);
+        const hc = await query(`SELECT 1 FROM outreach_click_events WHERE token = $1 AND (human_confirmed OR NOT is_bot) LIMIT 1`, [row.token]);
+        reintro = String(f1.rows[0]?.transport ?? 'resend') === 'resend' && !hc.rowCount;
+    }
     if (stage) {
         // Branch C: any real (non bot) click on any tracked link, ever. Otherwise branch N.
         const ck = await query(`SELECT 1 FROM outreach_click_events WHERE token = $1 AND (NOT is_bot OR human_confirmed) LIMIT 1`, [row.token]);
@@ -562,7 +570,11 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
     const v8cStart = s.copy_v8c_start ? Date.parse(s.copy_v8c_start) : NaN;
     const useC = Number.isFinite(v8cStart) && Date.now() >= v8cStart;
     const useV8 = tmplStep === 1 && !stage && Number.isFinite(v8Start) && Date.now() >= v8Start;
-    if (useV8) {
+    let reVariant: string | null = null;
+    if (reintro) {
+        const m8 = renderV8({ token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, sigSep: '-'.repeat(2), useHtml: s.html_enabled === 'true', useC });
+        reVariant = m8.variant; msg = m8;
+    } else if (useV8) {
         msg = renderV8({ token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, sigSep: '-'.repeat(2), useHtml: s.html_enabled === 'true', force: isSeed ? v8Force : undefined, useC });
     } else if (useV6) {
         msg = renderV6({ template: c.template, step: tmplStep, branch: tmplStep === 1 ? 'N' : v6Branch, token: c.token, firstName: c.first_name, useHtml: s.html_enabled === 'true', baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, sigSep: '-'.repeat(2) });
@@ -588,7 +600,7 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
     const data = { id: res.id ?? undefined };
     await query(
         `INSERT INTO outreach_sends (token, step, template, domain, from_addr, message_id) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (token, step) DO NOTHING`,
-        [row.token, row.step, tmplStep === 3 ? 'CHECKIN' : stage ? (seqV2 ? `${stage}_${branch}` : 'FU') : c.template, row.domain, from, data.id ?? null]
+        [row.token, row.step, tmplStep === 3 ? 'CHECKIN' : reVariant ? `RE_${reVariant}` : stage ? (seqV2 ? `${stage}_${branch}` : 'FU') : c.template, row.domain, from, data.id ?? null]
     );
     await query(`UPDATE outreach_queue SET state = 'sent' WHERE id = $1`, [row.id]);
     if (!isSeed) {

@@ -37,6 +37,7 @@ export function followupHtml(body: string, preheader: string): string {
         const lines = block.split('\n').map((l) => l.trim()).filter(Boolean);
         if (!lines.length) continue;
         if (lines[0] === '{{sender_name}}') {
+            out.push(`<p class="t" style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#e5e7eb;">Reply to this email or write to me at eric@trademind.bot.</p>`);
             out.push(`<p class="t" style="margin:0 0 4px;font-size:16px;color:#e5e7eb;">{{sender_name}}</p><p class="t2" style="margin:0 0 24px;font-size:13px;color:#aab4c5;">Founder, TradeMind &middot; New York</p>`);
             continue;
         }

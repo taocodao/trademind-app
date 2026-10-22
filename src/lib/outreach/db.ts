@@ -100,6 +100,12 @@ export async function ensureOutreachTables(): Promise<void> {
             paused_reason TEXT,
             paused_at     TIMESTAMPTZ
         )`);
+    // Per-domain transport and warm-up. cap_start NULL means no per-domain cap (weight share only).
+    await query(`ALTER TABLE outreach_domains ADD COLUMN IF NOT EXISTS transport TEXT NOT NULL DEFAULT 'resend'`);
+    await query(`ALTER TABLE outreach_domains ADD COLUMN IF NOT EXISTS cap_start INTEGER`);
+    await query(`ALTER TABLE outreach_domains ADD COLUMN IF NOT EXISTS cap_step INTEGER`);
+    await query(`ALTER TABLE outreach_domains ADD COLUMN IF NOT EXISTS cap_max INTEGER`);
+    await query(`ALTER TABLE outreach_domains ADD COLUMN IF NOT EXISTS activated_on DATE`);
     await query(`CREATE TABLE IF NOT EXISTS outreach_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)`);
     await query(`
         CREATE TABLE IF NOT EXISTS outreach_plan_days (
@@ -361,6 +367,40 @@ export async function applyOutreachEvent(
         await query(`UPDATE outreach_sends SET complaint = TRUE WHERE id = $1`, [id]);
         await query(`UPDATE outreach_contacts SET status = 'complained', updated_at = NOW() WHERE token = $1`, [token]);
         await query(`UPDATE outreach_queue SET state = 'skipped', note = 'complained' WHERE token = $1 AND state = 'pending'`, [token]);
+    }
+    return true;
+}
+
+
+/**
+ * SendGrid Event Webhook: map one event onto the same state changes the Resend webhook makes.
+ * Matched by the token and step we send as custom_args. Hard bounces and spam reports suppress the address.
+ * 'blocked' and 'deferred' are transient and change nothing. Returns true if the event belonged to a campaign send.
+ */
+export async function applySendgridEvent(ev: { event?: string; token?: string; step?: string | number; sg_message_id?: string; reason?: string; type?: string; email?: string }): Promise<boolean> {
+    if (!ev.token || ev.step === undefined || ev.step === null || ev.step === '') return false;
+    await ensureOutreachTables();
+    const step = Number(ev.step);
+    if (!Number.isFinite(step)) return false;
+    const r = await query(`SELECT id, token FROM outreach_sends WHERE token = $1 AND step = $2`, [String(ev.token), step]);
+    if (!r.rows[0]) return false;
+    const { id, token } = r.rows[0];
+    const email = String(ev.email ?? '').trim().toLowerCase();
+    if (ev.event === 'delivered') {
+        await query(`UPDATE outreach_sends SET status = 'delivered' WHERE id = $1 AND status = 'sent'`, [id]);
+    } else if (ev.event === 'bounce' || ev.event === 'dropped') {
+        // 'bounce' with type 'bounce' is a hard bounce; 'blocked' type is a transient refusal. Dropped means SendGrid
+        // already holds this address as bounced or reported, so it is treated the same way.
+        if (ev.event === 'bounce' && ev.type === 'blocked') return true;
+        await query(`UPDATE outreach_sends SET status = 'bounced', bounce_type = 'Permanent', error = $2 WHERE id = $1`, [id, String(ev.reason ?? ev.event).slice(0, 300)]);
+        await query(`UPDATE outreach_contacts SET status = 'bounced', updated_at = NOW() WHERE token = $1 AND status NOT IN ('confirmed','subscribed','unsubscribed')`, [token]);
+        await query(`UPDATE outreach_queue SET state = 'skipped', note = 'bounced' WHERE token = $1 AND state = 'pending'`, [token]);
+        if (email) await query(`INSERT INTO newsletter_suppression (email, reason) VALUES ($1, 'hard_bounce') ON CONFLICT (email) DO NOTHING`, [email]);
+    } else if (ev.event === 'spamreport') {
+        await query(`UPDATE outreach_sends SET complaint = TRUE WHERE id = $1`, [id]);
+        await query(`UPDATE outreach_contacts SET status = 'complained', updated_at = NOW() WHERE token = $1`, [token]);
+        await query(`UPDATE outreach_queue SET state = 'skipped', note = 'complained' WHERE token = $1 AND state = 'pending'`, [token]);
+        if (email) await query(`INSERT INTO newsletter_suppression (email, reason) VALUES ($1, 'complaint') ON CONFLICT (email) DO NOTHING`, [email]);
     }
     return true;
 }

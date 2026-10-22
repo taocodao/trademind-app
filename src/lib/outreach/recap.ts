@@ -1,3 +1,4 @@
+import { sendMail, type Transport } from './transport';
 import { query } from '@/lib/db';
 import { MAILING_ADDRESS } from '@/lib/newsletter/email';
 import { ISSUES, issueUrl } from '@/lib/newsletter/issues';
@@ -5,7 +6,6 @@ import { RECAP_HTML } from './recap-html';
 import { BASE_URL, CAMPAIGN, ensureOutreachTables, getSettings } from './db';
 import { etParts } from './sender';
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY ?? '';
 
 /**
  * Monthly recap for people who chose "monthly" on the invitation unsubscribe page.
@@ -111,25 +111,22 @@ export async function processRecaps(limit = 15, now = new Date()): Promise<Recor
            AND NOT EXISTS (SELECT 1 FROM outreach_recap_sends x WHERE x.token = c.token AND x.month_key = $1)
            AND NOT EXISTS (SELECT 1 FROM newsletter_suppression ns WHERE ns.email = c.email)
          ORDER BY c.updated_at LIMIT $2`, [monthKey, limit]);
-    const doms = (await query(`SELECT domain, from_local FROM outreach_domains WHERE status = 'active' ORDER BY domain`)).rows as { domain: string; from_local: string }[];
+    const doms = (await query(`SELECT domain, from_local, transport FROM outreach_domains WHERE status = 'active' ORDER BY domain`)).rows as { domain: string; from_local: string; transport: string }[];
     if (!doms.length) return { skipped: 'no active domains' };
     let sent = 0, failed = 0, i = 0;
     for (const c of due.rows) {
         const d = doms[i++ % doms.length];
         const msg = renderRecap({ token: c.token, firstName: c.first_name, senderName: s.sender_name || 'Eric Huang', monthKey, content });
         try {
-            const resp = await fetch('https://api.resend.com/emails', {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json', 'Idempotency-Key': `recap-${c.token}-${monthKey}` },
-                body: JSON.stringify({
-                    from: `${s.from_display || 'Eric Huang From AI Investor Copilot'} <${d.from_local}@${d.domain}>`, to: [c.email], reply_to: s.reply_to || undefined,
-                    subject: msg.subject, text: msg.text, html: msg.html,
-                    ...(s.list_unsub_header === 'false' ? {} : { headers: { 'List-Unsubscribe': `<${msg.unsubUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } }),
-                    tags: [{ name: 'campaign', value: CAMPAIGN }, { name: 'step', value: 'recap' }],
-                }),
+            const res = await sendMail({
+                transport: (d.transport === 'sendgrid' ? 'sendgrid' : 'resend') as Transport,
+                from: `${s.from_display || 'Eric Huang From AI Investor Copilot'} <${d.from_local}@${d.domain}>`, to: c.email, replyTo: s.reply_to || undefined,
+                subject: msg.subject, text: msg.text, html: msg.html,
+                headers: s.list_unsub_header === 'false' ? undefined : { 'List-Unsubscribe': `<${msg.unsubUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
+                token: c.token, step: 0, campaign: CAMPAIGN, idempotencyKey: `recap-${c.token}-${monthKey}`,
             });
-            const data = (await resp.json().catch(() => ({}))) as { id?: string };
-            if (!resp.ok) { failed++; continue; }
+            const data = { id: res.id ?? undefined };
+            if (!res.ok) { failed++; continue; }
             await query(`INSERT INTO outreach_recap_sends (token, month_key, domain, resend_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`, [c.token, monthKey, d.domain, data.id ?? null]);
             sent++;
         } catch { failed++; }

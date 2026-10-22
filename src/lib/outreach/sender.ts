@@ -1,8 +1,9 @@
 /**
  * Tokenized invitation sender: daily planner, due-row sender, health gates and daily report.
  *
- * Transport: Resend, one verified sending subdomain per brand domain, plain text only,
- * no open or click tracking, links on trademind.bot, one-click unsubscribe headers.
+ * Transport: per sending domain, Resend or SendGrid (outreach_domains.transport), no open or click tracking,
+ * links on trademind.bot, one-click unsubscribe headers. New domains warm up with a per-domain daily cap
+ * (cap_start + cap_step per day since activation, up to cap_max).
  *
  * Ramp (set by Eric, Oct 2026): 100 sends on the first send day, +50 each send day, seven days a week,
  * spread across 8:00 AM to 8:00 PM ET.
@@ -20,6 +21,7 @@ import { renderV6, isV6Control, hasV6 } from './copy-v6';
 import { renderV8 } from './copy-v8';
 import { STAGE_BY_STEP, STEP_DAYS, PREVIEW_VARIANT, followupFooterText, followupHtml } from './followup';
 import { BASE_URL, CAMPAIGN, ensureOutreachTables, getSettings, setSetting } from './db';
+import { sendMail, transportKeyPresent, type Transport } from './transport';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const ET = 'America/New_York';
@@ -96,7 +98,7 @@ export function renderInvite(opts: {
     if (stage && !fu && opts.step !== 2) throw new Error(`Follow-up step ${opts.step} needs the v2 sequence`);
     const key = opts.step === 3 ? 'CHECKIN' : opts.step === 2 ? 'FU' : opts.template;
     const v5 = fu
-        ? { subject: fu.subject, body: `${fu.body}\n${followupFooterText()}`, html: opts.useHtml === true ? followupHtml(fu.body, fu.preheader) : null }
+        ? { subject: fu.subject, body: `${fu.body.replace('\n\n{{sender_name}}', '\n\nReply to this email or write to me at eric@trademind.bot.\n\n{{sender_name}}')}\n${followupFooterText()}`, html: opts.useHtml === true ? followupHtml(fu.body, fu.preheader) : null }
         : INVITE_TEMPLATES_V5[key];
     const legacy = INVITE_TEMPLATES[key];
     // v5 (HTML plus plain text, new subjects) only when switched on; follow-ups v2 and the check-in always use v5.
@@ -155,9 +157,48 @@ export async function releasedSegments(): Promise<string[]> {
     return out;
 }
 
-async function activeDomains(): Promise<{ domain: string; from_local: string; weight: number }[]> {
-    const r = await query(`SELECT domain, from_local, weight::float AS weight FROM outreach_domains WHERE status = 'active' ORDER BY domain`);
-    return r.rows as { domain: string; from_local: string; weight: number }[];
+interface ActiveDomain { domain: string; from_local: string; weight: number; limit: number }
+
+/** Daily limit for a domain: warm-up cap (start + step per day since activation, up to max); Infinity when no cap is set. */
+function domainLimit(d: { cap_start: number | null; cap_step: number | null; cap_max: number | null; activated_on: string | null }, date: string): number {
+    if (d.cap_start === null || d.cap_start === undefined) return Infinity;
+    const days = d.activated_on ? Math.max(0, Math.round((Date.parse(date) - Date.parse(String(d.activated_on).slice(0, 10))) / 86_400_000)) : 0;
+    const v = Number(d.cap_start) + Number(d.cap_step ?? 0) * days;
+    return Math.max(0, Math.min(v, d.cap_max ? Number(d.cap_max) : v));
+}
+
+async function activeDomains(date: string): Promise<ActiveDomain[]> {
+    await query(`UPDATE outreach_domains SET activated_on = $1::date WHERE status = 'active' AND activated_on IS NULL`, [date]);
+    const r = await query(`SELECT domain, from_local, weight::float AS weight, cap_start, cap_step, cap_max, activated_on::text AS activated_on FROM outreach_domains WHERE status = 'active' ORDER BY domain`);
+    return r.rows.map((x) => ({
+        domain: String(x.domain), from_local: String(x.from_local), weight: Number(x.weight),
+        limit: domainLimit({ cap_start: x.cap_start, cap_step: x.cap_step, cap_max: x.cap_max, activated_on: x.activated_on }, date),
+    }));
+}
+
+/** Split a daily budget across domains by weight, never giving a domain more than its warm-up limit. */
+export function allocateBudget(doms: { domain: string; weight: number; limit: number }[], budget: number): Map<string, number> {
+    const out = new Map<string, number>(doms.map((d) => [d.domain, 0]));
+    let left = budget;
+    let open = doms.filter((d) => d.limit > 0);
+    for (let guard = 0; guard < 10 && left > 0 && open.length; guard++) {
+        const w = open.reduce((a, d) => a + d.weight, 0) || 1;
+        let spent = 0;
+        const next: typeof open = [];
+        for (const d of open) {
+            const room = Math.max(0, d.limit - (out.get(d.domain) ?? 0));
+            const give = Math.min(room, Math.floor((left * d.weight) / w));
+            out.set(d.domain, (out.get(d.domain) ?? 0) + give); spent += give;
+            if (room - give > 0) next.push(d);
+        }
+        if (spent === 0) {
+            // Rounding leftovers go one by one to domains that still have room.
+            for (const d of next) { if (left - spent <= 0) break; out.set(d.domain, (out.get(d.domain) ?? 0) + 1); spent += 1; }
+            if (spent === 0) break;
+        }
+        left -= spent; open = next;
+    }
+    return out;
 }
 
 export async function planToday(now = new Date()): Promise<PlanResult | null> {
@@ -182,19 +223,13 @@ export async function planToday(now = new Date()): Promise<PlanResult | null> {
         );
         if (!claim.rowCount) return null;
         try {
-        const doms = await activeDomains();
+        const doms = await activeDomains(et.date);
         if (!doms.length) return { planned: 0, budget, dayIndex: idx, reason: 'no active domains' };
 
         // Expired leftovers from earlier days go back to the pool.
         await query(`DELETE FROM outreach_queue WHERE state IN ('pending','expired') AND plan_date < $1`, [et.date]);
 
-        const totalW = doms.reduce((a, d) => a + d.weight, 0);
-        const cap = new Map<string, number>();
-        let assigned = 0;
-        doms.forEach((d, i) => {
-            const c = i === doms.length - 1 ? budget - assigned : Math.round((budget * d.weight) / totalW);
-            cap.set(d.domain, Math.max(c, 0)); assigned += Math.max(c, 0);
-        });
+        const cap = allocateBudget(doms, budget);
 
         // Follow-ups. v2 sequence: 7, 14, 21 and 28 days after the first email to everyone who has not subscribed or
         // unsubscribed. People with a real click get all four; people without a click get FU1 and FINAL, plus FU2 and
@@ -468,7 +503,7 @@ async function sendAlert(subject: string, body: string): Promise<void> {
 
 // ---------- sending ----------
 
-async function sendOne(row: { id: number; token: string; step: number; domain: string }, s: Record<string, string>, fromLocal: string): Promise<'sent' | 'skipped' | 'failed'> {
+async function sendOne(row: { id: number; token: string; step: number; domain: string }, s: Record<string, string>, fromLocal: string, transport: Transport): Promise<'sent' | 'skipped' | 'failed'> {
     const cr = await query(`SELECT token, email, first_name, template, wave, status, snooze_until, subscriber_email FROM outreach_contacts WHERE token = $1`, [row.token]);
     const c = cr.rows[0];
     const skip = async (note: string) => { await query(`UPDATE outreach_queue SET state = 'skipped', note = $2 WHERE id = $1`, [row.id, note]); return 'skipped' as const; };
@@ -535,28 +570,22 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
         msg = renderInvite(baseOpts);
     }
     const from = `${s.from_display || 'Eric Huang From AI Investor Copilot'} <${fromLocal}@${row.domain}>`;
-    let resp: Response;
+    let res;
     try {
-        resp = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json', 'Idempotency-Key': `outreach-${row.token}-${row.step}` },
-            body: JSON.stringify({
-                from, to: [c.email], reply_to: s.reply_to || undefined, subject: msg.subject, text: msg.text, ...(msg.html ? { html: msg.html } : {}),
-                ...(s.list_unsub_header === 'false' ? {} : { headers: { 'List-Unsubscribe': `<${msg.unsubUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } }),
-                tags: [{ name: 'campaign', value: CAMPAIGN }, { name: 'step', value: String(row.step >= 100 ? 0 : row.step) }],
-            }),
+        res = await sendMail({
+            transport, from, to: c.email, replyTo: s.reply_to || undefined, subject: msg.subject, text: msg.text, html: msg.html,
+            headers: s.list_unsub_header === 'false' ? undefined : { 'List-Unsubscribe': `<${msg.unsubUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
+            token: row.token, step: row.step, campaign: CAMPAIGN, idempotencyKey: `outreach-${row.token}-${row.step}`,
         });
     } catch (e) {
         await query(`UPDATE outreach_queue SET note = $2 WHERE id = $1`, [row.id, `network: ${(e as Error).message}`.slice(0, 200)]);
         return 'failed';
     }
-    if (!resp.ok) {
-        const body = (await resp.text()).slice(0, 300);
-        const permanent = resp.status === 422 || resp.status === 400;
-        await query(`UPDATE outreach_queue SET state = $2, note = $3 WHERE id = $1`, [row.id, permanent ? 'failed' : 'pending', `resend ${resp.status}: ${body}`]);
+    if (!res.ok) {
+        await query(`UPDATE outreach_queue SET state = $2, note = $3 WHERE id = $1`, [row.id, res.permanent ? 'failed' : 'pending', `${transport} ${res.status}: ${res.body}`]);
         return 'failed';
     }
-    const data = (await resp.json()) as { id?: string };
+    const data = { id: res.id ?? undefined };
     await query(
         `INSERT INTO outreach_sends (token, step, template, domain, from_addr, message_id) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (token, step) DO NOTHING`,
         [row.token, row.step, tmplStep === 3 ? 'CHECKIN' : stage ? (seqV2 ? `${stage}_${branch}` : 'FU') : c.template, row.domain, from, data.id ?? null]
@@ -573,14 +602,13 @@ export async function processDue(limit = 40, now = new Date()): Promise<Record<s
     await ensureOutreachTables();
     const s = await getSettings();
     if (s.paused !== 'false') return { paused: 'true' };
-    if (!RESEND_API_KEY) return { error: 'RESEND_API_KEY missing' };
     await evaluateGates();
     if ((await getSettings()).paused !== 'false') return { paused: 'true' };
 
     // Rows that missed their window by more than 3 hours go back to the pool.
     await query(`UPDATE outreach_queue SET state = 'expired' WHERE state = 'pending' AND scheduled_at < $1`, [new Date(now.getTime() - 3 * 3600_000)]);
 
-    const doms = new Map((await query(`SELECT domain, from_local, status FROM outreach_domains`)).rows.map((r) => [String(r.domain), r]));
+    const doms = new Map((await query(`SELECT domain, from_local, status, transport FROM outreach_domains`)).rows.map((r) => [String(r.domain), r]));
     const active = [...doms.values()].filter((d) => d.status === 'active').map((d) => String(d.domain));
 
     const due = await query(
@@ -597,10 +625,13 @@ export async function processDue(limit = 40, now = new Date()): Promise<Record<s
             r.domain = pick; counts.rerouted++;
         }
     }
-    const runnable = rows.filter((r) => active.includes(r.domain));
+    // A domain whose provider key is not configured sends nothing; its rows stay pending.
+    const keyed = (d: string) => transportKeyPresent((String(doms.get(d)?.transport ?? 'resend')) as Transport);
+    const runnable = rows.filter((r) => active.includes(r.domain) && keyed(r.domain));
+    if (rows.length && !runnable.length && active.length) return { error: 'provider key missing for active domains' };
     for (let i = 0; i < runnable.length; i += 5) {
         const batch = runnable.slice(i, i + 5);
-        const res = await Promise.all(batch.map((r) => sendOne(r, s, String(doms.get(r.domain)?.from_local ?? 'eric'))));
+        const res = await Promise.all(batch.map((r) => sendOne(r, s, String(doms.get(r.domain)?.from_local ?? 'eric'), (String(doms.get(r.domain)?.transport ?? 'resend')) as Transport)));
         for (const x of res) counts[x]++;
     }
     return counts;

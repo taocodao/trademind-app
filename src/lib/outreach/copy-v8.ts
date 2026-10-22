@@ -26,6 +26,7 @@ const RESULT_P1 = 'From October 14, 2024 through October 13, 2026, the QQQ LEAPS
 const RESULT_P2 = 'The largest simulated decline from a previous portfolio high was 14.59%, compared with 22.88% for QQQ buy and hold.';
 const LIMITS = 'These are hypothetical results, not returns earned in a real account. Options were model-priced, not valued using actual option quotes. The SMH sleeve has never traded in a real account. The rules were developed with hindsight, and this was one favorable period for QQQ and semiconductors. Do not read these figures as after-cost subscriber returns. Actual results can differ substantially, and losses can exceed the simulated decline. This backtest does not predict future returns.';
 const OFFER = 'Confirm your free signup to get 30% off a yearly TradeMind strategy subscription. Use the code with the same email address within 3 months of confirmation.';
+export const REPLY_LINE = 'Reply to this email or write to me at eric@trademind.bot.';
 const NOBROKER = 'You keep your brokerage account and place every order yourself. TradeMind never connects to your broker or places trades.';
 
 const COPY: Record<'A' | 'B', { subject: string; intro: string[] }> = {
@@ -74,7 +75,7 @@ export function renderV8(o: V8Opts): { subject: string; text: string; html: stri
         hi, '', ...c.intro.flatMap((p) => [p, '']),
         'Four parts in every issue:', ...PARTS.map(([, n, d]) => `- ${n}: ${d}`), `What each issue covers: ${o.baseUrl}/r/${o.token}/i?s=1`, '',
         RESULT_H.toUpperCase(), RESULT_P1, '', RESULT_P2, '', LIMITS, '',
-        ...links, '', 'Free weekly newsletter. Unsubscribe any time.', OFFER, '', NOBROKER, '', 'Best, Eric', '',
+        ...links, '', 'Free weekly newsletter. Unsubscribe any time.', OFFER, '', NOBROKER, '', REPLY_LINE, '', 'Best, Eric', '',
         o.sigSep,
         `You're getting this invite because you subscribed to an investing publication. Unsubscribe or snooze: ${unsubUrl}`,
         `AI Investor Copilot by TradeMind, ${o.mailingAddress}`,
@@ -115,6 +116,7 @@ export function renderV8(o: V8Opts): { subject: string; text: string; html: stri
             + `<p class="t" style="margin:0 0 6px;font-size:14px;line-height:1.55;color:#e5e7eb;"><b>Free weekly newsletter. Unsubscribe any time.</b></p>`
             + `<p class="t" style="margin:0 0 16px;font-size:14px;line-height:1.55;color:#e5e7eb;">${escH(OFFER)}</p>`
             + P(NOBROKER, 'font-size:14px;color:#aab4c5;')
+            + P(REPLY_LINE, 'font-size:15px;')
             + `<p class="t" style="margin:0 0 4px;font-size:16px;color:#e5e7eb;">Eric Huang</p><p class="t2" style="margin:0 0 24px;font-size:13px;color:#aab4c5;">Founder, TradeMind &middot; New York</p>`;
         html = (head + body + tail).replace(/\{\{mailing_address\}\}/g, escH(o.mailingAddress));
     }
@@ -152,7 +154,7 @@ function renderC(o: V8Opts): { subject: string; text: string; html: string | nul
         `Check the backtest yourself: ${checkUrl}`, '',
         `Prefer to start with the brief? Read one complete issue: ${previewUrl}`,
         `Subscribe free: ${subscribeUrl}`, '',
-        'Free weekly newsletter. Unsubscribe any time.', OFFER, '', NOBROKER, '', 'Eric Huang', 'Founder, TradeMind', 'Queens, New York', '',
+        'Free weekly newsletter. Unsubscribe any time.', OFFER, '', NOBROKER, '', REPLY_LINE, '', 'Eric Huang', 'Founder, TradeMind', 'Queens, New York', '',
         o.sigSep,
         `You're getting this invite because you subscribed to an investing publication. Unsubscribe or snooze: ${unsubUrl}`,
         `AI Investor Copilot by TradeMind, ${o.mailingAddress}`,
@@ -192,6 +194,7 @@ function renderC(o: V8Opts): { subject: string; text: string; html: string | nul
             + `<p class="t" style="margin:14px 0 6px;font-size:14px;line-height:1.55;color:#e5e7eb;"><b>Free weekly newsletter. Unsubscribe any time.</b></p>`
             + `<p class="t" style="margin:0 0 16px;font-size:14px;line-height:1.55;color:#e5e7eb;">${escH(OFFER)}</p>`
             + P(NOBROKER, 'font-size:14px;color:#aab4c5;')
+            + P(REPLY_LINE, 'font-size:15px;')
             + `<p class="t" style="margin:0 0 4px;font-size:16px;color:#e5e7eb;">Eric Huang</p><p class="t2" style="margin:0 0 24px;font-size:13px;color:#aab4c5;">Founder, TradeMind &middot; Queens, New York</p>`;
         html = (head + body + tail).replace(/\{\{mailing_address\}\}/g, escH(o.mailingAddress));
     }

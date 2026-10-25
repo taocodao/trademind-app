@@ -4,6 +4,7 @@ import StartVisit from '@/components/start/StartVisit';
 import SubmissionForm from '@/components/start/SubmissionForm';
 import TokenLink from '@/components/start/TokenLink';
 import { isSection, SECTION_LIST, SectionKey, TASKS } from '@/lib/start/sections';
+import { HIGHLIGHT_TEXT } from '@/lib/outreach/copy-seq6';
 import { LIMITS, NOBROKER, PARTS, RESULT_H, RESULT_P1, RESULT_P2 } from '@/lib/outreach/copy-v8';
 import { ALT as WAIT_ALT, CAP as WAIT_CAP, IMG as WAIT_IMG, P2 as WAIT_P2 } from '@/lib/outreach/copy-ws';
 
@@ -17,6 +18,7 @@ function SimBox() {
     return (
         <div className="mt-6 rounded-lg border-l-4 border-[#2f6bff] bg-[#1a2540] p-4">
             <p className="text-xs font-extrabold uppercase tracking-wide text-blue-300">{RESULT_H}</p>
+            <p className="mt-2 text-lg font-extrabold leading-snug text-white">{HIGHLIGHT_TEXT}</p>
             <p className="mt-2 text-sm leading-relaxed">{RESULT_P1}</p>
             <p className="mt-2 text-sm leading-relaxed">{RESULT_P2}</p>
             <p className="mt-3 text-sm leading-relaxed text-gray-300">{LIMITS}</p>

@@ -88,6 +88,7 @@ for (const st of [1, 2, 5, 6, 7, 8]) {
     t(`${lab}: does not say it is the last email`, !/last (email|note|message)|final (email|note)|never (write|email) again/i.test(all));
     t(`${lab}: offer line only in emails 1 to 3`, (st <= 5 && st !== 5 && st !== 6 ? true : true) && (/30% off/.test(m.text) === [1, 2, 5].includes(st)));
 }
+t('sequence: emails 1 and 2 lead with the 4.6 times and 36% shallower highlight', [1, 2].every((st) => { const x = sq.renderSeq6({ ...so, step: st }); return /two-year simulation, QQQ LEAPS returned about 4\.6 times the percentage return/.test(x.text) && /about 36% shallower/.test(x.html); }));
 const m2 = sq.renderSeq6({ ...so, step: 2, visited: ['strategies'] });
 t('sequence: quiet link moves to next unseen section after a visit', m2.text.includes('/r/abcdef2345/ru?s=2') && m2.text.indexOf('See rules and plans') > 0);
 const m7 = sq.renderSeq6({ ...so, step: 7, answer: 'c' });

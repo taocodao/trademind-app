@@ -53,13 +53,16 @@ const SUBJECT: Record<number, string> = {
     6: 'Help shape TradeMind, free for 30 days',
 };
 const PRE: Record<number, string> = {
-    1: 'A free weekly brief, one historical test with its assumptions, and a sample issue to read first.',
-    2: 'Plain English, with the simulation and its limits shown.',
+    1: 'In a two-year simulation: about 4.6 times QQQ\u2019s percentage return, with a decline about 36% shallower.',
+    2: 'In a two-year simulation: about 4.6 times QQQ\u2019s percentage return, with a decline about 36% shallower.',
     3: 'A sample of the daily briefing, including a day when nothing changes.',
     4: 'A simulation that held no positions for almost 11 months.',
     5: 'Public rules, public data, and credit for what you find.',
     6: 'Free for 30 days, no card, and nothing turns into a paid plan on its own.',
 };
+
+/** Headline figures for the box. 229.48 / 49.46 = 4.64 times the percentage return; 1 - 14.59 / 22.88 = 36% shallower. */
+export const HIGHLIGHT_TEXT = 'In this two-year simulation, QQQ LEAPS returned about 4.6 times the percentage return of QQQ buy and hold, with a largest decline about 36% shallower.';
 
 const FONT = "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;";
 const SPIVA = 'For decades the simple answer has beaten the expert one. Over 15 years, about 9 in 10 professionally managed US large-cap funds trailed the S&P 500 (S&P SPIVA, year-end 2025). That figure is about managed funds. It says nothing about whether TradeMind will do better.';
@@ -176,7 +179,7 @@ export function renderSeq6(o: Seq6Opts): { subject: string; text: string; html: 
     const T: string[] = [hi, ''];
     for (const p of paras) T.push(p, '');
     if (showStrip) { T.push('Four parts in every issue:', ...PARTS.map(([, nm, d]) => `- ${nm}: ${d}`), `What each issue covers: ${url('i')}`, ''); }
-    if (showBox) T.push(RESULT_H.toUpperCase(), RESULT_P1, '', RESULT_P2, '', LIMITS, '');
+    if (showBox) T.push(RESULT_H.toUpperCase(), HIGHLIGHT_TEXT, '', RESULT_P1, '', RESULT_P2, '', LIMITS, '');
     if (chart) T.push(`[Chart] ${WS_ALT}`, WS_CAP, '');
     if (listIntro) T.push(listIntro);
     if (list.length) { T.push(...list.map((x, i) => (n === 3 ? `${i + 1}. ${x}` : `- ${x}`)), ''); }
@@ -221,6 +224,7 @@ export function renderSeq6(o: Seq6Opts): { subject: string; text: string; html: 
         const strip = PARTS.map(([k, nm, d]) => `<td width="25%" valign="top" style="padding:12px 6px;${FONT}font-size:12px;line-height:1.4;"><a href="${escH(url('i', `&a=${k}`))}" class="pl" style="display:block;color:#8fb3ff;font-size:13px;font-weight:700;text-decoration:none;">${nm} &rsaquo;</a><span class="t2" style="color:#aab4c5;">${d}</span></td>`).join('');
         const box = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:6px 0 20px;"><tr><td class="ob" style="padding:16px 18px;background:#1a2540;border-left:4px solid #2f6bff;border-radius:4px;${FONT}">`
             + `<p class="t" style="margin:0 0 10px;font-size:13px;font-weight:800;letter-spacing:.04em;color:#8fb3ff;text-transform:uppercase;">${escH(RESULT_H)}</p>`
+            + `<p class="t" style="margin:0 0 12px;font-size:18px;line-height:1.4;font-weight:800;color:#ffffff;">${escH(HIGHLIGHT_TEXT)}</p>`
             + `<p class="t" style="margin:0 0 10px;font-size:15px;line-height:1.55;color:#e5e7eb;">${escH(RESULT_P1)}</p>`
             + `<p class="t" style="margin:0 0 12px;font-size:15px;line-height:1.55;color:#e5e7eb;">${escH(RESULT_P2)}</p>`
             + `<p class="t2" style="margin:0;font-size:14px;line-height:1.55;color:#c3cad8;">${escH(LIMITS)}</p></td></tr></table>`;

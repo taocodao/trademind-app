@@ -1,5 +1,5 @@
+import { getPrivyUserId } from '@/lib/auth-helpers';
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { query } from '@/lib/db';
 import { getStripe } from '@/lib/stripe-server';
 import { provisionCheckoutSession, reconcileUserCheckouts } from '@/lib/stripe-provision';
@@ -8,25 +8,8 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 async function getUserId(req: NextRequest): Promise<string | null> {
-    const cookieStore = await cookies();
-    const cookieUserId = cookieStore.get('privy-user-id')?.value;
-    if (cookieUserId) return cookieUserId;
-    const privyToken = cookieStore.get('privy-token')?.value;
-    if (privyToken) {
-        try {
-            const payload = JSON.parse(Buffer.from(privyToken.split('.')[1], 'base64url').toString());
-            const id = payload?.sub || payload?.privy_did || null;
-            if (id) return id;
-        } catch { /* fall through */ }
-    }
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) return null;
-    try {
-        const payload = JSON.parse(Buffer.from(authHeader.slice(7).split('.')[1], 'base64url').toString());
-        return payload?.sub || payload?.privy_did || null;
-    } catch {
-        return null;
-    }
+    // Verified identity only: the sign-in token signature is checked; unverified token contents are never trusted.
+    return getPrivyUserId(req);
 }
 
 /**

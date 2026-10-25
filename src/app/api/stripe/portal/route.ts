@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { getPrivyUserId } from '@/lib/auth-helpers';
 import Stripe from 'stripe';
 import pool from '@/lib/db';
 import { getStripe } from '@/lib/stripe-server';
@@ -8,31 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
     try {
-        const cookieStore = await cookies();
-        let userId = cookieStore.get('privy-user-id')?.value;
-        if (!userId) {
-            const privyToken = cookieStore.get('privy-token')?.value;
-            if (privyToken) {
-                try {
-                    const payload = JSON.parse(Buffer.from(privyToken.split('.')[1], 'base64url').toString());
-                    userId = payload?.sub || payload?.privy_did || '';
-                } catch { /* ignore */ }
-            }
-        }
-
-        // Fallback: Bearer token
-        if (!userId) {
-            const authHeader = req.headers.get('Authorization');
-            if (authHeader?.startsWith('Bearer ')) {
-                const token = authHeader.slice(7);
-                try {
-                    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
-                    userId = payload?.sub || payload?.privy_did || '';
-                } catch {
-                    // malformed token
-                }
-            }
-        }
+        const userId = await getPrivyUserId(req);
 
         if (!userId) {
             return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });

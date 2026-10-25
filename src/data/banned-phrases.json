@@ -1,0 +1,16 @@
+{
+  "note": "Phrases that newsletter, briefing and outreach copy must not contain. Used by scripts/check-claims.mjs now and by the briefing wording filter later.",
+  "phrases": [
+    "guarantee", "promise", "will return", "can't lose", "cannot lose", "winning trades", "second income",
+    "low-risk options", "beat the market with less risk", "daily opportunities", "autopilot", "fly it higher",
+    "compounds to", "last chance", "spots almost gone"
+  ],
+  "patterns": [
+    { "name": "million-dollar growth claim", "regex": "\\$\\s?1(,000,000|M\\b)|\\bmillion\\b" },
+    { "name": "Defensive described as only ETFs", "regex": "only\\s+ETFs?" },
+    { "name": "worst fall shallow", "regex": "worst\\s+fall" }
+  ],
+  "allow": [
+    { "file": "src/lib/newsletter/guides.ts", "text": "why income autopilot fails" }
+  ]
+}

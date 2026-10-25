@@ -1,0 +1,69 @@
+{
+  "note": "Single source of truth for every fact the newsletter, briefing and outreach may print. Items marked needs_owner_confirmation must be confirmed by the owner before the engine may use them. Simulated and live figures are kept apart and must never share a sentence.",
+  "record_version": "0.1-draft",
+  "as_of": "2026-10-24",
+  "company": {
+    "name": "TradeMind",
+    "site": "https://trademind.bot",
+    "mailing_address": "151-58 24th Rd, Whitestone, NY 11357"
+  },
+  "execution_posture": {
+    "statement": "TradeMind never connects to a brokerage and never places orders. Members enter every order themselves at their own broker.",
+    "brokerage_connection": false,
+    "auto_trading": false
+  },
+  "strategies": [
+    {
+      "id": "QQQ_LEAPS",
+      "display_name": "QQQ LEAPS",
+      "description": "Long-dated QQQ calls with short calls sold against them, plus a test-phase SMH put-spread sleeve.",
+      "needs_options_permission": true
+    },
+    {
+      "id": "TQQQ_TURBOCORE_PRO",
+      "display_name": "QQQ Defensive",
+      "internal_name": "QQQ Basic",
+      "description": "A leveraged ETF allocation (QQQ, QLD, TQQQ and SGOV). No options permission is needed.",
+      "needs_options_permission": false
+    }
+  ],
+  "simulated_results": {
+    "label": "simulated",
+    "window": "October 14, 2024 to October 13, 2026",
+    "qqq_leaps_sim": { "total_return_pct": 229.48, "largest_drop_pct": 14.59 },
+    "qqq_buy_and_hold_reference": { "total_return_pct": 49.46, "largest_drop_pct": 22.88 },
+    "needs_owner_confirmation": true,
+    "caution": "Simulation, not live trading. Show with the word simulated next to every figure."
+  },
+  "live_model_results": {
+    "label": "live model",
+    "value": null,
+    "needs_owner_confirmation": true
+  },
+  "audience": {
+    "confirmed_newsletter_subscribers": 981,
+    "as_of": "2026-10-23",
+    "paying_members": null,
+    "needs_owner_confirmation": true
+  },
+  "prices": {
+    "legacy_annual_usd": { "QQQ_DEFENSIVE": 252, "QQQ_LEAPS": 336 },
+    "proposed_levels_usd": {
+      "research": { "monthly": 29, "annual": 290 },
+      "research_plus_tracking": { "monthly": 49, "annual": 490 },
+      "founding_research": { "monthly": 19, "annual": 190, "paid_months": 12 },
+      "founding_tracking": { "monthly": 34, "annual": 340, "paid_months": 12 },
+      "adviser_license": { "monthly": 149, "annual": 1490, "internal_users": 3 }
+    },
+    "status": "proposal_not_live"
+  },
+  "program": {
+    "first_group": 30,
+    "wave_size_max": 50,
+    "hard_limit": 200,
+    "preview_days": 30,
+    "partner_credit_days_per_activity": 30,
+    "partner_credit_max_months": 6,
+    "automatic_charges": false
+  }
+}

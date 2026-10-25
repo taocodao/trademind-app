@@ -20,6 +20,7 @@ import { FOLLOWUPS_V5 } from './followups-v5';
 import { renderV6, isV6Control, hasV6 } from './copy-v6';
 import { renderWS } from './copy-ws';
 import { renderV8 } from './copy-v8';
+import { renderProg, PROG_TEMPLATE, PROG_FOLLOWUP_STEPS, PROG_LABEL } from './copy-prog';
 import { STAGE_BY_STEP, STEP_DAYS, PREVIEW_VARIANT, followupFooterText, followupHtml } from './followup';
 import { BASE_URL, CAMPAIGN, ensureOutreachTables, getSettings, setSetting } from './db';
 import { sendMail, transportKeyPresent, type Transport } from './transport';
@@ -536,6 +537,12 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
                 [[String(c.email).toLowerCase(), String(c.subscriber_email ?? '').toLowerCase()].filter(Boolean)]
             );
             if (sub.rowCount) return skip('already subscribed');
+            // Anyone who applied to, or joined, the founding program gets no more invitations.
+            const applied = await query(
+                `SELECT 1 FROM program_application WHERE email_norm = $1 UNION ALL SELECT 1 FROM program_participant WHERE email_norm = $1 LIMIT 1`,
+                [String(c.email).toLowerCase()]
+            ).catch(() => ({ rowCount: 0 }));
+            if (applied.rowCount) return skip('applied to program');
         }
     }
     // Re-introduction: a person whose first email went out through Resend and who has not responded gets the new first
@@ -582,8 +589,25 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
             useWS = String(s2.rows[0]?.template ?? '').startsWith('RE_');
         }
     }
+    // Founding program message (copy_prog_start): replaces the A/B/C first email, and its follow-ups go to the people who got it.
+    const progStart = s.copy_prog_start ? Date.parse(s.copy_prog_start) : NaN;
+    const progLive = Number.isFinite(progStart) && Date.now() >= progStart;
+    const useProgFirst = tmplStep === 1 && !stage && progLive;
+    let useProgFu = false;
+    if (stage && seqV2 && !isSeed) {
+        const f1 = await query(`SELECT template FROM outreach_sends WHERE token = $1 AND step = 1`, [row.token]);
+        if (String(f1.rows[0]?.template ?? '') === PROG_TEMPLATE) {
+            if (!(PROG_FOLLOWUP_STEPS as readonly number[]).includes(row.step)) return skip('program sequence skips this step');
+            useProgFu = true;
+        }
+    }
     let reVariant: string | null = null;
-    if (useWS) {
+    const progOpts = { token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, sigSep: '-'.repeat(2), useHtml: s.html_enabled === 'true' };
+    if (useProgFirst) {
+        msg = renderProg(progOpts);
+    } else if (useProgFu) {
+        msg = renderProg({ ...progOpts, step: row.step });
+    } else if (useWS) {
         msg = renderWS({ token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, sigSep: '-'.repeat(2), useHtml: s.html_enabled === 'true', step: row.step, last: row.step === 7 });
     } else if (reintro) {
         const m8 = renderV8({ token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, sigSep: '-'.repeat(2), useHtml: s.html_enabled === 'true', useC });
@@ -614,7 +638,7 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
     const data = { id: res.id ?? undefined };
     await query(
         `INSERT INTO outreach_sends (token, step, template, domain, from_addr, message_id) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (token, step) DO NOTHING`,
-        [row.token, row.step, tmplStep === 3 ? 'CHECKIN' : reVariant ? `RE_${reVariant}` : useWS ? 'WS' : stage ? (seqV2 ? `${stage}_${branch}` : 'FU') : c.template, row.domain, from, data.id ?? null]
+        [row.token, row.step, tmplStep === 3 ? 'CHECKIN' : useProgFirst ? PROG_TEMPLATE : useProgFu ? PROG_LABEL[row.step] : reVariant ? `RE_${reVariant}` : useWS ? 'WS' : stage ? (seqV2 ? `${stage}_${branch}` : 'FU') : c.template, row.domain, from, data.id ?? null]
     );
     await query(`UPDATE outreach_queue SET state = 'sent' WHERE id = $1`, [row.id]);
     if (!isSeed) {

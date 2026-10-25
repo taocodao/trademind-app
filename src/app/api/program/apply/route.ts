@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
         can_do_monthly_activity: b.can_do_monthly_activity === true,
         interview_ok: b.interview_ok === true,
         heard_about_us: clip(b.heard_about_us, 200),
+        outreach_token: /^[A-Za-z0-9_-]{8,64}$/.test(clip(b.outreach_token, 64)) ? clip(b.outreach_token, 64) : '',
     };
     await ensureProgramTables();
     const norm = normEmail(email);

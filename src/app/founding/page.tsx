@@ -17,7 +17,7 @@ export default function FoundingApply() {
             years_investing: f.get('years'), paid_research_last_year: f.get('paid'),
             used_and_stopped: f.get('stopped'), problem_to_solve: f.get('problem'),
             delivery_preference: f.get('delivery'), can_do_monthly_activity: f.get('activity') === 'yes',
-            interview_ok: f.get('interview') === 'on', heard_about_us: f.get('heard'), source: new URLSearchParams(window.location.search).get('source') || '',
+            interview_ok: f.get('interview') === 'on', heard_about_us: f.get('heard'), source: new URLSearchParams(window.location.search).get('source') || '', outreach_token: new URLSearchParams(window.location.search).get('t') || '',
             consent: f.get('consent') === 'on', website: f.get('website'),
         };
         const r = await fetch('/api/program/apply', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });

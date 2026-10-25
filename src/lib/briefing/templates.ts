@@ -16,6 +16,20 @@ export function overallStatus(f: FactsRun): 'CHANGE' | 'NO_CHANGE' | 'TECHNICAL'
     return 'NO_CHANGE';
 }
 
+/** One plain sentence that opens the instruction block. Built only from statuses. */
+export function summaryLine(f: FactsRun): string {
+    const o = overallStatus(f);
+    if (o === 'TECHNICAL') return "Today's model result is delayed. Take no action until we confirm.";
+    if (o === 'CHECK') {
+        const names = f.strategies.filter((s) => s.status === 'UNVERIFIED').map((s) => s.display_name).join(' and ');
+        return `We could not confirm the status of ${names} today. Take no action on it until we confirm.`;
+    }
+    if (o === 'NO_CHANGE') return 'Nothing to do today. Both strategies hold their current model positions.';
+    const changed = f.strategies.filter((s) => s.status === 'CHANGE').map((s) => s.display_name);
+    const same = f.strategies.filter((s) => s.status === 'NO_CHANGE').map((s) => s.display_name);
+    return `${changed.join(' and ')} changed ${changed.length > 1 ? 'their' : 'its'} model ${changed.length > 1 ? 'positions' : 'weights'} today.${same.length ? ` ${same.join(' and ')} holds ${same.length > 1 ? 'their' : 'its'} current position.` : ''}`;
+}
+
 export function subjectFor(f: FactsRun, kind: 'daily' | 'alert'): string {
     const d = shortDate(f.run_date);
     const o = overallStatus(f);
@@ -84,6 +98,7 @@ export function fillPlaceholders(text: string, vals: Record<string, string>): st
 export function renderDailyText(f: FactsRun, commentaryFilled: string | null): string {
     const parts: string[] = [];
     parts.push('MODEL INSTRUCTION');
+    parts.push(summaryLine(f));
     parts.push(f.strategies.map(instructionLine).join('\n'));
     parts.push(`Data as of ${longDate(f.run_date)}. The model runs at 3:00 PM Eastern.`);
     parts.push('CURRENT MODEL POSITION');
@@ -104,7 +119,7 @@ export function renderDailyText(f: FactsRun, commentaryFilled: string | null): s
 
 export function renderAlertText(f: FactsRun): string {
     const changed = f.strategies.filter((s) => s.status === 'CHANGE');
-    const parts: string[] = ['MODEL INSTRUCTION', changed.map(instructionLine).join('\n'), `Data as of ${longDate(f.run_date)}.`, `Full record: ${LEDGER_URL}`, FOOTER_MARK, DISCLOSURE, `TradeMind, ${canonical.company.mailing_address}`, 'Change alerts or unsubscribe: {{unsubscribe_url}}'];
+    const parts: string[] = ['MODEL INSTRUCTION', summaryLine(f), changed.map(instructionLine).join('\n'), `Data as of ${longDate(f.run_date)}.`, `Full record: ${LEDGER_URL}`, FOOTER_MARK, DISCLOSURE, `TradeMind, ${canonical.company.mailing_address}`, 'Change alerts or unsubscribe: {{unsubscribe_url}}'];
     return parts.join('\n\n');
 }
 

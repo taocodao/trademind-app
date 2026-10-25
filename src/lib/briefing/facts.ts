@@ -46,7 +46,7 @@ async function defensiveFacts(date: string): Promise<StrategyFacts> {
     const base: StrategyFacts = {
         strategy: 'TQQQ_TURBOCORE_PRO', display_name: 'QQQ Defensive', status: 'DELAYED', run_verified: false,
         source_signal_id: null, as_of: null, regime: null, confidence_pct: null, qqq_close: null,
-        weights: [], previous_weights_differ: null, instructions: [], gates: [],
+        weights: [], previous_weights: [], previous_weights_differ: null, instructions: [], gates: [],
     };
     if (!today) return base;
     const d = today.data;
@@ -55,8 +55,16 @@ async function defensiveFacts(date: string): Promise<StrategyFacts> {
     if (!weights.length) return { ...base, status: 'RUN_FAILED' };
     const differs = prev ? !sameWeights(weights, weightsOf(prev.data)) : null;
     const close = /QQQ close:\s*([\d.]+)/.exec(String(d.rationale || ''));
+    const prevWeights = prev ? weightsOf(prev.data) : [];
+    const fmt = (items: { symbol: string; pct: number }[]) => items.map((i) => `${i.symbol} ${i.pct}%`).join(', ');
     const instructions = differs
-        ? weights.map((w) => `${w.level[0].toUpperCase()}${w.level.slice(1)} level model weights: ${w.items.map((i) => `${i.symbol} ${i.pct}%`).join(', ')}`)
+        ? weights.map((w) => {
+            const before = prevWeights.find((p) => p.level === w.level);
+            const level = `${w.level[0].toUpperCase()}${w.level.slice(1)} level`;
+            return before && JSON.stringify(before.items) !== JSON.stringify(w.items)
+                ? `${level}: move to ${fmt(w.items)} (was ${fmt(before.items)})`
+                : `${level}: stays at ${fmt(w.items)}`;
+        })
         : [];
     return {
         ...base,
@@ -67,7 +75,7 @@ async function defensiveFacts(date: string): Promise<StrategyFacts> {
         regime: d.regime ? String(d.regime) : null,
         confidence_pct: typeof d.confidence === 'number' ? Math.round(d.confidence * 100) : null,
         qqq_close: close ? Number(close[1]) : null,
-        weights, previous_weights_differ: differs, instructions,
+        weights, previous_weights: prevWeights, previous_weights_differ: differs, instructions,
         gates: [
             { name: 'Market regime', value: String(d.regime ?? 'unknown') },
             { name: '200-day average gate', value: d.sma200_gate ? 'passed' : 'not passed' },
@@ -80,7 +88,7 @@ async function leapsFacts(date: string): Promise<StrategyFacts> {
     const base: StrategyFacts = {
         strategy: 'QQQ_LEAPS', display_name: 'QQQ LEAPS', status: 'UNVERIFIED', run_verified: false,
         source_signal_id: null, as_of: null, regime: null, confidence_pct: null, qqq_close: null,
-        weights: [], previous_weights_differ: null, instructions: [], gates: [],
+        weights: [], previous_weights: [], previous_weights_differ: null, instructions: [], gates: [],
     };
     const change = await latestSignal('QQQ_LEAPS', date, ['ENTER', 'EXIT', 'ROLL', 'CLOSE']);
     if (change) {

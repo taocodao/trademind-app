@@ -30,12 +30,12 @@ const defensive = (over = {}) => ({
     strategy: 'TQQQ_TURBOCORE_PRO', display_name: 'QQQ Defensive', status: 'NO_CHANGE', run_verified: true,
     source_signal_id: 'x', as_of: '2026-10-26T19:01:00Z', regime: 'BULL', confidence_pct: 43, qqq_close: 704.83,
     weights: [{ level: 'moderate', items: [{ symbol: 'QQQ', pct: 85 }, { symbol: 'SGOV', pct: 15 }] }],
-    previous_weights_differ: false, instructions: [],
+    previous_weights: [], previous_weights_differ: false, instructions: [],
     gates: [{ name: 'Market regime', value: 'BULL' }, { name: '200-day average gate', value: 'passed' }, { name: 'Short-term trend signal', value: 'positive' }], ...over,
 });
 const leaps = (over = {}) => ({
     strategy: 'QQQ_LEAPS', display_name: 'QQQ LEAPS', status: 'NO_CHANGE', run_verified: true, source_signal_id: null, as_of: null,
-    regime: null, confidence_pct: null, qqq_close: null, weights: [], previous_weights_differ: null, instructions: [], gates: [], ...over,
+    regime: null, confidence_pct: null, qqq_close: null, weights: [], previous_weights: [], previous_weights_differ: null, instructions: [], gates: [], ...over,
 });
 const facts = (s = [leaps(), defensive()]) => ({ run_id: 'r', run_date: '2026-10-26', record_type: 'live_model', early_close: false, strategies: s, benchmark: { symbol: 'QQQ', close: 704.83 }, engine_note: '', hash: 'h' });
 const GOOD = 'The model reads the market regime as {{regime}} with confidence of {{confidence}}, and {{gates_passed}} of {{gates_total}} gates are satisfied. Confidence below the threshold is a reason for patience, not a signal. Quiet days are normal for a rules based process.';
@@ -100,7 +100,14 @@ c = runChecks({ kind: 'daily', subject: 'x', text, rawCommentary: null, facts: f
 t('missing ledger link is blocked', c.find((x) => x.name === 'ledger_link').pass === false);
 
 // Alert
-const chg = facts([leaps(), defensive({ status: 'CHANGE', previous_weights_differ: true, instructions: ['Moderate level model weights: QQQ 85%, SGOV 15%'] })]);
+const prev = [{ level: 'moderate', items: [{ symbol: 'SGOV', pct: 70 }, { symbol: 'QQQ', pct: 30 }] }];
+const chg = facts([leaps(), defensive({ status: 'CHANGE', previous_weights: prev, previous_weights_differ: true, instructions: ['Moderate level: move to QQQ 85%, SGOV 15% (was SGOV 70%, QQQ 30%)'] })]);
+const dc = assemble(chg, 'daily', GOOD);
+t('change day shows what moved', dc.pass && /move to QQQ 85%, SGOV 15% \(was SGOV 70%, QQQ 30%\)/.test(dc.text), JSON.stringify(dc.checks.filter((x) => !x.pass)));
+t('summary line follows heading', /^MODEL INSTRUCTION\n\nQQQ Defensive changed its model weights today\./.test(dc.text));
+t('quiet day summary says nothing to do', /^MODEL INSTRUCTION\n\nNothing to do today\./.test(assemble(facts(), 'daily', GOOD).text));
+t('failed run summary says delayed', /^MODEL INSTRUCTION\n\nToday's model result is delayed\./.test(assemble(facts([leaps({ status: 'RUN_FAILED', run_verified: false }), defensive()]), 'daily', null).text));
+t('unconfirmed run summary names the strategy', /could not confirm the status of QQQ LEAPS/.test(assemble(facts([leaps({ status: 'UNVERIFIED', run_verified: false }), defensive()]), 'daily', null).text));
 const a = assemble(chg, 'alert', null);
 t('alert passes and is short', a.pass && a.text.split(/\s+/).length < 120, JSON.stringify(a.checks.filter((x) => !x.pass)));
 t('alert subject names the strategy', /QQQ Defensive: Strategy change/.test(a.subject));

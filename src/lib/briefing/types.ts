@@ -14,6 +14,8 @@ export interface StrategyFacts {
     qqq_close: number | null;
     /** Model weights by risk level, as percentages (Defensive). */
     weights: { level: string; items: { symbol: string; pct: number }[] }[];
+    /** Weights from the previous market day, kept so a change can show what moved. */
+    previous_weights: { level: string; items: { symbol: string; pct: number }[] }[];
     previous_weights_differ: boolean | null;
     /** Instruction lines taken only from signal fields. */
     instructions: string[];

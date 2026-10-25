@@ -281,6 +281,10 @@ export async function planToday(now = new Date()): Promise<PlanResult | null> {
         // Six-email panel sequence: people whose first email was S1 follow their own schedule (day 7, 14, 21, 28, 35),
         // at least 4 days apart, and are kept out of every other follow-up path.
         const treated = new Set<string>();
+        // People whose first email went out before copy_prog_start (and who have not had the old close-out) join the new
+        // sequence at their next follow-up. Their next email is the first of steps 2, 5, 6, 7, 8 they have not received.
+        const progStartMs = s.copy_prog_start ? Date.parse(s.copy_prog_start) : NaN;
+        const progStartIso = Number.isFinite(progStartMs) && Date.now() >= progStartMs ? new Date(progStartMs).toISOString() : null;
         if (seqV2) {
             const sq = await query(`
                 SELECT c.token, c.tz, s1.domain,
@@ -289,13 +293,16 @@ export async function planToday(now = new Date()): Promise<PlanResult | null> {
                        COALESCE((SELECT array_agg(x.step) FROM outreach_sends x WHERE x.token = c.token), '{}') AS sent_steps,
                        COALESCE((SELECT array_agg(q.step) FROM outreach_queue q WHERE q.token = c.token AND q.state = 'pending'), '{}') AS queued_steps
                 FROM outreach_contacts c
-                JOIN outreach_sends s1 ON s1.token = c.token AND s1.step = 1 AND s1.template = '${SEQ6_TEMPLATE}' AND s1.status IN ('sent','delivered')
+                JOIN outreach_sends s1 ON s1.token = c.token AND s1.step = 1 AND s1.status IN ('sent','delivered')
                 WHERE c.status IN ('sent','clicked') AND c.wave <> 'seed'
+                  AND (s1.template = '${SEQ6_TEMPLATE}'
+                       OR ($1::timestamptz IS NOT NULL AND s1.sent_at < $1::timestamptz
+                           AND NOT EXISTS (SELECT 1 FROM outreach_sends x7 WHERE x7.token = c.token AND x7.step = 7)))
                   AND NOT EXISTS (SELECT 1 FROM newsletter_suppression ns WHERE ns.email = c.email)
                   AND NOT EXISTS (SELECT 1 FROM newsletter_subscribers sub WHERE sub.status IN ('confirmed','pending') AND sub.email IN (c.email, COALESCE(c.subscriber_email, c.email)))
                   AND NOT EXISTS (SELECT 1 FROM program_application pa WHERE pa.email_norm = LOWER(c.email))
                   AND NOT EXISTS (SELECT 1 FROM program_participant pp WHERE pp.email_norm = LOWER(c.email))
-                LIMIT 6000`).catch(() => ({ rows: [] as any[] }));
+                LIMIT 6000`, [progStartIso]).catch(() => ({ rows: [] as any[] }));
             for (const row of sq.rows) {
                 treated.add(row.token);
                 const sentS = new Set<number>(row.sent_steps);
@@ -627,8 +634,13 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
     const useProgFirst = tmplStep === 1 && !stage && (progLive || seedTest);
     let useProgFu = false;
     if (stage && seqV2 && !isSeed) {
-        const f1 = await query(`SELECT template FROM outreach_sends WHERE token = $1 AND step = 1`, [row.token]);
-        if (String(f1.rows[0]?.template ?? '') === SEQ6_TEMPLATE) {
+        const f1 = await query(`SELECT template, sent_at FROM outreach_sends WHERE token = $1 AND step = 1`, [row.token]);
+        let member = String(f1.rows[0]?.template ?? '') === SEQ6_TEMPLATE;
+        if (!member && progLive && f1.rows[0]?.sent_at && new Date(f1.rows[0].sent_at).getTime() < progStart) {
+            const closed = await query(`SELECT 1 FROM outreach_sends WHERE token = $1 AND step = 7 AND template <> $2 LIMIT 1`, [row.token, SEQ6_LABEL[7]]);
+            member = !closed.rowCount;
+        }
+        if (member) {
             if (!(SEQ6_STEPS as readonly number[]).includes(row.step)) return skip('sequence does not use this step');
             useProgFu = true;
         }

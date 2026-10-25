@@ -91,6 +91,8 @@ for (const st of [1, 2, 5, 6, 7, 8]) {
 t('sequence: emails 1 and 2 lead with the 4.6 times and 36% shallower highlight', [1, 2].every((st) => { const x = sq.renderSeq6({ ...so, step: st }); return /two-year simulation, QQQ LEAPS returned about 4\.6 times the percentage return/.test(x.text) && /about 36% shallower/.test(x.html); }));
 const m2 = sq.renderSeq6({ ...so, step: 2, visited: ['strategies'] });
 t('sequence: quiet link moves to next unseen section after a visit', m2.text.includes('/r/abcdef2345/ru?s=2') && m2.text.indexOf('See rules and plans') > 0);
+const mo = sq.renderSeq6({ ...so, step: 5, n: 2 });
+t('sequence: re-introduced contacts get email 2 content on step 5', /QQQ LEAPS owns a long-dated/.test(mo.text) && mo.text.includes('/r/abcdef2345/st?s=5'));
 const m7 = sq.renderSeq6({ ...so, step: 7, answer: 'c' });
 t('sequence: email 5 first line follows the challenge answer', /walked away/.test(m7.text) && /^Hi Sam,\n\nIf you would have walked away/.test(m7.text));
 const m6 = sq.renderSeq6({ ...so, step: 6 });

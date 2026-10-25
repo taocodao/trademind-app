@@ -14,6 +14,10 @@ export const SEQ6_TEMPLATE = 'S1';
 export const SEQ6_STEPS = [1, 2, 5, 6, 7, 8] as const;
 export const SEQ6_DAYS: Record<number, number> = { 2: 7, 5: 14, 6: 21, 7: 28, 8: 35 };
 export const SEQ6_LABEL: Record<number, string> = { 1: 'S1', 2: 'S2', 5: 'S3', 6: 'S4', 7: 'S5', 8: 'S6' };
+/** People whose first email was never delivered well (sent through retired domains) get email 1 as their step 2 re-introduction, labeled S1R. Their later emails use steps 5, 6, 7, 8, 9 for emails 2 to 6. */
+export const SEQ6_REINTRO_LABEL = 'S1R';
+export const SEQ6_OFFSET_LADDER = [5, 6, 7, 8, 9] as const;
+export const seq6Label = (n: number) => `S${n}`;
 const N_BY_STEP: Record<number, number> = { 1: 1, 2: 2, 5: 3, 6: 4, 7: 5, 8: 6 };
 
 export type Section = 'brief' | 'strategies' | 'rules' | 'challenge' | 'verify' | 'panel';
@@ -69,8 +73,10 @@ const SPIVA = 'For decades the simple answer has beaten the expert one. Over 15 
 
 export interface Seq6Opts {
     token: string; firstName: string | null; baseUrl: string; mailingAddress: string; sigSep: string; useHtml?: boolean;
-    /** Sequence step: 1, 2, 5, 6, 7 or 8. */
+    /** Sequence step: 1, 2, 5, 6, 7, 8 or 9. Used for the tracking step number and, unless n is given, the email number. */
     step: number;
+    /** Email number 1 to 6, when it differs from the step (people who got the re-introduction as email 1). */
+    n?: number;
     /** Sections this person has viewed (human confirmed). Used only to choose the quiet link. */
     visited?: string[];
     /** Answer from email 4 (a, b or c), used for the first line of email 5. */
@@ -80,7 +86,7 @@ export interface Seq6Opts {
 function sectionCode(k: Section) { return SECTIONS.find((s) => s.key === k)!; }
 
 export function renderSeq6(o: Seq6Opts): { subject: string; text: string; html: string | null; unsubUrl: string; n: number } {
-    const n = N_BY_STEP[o.step] ?? 1;
+    const n = o.n ?? N_BY_STEP[o.step] ?? 1;
     const s = o.step;
     const url = (kind: string, extra = '') => `${o.baseUrl}/r/${o.token}/${kind}?s=${s}${extra}`;
     const unsubUrl = `${o.baseUrl}/u/${o.token}`;

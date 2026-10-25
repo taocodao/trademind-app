@@ -56,7 +56,8 @@ function render(p: MailPayload): { text: string; html: string } {
     return { text: lines.join('\n'), html };
 }
 
-async function send(p: MailPayload): Promise<boolean> {
+export type { MailPayload };
+export async function send(p: MailPayload): Promise<boolean> {
     if (!RESEND_API_KEY) {
         console.warn('[Newsletter email] RESEND_API_KEY not configured');
         return false;

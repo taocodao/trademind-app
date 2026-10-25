@@ -14,6 +14,7 @@ import { createAccount } from '@/lib/accounts';
 import { query } from '@/lib/db';
 import { handleReferralFirstPayment } from '@/lib/referrals';
 import { provisionCheckoutSession } from '@/lib/stripe-provision';
+import { handleProgramCheckout, handleProgramSubscriptionEnded } from '@/lib/program/billing';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -61,6 +62,11 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
     switch (event.type) {
         case 'checkout.session.completed': {
             const session = event.data.object as Stripe.Checkout.Session;
+            // Founding program purchases never create accounts or memberships.
+            if (session.metadata?.program === '1') {
+                await handleProgramCheckout(session);
+                return;
+            }
             await emailInvoiceForSession(session);
             await provisionCheckoutSession(session);
             return;
@@ -111,6 +117,7 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
         }
 
         case 'customer.subscription.deleted': {
+            if (await handleProgramSubscriptionEnded(event.data.object as Stripe.Subscription)) return;
             const subscription = event.data.object as Stripe.Subscription;
             const membership = await getMembershipByStripeSubscription(subscription.id);
             if (!membership) return;

@@ -592,7 +592,8 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
     // Founding program message (copy_prog_start): replaces the A/B/C first email, and its follow-ups go to the people who got it.
     const progStart = s.copy_prog_start ? Date.parse(s.copy_prog_start) : NaN;
     const progLive = Number.isFinite(progStart) && Date.now() >= progStart;
-    const useProgFirst = tmplStep === 1 && !stage && progLive;
+    // copy_prog_seed = 'true' lets only seed (test) contacts receive the program message before the live start.
+    const useProgFirst = tmplStep === 1 && !stage && (progLive || (isSeed && s.copy_prog_seed === 'true'));
     let useProgFu = false;
     if (stage && seqV2 && !isSeed) {
         const f1 = await query(`SELECT template FROM outreach_sends WHERE token = $1 AND step = 1`, [row.token]);

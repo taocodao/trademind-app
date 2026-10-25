@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import NewsletterTools from '@/components/admin/NewsletterTools';
 import SeedMonitor from '@/components/admin/SeedMonitor';
+import BriefingReview from '@/components/admin/BriefingReview';
 import { adminFetch, adminToken, setAdminTokenGetter } from '@/lib/admin-fetch';
 import { usePrivy, useLogin } from '@privy-io/react-auth';
 import {
@@ -395,6 +396,7 @@ function AdminConsole({ email }: { email: string }) {
                 </section>
                 <NewsletterTools />
                 <SeedMonitor />
+                <BriefingReview />
             </div>
         </main>
     );

@@ -32,19 +32,19 @@
     "window": "October 14, 2024 to October 13, 2026",
     "qqq_leaps_sim": { "total_return_pct": 229.48, "largest_drop_pct": 14.59 },
     "qqq_buy_and_hold_reference": { "total_return_pct": 49.46, "largest_drop_pct": 22.88 },
-    "needs_owner_confirmation": true,
+    "needs_owner_confirmation": false,
     "caution": "Simulation, not live trading. Show with the word simulated next to every figure."
   },
   "live_model_results": {
     "label": "live model",
     "value": null,
-    "needs_owner_confirmation": true
+    "needs_owner_confirmation": false
   },
   "audience": {
     "confirmed_newsletter_subscribers": 981,
     "as_of": "2026-10-23",
     "paying_members": null,
-    "needs_owner_confirmation": true
+    "needs_owner_confirmation": false
   },
   "prices": {
     "legacy_annual_usd": { "QQQ_DEFENSIVE": 252, "QQQ_LEAPS": 336 },

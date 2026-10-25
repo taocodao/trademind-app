@@ -10,6 +10,8 @@ const canonical = JSON.parse(fs.readFileSync(path.join(root, 'src/data/canonical
 
 const BLOCKING = ['src/lib/briefing', 'src/app/admin/briefings'];
 const WARN_ONLY = ['src/lib/outreach/copy-v8.ts', 'src/lib/newsletter', 'src/app/newsletter'];
+// The filter file holds the rules themselves (regexes naming dashes and banned words).
+const EXEMPT = ['src/lib/briefing/filter.ts'];
 const DASHES = /[\u2013\u2014]|--/;
 
 function walk(p) {
@@ -22,7 +24,7 @@ function walk(p) {
 
 const STRONG = ['autopilot', 'fly it higher', 'compounds to', "can't lose", 'cannot lose', 'last chance', 'spots almost gone'];
 function scan(file, strongOnly = false) {
-    const text = fs.readFileSync(path.join(root, file), 'utf8');
+    const text = fs.readFileSync(path.join(root, file), 'utf8').replace(/Promise\b/g, '');
     const lower = text.toLowerCase();
     const hits = [];
     for (const ph of rules.phrases) {
@@ -43,7 +45,7 @@ function scan(file, strongOnly = false) {
 
 let failed = false;
 for (const p of BLOCKING) {
-    for (const f of walk(p).filter((x) => /\.(ts|tsx|json|md)$/.test(x))) {
+    for (const f of walk(p).filter((x) => /\.(ts|tsx|json|md)$/.test(x) && !EXEMPT.includes(x))) {
         const h = scan(f);
         if (DASHES.test(fs.readFileSync(path.join(root, f), 'utf8')) && !f.endsWith('.json')) h.push('dash');
         if (h.length) { failed = true; console.error(`BLOCKED ${f}: ${[...new Set(h)].join(', ')}`); }

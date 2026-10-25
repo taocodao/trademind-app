@@ -17,7 +17,7 @@ export default function FoundingApply() {
             years_investing: f.get('years'), paid_research_last_year: f.get('paid'),
             used_and_stopped: f.get('stopped'), problem_to_solve: f.get('problem'),
             delivery_preference: f.get('delivery'), can_do_monthly_activity: f.get('activity') === 'yes',
-            interview_ok: f.get('interview') === 'on', heard_about_us: f.get('heard'),
+            interview_ok: f.get('interview') === 'on', heard_about_us: f.get('heard'), source: new URLSearchParams(window.location.search).get('source') || '',
             consent: f.get('consent') === 'on', website: f.get('website'),
         };
         const r = await fetch('/api/program/apply', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -47,6 +47,8 @@ export default function FoundingApply() {
                 <li>Honest criticism is welcome.</li>
                 <li>TradeMind never connects to your broker. You place every order yourself. Results shown so far are simulated, not live trading.</li>
             </ul>
+
+            <p className="mt-4 text-sm"><a href="/founding/sample" className="text-blue-300 underline">See a sample daily briefing first</a></p>
 
             <form onSubmit={submit} className="mt-8 space-y-4">
                 <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />

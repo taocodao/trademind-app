@@ -53,5 +53,19 @@ t('founding checkout email at the end', keys(r.dueEmails(st({ path: 'founding' }
 t('no founding email once paid', !keys(r.dueEmails(st({ path: 'founding', paid_started_at: at(30) }), at(31), new Set(['preview_started']))).includes('founding_ready'));
 t('limits', r.FIRST_GROUP === 30 && r.WAVE_SIZE_MAX === 50 && r.HARD_LIMIT === 200);
 
+// Invite copy
+const ic = fs.readFileSync(path.join(process.cwd(), 'src/lib/program/invite-copy.ts'), 'utf8');
+fs.writeFileSync(path.join(out, 'invite.js'), ts.transpileModule(ic, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText);
+const inv = createRequire(path.join(out, 'x.js'))('./invite.js');
+const inp = { firstName: 'Sam', applyUrl: 'https://trademind.bot/founding?source=invite', sampleUrl: 'https://trademind.bot/founding/sample', unsubscribeUrl: 'https://trademind.bot/newsletter/unsubscribe?token=x', address: 'ADDR' };
+const itxt = inv.inviteText(inp), ihtml = inv.inviteHtml(inp);
+const banned = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'src/data/banned-phrases.json'), 'utf8'));
+t('invite text has no banned phrases', !banned.phrases.some((p) => (itxt + inv.INVITE_SUBJECT).toLowerCase().includes(p)));
+t('invite has no dashes', !/[\u2013\u2014]|--/.test(itxt + ihtml + inv.INVITE_SUBJECT));
+t('invite says no card and no automatic charge', /No card is needed/.test(itxt) && /Nothing turns into a paid plan automatically/.test(itxt));
+t('invite states simulation and own orders', /simulation, not live trading/.test(itxt) && /You place every order yourself/.test(itxt));
+t('invite has unsubscribe and address', itxt.includes(inp.unsubscribeUrl) && itxt.includes('ADDR') && ihtml.includes(inp.unsubscribeUrl));
+t('invite greets by name or there', /^Hi Sam,/.test(itxt) && /^Hi there,/.test(inv.inviteText({ ...inp, firstName: null })));
+
 console.log(fail ? `\n${fail} test(s) failed` : '\nAll tests passed');
 process.exit(fail ? 1 : 0);

@@ -8,7 +8,7 @@ const root = process.cwd();
 const rules = JSON.parse(fs.readFileSync(path.join(root, 'src/data/banned-phrases.json'), 'utf8'));
 const canonical = JSON.parse(fs.readFileSync(path.join(root, 'src/data/canonical-record.json'), 'utf8'));
 
-const BLOCKING = ['src/lib/briefing', 'src/app/admin/briefings', 'src/lib/program', 'src/app/founding', 'src/app/api/program', 'src/app/api/admin/program', 'src/lib/outreach/copy-prog.ts'];
+const BLOCKING = ['src/lib/briefing', 'src/app/admin/briefings', 'src/lib/program', 'src/app/founding', 'src/app/api/program', 'src/app/api/admin/program', 'src/lib/outreach/copy-seq6.ts', 'src/app/start', 'src/lib/start', 'src/app/api/start', 'src/components/start'];
 const WARN_ONLY = ['src/lib/outreach/copy-v8.ts', 'src/lib/newsletter', 'src/app/newsletter'];
 // The filter file holds the rules themselves (regexes naming dashes and banned words).
 const EXEMPT = ['src/lib/briefing/filter.ts'];

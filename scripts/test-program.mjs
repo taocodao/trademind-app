@@ -66,21 +66,35 @@ t('invite says no card and no automatic charge', /No card is needed/.test(itxt) 
 t('invite states simulation and own orders', /simulation, not live trading/.test(itxt) && /You place every order yourself/.test(itxt));
 t('invite has unsubscribe and address', itxt.includes(inp.unsubscribeUrl) && itxt.includes('ADDR') && ihtml.includes(inp.unsubscribeUrl));
 t('invite greets by name or there', /^Hi Sam,/.test(itxt) && /^Hi there,/.test(inv.inviteText({ ...inp, firstName: null })));
-// Outreach program message
-for (const f of ['copy-prog', 'templates-v5']) {
+// Outreach six-email sequence
+for (const f of ['copy-seq6', 'copy-v8', 'copy-ws', 'templates-v5']) {
     const src = fs.readFileSync(path.join(process.cwd(), `src/lib/outreach/${f}.ts`), 'utf8');
     fs.writeFileSync(path.join(out, f + '.js'), ts.transpileModule(src, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, esModuleInterop: true } }).outputText);
 }
-const cp = createRequire(path.join(out, 'x.js'))('./copy-prog.js');
-const po = { token: 'abcDEF123456', firstName: 'Sam', baseUrl: 'https://trademind.bot', mailingAddress: 'ADDR', sigSep: '-'.repeat(2), useHtml: true };
-for (const st of [undefined, 2, 5, 7]) {
-    const m = cp.renderProg({ ...po, step: st });
+const sq = createRequire(path.join(out, 'x.js'))('./copy-seq6.js');
+const so = { token: 'abcdef2345', firstName: 'Sam', baseUrl: 'https://trademind.bot', mailingAddress: 'ADDR', sigSep: '-'.repeat(2), useHtml: true };
+const patterns = banned.patterns.map((p) => new RegExp(p.regex, 'i'));
+const kinds = { 1: 'p', 2: 'st', 5: 'x', 6: 'qa', 7: 'vf', 8: 'f' };
+for (const st of [1, 2, 5, 6, 7, 8]) {
+    const m = sq.renderSeq6({ ...so, step: st });
     const all = m.subject + m.text + (m.html || '');
-    t(`outreach program step ${st ?? 1}: no banned phrases`, !banned.phrases.some((p) => all.toLowerCase().includes(p)));
-    t(`outreach program step ${st ?? 1}: no dashes`, !/[\u2013\u2014]/.test(all) && !m.subject.includes('--'));
-    t(`outreach program step ${st ?? 1}: tracked links and unsubscribe`, m.text.includes('/r/abcDEF123456/f') && m.text.includes('/r/abcDEF123456/x') && m.text.includes('/u/abcDEF123456') && !!m.html && m.html.includes('/u/abcDEF123456'));
-    t(`outreach program step ${st ?? 1}: address and simulation line`, m.text.includes('ADDR') && /simulation, not live trading/.test(m.text));
+    const lab = `sequence step ${st}`;
+    t(`${lab}: no banned phrases or patterns`, !banned.phrases.some((p) => all.toLowerCase().includes(p)) && !patterns.some((r) => r.test(all)));
+    t(`${lab}: no dashes`, !/[\u2013\u2014]/.test(all) && !m.subject.includes('--'));
+    t(`${lab}: primary tracked link`, m.text.includes(`/r/abcdef2345/${kinds[st]}?s=${st}`) && !!m.html && m.html.includes(`/r/abcdef2345/${kinds[st]}?s=${st}`));
+    t(`${lab}: unsubscribe, address, no-broker line`, m.text.includes('/u/abcdef2345') && m.text.includes('ADDR') && /never connects to your broker/.test(m.text) && m.html.includes('/u/abcdef2345'));
+    t(`${lab}: trademind.bot link in text and html`, m.text.includes('trademind.bot: https://trademind.bot/r/abcdef2345/h?s=' + st) && />trademind\.bot<\/a>/.test(m.html));
+    t(`${lab}: explore row has five other sections`, (m.text.match(/\/r\/abcdef2345\/(br|st|ru|ch|vf|pn)\?/g) || []).length >= 5);
+    t(`${lab}: does not say it is the last email`, !/last (email|note|message)|final (email|note)|never (write|email) again/i.test(all));
+    t(`${lab}: offer line only in emails 1 to 3`, (st <= 5 && st !== 5 && st !== 6 ? true : true) && (/30% off/.test(m.text) === [1, 2, 5].includes(st)));
 }
+const m2 = sq.renderSeq6({ ...so, step: 2, visited: ['strategies'] });
+t('sequence: quiet link moves to next unseen section after a visit', m2.text.includes('/r/abcdef2345/ru?s=2') && m2.text.indexOf('See rules and plans') > 0);
+const m7 = sq.renderSeq6({ ...so, step: 7, answer: 'c' });
+t('sequence: email 5 first line follows the challenge answer', /walked away/.test(m7.text) && /^Hi Sam,\n\nIf you would have walked away/.test(m7.text));
+const m6 = sq.renderSeq6({ ...so, step: 6 });
+t('sequence: email 4 has three answer links', ['qa', 'qb', 'qc'].every((k) => m6.text.includes(`/r/abcdef2345/${k}?s=6`)));
+t('sequence: figures shown with simulation limits', [7, 1, 2].every((st) => { const x = sq.renderSeq6({ ...so, step: st }).text; return /229\.48%/.test(x) ? /simulat/i.test(x) && /hindsight/.test(x) : true; }));
 
 console.log(fail ? `\n${fail} test(s) failed` : '\nAll tests passed');
 process.exit(fail ? 1 : 0);

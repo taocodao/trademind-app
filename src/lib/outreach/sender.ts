@@ -20,7 +20,7 @@ import { FOLLOWUPS_V5 } from './followups-v5';
 import { renderV6, isV6Control, hasV6 } from './copy-v6';
 import { renderWS } from './copy-ws';
 import { renderV8 } from './copy-v8';
-import { renderProg, PROG_TEMPLATE, PROG_FOLLOWUP_STEPS, PROG_LABEL } from './copy-prog';
+import { renderSeq6, SEQ6_TEMPLATE, SEQ6_STEPS, SEQ6_DAYS, SEQ6_LABEL } from './copy-seq6';
 import { STAGE_BY_STEP, STEP_DAYS, PREVIEW_VARIANT, followupFooterText, followupHtml } from './followup';
 import { BASE_URL, CAMPAIGN, ensureOutreachTables, getSettings, setSetting } from './db';
 import { sendMail, transportKeyPresent, type Transport } from './transport';
@@ -278,11 +278,40 @@ export async function planToday(now = new Date()): Promise<PlanResult | null> {
         const dstr = (v: unknown) => (v instanceof Date ? v.toISOString().slice(0, 10) : String(v).slice(0, 10));
         const fuRows: { token: string; tz: string; domain: string; step: number }[] = [];
 
+        // Six-email panel sequence: people whose first email was S1 follow their own schedule (day 7, 14, 21, 28, 35),
+        // at least 4 days apart, and are kept out of every other follow-up path.
+        const treated = new Set<string>();
+        if (seqV2) {
+            const sq = await query(`
+                SELECT c.token, c.tz, s1.domain,
+                       (s1.sent_at AT TIME ZONE 'America/New_York')::date AS first_day,
+                       (SELECT MAX(sent_at AT TIME ZONE 'America/New_York')::date FROM outreach_sends x WHERE x.token = c.token AND x.step < 100) AS last_day,
+                       COALESCE((SELECT array_agg(x.step) FROM outreach_sends x WHERE x.token = c.token), '{}') AS sent_steps,
+                       COALESCE((SELECT array_agg(q.step) FROM outreach_queue q WHERE q.token = c.token AND q.state = 'pending'), '{}') AS queued_steps
+                FROM outreach_contacts c
+                JOIN outreach_sends s1 ON s1.token = c.token AND s1.step = 1 AND s1.template = '${SEQ6_TEMPLATE}' AND s1.status IN ('sent','delivered')
+                WHERE c.status IN ('sent','clicked') AND c.wave <> 'seed'
+                  AND NOT EXISTS (SELECT 1 FROM newsletter_suppression ns WHERE ns.email = c.email)
+                  AND NOT EXISTS (SELECT 1 FROM newsletter_subscribers sub WHERE sub.status IN ('confirmed','pending') AND sub.email IN (c.email, COALESCE(c.subscriber_email, c.email)))
+                  AND NOT EXISTS (SELECT 1 FROM program_application pa WHERE pa.email_norm = LOWER(c.email))
+                  AND NOT EXISTS (SELECT 1 FROM program_participant pp WHERE pp.email_norm = LOWER(c.email))
+                LIMIT 6000`).catch(() => ({ rows: [] as any[] }));
+            for (const row of sq.rows) {
+                treated.add(row.token);
+                const sentS = new Set<number>(row.sent_steps);
+                const queuedS = new Set<number>(row.queued_steps);
+                const nextS = [2, 5, 6, 7, 8].find((st) => !sentS.has(st));
+                if (nextS === undefined || queuedS.has(nextS)) continue;
+                if (dayDiff(et.date, dstr(row.first_day)) < SEQ6_DAYS[nextS]) continue;
+                if (row.last_day && dayDiff(et.date, dstr(row.last_day)) < 4) continue;
+                fuRows.push({ token: row.token, tz: row.tz, domain: row.domain, step: nextS });
+            }
+        }
+
         // Previewer follow-ups: a person who viewed the preview page and scrolled, tapped or typed (confirmed by the page script)
         // gets one neutral email the next business morning (step 5, "another sample") and one more 7 days later (step 6).
         // Half of eligible previewers are triggered; the rest stay on the unchanged schedule. Anyone who already received the
         // closing email, signed up, or opted out gets nothing. One acquisition email per 24 hours, at most two follow-ups in 7 days.
-        const treated = new Set<string>();
         const previewRows: { token: string; tz: string; domain: string; step: number; morning: boolean }[] = [];
         if (seqV2 && s.preview_trigger !== 'off') {
             const pv = await query(`
@@ -302,6 +331,7 @@ export async function planToday(now = new Date()): Promise<PlanResult | null> {
                 LIMIT 3000`);
             const nowMs0 = now.getTime();
             for (const row of pv.rows) {
+                if (treated.has(row.token)) continue;
                 if (isV6Control(row.token) || !isPreviewTriggered(row.token)) continue;
                 treated.add(row.token);
                 const sent = new Set<number>(row.sent_steps);
@@ -589,25 +619,36 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
             useWS = String(s2.rows[0]?.template ?? '').startsWith('RE_');
         }
     }
-    // Founding program message (copy_prog_start): replaces the A/B/C first email, and its follow-ups go to the people who got it.
+    // Six-email founding panel sequence (copy_prog_start): replaces the A/B/C first email. Its follow-ups go to the people who got it.
     const progStart = s.copy_prog_start ? Date.parse(s.copy_prog_start) : NaN;
     const progLive = Number.isFinite(progStart) && Date.now() >= progStart;
-    // copy_prog_seed = 'true' lets only seed (test) contacts receive the program message before the live start.
-    const useProgFirst = tmplStep === 1 && !stage && (progLive || (isSeed && s.copy_prog_seed === 'true'));
+    // copy_prog_seed = 'true' lets only seed (test) contacts receive the sequence before the live start.
+    const seedTest = isSeed && s.copy_prog_seed === 'true';
+    const useProgFirst = tmplStep === 1 && !stage && (progLive || seedTest);
     let useProgFu = false;
     if (stage && seqV2 && !isSeed) {
         const f1 = await query(`SELECT template FROM outreach_sends WHERE token = $1 AND step = 1`, [row.token]);
-        if (String(f1.rows[0]?.template ?? '') === PROG_TEMPLATE) {
-            if (!(PROG_FOLLOWUP_STEPS as readonly number[]).includes(row.step)) return skip('program sequence skips this step');
+        if (String(f1.rows[0]?.template ?? '') === SEQ6_TEMPLATE) {
+            if (!(SEQ6_STEPS as readonly number[]).includes(row.step)) return skip('sequence does not use this step');
             useProgFu = true;
         }
+    } else if (stage && seedTest) {
+        useProgFu = (SEQ6_STEPS as readonly number[]).includes(row.step);
+    }
+    let seqVisited: string[] = [];
+    let seqAnswer: string | null = null;
+    if (useProgFu && !isSeed) {
+        const vv = await query(`SELECT DISTINCT link_type FROM outreach_click_events WHERE token = $1 AND human_confirmed AND link_type LIKE 'sec\\_%'`, [row.token]);
+        seqVisited = vv.rows.map((r: { link_type: string }) => String(r.link_type).slice(4));
+        const an = await query(`SELECT value FROM start_response WHERE token = $1 AND kind = 'challenge' ORDER BY id DESC LIMIT 1`, [row.token]).catch(() => ({ rows: [] as { value: string }[] }));
+        seqAnswer = an.rows[0]?.value ?? null;
     }
     let reVariant: string | null = null;
-    const progOpts = { token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, sigSep: '-'.repeat(2), useHtml: s.html_enabled === 'true' };
+    const seqOpts = { token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, sigSep: '-'.repeat(2), useHtml: s.html_enabled === 'true' };
     if (useProgFirst) {
-        msg = renderProg(progOpts);
+        msg = renderSeq6({ ...seqOpts, step: 1 });
     } else if (useProgFu) {
-        msg = renderProg({ ...progOpts, step: row.step });
+        msg = renderSeq6({ ...seqOpts, step: row.step, visited: seqVisited, answer: seqAnswer });
     } else if (useWS) {
         msg = renderWS({ token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, sigSep: '-'.repeat(2), useHtml: s.html_enabled === 'true', step: row.step, last: row.step === 7 });
     } else if (reintro) {
@@ -639,7 +680,7 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
     const data = { id: res.id ?? undefined };
     await query(
         `INSERT INTO outreach_sends (token, step, template, domain, from_addr, message_id) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (token, step) DO NOTHING`,
-        [row.token, row.step, tmplStep === 3 ? 'CHECKIN' : useProgFirst ? PROG_TEMPLATE : useProgFu ? PROG_LABEL[row.step] : reVariant ? `RE_${reVariant}` : useWS ? 'WS' : stage ? (seqV2 ? `${stage}_${branch}` : 'FU') : c.template, row.domain, from, data.id ?? null]
+        [row.token, row.step, tmplStep === 3 ? 'CHECKIN' : useProgFirst ? SEQ6_TEMPLATE : useProgFu ? SEQ6_LABEL[row.step] : reVariant ? `RE_${reVariant}` : useWS ? 'WS' : stage ? (seqV2 ? `${stage}_${branch}` : 'FU') : c.template, row.domain, from, data.id ?? null]
     );
     await query(`UPDATE outreach_queue SET state = 'sent' WHERE id = $1`, [row.id]);
     if (!isSeed) {

@@ -15,21 +15,21 @@ export function v8Variant(token: string, cEnabled = false): V8Variant {
     return even ? 'A' : cEnabled ? 'C' : 'B';
 }
 
-const PARTS: [string, string, string][] = [
+export const PARTS: [string, string, string][] = [
     ['weather', 'Market weather', 'current conditions'],
     ['readout', 'Copilot readout', 'what the model indicates'],
     ['flight', 'Flight plan', 'scenarios to watch'],
     ['turbulence', 'Turbulence test', 'what could invalidate the outlook'],
 ];
-const RESULT_H = 'Two-year simulated backtest, not actual trading';
-const RESULT_P1 = 'From October 14, 2024 through October 13, 2026, the QQQ LEAPS simulation, including its test-phase SMH put-spread sleeve, showed a total return of 229.48%. QQQ buy and hold returned 49.46% over the same period. That is about 4.6 times the percentage return, not 4.6 times the ending account value.';
-const RESULT_P2 = 'The largest simulated decline from a previous portfolio high was 14.59%, compared with 22.88% for QQQ buy and hold.';
-const LIMITS = 'These are hypothetical results, not returns earned in a real account. Options were model-priced, not valued using actual option quotes. The SMH sleeve has never traded in a real account. The rules were developed with hindsight, and this was one favorable period for QQQ and semiconductors. Do not read these figures as after-cost subscriber returns. Actual results can differ substantially, and losses can exceed the simulated decline. This backtest does not predict future returns.';
-const OFFER = 'Confirm your free signup to get 30% off a yearly TradeMind strategy subscription. Use the code with the same email address within 3 months of confirmation.';
+export const RESULT_H = 'Two-year simulated backtest, not actual trading';
+export const RESULT_P1 = 'From October 14, 2024 through October 13, 2026, the QQQ LEAPS simulation, including its test-phase SMH put-spread sleeve, showed a total return of 229.48%. QQQ buy and hold returned 49.46% over the same period. That is about 4.6 times the percentage return, not 4.6 times the ending account value.';
+export const RESULT_P2 = 'The largest simulated decline from a previous portfolio high was 14.59%, compared with 22.88% for QQQ buy and hold.';
+export const LIMITS = 'These are hypothetical results, not returns earned in a real account. Options were model-priced, not valued using actual option quotes. The SMH sleeve has never traded in a real account. The rules were developed with hindsight, and this was one favorable period for QQQ and semiconductors. Do not read these figures as after-cost subscriber returns. Actual results can differ substantially, and losses can exceed the simulated decline. This backtest does not predict future returns.';
+export const OFFER = 'Confirm your free signup to get 30% off a yearly TradeMind strategy subscription. Use the code with the same email address within 3 months of confirmation.';
 export const REPLY_LINE = 'Reply to this email or write to me at eric@trademind.bot.';
-const NOBROKER = 'You keep your brokerage account and place every order yourself. TradeMind never connects to your broker or places trades.';
+export const NOBROKER = 'You keep your brokerage account and place every order yourself. TradeMind never connects to your broker or places trades.';
 
-const COPY: Record<'A' | 'B', { subject: string; intro: string[] }> = {
+export const COPY: Record<'A' | 'B', { subject: string; intro: string[] }> = {
     A: {
         subject: 'A weekly QQQ brief you can preview',
         intro: [
@@ -48,7 +48,7 @@ const COPY: Record<'A' | 'B', { subject: string; intro: string[] }> = {
     },
 };
 
-function escH(v: string): string {
+export function escH(v: string): string {
     return v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 const FONT = "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;";
@@ -134,7 +134,7 @@ const C_PARTS: [string, string][] = [
     ['The semiconductor sleeve.', 'We sell SMH put spreads, which earn premium when semiconductors hold steady or rise. Losses are capped by the spread. This sleeve is in a test phase and has never traded in a real account.'],
 ];
 const C_RESULT_P1 = 'From October 14, 2024 through October 13, 2026, QQQ LEAPS returned 229.48%, versus 49.46% for QQQ buy and hold. That is about 4.6 times the percentage return, or about 81.5% a year. The largest simulated drops were 14.59% and 22.88%.';
-const C_COMPOUND = 'If that pace were repeated, $1,000 would become about $65,000 in 7 years and pass $1,000,000 in about 11.6 years. That is arithmetic on a two-year simulation, not a forecast.';
+const C_COMPOUND = 'Two years is a short sample, and a pace like this is unlikely to repeat. Treat the figures as one historical test, not as a forecast.';
 const C_LIMITS = 'This was not actual trading. Options were model-priced, costs can differ, the rules were developed with hindsight, and it was one favorable period for QQQ and semiconductors. The semiconductor sleeve produced most of its profit in the last six months. Do not treat any of it as a prediction, and do not read it as after-cost subscriber returns.';
 const C_CHECK = 'Do not take my word for it. See the rules, the assumptions, the dated trades and the arithmetic, then tell me which assumption you would challenge first. I answer every reply.';
 

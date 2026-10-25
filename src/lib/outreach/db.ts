@@ -192,7 +192,7 @@ const SCANNER_UA = /bot|crawl|spider|scanner|python-requests|curl|wget|headless|
 
 /** Records a link click and classifies it. Returns the contact and whether it counted as a bot. */
 export async function recordClick(input: {
-    token: string; linkType: 'preview' | 'subscribe' | 'unsub' | 'inside' | 'home' | 'record' | 'issue' | 'check' | 'apply' | 'sample'; step: number | null;
+    token: string; linkType: string; step: number | null;
     method: string; ip: string | null; ua: string | null;
 }): Promise<{ known: boolean; isBot: boolean }> {
     await ensureOutreachTables();

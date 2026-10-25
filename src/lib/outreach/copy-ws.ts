@@ -11,11 +11,11 @@ import { REPLY_LINE } from './copy-v8';
 
 const SUBJECT = 'Look at the flat stretch first';
 const PRE = 'Almost 11 months with no positions in a QQQ simulation, and what it looked like next to QQQ.';
-const IMG = 'https://trademind.bot/campaigns/waiting-chart.png';
-const ALT = 'Simulated QQQ LEAPS value versus QQQ buy and hold, Oct 14, 2024 to Oct 13, 2026. The simulated line is flat until the first QQQ LEAPS entry on Sept 2, 2025.';
+export const IMG = 'https://trademind.bot/campaigns/waiting-chart.png';
+export const ALT = 'Simulated QQQ LEAPS value versus QQQ buy and hold, Oct 14, 2024 to Oct 13, 2026. The simulated line is flat until the first QQQ LEAPS entry on Sept 2, 2025.';
 const P1 = 'Here is the part of our QQQ simulation I would look at first: the long flat stretch at the start of the chart.';
-const P2 = 'After one early SMH loss, the simulation held no positions until September 2, 2025, when its QQQ LEAPS entry conditions first passed. On the day it entered, it was down about 5% and QQQ buy and hold was up about 14%.';
-const CAP = 'Simulation, Oct 14, 2024 to Oct 13, 2026. The grey dashed line is QQQ buy and hold, a comparison only.';
+export const P2 = 'After one early SMH loss, the simulation held no positions until September 2, 2025, when its QQQ LEAPS entry conditions first passed. On the day it entered, it was down about 5% and QQQ buy and hold was up about 14%.';
+export const CAP = 'Simulation, Oct 14, 2024 to Oct 13, 2026. The grey dashed line is QQQ buy and hold, a comparison only.';
 const P3 = 'Would you have kept following it, asked for a clearer explanation, or walked away? There is no right answer. The rules were developed with hindsight, options were model-priced, and the later result came in one favorable window for QQQ and semiconductors. This is a simulation, not a real account, and it does not show that waiting was the better choice.';
 const FINAL_LINE = 'This is my last email unless you subscribe. Nothing more will come from TradeMind after this.';
 const OFFER = 'Confirm your free signup to get 30% off a yearly TradeMind strategy subscription. Use the code with the same email address within 3 months of confirmation.';

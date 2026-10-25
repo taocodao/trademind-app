@@ -13,16 +13,20 @@ export const runtime = 'nodejs';
  * script after 3 visible seconds (POST /api/engage). No click ever subscribes anyone: the
  * subscribe link only opens a form the person submits themselves.
  */
+const KINDS = ['p', 's', 'i', 'h', 'n', 'v', 'c', 'f', 'x', 'br', 'st', 'ru', 'ch', 'vf', 'pn', 'qa', 'qb', 'qc'];
+/** Start here sections: link kind to section key and page. */
+const SECTION_BY_KIND: Record<string, string> = { br: 'brief', st: 'strategies', ru: 'rules', ch: 'challenge', vf: 'verify', pn: 'panel' };
+
 async function handle(req: NextRequest, params: Promise<{ token: string; kind: string }>, method: string) {
     const { token, kind } = await params;
     const fallback = NextResponse.redirect(new URL('/newsletter', BASE_URL), 302);
-    if (!validToken(token) || !['p', 's', 'i', 'h', 'n', 'v', 'c', 'f', 'x'].includes(kind)) return fallback;
+    if (!validToken(token) || !KINDS.includes(kind)) return fallback;
     const sParam = Number(req.nextUrl.searchParams.get('s') ?? '1');
     const step = sParam >= 1 && sParam <= 9 ? sParam : 1;
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
     const ua = req.headers.get('user-agent');
     const { known, isBot } = await recordClick({
-        token, linkType: kind === 'p' ? 'preview' : kind === 's' ? 'subscribe' : kind === 'i' ? 'inside' : kind === 'h' ? 'home' : kind === 'v' ? 'record' : kind === 'c' ? 'check' : kind === 'f' ? 'apply' : kind === 'x' ? 'sample' : 'issue', step, method, ip, ua,
+        token, linkType: SECTION_BY_KIND[kind] ? `sec_${SECTION_BY_KIND[kind]}` : kind.startsWith('q') ? `poll_${kind.slice(1)}` : kind === 'p' ? 'preview' : kind === 's' ? 'subscribe' : kind === 'i' ? 'inside' : kind === 'h' ? 'home' : kind === 'v' ? 'record' : kind === 'c' ? 'check' : kind === 'f' ? 'apply' : kind === 'x' ? 'sample' : 'issue', step, method, ip, ua,
     });
     if (!known) return fallback;
     if (method === 'HEAD') return new NextResponse(null, { status: 200 });
@@ -41,6 +45,8 @@ async function handle(req: NextRequest, params: Promise<{ token: string; kind: s
     else if (kind === 'v') dest = `/simulated-record?t=${token}&${utm}`;
     else if (kind === 'c') dest = `/newsletter/verify?t=${token}&${utm}`;
     else if (kind === 'f') dest = `/founding?t=${token}&source=outreach&${utm}`;
+    else if (SECTION_BY_KIND[kind]) dest = `/start/${SECTION_BY_KIND[kind]}?t=${token}&${utm}`;
+    else if (kind.startsWith('q')) dest = `/start/challenge/answer?a=${kind.slice(1)}&t=${token}&${utm}`;
     else if (kind === 'x') dest = `/founding/sample?t=${token}&${utm}`;
     else {
         const u = req.nextUrl.searchParams.get('u') ?? '';

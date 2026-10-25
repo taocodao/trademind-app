@@ -77,10 +77,8 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
                         LEAPS returned about {(leaps.pnlPct / leaps.benchmarkPct).toFixed(1)} times the percentage return of QQQ buy and hold (not {(leaps.pnlPct / leaps.benchmarkPct).toFixed(1)} times the ending account value).
                         Over two years that is about {annual.toFixed(1)}% a year. Defensive had a smaller drop but returned less than buy and hold.
                     </p>
-                    <h3 style={{ fontSize: 16, margin: '22px 0 8px' }}>The compounding arithmetic</h3>
-                    <p style={{ color: '#C9D2E3', fontSize: 15, lineHeight: 1.6, marginTop: 0 }}>
-                        If a pace of {annual.toFixed(1)}% a year were repeated, $1,000 would become about {roughly(growth(7))} after 7 years and pass $1,000,000 after about {yearsToMillion.toFixed(1)} years.
-                        That is multiplication on a two-year simulation, not a forecast. Two years is a short sample, and returns this high are unlikely to repeat for a decade.
+                    <p style={{ color: '#C9D2E3', fontSize: 15, lineHeight: 1.6, marginTop: 12 }}>
+                        Two years is a short sample, and a pace like this is unlikely to repeat. Treat the figures as one historical test, not as a forecast.
                     </p>
                 </section>
 

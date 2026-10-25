@@ -1,7 +1,7 @@
 import { INVITE_TEMPLATES_V5 } from './templates-v5';
 
 /** Follow-up steps (queue/sends step numbers) and their day offsets from the first email. */
-export const STAGE_BY_STEP: Record<number, string> = { 2: 'FU1', 5: 'FU2', 6: 'FU3', 7: 'FINAL' };
+export const STAGE_BY_STEP: Record<number, string> = { 2: 'FU1', 5: 'FU2', 6: 'FU3', 7: 'FINAL', 8: 'FU4' };
 export const STEP_DAYS: Record<number, number> = { 2: 7, 5: 14, 6: 21, 7: 28 };
 /** Follow-ups whose wording describes one specific sample issue: send the reader straight to it. */
 export const PREVIEW_VARIANT: Record<string, 'ml' | 'bt'> = { T1_C_FU2: 'ml', T4_C_FU2: 'bt' };

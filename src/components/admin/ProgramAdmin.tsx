@@ -6,19 +6,23 @@ import { adminFetch } from '@/lib/admin-fetch';
 
 type App = { id: number; email: string; name: string | null; role: string | null; track: string | null; answers: Record<string, unknown>; status: string; created_at: string };
 type Part = { email_norm: string; cohort: number; track: string | null; path: string; started_at: string; paid_started_at: string | null };
+type Sub = { id: number; kind: string; name: string | null; email: string; body: string; public_credit: boolean; status: string; created_at: string };
 type Inv = { eligible: number; include_imported: boolean; invited: number; test_addresses: string[] };
 
 export default function ProgramAdmin() {
     const [apps, setApps] = useState<App[]>([]);
     const [parts, setParts] = useState<Part[]>([]);
     const [inv, setInv] = useState<Inv | null>(null);
+    const [subs, setSubs] = useState<Sub[]>([]);
+    const [answers, setAnswers] = useState<{ value: string; people: number }[]>([]);
     const [open, setOpen] = useState<number | null>(null);
     const [cohort, setCohort] = useState(1);
     const [msg, setMsg] = useState('');
     const [testTo, setTestTo] = useState('testtrademind@gmail.com');
 
     const load = useCallback(async () => {
-        const [a, i] = await Promise.all([adminFetch('/api/admin/program'), adminFetch('/api/admin/program/invite')]);
+        const [a, i, st] = await Promise.all([adminFetch('/api/admin/program'), adminFetch('/api/admin/program/invite'), adminFetch('/api/admin/start')]);
+        if (st.ok) { const j = await st.json(); setSubs(j.submissions); setAnswers(j.answers); }
         if (a.ok) { const j = await a.json(); setApps(j.applications); setParts(j.participants); }
         if (i.ok) setInv(await i.json());
     }, []);
@@ -28,6 +32,10 @@ export default function ProgramAdmin() {
         const r = await adminFetch('/api/admin/program', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, action, cohort }) });
         const j = await r.json().catch(() => ({}));
         setMsg(r.ok ? (action === 'accept' ? `Accepted. Preview ends ${new Date(j.preview_ends).toLocaleDateString()}` : 'Declined') : j.error || 'Failed');
+        await load();
+    }
+    async function mark(id: number, status: string) {
+        await adminFetch('/api/admin/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status }) });
         await load();
     }
     async function invite(body: Record<string, unknown>) {
@@ -75,6 +83,20 @@ export default function ProgramAdmin() {
                                 )}
                             </div>
                         )}
+                    </li>
+                ))}
+            </ul>
+
+            <h3 className="mt-6 font-medium">Start here submissions ({subs.length})</h3>
+            <p className="text-xs text-gray-400">Challenge answers: {answers.length ? answers.map((a) => `${a.value.toUpperCase()}: ${a.people}`).join(', ') : 'none yet'}</p>
+            <ul className="mt-2 space-y-2">
+                {subs.map((x) => (
+                    <li key={x.id} className="rounded-lg border border-white/10 p-3 text-sm">
+                        <div className="flex justify-between"><span>{x.kind} · {x.email}{x.public_credit ? ' · credit ok' : ''}</span><span className="text-xs text-gray-400">{x.status}</span></div>
+                        <p className="mt-1 whitespace-pre-wrap text-xs text-gray-300">{x.body}</p>
+                        <div className="mt-2 flex gap-2 text-xs">
+                            {['reviewed', 'credited', 'declined'].map((st) => <button key={st} className="rounded bg-white/10 px-2 py-1" onClick={() => mark(x.id, st)}>{st}</button>)}
+                        </div>
                     </li>
                 ))}
             </ul>

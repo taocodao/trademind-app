@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { getContact } from '@/lib/outreach/db';
 import PlansClient from './PlansClient';
+import PlansV2 from './PlansV2';
+import { isPricingV2Enabled } from '@/lib/pricing-v2';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
@@ -15,13 +17,17 @@ const looksLikeEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
  * Dedicated plans page for people who arrive from our emails. The address in the link (?email=, or the
  * personal invitation link remembered in a cookie) is carried through sign in and payment.
  */
-export default async function PlansPage({ searchParams }: { searchParams: Promise<{ email?: string; t?: string; sub?: string }> }) {
-    const { email, t, sub } = await searchParams;
+export default async function PlansPage({ searchParams }: { searchParams: Promise<{ email?: string; t?: string; sub?: string; product?: string; interval?: string }> }) {
+    const { email, t, sub, product, interval } = await searchParams;
     let linkEmail = email && looksLikeEmail(email) ? email.trim() : '';
     if (!linkEmail) {
         const token = t || (await cookies()).get('tm_t')?.value || '';
         const contact = token ? await getContact(token) : null;
         linkEmail = contact?.email ?? '';
+    }
+    if (isPricingV2Enabled()) {
+        const p = product === 'defensive' || product === 'leaps' || product === 'both' ? product : null;
+        return <PlansV2 linkEmail={linkEmail} product={p} interval={interval === 'year' ? 'year' : 'month'} />;
     }
     return <PlansClient linkEmail={linkEmail} justSubscribed={sub === '1'} />;
 }

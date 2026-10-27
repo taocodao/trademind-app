@@ -3,6 +3,7 @@ import { Check, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePrivy } from '@privy-io/react-auth';
 import { PRICING } from '@/lib/pricing-config';
+import PricingV2 from './PricingV2';
 
 /**
  * Pricing (Sep 2026 model):
@@ -16,6 +17,27 @@ import { PRICING } from '@/lib/pricing-config';
  *   month refunds the payment in full.
  */
 export function PricingSection() {
+    const [v2, setV2] = useState(false);
+    useEffect(() => {
+        fetch('/api/stripe/v2/quote').then((r) => (r.ok ? r.json() : null)).then((d) => setV2(Boolean(d?.enabled))).catch(() => {});
+    }, []);
+    if (v2) {
+        return (
+            <section className="w-full max-w-7xl mx-auto py-10 px-6 relative z-10" id="pricing">
+                <div className="text-center mb-8">
+                    <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Choose your plan</h2>
+                    <p className="text-sm text-gray-300 leading-relaxed max-w-3xl mx-auto">
+                        TradeMind is a signal service, not auto-trading. Every trading day we process the signal and email you the exact order instructions to enter at your own broker. Your TradeMind virtual account mirrors each order so your record matches the signal.
+                    </p>
+                </div>
+                <PricingV2 mode="landing" />
+            </section>
+        );
+    }
+    return <PricingSectionLegacy />;
+}
+
+function PricingSectionLegacy() {
     const { t } = useTranslation();
     const { login, authenticated } = usePrivy();
     const [selectedTier, setSelectedTier] = useState<string>('qqq_leaps');

@@ -24,6 +24,8 @@ export interface SignalRow {
     confirmedAt: string | null;
     fills: { activityId: number; sysPrice: number; userPrice: number }[] | null;
     fillNote: string | null;
+    fillStatus?: string | null;
+    fillDiscrepancy?: boolean;
     orders: SignalOrder[];
     lots?: LotInfo[];
     strategy: string | null;
@@ -90,6 +92,9 @@ export function SignalCard({
     const when = signal.publishedAt || signal.receivedAt;
     const dateStr = when ? new Date(when).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
     const confirmed = !!signal.confirmedAt;
+    const outcome = !confirmed ? (signal.fillStatus ?? null) : null;
+    const OUTCOME_LABEL: Record<string, string> = { not_placed: 'Not placed', partial: 'Partly filled', not_applicable: 'Not applicable', declined: 'Prefer not to say' };
+    const [otherOpen, setOtherOpen] = useState(false);
     const executable = signal.accountStatus === 'executed' && signal.orders.length > 0;
     const fillByActivity = new Map((signal.fills || []).map((f) => [f.activityId, f]));
     const guideType = guideTypeFor(signal.orders);
@@ -128,8 +133,28 @@ export function SignalCard({
         }
     };
 
+    const reportOutcome = async (o: string) => {
+        setError(null);
+        setBusy(true);
+        try {
+            const res = await fetch(`/api/accounts/${accountId}/signals/${encodeURIComponent(signal.signalId)}/fill`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ outcome: o, note: note || undefined }),
+            });
+            const d = await res.json();
+            if (!res.ok) { setError(d.error || 'Could not record this.'); return; }
+            setOtherOpen(false);
+            onChanged?.();
+        } catch {
+            setError('Network error. Try again.');
+        } finally {
+            setBusy(false);
+        }
+    };
+
     const undo = async () => {
-        if (!window.confirm('Undo this fill report? Your orders return to the model prices.')) return;
+        if (!window.confirm(confirmed ? 'Undo this fill report? Your orders return to the model prices.' : 'Remove this report?')) return;
         setBusy(true);
         try {
             await fetch(`/api/accounts/${accountId}/signals/${encodeURIComponent(signal.signalId)}/fill`, { method: 'DELETE' });
@@ -222,7 +247,7 @@ export function SignalCard({
                         <BookOpen className="w-3.5 h-3.5" /> How to enter this order
                     </Link>
                 )}
-                {executable && !confirmed && (
+                {executable && !confirmed && !outcome && (
                     <button
                         onClick={() => setOpen((o) => !o)}
                         className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-300 hover:text-white transition border border-emerald-500/30 hover:border-white/40 rounded-lg px-2.5 py-1.5"
@@ -231,7 +256,20 @@ export function SignalCard({
                         <ChevronDown className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />
                     </button>
                 )}
-                {confirmed && (
+                {executable && !confirmed && !outcome && (
+                    <button
+                        onClick={() => setOtherOpen((o) => !o)}
+                        className="inline-flex items-center gap-1.5 text-[11px] font-bold text-amber-300 hover:text-white transition border border-amber-500/30 hover:border-white/40 rounded-lg px-2.5 py-1.5"
+                    >
+                        Did not go as planned?
+                    </button>
+                )}
+                {outcome && (
+                    <span className="text-[11px] font-semibold text-amber-300 border border-amber-500/30 rounded-lg px-2.5 py-1.5">
+                        Reported: {OUTCOME_LABEL[outcome] ?? outcome}
+                    </span>
+                )}
+                {(confirmed || outcome) && (
                     <button
                         onClick={undo}
                         disabled={busy}
@@ -241,6 +279,34 @@ export function SignalCard({
                     </button>
                 )}
             </div>
+
+            {otherOpen && !confirmed && !outcome && (
+                <div className="mt-3 rounded-lg border border-amber-500/25 bg-amber-500/[0.05] p-3">
+                    <p className="text-[11px] text-tm-muted mb-2">
+                        Tell us what happened. Your virtual account keeps following the model. This is saved for tracking and does not change your ledger.
+                    </p>
+                    <input
+                        type="text"
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        placeholder="Note (optional, e.g. filled 1 of 2 contracts)"
+                        className="mb-2 w-full bg-black/40 border border-white/15 rounded-md px-2.5 py-1.5 text-[12px] text-white focus:outline-none focus:border-amber-400/60"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                        {(['not_placed', 'partial', 'not_applicable', 'declined'] as const).map((k) => (
+                            <button
+                                key={k}
+                                onClick={() => reportOutcome(k)}
+                                disabled={busy}
+                                className="py-2 rounded-lg border border-white/15 hover:border-amber-400/60 text-[12px] font-semibold text-white transition disabled:opacity-50"
+                            >
+                                {OUTCOME_LABEL[k]}
+                            </button>
+                        ))}
+                    </div>
+                    {error && <p className="mt-2 text-[11px] text-tm-red">{error}</p>}
+                </div>
+            )}
 
             {/* Inline fill form */}
             {open && !confirmed && (

@@ -175,6 +175,9 @@ export function initializeAccountTables(): Promise<void> {
             await query(`ALTER TABLE account_signals ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ`);
             await query(`ALTER TABLE account_signals ADD COLUMN IF NOT EXISTS fill_details JSONB`);
             await query(`ALTER TABLE account_signals ADD COLUMN IF NOT EXISTS fill_note TEXT`);
+            // Non-ledger outcome the member reports when the order did not go as the model assumed (Pricing v2 study tasks).
+            await query(`ALTER TABLE account_signals ADD COLUMN IF NOT EXISTS fill_status VARCHAR(20)`);
+            await query(`ALTER TABLE account_signals ADD COLUMN IF NOT EXISTS fill_discrepancy BOOLEAN NOT NULL DEFAULT FALSE`);
 
             // QQQ LEAPS lots: every call an account holds is its own lot so each
             // one is managed (exit rules, member adjustments) on its own terms.

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAccount } from '@/lib/accounts';
-import { confirmSignalFill, clearSignalFillConfirmation } from '@/lib/signal-fills';
+import { confirmSignalFill, clearSignalFillConfirmation, recordFillOutcome, clearFillOutcome } from '@/lib/signal-fills';
 import { getUserId } from '@/lib/auth';
 
 // POST /api/accounts/[id]/signals/[signalId]/fill — member reports their broker
@@ -19,6 +19,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     try {
         const body = await req.json();
+        if (typeof body?.outcome === 'string') {
+            const o = await recordFillOutcome(accountId, signalId, body.outcome, body?.note ?? null);
+            if (!o.ok) return NextResponse.json({ error: o.error }, { status: 400 });
+            return NextResponse.json({ success: true });
+        }
         const fills = Array.isArray(body?.fills) ? body.fills : [];
         const result = await confirmSignalFill(accountId, signalId, fills, body?.note ?? null);
         if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
@@ -44,7 +49,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     if (!account) return NextResponse.json({ error: 'Account not found' }, { status: 404 });
 
     try {
-        const result = await clearSignalFillConfirmation(accountId, signalId);
+        let result = await clearSignalFillConfirmation(accountId, signalId);
+        if (!result.ok) result = await clearFillOutcome(accountId, signalId);
         if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
         return NextResponse.json({ success: true });
     } catch (err) {

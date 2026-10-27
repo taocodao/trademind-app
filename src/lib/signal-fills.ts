@@ -104,7 +104,7 @@ export async function confirmSignalFill(
         }
 
         await client.query(
-            `UPDATE account_signals SET confirmed_at = NOW(), fill_details = $3, fill_note = $4
+            `UPDATE account_signals SET confirmed_at = NOW(), fill_details = $3, fill_note = $4, fill_status = 'filled', fill_discrepancy = FALSE
              WHERE account_id = $1 AND signal_id = $2`,
             [accountId, signalId, JSON.stringify(stored), note?.slice(0, 500) ?? null]
         );
@@ -174,7 +174,7 @@ export async function clearSignalFillConfirmation(
         }
 
         await client.query(
-            `UPDATE account_signals SET confirmed_at = NULL, fill_details = NULL, fill_note = NULL
+            `UPDATE account_signals SET confirmed_at = NULL, fill_details = NULL, fill_note = NULL, fill_status = NULL, fill_discrepancy = FALSE
              WHERE account_id = $1 AND signal_id = $2`,
             [accountId, signalId]
         );
@@ -203,6 +203,61 @@ async function syncLotPrice(client: any, accountId: number, activityId: number, 
          WHERE account_id = $1 AND exit_activity_id = $2`,
         [accountId, activityId, price, adjusted]
     );
+}
+
+export type FillOutcome = 'not_placed' | 'partial' | 'not_applicable' | 'declined';
+export const FILL_OUTCOMES: FillOutcome[] = ['not_placed', 'partial', 'not_applicable', 'declined'];
+
+/**
+ * Record an outcome that is not a price report: the order was not placed, was only partly filled, does not
+ * apply to this member, or the member prefers not to say. The ledger is NOT changed (the virtual account keeps
+ * following the model); the outcome is kept for tracking and flagged as a discrepancy where it differs from
+ * the model assumption (not placed, partly filled).
+ */
+export async function recordFillOutcome(
+    accountId: number,
+    signalId: string,
+    outcome: string,
+    note?: string | null
+): Promise<{ ok: boolean; error?: string }> {
+    if (!FILL_OUTCOMES.includes(outcome as FillOutcome)) return { ok: false, error: 'Unknown outcome' };
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        await client.query(`SELECT id FROM accounts WHERE id = $1 FOR UPDATE`, [accountId]);
+        const sig = await client.query(
+            `SELECT status, confirmed_at, fill_status FROM account_signals WHERE account_id = $1 AND signal_id = $2`,
+            [accountId, signalId]
+        );
+        if (sig.rows.length === 0) throw new FillError('Signal not delivered to this account');
+        if (sig.rows[0].status !== 'executed') throw new FillError('Only executed signals can be reported');
+        if (sig.rows[0].confirmed_at) throw new FillError('This signal already has a reported fill price. Undo it first.');
+        if (sig.rows[0].fill_status) throw new FillError('This signal already has a reported outcome. Undo it first.');
+        const discrepancy = outcome === 'not_placed' || outcome === 'partial';
+        await client.query(
+            `UPDATE account_signals SET fill_status = $3, fill_discrepancy = $4, fill_note = $5
+             WHERE account_id = $1 AND signal_id = $2`,
+            [accountId, signalId, outcome, discrepancy, note ? String(note).slice(0, 500) : null]
+        );
+        await client.query('COMMIT');
+        return { ok: true };
+    } catch (err) {
+        await client.query('ROLLBACK');
+        if (err instanceof FillError) return { ok: false, error: err.message };
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+/** Remove a reported outcome (the ledger was never changed, so nothing else to restore). */
+export async function clearFillOutcome(accountId: number, signalId: string): Promise<{ ok: boolean; error?: string }> {
+    const r = await pool.query(
+        `UPDATE account_signals SET fill_status = NULL, fill_discrepancy = FALSE, fill_note = NULL
+         WHERE account_id = $1 AND signal_id = $2 AND fill_status IS NOT NULL AND confirmed_at IS NULL`,
+        [accountId, signalId]
+    );
+    return (r.rowCount ?? 0) > 0 ? { ok: true } : { ok: false, error: 'No reported outcome to undo' };
 }
 
 class FillError extends Error {}

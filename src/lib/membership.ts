@@ -123,6 +123,10 @@ export function initializeMembershipTables(): Promise<void> {
             await query(`CREATE INDEX IF NOT EXISTS idx_account_memberships_free_month_end ON account_memberships(free_month_ends_at) WHERE status = 'free_month'`);
             await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_account_memberships_sub ON account_memberships(stripe_subscription_id) WHERE stripe_subscription_id IS NOT NULL`);
 
+            // Pricing v2 (additive, unused until PRICING_V2_ENABLED): billing period and catalog version per membership.
+            await query(`ALTER TABLE account_memberships ADD COLUMN IF NOT EXISTS billing_interval VARCHAR(10)`).catch(() => {});
+            await query(`ALTER TABLE account_memberships ADD COLUMN IF NOT EXISTS pricing_version SMALLINT NOT NULL DEFAULT 1`).catch(() => {});
+
             // accounts additions
             await query(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS alert_email TEXT`).catch(() => {});
             await query(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'active'`).catch(() => {});

@@ -54,13 +54,16 @@ Key highlights:
 | Tier | Access | Price |
 |------|--------|-------|
 | Observer | Free, read-only, no signals | $0 |
-| QQQ Defensive | ETF rotation signals | $360/yr regular, $252/yr with the newsletter offer |
-| QQQ LEAPS | LEAPS options signals | $480/yr regular, $336/yr with the newsletter offer |
+| QQQ Defensive | ETF allocation signals (QQQ, QLD, TQQQ, SGOV) | $30/month or $300/year; newsletter subscribers pay 30% less ($21/month or $210/year) |
+| QQQ LEAPS | LEAPS options signals | $40/month or $400/year; newsletter subscribers pay 30% less ($28/month or $280/year) |
+| Both strategies | One Defensive account and one LEAPS account on one subscription | $60/month or $600/year; subscribers $42/month or $420/year |
+
+A free 30 day study preview (20 seats, no card, up to 90 days with activities) is also available by application.
 
 ### Trial terms (September 2026)
-- Payment is processed at checkout: the card is charged the full annual amount immediately.
-- The first month is the free trial: cancel within the first month and the payment is refunded in full.
-- New accounts are created automatically after checkout with default balances ($10,000 QQQ Defensive, $25,000 QQQ LEAPS); users adjust them afterward. One QQQ Defensive and/or one QQQ LEAPS account per login.
+- Payment is processed at checkout: the card is charged immediately for the first month or year.
+- Cancel within 31 days of the first payment and it is refunded in full. Later renewals are not refunded.
+- New accounts are created automatically after checkout with default balances ($10,000 QQQ Defensive, $25,000 QQQ LEAPS); users adjust them afterward. Buying again with the same login adds another account.
 
 - Observer users can see the app but cannot execute or receive signals
 - Paid subscribers can use all features including virtual trading and AI Copilot

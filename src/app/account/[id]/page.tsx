@@ -509,7 +509,6 @@ function MembershipBanner({ membership, busy, billingBusy, onSubscribe, onCancel
 }) {
     const fmt = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
     const daysLeft = (iso: string) => Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000));
-    const price = membership.plan === 'LEAPS' ? 336 : 252;
 
     let tone = 'border-white/10 bg-white/[0.03]';
     let dot = 'bg-tm-muted';
@@ -523,14 +522,14 @@ function MembershipBanner({ membership, busy, billingBusy, onSubscribe, onCancel
             tone = 'border-purple-500/30 bg-purple-500/10'; dot = 'bg-purple-400';
             title = `Free month - ${d} day${d !== 1 ? 's' : ''} left`;
             detail = `Signals are running. Subscribe before ${membership.free_month_ends_at ? fmt(membership.free_month_ends_at) : 'it ends'} to keep them on.`;
-            cta = `Subscribe - $${price}/yr`;
+            cta = 'Subscribe';
             break;
         }
         case 'awaiting_payment':
             tone = 'border-amber-500/30 bg-amber-500/10'; dot = 'bg-amber-400';
             title = 'Payment due';
             detail = 'Subscribe to start signal delivery for this account.';
-            cta = `Subscribe - $${price}/yr`;
+            cta = 'Subscribe';
             break;
         case 'active':
             tone = 'border-emerald-500/30 bg-emerald-500/10'; dot = 'bg-emerald-400';
@@ -560,7 +559,7 @@ function MembershipBanner({ membership, busy, billingBusy, onSubscribe, onCancel
             tone = 'border-tm-red/30 bg-tm-red/10'; dot = 'bg-tm-red';
             title = 'Membership expired';
             detail = 'Signal delivery is paused for this account. Subscribe to resume.';
-            cta = `Subscribe - $${price}/yr`;
+            cta = 'Subscribe';
             break;
     }
 

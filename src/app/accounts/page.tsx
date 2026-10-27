@@ -11,9 +11,6 @@ import Link from "next/link";
 import { useAccountContext } from "@/components/providers/AccountContext";
 import { getStrategy } from "@/lib/strategies";
 
-/** Annual prices per plan (display only; source of truth is Stripe). */
-const PLAN_PRICE: Record<string, number> = { basic: 252, leaps: 336 };
-
 function membershipBadge(m?: { status: string; free_month_ends_at: string | null; current_period_end: string | null; cancel_at_period_end: boolean } | null) {
     if (!m) return null;
     const fmt = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -250,22 +247,18 @@ function AccountsPageInner() {
             </header>
 
             <div className="px-6 mb-4 grid grid-cols-2 gap-3">
-                {!accounts.some((a) => a.membership?.plan === 'basic') && (
-                    <Link
-                        href="/upgrade?plan=basic"
-                        className="flex items-center justify-center gap-2 py-3 rounded-xl font-bold border border-[#4f8ef7]/50 text-white transition hover:bg-[#4f8ef7]/10"
-                    >
-                        Start QQQ Defensive - $252/yr
-                    </Link>
-                )}
-                {!accounts.some((a) => a.membership?.plan === 'leaps') && (
-                    <Link
-                        href="/upgrade?plan=leaps"
-                        className="flex items-center justify-center gap-2 py-3 rounded-xl font-bold bg-tm-purple hover:bg-tm-purple/90 text-white transition"
-                    >
-                        Start QQQ LEAPS - $336/yr
-                    </Link>
-                )}
+                <Link
+                    href="/plans?product=defensive"
+                    className="flex items-center justify-center gap-2 py-3 rounded-xl font-bold border border-[#4f8ef7]/50 text-white transition hover:bg-[#4f8ef7]/10"
+                >
+                    Add a QQQ Defensive account
+                </Link>
+                <Link
+                    href="/plans?product=leaps"
+                    className="flex items-center justify-center gap-2 py-3 rounded-xl font-bold bg-tm-purple hover:bg-tm-purple/90 text-white transition"
+                >
+                    Add a QQQ LEAPS account
+                </Link>
             </div>
 
             {/* Account list */}
@@ -352,7 +345,7 @@ function AccountsPageInner() {
                                         }}
                                         className="w-full mt-4 py-2.5 rounded-lg font-bold bg-tm-purple hover:bg-tm-purple/90 text-white text-sm transition"
                                     >
-                                        {a.membership.status === 'past_due' ? 'Update payment' : `Subscribe - $${PLAN_PRICE[a.membership.plan] ?? ''}/yr`}
+                                        {a.membership.status === 'past_due' ? 'Update payment' : 'Subscribe'}
                                     </button>
                                 )}
 

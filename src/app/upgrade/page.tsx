@@ -27,6 +27,14 @@ function UpgradePageInner() {
             ? { label: PRICING.plans.turbocore_pro_bundle.label, price: PRICING.plans.turbocore_pro_bundle.annual }
             : null;
 
+    // Pricing v2 replaces this page for new purchases; existing account subscribe links still work.
+    useEffect(() => {
+        if (accountId) return;
+        fetch('/api/stripe/v2/quote').then((r) => (r.ok ? r.json() : null)).then((d) => {
+            if (d?.enabled) window.location.replace(`/plans${plan ? `?product=${plan === 'leaps' ? 'leaps' : 'defensive'}` : ''}${emailParam ? `${plan ? '&' : '?'}email=${encodeURIComponent(emailParam)}` : ''}`);
+        }).catch(() => {});
+    }, [accountId, plan, emailParam]);
+
     const startCheckout = async () => {
         if (!accountId && !plan) return;
         setLoading(true);

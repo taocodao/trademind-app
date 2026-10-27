@@ -77,9 +77,10 @@ export async function POST(req: NextRequest) {
         }
 
         const invoice = (full as { latest_invoice?: unknown }).latest_invoice;
-        const invoiceObj = invoice && typeof invoice === 'object' ? invoice as { id?: string; payment_intent?: unknown; status?: string; status_transitions?: { paid_at?: number }; created?: number } : null;
+        const invoiceObj = invoice && typeof invoice === 'object' ? invoice as { id?: string; payment_intent?: unknown; status?: string; status_transitions?: { paid_at?: number }; created?: number; billing_reason?: string } : null;
         const paidAt = invoiceObj?.status_transitions?.paid_at ?? invoiceObj?.created ?? 0;
-        const withinRefundWindow = paidAt > 0 && (Date.now() / 1000 - paidAt) <= 31 * 24 * 60 * 60;
+        // Only the first charge of a subscription is refundable, so a monthly renewal never is.
+        const withinRefundWindow = invoiceObj?.billing_reason === 'subscription_create' && paidAt > 0 && (Date.now() / 1000 - paidAt) <= 31 * 24 * 60 * 60;
 
         if (withinRefundWindow && invoiceObj?.status === 'paid') {
             const piRef = invoiceObj.payment_intent;

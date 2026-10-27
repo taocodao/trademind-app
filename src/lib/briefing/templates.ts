@@ -3,6 +3,7 @@ import { longDate, shortDate } from './calendar';
 import type { FactsRun, StrategyFacts } from './types';
 
 export const FOOTER_MARK = '[[FOOTER]]';
+export const PLANS_URL = 'https://trademind.bot/plans';
 export const LEDGER_URL = 'https://trademind.bot/live-record';
 
 const DISCLOSURE =
@@ -111,6 +112,7 @@ export function renderDailyText(f: FactsRun, commentaryFilled: string | null): s
     }
     parts.push(`Public ledger: ${LEDGER_URL}`);
     parts.push(FOOTER_MARK);
+    parts.push(`Want these signals for your own account? Newsletter subscribers pay 30% less. See the plans, or apply to the free study preview: ${PLANS_URL}`);
     parts.push(DISCLOSURE);
     parts.push(`TradeMind, ${canonical.company.mailing_address}`);
     parts.push('Change how often you hear from us or unsubscribe: {{unsubscribe_url}}');

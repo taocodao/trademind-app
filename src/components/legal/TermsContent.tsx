@@ -19,7 +19,7 @@ export function TermsContent() {
                 <h3>2. Descripción del Servicio</h3>
                 <p>TradeMind@bot es una plataforma de software que ofrece señales de trading generadas algorítmicamente, herramientas de simulación de cartera virtual e integración opcional con la API del bróker. <strong>TradeMind@bot no es un asesor de inversiones registrado, corredor de bolsa ni planificador financiero.</strong></p>
                 <h3>3. Suscripciones y Facturación</h3>
-                <p>Cada cuenta tiene una membresía anual independiente y recibe sus primeros 30 días sin costo. No se crea una suscripción de Stripe hasta que eliges suscribirte. La renovación anual está activada de forma predeterminada y puede desactivarse para cada cuenta. Todas las tarifas están en USD y no son reembolsables, salvo lo exigido por la ley.</p>
+                <p>Un plan es una suscripción mensual o anual para una cuenta QQQ Defensive, una cuenta QQQ LEAPS, o ambas. Tu tarjeta se cobra de inmediato al pagar y la suscripción se renueva cada periodo hasta que la canceles. Si cancelas dentro de los 31 días posteriores a tu primer pago, ese primer pago se reembolsa por completo y el acceso termina de inmediato. Las renovaciones posteriores no se reembolsan; si cancelas entonces, el acceso continúa hasta el final del periodo pagado. Los suscriptores del boletín reciben un 30% de descuento mientras la suscripción siga activa. Comprar de nuevo con el mismo inicio de sesión agrega otra cuenta. Todas las tarifas están en USD y no son reembolsables, salvo lo indicado aquí o lo exigido por la ley.</p>
                 <h3>4. Integración con API del Bróker</h3>
                 <p>TradeMind@bot no custodia ni controla tus fondos y no ejecuta operaciones sin tu autorización. Eres el único responsable de todas las operaciones ejecutadas en tu cuenta de corretaje.</p>
                 <h3>5. Sin Asesoramiento de Inversión</h3>
@@ -57,7 +57,7 @@ export function TermsContent() {
                 <h3>2. 服务描述</h3>
                 <p>TradeMind@bot是一个软件技术平台，提供算法生成的交易信号、虚拟投资组合模拟工具及可选的券商API集成。<strong>TradeMind@bot不是注册投资顾问、经纪交易商或财务规划师。</strong></p>
                 <h3>3. 订阅与账单</h3>
-                <p>每个账户均有独立的年度会员资格，并享有前30天免费。只有在您选择订阅后才会创建Stripe订阅。年度自动续订默认开启，您可为每个账户单独关闭。所有费用以美元计价，除法律规定外不予退款。</p>
+                <p>套餐是针对一个QQQ Defensive账户、一个QQQ LEAPS账户或两者的月度或年度订阅。结账时立即从您的银行卡扣款，订阅会在每个周期自动续订，直到您取消。如果您在首次付款后31天内取消，首次付款将全额退还，访问权限立即结束。之后的续订费用不予退款；此后取消的，访问权限持续到已付费周期结束。新闻简报订阅者在订阅保持有效期间享受7折优惠。使用同一登录再次购买会新增一个账户。所有费用以美元计价，除本条款所述或法律规定外不予退款。</p>
                 <h3>4. 券商API集成</h3>
                 <p>TradeMind@bot不持有、托管或控制您的资金，未经您授权不会执行交易。您须对您券商账户中执行的所有交易独自承担责任。</p>
                 <h3>5. 非投资建议</h3>
@@ -95,7 +95,7 @@ export function TermsContent() {
             <h3>2. Description of Service</h3>
             <p>TradeMind@bot is a software technology platform that provides algorithmically generated trading signals, virtual portfolio simulation tools, and optional broker API integration. <strong>TradeMind@bot is not a registered investment advisor, broker-dealer, or financial planner.</strong></p>
             <h3>3. Subscriptions &amp; Billing</h3>
-            <p>Each account has its own annual membership and receives its first 30 days free. No Stripe subscription is created until you choose to subscribe. Yearly auto renew is on by default and can be turned off for each account. All fees are in USD and are non-refundable except as required by law.</p>
+            <p>A plan is a monthly or yearly subscription for one QQQ Defensive account, one QQQ LEAPS account, or both. Your card is charged immediately at checkout, and the subscription renews each period until you cancel. If you cancel within 31 days of your first payment, that first payment is refunded in full and access ends right away. Later renewals are not refunded; if you cancel then, access continues to the end of the period you paid for. Newsletter subscribers receive a 30% discount for as long as the subscription stays active. Buying again with the same login adds another account. All fees are in USD and are non-refundable except as stated here or as required by law.</p>
             <h3>4. Broker API Integration</h3>
             <p>TradeMind@bot does not hold, custody, or control your funds and does not execute trades without your authorization. You are solely responsible for all trades executed in your brokerage account.</p>
             <h3>5. No Investment Advice</h3>

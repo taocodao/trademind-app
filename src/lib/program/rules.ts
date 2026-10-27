@@ -1,16 +1,20 @@
 /**
- * Founding Member Program rules. Pure functions, no I/O, so they can be tested.
+ * Study preview rules (30 days free, each completed activity adds 30 days, 90 days at most, 20 seats, no card).
+ * The founding price tables below are retired and kept only until the old billing code is removed. Pure functions, no I/O, so they can be tested.
  * Dates are ISO strings in UTC; the program works in whole days.
  */
 
 export const PREVIEW_DAYS = 30;
 export const CREDIT_DAYS_PER_ACTIVITY = 30;
-/** Total free access (preview plus earned credit) never exceeds six months from the start. */
-export const MAX_FREE_DAYS = 180;
+/** Total free access (preview plus earned credit) never exceeds 90 days from the start. */
+export const MAX_FREE_DAYS = 90;
+/** At most two extensions: 30 + 30 + 30 days. */
+export const MAX_ACTIVITIES = 2;
 export const ACTIVITY_GRACE_DAYS = 14;
-export const FIRST_GROUP = 30;
-export const WAVE_SIZE_MAX = 50;
-export const HARD_LIMIT = 200;
+/** Study preview seats. */
+export const FIRST_GROUP = 20;
+export const WAVE_SIZE_MAX = 20;
+export const HARD_LIMIT = 20;
 
 export type PlanLevel = 'research' | 'tracking';
 export type Interval = 'month' | 'year';
@@ -43,10 +47,10 @@ export interface ParticipantState {
     paid_started_at: string | null;
 }
 
-/** End of free access: the 30 day preview plus 30 days for each completed activity, capped at six months. */
+/** End of free access: the 30 day preview plus 30 days for each completed activity, capped at 90 days. */
 export function freeAccessEnd(s: ParticipantState): string {
-    const credit = new Set(s.completed_months.filter((m) => m >= 1 && m <= 6)).size * CREDIT_DAYS_PER_ACTIVITY;
-    const days = Math.min(MAX_FREE_DAYS, PREVIEW_DAYS + (s.path === 'partner' || s.path === 'founding' ? credit : 0));
+    const credit = new Set(s.completed_months.filter((m) => m >= 1 && m <= MAX_ACTIVITIES)).size * CREDIT_DAYS_PER_ACTIVITY;
+    const days = Math.min(MAX_FREE_DAYS, PREVIEW_DAYS + credit);
     return addDays(s.started_at, days);
 }
 
@@ -73,23 +77,18 @@ export function dueEmails(s: ParticipantState, nowIso: string, sent: Set<string>
     const day = daysBetween(s.started_at, nowIso);
     const push = (e: DueEmail) => { if (!sent.has(e.key)) out.push(e); };
     if (day >= 0) push({ kind: 'preview_started', key: 'preview_started' });
-    if (s.path === 'undecided' && day >= 23 && day < PREVIEW_DAYS + 7) push({ kind: 'choice_reminder', key: 'choice_reminder' });
-    if (s.path === 'partner') {
-        for (let m = 1; m <= 6; m++) {
+    if (s.path !== 'free') {
+        for (let m = 1; m <= MAX_ACTIVITIES; m++) {
             const due = activityDue(s.started_at, m);
             if (new Date(nowIso) >= new Date(due) && !s.completed_months.includes(m) && daysBetween(due, nowIso) <= ACTIVITY_GRACE_DAYS && due < freeAccessEnd(s)) {
                 push({ kind: 'activity_due', key: `activity_due_${m}`, month: m });
             }
         }
     }
-    if (s.path === 'partner' || s.path === 'founding') {
+    if (s.path !== 'free' && !s.paid_started_at) {
         const end = freeAccessEnd(s);
         const left = daysBetween(nowIso, end);
         if (left <= 7 && left >= 0) push({ kind: 'free_time_ending', key: `free_time_ending_${end.slice(0, 10)}` });
-    }
-    // A founding member pays from the day free access ends; the checkout link is sent that day, never earlier.
-    if (s.path === 'founding' && !s.paid_started_at && new Date(nowIso) >= new Date(freeAccessEnd(s))) {
-        push({ kind: 'founding_ready', key: 'founding_ready' });
     }
     return out;
 }

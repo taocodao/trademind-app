@@ -29,20 +29,20 @@ export default function FoundingApply() {
         return (
             <main className="mx-auto max-w-xl px-5 py-16">
                 <h1 className="text-2xl font-semibold">Thank you for applying</h1>
-                <p className="mt-3 text-gray-300">We review every application by hand. If you are selected, we email you with the start of your 30 day preview. No card is needed and nothing is charged.</p>
+                <p className="mt-3 text-gray-300">We review every application by hand. If you are selected, we email you with the start of your 30 day study preview. No card is needed and nothing is charged.</p>
             </main>
         );
     }
 
     return (
         <main className="mx-auto max-w-xl px-5 py-12">
-            <h1 className="text-3xl font-semibold">Help shape TradeMind, or join at a founding price</h1>
+            <h1 className="text-3xl font-semibold">Join the TradeMind study preview</h1>
             <p className="mt-4 text-gray-300">
-                We are opening a small program for readers who follow rules based QQQ strategies. Selected readers get 30 days of Research and Tracking at no charge.
-                After that you choose: share one short piece of feedback each month to keep using it free for up to six months, or become a founding member from $19 per month for your first 12 paid months, with no feedback tasks.
+                We are opening a small study preview for readers who follow rules based QQQ strategies. There are 20 seats, and we review every application by hand.
+                Accepted readers follow the signals with a virtual account for 30 days at no charge. Each short activity you complete adds 30 more days, up to 90 days in total.
             </p>
             <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-gray-300">
-                <li>No card is needed to apply. Nothing turns into a paid plan automatically.</li>
+                <li>No card is needed. Nothing turns into a paid plan automatically. You only pay if you choose to buy a plan yourself.</li>
                 <li>You never need to trade, deposit money, write a review or refer anyone.</li>
                 <li>Honest criticism is welcome.</li>
                 <li>TradeMind never connects to your broker. You place every order yourself. Results shown so far are simulated, not live trading.</li>

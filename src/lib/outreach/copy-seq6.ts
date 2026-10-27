@@ -169,7 +169,7 @@ export function renderSeq6(o: Seq6Opts): { subject: string; text: string; html: 
             'Read a briefing and tell me what was confusing (feedback).',
         ];
         after = [
-            'Each completed task earns 30 days of free access, up to six months in total. After the first 30 days you choose: keep going by doing one task a month, or take a founding price with no tasks at all. No card is needed to apply, and nothing turns into a paid plan automatically. You never need to trade, refer anyone, or write a review.',
+            'Each completed task earns 30 more days of free access, up to 90 days in total. There are 20 seats. You can buy a plan yourself at any time, and nothing turns into one automatically. No card is needed to apply, and nothing turns into a paid plan automatically. You never need to trade, refer anyone, or write a review.',
             'Every TradeMind result shown so far comes from a simulation, not live trading.',
         ];
     }

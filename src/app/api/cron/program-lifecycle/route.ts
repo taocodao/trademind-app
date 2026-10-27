@@ -10,7 +10,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 /**
- * Daily lifecycle emails for program participants (day 23 notice, activity due, free time ending, founding ready).
+ * Daily lifecycle emails for program participants (activity due, free time ending).
  * It never starts a charge. The welcome email is sent when a person is accepted.
  *   ?dry=1  list what would be sent without sending
  */

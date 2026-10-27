@@ -51,7 +51,7 @@ export default function Sample() {
             <h2 className="mt-8 text-lg font-semibold">A day the model changed its weights</h2>
             <pre className={box}>{CHANGE}</pre>
             <p className="mt-8 text-sm text-gray-400">Educational research, not investment advice. TradeMind never connects to a brokerage and never places orders. You enter every order yourself. Results shown on our site are simulated unless labeled otherwise, and simulated results are not live trading.</p>
-            <p className="mt-6"><Link href="/founding" className="text-blue-300 underline">Apply to the founding program</Link></p>
+            <p className="mt-6"><Link href="/founding" className="text-blue-300 underline">Apply to the study preview</Link></p>
         </main>
     );
 }

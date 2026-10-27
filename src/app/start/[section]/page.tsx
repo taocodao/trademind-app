@@ -121,16 +121,16 @@ function Body({ section }: { section: SectionKey }) {
         case 'panel':
             return (
                 <>
-                    <p className="mt-4 text-gray-300">I am building a small research panel of QQQ investors. Members try Research and Tracking free for 30 days and help me test the model. The first group is 30 people.</p>
+                    <p className="mt-4 text-gray-300">I am building a small research panel of QQQ investors. Members follow the signals free for 30 days and help me test the model. There are 20 seats.</p>
                     <h2 className="mt-8 text-lg font-semibold">Tasks, all optional</h2>
                     <ul className="mt-3 space-y-2">
                         {TASKS.map((t) => <li key={t.task} className={card}><b>{t.task}</b> <span className="text-xs text-gray-400">({t.effort})</span><p className="mt-1 text-sm text-gray-300">{t.counts}</p></li>)}
                     </ul>
                     <h2 className="mt-8 text-lg font-semibold">The terms</h2>
                     <ul className="mt-3 list-disc space-y-2 pl-6 text-gray-300">
-                        <li>Free for 30 days. No card is needed to apply, and nothing turns into a paid plan automatically.</li>
-                        <li>Each completed task earns 30 days of free access, up to six months in total. A task counts when you complete it, whatever you conclude. Your answer is never judged on whether it is favorable to TradeMind.</li>
-                        <li>After the first 30 days you choose: keep going by doing one task a month, or take a founding price (from $19 per month) with no tasks at all.</li>
+                        <li>Free for 30 days. No card is needed, and nothing turns into a paid plan automatically.</li>
+                        <li>Each completed task earns 30 days of free access, up to 90 days in total. A task counts when you complete it, whatever you conclude. Your answer is never judged on whether it is favorable to TradeMind.</li>
+                        <li>There are 20 seats. You can buy a plan yourself at any time, and newsletter subscribers pay 30% less.</li>
                         <li>You never need to trade, refer anyone, or write a review.</li>
                     </ul>
                     <p className="mt-5 text-sm text-gray-400">Every TradeMind result shown so far comes from a simulation, not live trading. {NOBROKER}</p>

@@ -10,6 +10,7 @@ import {
 } from '@/lib/membership';
 import { createAccount } from '@/lib/accounts';
 import { handleReferralFirstPayment } from '@/lib/referrals';
+import { isV2Session, provisionV2Session } from '@/lib/stripe-provision-v2';
 
 /**
  * Provision the virtual account + membership for a completed Checkout
@@ -24,6 +25,7 @@ import { handleReferralFirstPayment } from '@/lib/referrals';
  * account instead of being bounced back to pricing and checkout.
  */
 export async function provisionCheckoutSession(session: Stripe.Checkout.Session, opts?: { userId?: string }): Promise<number | null> {
+    if (isV2Session(session)) return provisionV2Session(session, opts);
     // Pay-first (guest) sessions carry no userId; they are provisioned only through /api/stripe/claim, which passes the signed-in login.
     const userId = opts?.userId ?? session.metadata?.userId;
     const metadataPlan = session.metadata?.plan;

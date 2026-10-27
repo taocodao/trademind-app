@@ -1,7 +1,7 @@
 import { getPrivyUserId } from '@/lib/auth-helpers';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAccount } from '@/lib/accounts';
-import { getMembershipByAccount, updateMembership, type AccountMembership } from '@/lib/membership';
+import { getMembershipByAccount, updateMembership, updateMembershipsBySubscription, type AccountMembership } from '@/lib/membership';
 import { getStripe } from '@/lib/stripe-server';
 import { query } from '@/lib/db';
 import { sendRefundEmail } from '@/lib/newsletter/email';
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
             const periodEnd = (full as { current_period_end?: number }).current_period_end;
             const accessUntil = periodEnd ? new Date(periodEnd * 1000).toISOString() : result.membership.current_period_end;
             await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: true });
-            await updateMembership(result.membership.account_id, {
+            await updateMembershipsBySubscription(subscriptionId, {
                 status: 'canceled',
                 cancel_at_period_end: true,
                 current_period_end: accessUntil,
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
                 }
             }
             await stripe.subscriptions.cancel(subscriptionId);
-            await updateMembership(result.membership.account_id, {
+            await updateMembershipsBySubscription(subscriptionId, {
                 status: 'expired',
                 stripe_subscription_id: null,
                 cancel_at_period_end: false,
@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
         const currentPeriodEnd = subscription.current_period_end
             ? new Date(subscription.current_period_end * 1000).toISOString()
             : result.membership.current_period_end;
-        await updateMembership(result.membership.account_id, {
+        await updateMembershipsBySubscription(subscriptionId, {
             status: 'canceled',
             cancel_at_period_end: true,
             current_period_end: currentPeriodEnd,
@@ -164,7 +164,7 @@ export async function PUT(req: NextRequest) {
         const subscription = await getStripe().subscriptions.update(subscriptionId, {
             cancel_at_period_end: false,
         }) as { status: string };
-        await updateMembership(result.membership.account_id, {
+        await updateMembershipsBySubscription(subscriptionId, {
             status: subscription.status === 'past_due' ? 'past_due' : 'active',
             cancel_at_period_end: false,
         });

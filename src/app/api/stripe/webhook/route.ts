@@ -5,7 +5,7 @@ import { getStripe } from '@/lib/stripe-server';
 import {
     createMembershipForAccount,
     getMembershipByAccount,
-    getMembershipByStripeSubscription,
+    listMembershipsByStripeSubscription,
     type MembershipPlan,
     type MembershipStatus,
     updateMembership,
@@ -106,26 +106,28 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
 
         case 'customer.subscription.updated': {
             const subscription = event.data.object as Stripe.Subscription & { current_period_end?: number };
-            const membership = await getMembershipByStripeSubscription(subscription.id);
-            if (!membership) return;
-            await updateMembership(membership.account_id, {
-                status: membershipStatusForStripe(subscription.status),
-                current_period_end: unixToIso(subscription.current_period_end),
-                cancel_at_period_end: subscription.cancel_at_period_end,
-            });
+            const rows = await listMembershipsByStripeSubscription(subscription.id);
+            for (const membership of rows) {
+                await updateMembership(membership.account_id, {
+                    status: membershipStatusForStripe(subscription.status),
+                    current_period_end: unixToIso(subscription.current_period_end),
+                    cancel_at_period_end: subscription.cancel_at_period_end,
+                });
+            }
             return;
         }
 
         case 'customer.subscription.deleted': {
             if (await handleProgramSubscriptionEnded(event.data.object as Stripe.Subscription)) return;
             const subscription = event.data.object as Stripe.Subscription;
-            const membership = await getMembershipByStripeSubscription(subscription.id);
-            if (!membership) return;
-            await updateMembership(membership.account_id, {
-                status: 'expired',
-                stripe_subscription_id: null,
-                cancel_at_period_end: false,
-            });
+            const rows = await listMembershipsByStripeSubscription(subscription.id);
+            for (const membership of rows) {
+                await updateMembership(membership.account_id, {
+                    status: 'expired',
+                    stripe_subscription_id: null,
+                    cancel_at_period_end: false,
+                });
+            }
             return;
         }
 
@@ -134,9 +136,8 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
             const subscriptionId = (invoice as Stripe.Invoice & { subscription?: string | Stripe.Subscription }).subscription;
             const normalizedId = typeof subscriptionId === 'string' ? subscriptionId : subscriptionId?.id;
             if (!normalizedId) return;
-            const membership = await getMembershipByStripeSubscription(normalizedId);
-            if (!membership) return;
-            await updateMembership(membership.account_id, { status: 'past_due' });
+            const rows = await listMembershipsByStripeSubscription(normalizedId);
+            for (const membership of rows) await updateMembership(membership.account_id, { status: 'past_due' });
             return;
         }
 

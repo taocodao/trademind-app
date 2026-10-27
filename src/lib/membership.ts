@@ -121,7 +121,10 @@ export function initializeMembershipTables(): Promise<void> {
             await query(`CREATE INDEX IF NOT EXISTS idx_account_memberships_user ON account_memberships(user_id)`);
             await query(`CREATE INDEX IF NOT EXISTS idx_account_memberships_status ON account_memberships(status)`);
             await query(`CREATE INDEX IF NOT EXISTS idx_account_memberships_free_month_end ON account_memberships(free_month_ends_at) WHERE status = 'free_month'`);
-            await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_account_memberships_sub ON account_memberships(stripe_subscription_id) WHERE stripe_subscription_id IS NOT NULL`);
+            // One subscription may cover two memberships (the Both strategies bundle: one Defensive and one LEAPS account),
+            // so uniqueness is per (subscription, plan). Single-strategy rows are unchanged.
+            await query(`DROP INDEX IF EXISTS idx_account_memberships_sub`).catch(() => {});
+            await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_account_memberships_sub_plan ON account_memberships(stripe_subscription_id, plan) WHERE stripe_subscription_id IS NOT NULL`);
 
             // Pricing v2 (additive, unused until PRICING_V2_ENABLED): billing period and catalog version per membership.
             await query(`ALTER TABLE account_memberships ADD COLUMN IF NOT EXISTS billing_interval VARCHAR(10)`).catch(() => {});
@@ -227,6 +230,14 @@ export async function getMembershipByStripeSubscription(subscriptionId: string):
     return res.rows[0] ? rowToMembership(res.rows[0]) : null;
 }
 
+/** Every membership paid by one Stripe subscription (one row, or two for the Both strategies bundle). */
+export async function listMembershipsByStripeSubscription(subscriptionId: string): Promise<AccountMembership[]> {
+    await initializeMembershipTables();
+    const res = await query(`SELECT * FROM account_memberships WHERE stripe_subscription_id = $1 ORDER BY id`, [subscriptionId]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return res.rows.map((r: any) => rowToMembership(r));
+}
+
 export async function listMembershipsForUser(userId: string): Promise<MembershipWithAccount[]> {
     await initializeMembershipTables();
     const res = await query(
@@ -259,6 +270,15 @@ export async function updateMembership(
     sets.push(`updated_at = NOW()`);
     vals.push(accountId);
     await query(`UPDATE account_memberships SET ${sets.join(', ')} WHERE account_id = $${i}`, vals);
+}
+
+/** Apply the same change to every membership paid by a subscription (billing state is shared by a bundle). */
+export async function updateMembershipsBySubscription(
+    subscriptionId: string,
+    fields: Parameters<typeof updateMembership>[1]
+): Promise<void> {
+    const rows = await listMembershipsByStripeSubscription(subscriptionId);
+    for (const m of rows) await updateMembership(m.account_id, fields);
 }
 
 // ─── Entitlement ─────────────────────────────────────────────────────────────

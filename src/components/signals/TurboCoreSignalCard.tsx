@@ -523,26 +523,6 @@ export function TurboCoreSignalCard({
 
         {expanded && (
           <div className="mt-4 pt-4 border-t border-white/5 animate-in slide-in-from-top-2 text-sm text-white/70 space-y-2">
-            <div className="flex justify-between items-center p-2 bg-black/30 rounded border border-white/5">
-              <span className="flex items-center gap-2">
-                <Activity className="w-4 h-4 text-orange-400" /> 5/30 EMA
-              </span>
-
-              <span className="font-mono">
-                {signal.ema_signal === 1 ? "GOLDEN CROSS" : "DEATH CROSS"}
-              </span>
-            </div>
-
-            <div className="flex justify-between items-center p-2 bg-black/30 rounded border border-white/5">
-              <span className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-blue-400" /> QQQ &gt; SMA200
-              </span>
-
-              <span className="font-mono">
-                {signal.sma200_gate ? "YES" : "NO"}
-              </span>
-            </div>
-
             {signal.rationale && (
               <p className="p-2 text-xs italic opacity-100">
                 &quot;{signal.rationale}&quot;

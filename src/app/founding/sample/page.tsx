@@ -19,10 +19,6 @@ QQQ Defensive, aggressive level: QQQ 100%
 WHAT TO WATCH
 
 - Market regime: BULL
-- 200-day average gate: passed
-- Short-term trend signal: positive
-- Model confidence: 43%
-- QQQ close: 704.83
 
 CONTEXT. NOT AN ADDITIONAL INSTRUCTION.
 

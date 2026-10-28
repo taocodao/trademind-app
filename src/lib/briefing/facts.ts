@@ -78,8 +78,8 @@ async function defensiveFacts(date: string): Promise<StrategyFacts> {
         weights, previous_weights: prevWeights, previous_weights_differ: differs, instructions,
         gates: [
             { name: 'Market regime', value: String(d.regime ?? 'unknown') },
-            { name: '200-day average gate', value: d.sma200_gate ? 'passed' : 'not passed' },
-            { name: 'Short-term trend signal', value: d.ema_signal === 1 ? 'positive' : 'not positive' },
+            // The 200-day gate and trend fields in the signal record are not computed as labeled
+            // (audit 2026-10-27), so they are not reported to readers.
         ],
     };
 }

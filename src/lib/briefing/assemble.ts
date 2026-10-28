@@ -4,11 +4,10 @@ import type { BriefingDraft, FactsRun } from './types';
 
 const SYSTEM = `You write a short market context paragraph (60 to 120 words) for a quantitative research newsletter.
 Rules, all mandatory:
-- Use only these placeholders for any figure: {{regime}}, {{confidence}}, {{qqq_close}}, {{gates_passed}}, {{gates_total}}. Never type a digit.
-- Explain what the model's regime, confidence and gates mean in plain English.
+- Use only these placeholders for any figure: {{regime}}. Never type a digit.
+- Explain in plain English what the model's regime label means. Do not mention confidence, probabilities, scores, gates or price levels.
 - Do not use the words buy, sell, add, exit, enter, trim or rebalance. Do not tell the reader what to do.
 - Do not predict prices. Do not name causes such as the Fed, inflation, earnings or tariffs.
-- Say plainly that confidence below the model's threshold is a reason for patience, not a signal.
 - No dashes of any kind. No exclamation points. Plain text only.`;
 
 /** Asks the writing model for commentary. Returns null if unavailable; the briefing then goes out status-only. */
@@ -26,7 +25,7 @@ export async function draftCommentary(facts: FactsRun): Promise<string | null> {
                 temperature: 0.2,
                 messages: [
                     { role: 'system', content: SYSTEM },
-                    { role: 'user', content: `Facts for today (placeholders stand for the numbers): regime={{regime}}, confidence={{confidence}}, gates passed={{gates_passed}} of {{gates_total}}, status for QQQ Defensive: ${def.status}. Write the paragraph.` },
+                    { role: 'user', content: `Facts for today (placeholders stand for the numbers): regime={{regime}}, status for QQQ Defensive: ${def.status}. Write the paragraph.` },
                 ],
             }),
         });

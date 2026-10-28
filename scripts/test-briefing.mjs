@@ -38,7 +38,7 @@ const leaps = (over = {}) => ({
     regime: null, confidence_pct: null, qqq_close: null, weights: [], previous_weights: [], previous_weights_differ: null, instructions: [], gates: [], ...over,
 });
 const facts = (s = [leaps(), defensive()]) => ({ run_id: 'r', run_date: '2026-10-26', record_type: 'live_model', early_close: false, strategies: s, benchmark: { symbol: 'QQQ', close: 704.83 }, engine_note: '', hash: 'h' });
-const GOOD = 'The model reads the market regime as {{regime}} with confidence of {{confidence}}, and {{gates_passed}} of {{gates_total}} gates are satisfied. Confidence below the threshold is a reason for patience, not a signal. Quiet days are normal for a rules based process.';
+const GOOD = 'The model reads the market regime as {{regime}}. Quiet days are normal for a rules based process.';
 
 // Calendar
 t('weekend is not a market day', !cal.isMarketDay('2026-10-24'));
@@ -64,7 +64,7 @@ t('unverified run is not called no change', !/QQQ LEAPS: No change/.test(d.text)
 
 // Forced violations hold commentary only
 const held = (raw) => assemble(facts(), 'daily', raw);
-let h = held('Confidence is {{confidence}} and the fund could reach 45% soon.');
+let h = held('The regime is {{regime}} and the fund could reach 45% soon.');
 t('digits in commentary are held', h.status_only && h.commentary === null && h.pass);
 h = held('Consider buying here because the regime is {{regime}}.');
 t('action words are held', h.status_only && h.commentary === null);
@@ -86,7 +86,7 @@ t('held issue still has instruction and status', h.text.startsWith('MODEL INSTRU
 
 // Number check on final text
 const f = facts();
-let text = T.renderDailyText(f, null).replace('704.83', '799.99');
+let text = T.renderDailyText(f, null).replace('WHAT TO WATCH', 'WHAT TO WATCH 799.99');
 let c = runChecks({ kind: 'daily', subject: 'TradeMind | No change | Oct 26', text, rawCommentary: null, facts: f });
 t('invented number is blocked', c.find((x) => x.name === 'number_match').pass === false);
 text = T.renderDailyText(f, null).replace('Keep your current model position.', 'Keep your position. Backtest total return 229%.');

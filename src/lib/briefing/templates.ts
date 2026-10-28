@@ -71,25 +71,16 @@ export function watchLines(f: FactsRun): string[] {
     const out: string[] = [];
     if (def?.run_verified) {
         for (const g of def.gates) out.push(`${g.name}: ${g.value}`);
-        if (def.confidence_pct !== null) out.push(`Model confidence: ${def.confidence_pct}%`);
-        if (def.qqq_close !== null) out.push(`QQQ close: ${def.qqq_close}`);
+        // Confidence percentage and QQQ close are withheld until the score definition and data rights are confirmed.
     }
     return out;
 }
 
-export const COMMENTARY_PLACEHOLDERS = ['regime', 'confidence', 'qqq_close', 'gates_passed', 'gates_total'] as const;
+export const COMMENTARY_PLACEHOLDERS = ['regime'] as const;
 
 export function placeholderValues(f: FactsRun): Record<string, string> {
     const def = f.strategies.find((s) => s.strategy === 'TQQQ_TURBOCORE_PRO');
-    const gates = def?.gates ?? [];
-    const passed = gates.filter((g) => g.value === 'passed' || g.value === 'positive' || /^BULL/.test(g.value)).length;
-    return {
-        regime: def?.regime ?? 'unknown',
-        confidence: def?.confidence_pct != null ? `${def.confidence_pct}%` : 'not available',
-        qqq_close: def?.qqq_close != null ? String(def.qqq_close) : 'not available',
-        gates_passed: String(passed),
-        gates_total: String(gates.length),
-    };
+    return { regime: def?.regime ?? 'unknown' };
 }
 
 export function fillPlaceholders(text: string, vals: Record<string, string>): string {

@@ -78,7 +78,7 @@ export default function ChoosePage() {
             {!me.paid && me.path !== 'free' && (
                 <section className="mt-8">
                     <h2 className="text-lg font-semibold">Monthly surveys</h2>
-                    <p className="mt-1 text-sm text-gray-300">Every month you pass adds 3 free months for one account at the end. Stay 2 months and pass both, and you have 2 months plus 6 months. You can leave at any time. A real attempt counts, and "I did not use it" is a valid answer.</p>
+                    <p className="mt-1 text-sm text-gray-300">To pass a month, send at least 3 pieces of feedback: suggestions, problems you hit in the app and questions all count. Each month you pass adds 3 free months for one account, worth about $90 on QQQ Defensive or $120 on QQQ LEAPS. Stay 2 months and pass both, and you have 2 months plus 6 months. You can leave at any time. A real attempt counts, and "I did not use it" is a valid answer.</p>
                     <ul className="mt-3 space-y-3 text-sm text-gray-300">
                         {me.activities!.map((a) => {
                             const open = !a.done && new Date() >= new Date(a.due);

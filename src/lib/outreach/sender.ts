@@ -24,6 +24,7 @@ import { renderSeq6, SEQ6_TEMPLATE, SEQ6_STEPS, SEQ6_DAYS, SEQ6_REINTRO_LABEL, S
 import { STAGE_BY_STEP, STEP_DAYS, PREVIEW_VARIANT, followupFooterText, followupHtml } from './followup';
 import { BASE_URL, CAMPAIGN, ensureOutreachTables, getSettings, setSetting } from './db';
 import { sendMail, transportKeyPresent, type Transport } from './transport';
+import { seq7Active, planSeq7, sendSeq7, isSeq7Row, seq7WindowOpen } from './seq7-live';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const ET = 'America/New_York';
@@ -67,7 +68,7 @@ export function isPreviewTriggered(token: string): boolean {
     return parseInt(createHash('sha256').update(`${token}:preview-trigger`).digest('hex').slice(0, 8), 16) % 2 === 0;
 }
 /** Business day in Eastern time (Monday to Friday, not a listed holiday). */
-function isBusinessDay(date: string, dow: number): boolean {
+export function isBusinessDay(date: string, dow: number): boolean {
     return dow >= 1 && dow <= 5 && !HOLIDAYS.has(date);
 }
 
@@ -169,7 +170,7 @@ function domainLimit(d: { cap_start: number | null; cap_step: number | null; cap
     return Math.max(0, Math.min(v, d.cap_max ? Number(d.cap_max) : v));
 }
 
-async function activeDomains(date: string): Promise<ActiveDomain[]> {
+export async function activeDomains(date: string): Promise<ActiveDomain[]> {
     await query(`UPDATE outreach_domains SET activated_on = $1::date WHERE status = 'active' AND activated_on IS NULL`, [date]);
     const r = await query(`SELECT domain, from_local, weight::float AS weight, cap_start, cap_step, cap_max, activated_on::text AS activated_on FROM outreach_domains WHERE status = 'active' ORDER BY domain`);
     return r.rows.map((x) => ({
@@ -209,6 +210,7 @@ export async function planToday(now = new Date()): Promise<PlanResult | null> {
     if (s.paused !== 'false') return null;
     const et = etParts(now);
     if (!s.start_date || et.date < s.start_date) return null;
+    if (seq7Active(s, now)) return (await planSeq7(now, s)) as unknown as PlanResult | null;
     if (!isSendDay(et.date, et.dow)) return null;
     if (et.hour < 5) return null;
 
@@ -557,6 +559,7 @@ async function sendAlert(subject: string, body: string): Promise<void> {
 async function sendOne(row: { id: number; token: string; step: number; domain: string }, s: Record<string, string>, fromLocal: string, transport: Transport): Promise<'sent' | 'skipped' | 'failed'> {
     const cr = await query(`SELECT token, email, first_name, template, wave, status, snooze_until, subscriber_email FROM outreach_contacts WHERE token = $1`, [row.token]);
     const c = cr.rows[0];
+    if (c && isSeq7Row(row.step)) return sendSeq7(row, s, c, fromLocal, transport);
     const skip = async (note: string) => { await query(`UPDATE outreach_queue SET state = 'skipped', note = $2 WHERE id = $1`, [row.id, note]); return 'skipped' as const; };
     if (!c) return skip('no contact');
     const isSeed = c.wave === 'seed';
@@ -750,9 +753,11 @@ export async function processDue(limit = 40, now = new Date()): Promise<Record<s
     );
     const counts = { sent: 0, skipped: 0, failed: 0, rerouted: 0 };
     const rows = due.rows as { id: number; token: string; step: number; domain: string }[];
+    // Seven-email sequence rows send only inside their window: retail 9:00 AM to 11:00 PM ET daily, advisers 9:00 AM to 6:00 PM ET weekdays.
+    for (let i = rows.length - 1; i >= 0; i--) { if (isSeq7Row(rows[i].step) && !(await seq7WindowOpen(rows[i], now))) rows.splice(i, 1); }
     // Paused domain: move to the active domain with the fewest pending rows.
     for (const r of rows) {
-        if (!active.includes(r.domain) && active.length) {
+        if (!active.includes(r.domain) && active.length && !isSeq7Row(r.step)) {
             const pick = active[randomInt(0, active.length)];
             await query(`UPDATE outreach_queue SET domain = $2 WHERE id = $1`, [r.id, pick]);
             r.domain = pick; counts.rerouted++;

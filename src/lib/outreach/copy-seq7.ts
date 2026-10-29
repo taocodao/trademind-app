@@ -42,24 +42,27 @@ export const SAMPLE_FACTS: IssueFacts = {
 export const STUDY_RULES = [
     '20 seats, and every application is read by hand',
     '4 months free, with a virtual account that follows the signals',
-    'A short survey at the end of each month, about 5 minutes',
-    'At least 3 pieces of feedback a month: suggestions, problems you hit in the app and questions all count',
-    'Every month you pass adds 3 free months for one account, worth about $90 on QQQ Defensive or $120 on QQQ LEAPS',
-    'Stay 2 months and pass both: 2 months plus 6 months. Stay all 4: 4 months plus 12',
-    'Leave at any time and keep the months you earned',
+    'Three notes a month: a suggestion, a problem you hit in the app, or a question',
+    'Each month you do adds 3 more free months on one account, up to a full year',
+    'Leave whenever you like and keep the months you earned',
     'No card, and nothing turns into a paid plan on its own',
 ];
 
 export const MEETING_URL = 'https://calendar.app.google/dKsXK6G3cV3ppbAo7';
-export const STUDY_BANNER = { title: 'Join the 4 month study program', text: '4 months free with a virtual account that follows the signals. To pass a month, send at least 3 pieces of feedback that month. Suggestions, problems you hit in the app and questions all count. Each month you pass is worth 3 free months for one account, about $90 on QQQ Defensive or $120 on QQQ LEAPS at standard monthly prices. Pass all four and it is worth up to $360 or $480. Stay 2 months and pass both, and you have 2 months plus 6 months. You can leave at any time.' };
+export const STUDY_COMPACT = '20 seats to help test TradeMind. Four months free with a virtual account, in exchange for three notes a month. Each month of notes earns three more free months.';
+export const STUDY_FULL = {
+    title: 'Help test the model, free',
+    body: [
+        'I\u2019m running a four month study with 20 QQQ investors. You get a virtual account that follows the signals, and I get your notes on what is unclear, missing or wrong.',
+        'The deal is simple. Send three notes a month: a suggestion, a problem you hit in the app, or a question. Send them in the monthly survey or by replying to any email. Each month you do, you earn three more free months on one account. Four months of notes earns a full year.',
+        'No card. Leave whenever you like and keep the months you have earned. Applications are read by hand.',
+    ],
+    value: 'At standard prices, each earned month is worth about $30 on QQQ Defensive or $40 on QQQ LEAPS.',
+};
 export const COOP = {
-    title: 'Ways we could work together',
-    items: [
-        ['Newsletter for professionals', 'A research edition written for advisers, with the model\u2019s reading, the rules behind it and the limits, for your own review or your client conversations.'],
-        ['Research on the model', 'Review the rules and the simulation, challenge the assumptions, or run your own tests. Critical feedback is welcome.'],
-        ['Custodian account implementation', 'A conversation about how published signals could be followed on a custodian account, with orders placed by your firm or custodian. This is only a possibility to discuss. TradeMind does not connect to any brokerage today and places no trades.'],
-        ['Something else', 'If you see another fit, tell me.'],
-    ] as [string, string][],
+    title: '30 minutes, your questions first',
+    intro: 'I will walk through the rules behind both strategies and the assumptions in the two year simulation, then you tell me what breaks. Critical feedback is the point of the call.',
+    more: 'If it is useful, there are two ways to keep going: a research edition written for advisers, with the model\u2019s reading, its rules and its limits, or a standing review of the model where you run your own tests. There is also a longer conversation to be had about how published signals could be followed on a custodian account, with orders placed by your firm. That is a possibility to discuss. TradeMind does not connect to any brokerage today and places no trades.',
 };
 
 export const SIM = { leaps: '+229.48%', leapsDd: '14.59%', qqq: '+49.46%', qqqDd: '22.88%', window: 'October 14, 2024 to October 13, 2026' };
@@ -75,19 +78,19 @@ interface Focus {
 
 export const FOCUS: Record<number, Focus> = {
     1: {
-        subject: 'A free weekly QQQ brief, risk first',
+        subject: 'One brief a week on QQQ, risk first',
         pre: 'Four parts, about five minutes, the same order every week. This week\u2019s issue is at the bottom.',
         pill: 'The weekly brief', title: 'One brief a week, built around risk',
         body: [
-            'I publish a free weekly brief for investors who hold QQQ or think about it. It reads the market with an AI model and fixed rules, then explains what the model sees in plain English.',
+            'If you hold QQQ, or keep almost deciding to, this is one brief a week on what the model sees and what could go wrong. An AI model and a fixed set of rules read the market, and the brief explains what they saw in plain English, risk first.',
             'Every issue has the same four parts: Market weather, Copilot readout, Flight plan and Turbulence test. This week\u2019s issue is below, so you can judge it before you decide anything.',
         ],
         why: 'A loss you planned for is easier to live with than one you did not. Each issue names the risk before it names the idea.',
-        example: '\u201cThe model reads BULL and its trend reading did not change this week. Here is what would change it.\u201d',
+        example: '\u201cThis week the model reads BULL, which means uptrend, and its reading did not change. The issue below shows what would change it.\u201d',
         primary: { label: 'Subscribe to the free weekly', kind: 'sw' }, secondary: { label: 'Prefer it daily', kind: 'sd' },
     },
     2: {
-        subject: 'The math of getting back to even',
+        subject: 'Lose 20%, need 25% to get back',
         pre: 'A 50% loss needs a 100% gain to recover. That one fact shapes everything we publish.',
         pill: 'Risk first', title: 'Why we limit declines before chasing gains',
         body: [
@@ -99,11 +102,11 @@ export const FOCUS: Record<number, Focus> = {
         primary: { label: 'See the full simulation', kind: 'v' }, secondary: { label: 'Subscribe to the free weekly', kind: 'sw' },
     },
     3: {
-        subject: 'Two QQQ strategies, with the rules written out',
+        subject: 'Two QQQ strategies, rules written out',
         pre: 'One uses a long-dated QQQ option. One moves among four ETFs. Both publish their rules first.',
         pill: 'The strategies', title: 'QQQ LEAPS and QQQ Defensive',
         body: [
-            'QQQ LEAPS owns a long-dated QQQ call option, which magnifies QQQ\u2019s moves, and sells shorter covered calls against it to collect premium. The most the long option can lose is what was paid for it. It needs options permission at your broker.',
+            'QQQ LEAPS owns a long-dated QQQ call option, which magnifies QQQ\u2019s moves, and sells shorter covered calls against it to collect premium. The most the long option can lose is the full amount paid for it. It needs options permission at your broker.',
             'QQQ Defensive moves among QQQ, QLD, TQQQ and SGOV, including leveraged ETFs, and is built to keep its declines shallow. Each account picks a conservative, moderate or aggressive risk level. It needs no options permission.',
         ],
         why: 'A strategy is only useful if you know its rules before you start, including when it does nothing.',
@@ -114,7 +117,7 @@ export const FOCUS: Record<number, Focus> = {
         pre: 'Hourly prices, volatility and a few market gauges in. A score that helps set exposure out.',
         pill: 'The AI model', title: 'The model in plain English',
         body: [
-            'The Defensive model reads hourly prices for QQQ, QLD, TQQQ, SGOV and HYG, plus several VIX volatility measures. It was trained on whether a moving average crossover signal would have paid off within about a month. Its output is an allocation score that helps set how much exposure each risk level holds.',
+            'The Defensive model reads hourly prices for QQQ, QLD, TQQQ and SGOV, a high-yield bond fund, and several measures of market volatility. It was trained on one question: when a simple trend signal fired, did the market reward it within about a month? Its output is an allocation score that helps set how much exposure each risk level holds.',
             'It does not predict prices, it is not a probability of profit, and it never trades. The rules around it are fixed and published, and it runs once each market day.',
         ],
         why: 'An AI model is only trustworthy if you can see what goes in, what comes out and what it is not allowed to do.',
@@ -122,17 +125,17 @@ export const FOCUS: Record<number, Focus> = {
         primary: { label: 'See a sample daily briefing', kind: 'x' }, secondary: { label: 'Subscribe to the free daily', kind: 'sd' },
     },
     5: {
-        subject: 'Would you have kept following this?',
-        pre: 'Almost 11 months with no positions in a QQQ simulation. One click to answer.',
+        subject: 'The flat stretch at the start',
+        pre: 'Almost 11 months with no positions in a QQQ simulation. Would you have stayed?',
         pill: 'The waiting test', title: 'The flat stretch at the start',
         body: [
-            'After one early SMH loss, the simulation held no positions until September 2, 2025, when its QQQ LEAPS entry conditions first passed. On the day it entered, it was down about 5% and QQQ buy and hold was up about 14%.',
+            'After one early SMH loss, the simulation held no positions until September 2, 2025, when its QQQ LEAPS entry conditions first passed. On the day it finally entered, the simulated account was down about 5% while QQQ buy and hold was up about 14%. Ten months of looking wrong.',
         ],
-        why: 'Rules that wait can look broken for months. Knowing whether you would wait matters more than any single number.',
+        why: 'Rules that wait can look broken for months. The study exists for this. A virtual account shows you, month by month, whether you would keep following rules that look broken.',
         primary: { label: '', kind: '' },
     },
     6: {
-        subject: 'See the virtual accounts, losses included',
+        subject: 'Two virtual accounts, losses included',
         pre: 'Two virtual accounts follow the published signals. Every trade and every drop is shown.',
         pill: 'Check our work', title: 'The virtual accounts in the app',
         body: [
@@ -140,7 +143,7 @@ export const FOCUS: Record<number, Focus> = {
             'They are virtual accounts, not brokerage accounts, and the record is short. Losing stretches are shown as they happened.',
         ],
         why: 'A simulation shows what the rules would have done. The virtual accounts show what the published signals are doing now.',
-        primary: { label: 'Open the virtual accounts', kind: 'va' }, secondary: { label: 'Open the verification kit', kind: 'vf' },
+        primary: { label: 'Open the virtual accounts', kind: 'va' }, secondary: { label: 'See how to check the numbers yourself', kind: 'vf' },
     },
     7: {
         subject: '20 seats to help test TradeMind',
@@ -149,7 +152,7 @@ export const FOCUS: Record<number, Focus> = {
         body: [
             'I am running a small study with QQQ investors. Members follow the signals with a virtual account and tell me what is unclear, what is missing and what they would change.',
         ],
-        why: 'The people who use the briefings shape what goes into them.',
+        why: 'You would be one of 20 people deciding what the briefings explain next, what the app fixes first, and what gets cut.',
         primary: { label: 'Apply to the study program', kind: 'f' }, secondary: { label: 'Subscribe to the free weekly', kind: 'sw' },
     },
 };
@@ -208,7 +211,7 @@ export function locked(label: string, url: string, cta: string): string {
     return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:10px 0 4px;background:${C.lock};border:1px dashed #3a4a70;border-radius:10px;"><tr><td style="padding:14px 16px;${F}"><div style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:${C.amber};padding-bottom:6px;">Plan members only</div><div style="font-size:14px;line-height:1.6;color:${C.body};padding-bottom:12px;">${esc(label)}</div>${btn(url, cta, 'outline')}</td></tr></table>`;
 }
 
-function weeklyIssue(o: Seq7Opts, url: (k: string, x?: string) => string): string {
+function weeklyIssue(o: Seq7Opts, url: (k: string, x?: string) => string, full: boolean): string {
     const f = o.facts ?? SAMPLE_FACTS;
     const chips = [['\u2601\uFE0F','Market weather'], ['\u{1F9ED}','Copilot readout'], ['\u2708\uFE0F','Flight plan'], ['\u26A0\uFE0F','Turbulence test']].map(([i, c]) => `<td style="padding:0 6px 6px 0;"><span style="display:inline-block;${F}font-size:12px;font-weight:700;color:${C.fg};border:1px solid ${C.line};border-radius:8px;padding:7px 10px;background:${C.card};">${i}&nbsp;${c}</span></td>`).join('');
     const trend = f.trend ? `QQQ is ${f.trend} its 200 day average${f.trendChanged ? ', changed since the last reading.' : ', unchanged since the last reading.'}` : 'Not included this week.';
@@ -222,16 +225,31 @@ function weeklyIssue(o: Seq7Opts, url: (k: string, x?: string) => string): strin
         card(`${pill('\u26A0\uFE0F Turbulence test')}<div style="height:10px;"></div><div style="font-size:17px;font-weight:800;color:${C.fg};padding-bottom:8px;">What could go wrong</div>${P('QLD and TQQQ aim for a multiple of one day of QQQ movement. Over longer periods the result can differ from that multiple, and declines can be deep. LEAPS values in a simulation are model-priced, and live quotes, spreads and fills can differ.', 14)}`),
     ];
     return row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid ${C.line};padding-top:22px;${F}"><div style="font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:${C.blue};">This week\u2019s free issue${f.sample ? ' (sample)' : ''}</div><div style="font-size:24px;font-weight:800;color:${C.fg};padding:6px 0 4px;">Flight Plan: <span style="color:${C.blue};">${esc(f.weekLabel)}</span></div><div style="font-size:13px;color:${C.muted};padding-bottom:12px;">About 5 minutes. Four parts, in the same order every week.</div><table role="presentation" cellpadding="0" cellspacing="0"><tr>${chips}</tr></table></td></tr></table>`) + sp(10)
-        + parts.join('')
-        + card(`<div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.blue};padding-bottom:10px;">The two year simulation</div>${simTiles()}<div style="height:14px;"></div>${btnPair(url('va'), 'See the virtual accounts', url('v'), 'Simulation details')}`);
+        + (full ? parts.join('') : parts[0] + row(`<div style="${F}font-size:14px;padding:2px 4px 14px;">${tl(url('i'), 'Read this week\u2019s full issue')}</div>`))
+        + card(`<div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.blue};padding-bottom:10px;">The two year simulation</div>${simTiles()}<div style="height:12px;"></div><div style="${F}font-size:14px;line-height:1.8;">${tl(url('va'), 'See the virtual accounts')}&nbsp;&nbsp;${tl(url('v'), 'Simulation details')}</div>`);
 }
 
-function studyBanner(url: (k: string, x?: string) => string): string {
-    return card(`<div style="${F}font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.blue};padding-bottom:6px;">\u{1F393}&nbsp;Study program</div><div style="${F}font-size:18px;font-weight:800;color:${C.fg};padding-bottom:8px;">${esc(STUDY_BANNER.title)}</div>${P(STUDY_BANNER.text, 14)}${btn(url('f'), 'Apply to the study program')}`, C.blue);
+type UrlFn = (k: string, x?: string) => string;
+const tl = (u: string, label: string, color = C.blue) => `<a href="${esc(u)}" style="color:${color};text-decoration:underline;font-weight:600;">${esc(label)} &rsaquo;</a>`;
+const SECOND: Record<number, [string, string][]> = {
+    1: [],
+    2: [['v', 'See the simulation details']],
+    3: [['st', 'Read the rules for both strategies'], ['sw', 'Subscribe free']],
+    4: [['x', 'See a sample daily briefing']],
+    5: [['sw', 'Subscribe free']],
+    6: [['va', 'Open the virtual accounts']],
+    7: [['sw', 'Subscribe free']],
+};
+const STUDY_LEAD = new Set([3, 5, 7]);
+
+function studyCompact(url: UrlFn): string {
+    return row(`<div style="${F}font-size:14px;line-height:1.55;color:${C.body};padding:2px 4px 14px;">${esc(STUDY_COMPACT)} ${tl(url('f'), 'Learn more')}</div>`);
 }
-function coopCard(url: (k: string, x?: string) => string): string {
-    const items = COOP.items.map(([t, d]) => `<tr><td style="padding:8px 0;border-top:1px solid ${C.line};${F}font-size:14px;line-height:1.55;color:${C.body};"><strong style="color:${C.fg};">${esc(t)}.</strong> ${esc(d)}</td></tr>`).join('');
-    return card(`<div style="${F}font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.green};padding-bottom:6px;">\u{1F91D}&nbsp;For professionals</div><div style="${F}font-size:18px;font-weight:800;color:${C.fg};padding-bottom:8px;">${esc(COOP.title)}</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${items}</table><div style="height:12px;"></div>${btn(url('mt'), 'Schedule a meeting')}`, C.green);
+function studyFull(url: UrlFn): string {
+    return card(`<div style="${F}font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.blue};padding-bottom:6px;">\u{1F393}&nbsp;Study program</div><div style="${F}font-size:20px;font-weight:800;color:${C.fg};padding-bottom:8px;">${esc(STUDY_FULL.title)}</div>${STUDY_FULL.body.map((x) => P(x, 14)).join('')}${btn(url('f'), 'Apply to the study program')}<div style="height:10px;"></div>${P(STUDY_FULL.value, 12, C.muted)}`, C.blue);
+}
+function coopCard(url: UrlFn): string {
+    return card(`<div style="${F}font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.green};padding-bottom:6px;">\u{1F91D}&nbsp;For advisers</div><div style="${F}font-size:20px;font-weight:800;color:${C.fg};padding-bottom:8px;">${esc(COOP.title)}</div>${P(COOP.intro, 14)}${P(COOP.more, 14)}`, C.green);
 }
 
 export function renderSeq7(o: Seq7Opts): { subject: string; text: string; html: string; unsubUrl: string; n: number } {
@@ -246,35 +264,30 @@ export function renderSeq7(o: Seq7Opts): { subject: string; text: string; html: 
     let extra = '';
     if (n === 2) extra = recoveryTable();
     if (n === 5) extra = `<p style="margin:0 0 6px;"><img src="${esc(WS_IMG)}" alt="${esc(WS_ALT)}" width="520" style="display:block;width:100%;max-width:520px;height:auto;border-radius:8px;border:0;"></p><p style="margin:0 0 12px;${F}font-size:12px;color:${C.muted};">${esc(WS_CAP)}</p>`;
-    if (n === 7) extra = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px;">${STUDY_RULES.map((r) => `<tr><td style="padding:4px 0;${F}font-size:14px;line-height:1.5;color:${C.body};"><span style="color:${C.green};font-weight:800;">&#10003;</span>&nbsp; ${esc(r)}</td></tr>`).join('')}</table>`;
     const focusCard = card(`${pill((FOCUS_ICON[n] ?? '') + ' ' + f.pill)}<div style="height:10px;"></div><div style="${F}font-size:20px;font-weight:800;color:${C.fg};line-height:1.3;padding-bottom:10px;">${esc(f.title)}</div>${f.body.map((b) => P(b)).join('')}${extra}${why(f.why)}${f.example ? example(f.example) : ''}`, C.green);
 
-    // Response block, different in each email
-    let response: string;
-    if (n === 5) {
-        const opts: [string, string][] = [['qa', 'A. Yes, I would have waited'], ['qb', 'B. I would want a clearer explanation first'], ['qc', 'C. I would have walked away']];
-        response = row(`<div style="${F}font-size:16px;font-weight:800;color:${C.fg};padding-bottom:10px;">Would you have kept following it?</div>`) + opts.map(([k, l]) => row(btn(url(k), l, 'outline', true)) + sp(8)).join('') + row(P('There is no right answer. Each choice is one click, then one short question on our site.', 13, C.muted));
-    } else {
-        const sec = f.secondary && !(n !== 1 && ['sw', 'sd'].includes(f.secondary.kind)) ? f.secondary : undefined;
-        response = row(sec ? btnPair(url(f.primary.kind), f.primary.label, url(sec.kind), sec.label) : btn(url(f.primary.kind), f.primary.label));
-    }
-
-    // Subscribe chooser (all emails except the first, where it is the main response)
-    const chooser = n === 1 ? '' : card(`<div style="${F}font-size:16px;font-weight:800;color:${C.fg};padding-bottom:6px;">Get the brief in your inbox</div>${P('Free. Choose weekly or daily, and change or stop any time.', 14, C.muted)}${btnPair(url('sw'), 'Free weekly', url('sd'), 'Free daily')}`);
-
-    const links = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td width="50%" style="padding:4px;">${btn(url('pl'), 'Plans and pricing', 'outline', true)}</td><td width="50%" style="padding:4px;">${btn(url('f'), 'Study program', 'outline', true)}</td></tr><tr><td width="50%" style="padding:4px;">${btn(url('va'), 'Virtual accounts', 'outline', true)}</td><td width="50%" style="padding:4px;">${btn(url('h'), 'trademind.bot', 'outline', true)}</td></tr></table>`;
+    const ria = o.audience === 'ria';
+    const studyLead = STUDY_LEAD.has(n) && !ria;
+    // One primary action per email. Everything else is a quiet text link.
+    const primary: [string, string] = ria ? ['mt', 'Book 30 minutes'] : studyLead ? ['f', 'Apply to the study program'] : ['sw', 'Subscribe free'];
+    const seconds = (SECOND[n] ?? []).filter(([k]) => k !== primary[0] && !(ria && k === 'f'));
+    if (ria && !seconds.some(([k]) => k === 'sw')) seconds.push(['sw', 'Subscribe free']);
+    const secondaryRow = (links: [string, string][]) => links.length ? row(`<div style="${F}font-size:14px;line-height:1.9;padding:4px 4px 14px;">${links.map(([k, l]) => tl(url(k), l)).join('&nbsp;&nbsp;&nbsp;')}</div>`) : '';
+    const pollRow = n === 5 ? row(`<div style="${F}font-size:15px;font-weight:800;color:${C.fg};padding:2px 4px 6px;">Would you have kept following it?</div><div style="${F}font-size:14px;line-height:1.9;padding:0 4px 4px;">${[['qa', 'A. Yes, I would have waited'], ['qb', 'B. I would want a clearer explanation first'], ['qc', 'C. I would have walked away']].map(([k, l]) => tl(url(k), l)).join('<br>')}</div><div style="${F}font-size:12px;line-height:1.5;color:${C.muted};padding:4px 4px 14px;">There is no right answer. If you picked C, you are exactly who should test this for free.</div>`) : '';
+    const primaryRow = row(btn(url(primary[0]), primary[1])) + (primary[0] === 'sw' ? row(P('Weekly by default. Switch to daily any time.', 13, C.muted)) : '');
 
     const H: string[] = [];
     H.push(row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="${F}font-size:18px;font-weight:800;color:${C.fg};"><a href="${esc(url('h'))}" style="color:${C.fg};text-decoration:none;">TradeMind<span style="color:${C.blue};">.bot</span></a></td><td align="right">${pill('Free research', C.blue, '#121a2e')}</td></tr></table>`) + sp(18));
     H.push(row(`<div style="${F}font-size:26px;font-weight:800;line-height:1.25;color:${C.fg};">${esc(THEME.split('.')[0])}. <span style="color:${C.blue};">${esc(THEME.split('.').slice(1).join('.').trim())}</span></div><div style="${F}font-size:13px;color:${C.muted};padding-top:6px;">${esc(THEME_SUB)}</div>`) + sp(20));
     H.push(row(P(hi, 16, C.fg)));
-    H.push(studyBanner(url));
-    H.push(focusCard);
-    if (o.audience === 'ria') H.push(coopCard(url));
-    H.push(response + sp(18));
-    H.push(chooser);
-    H.push(weeklyIssue(o, url));
-    H.push(row(`<div style="${F}font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.muted};padding:4px 4px 8px;">Explore</div>${links}`) + sp(16));
+    if (ria) H.push(studyCompact(url));
+    if (ria) H.push(focusCard + coopCard(url));
+    else if (studyLead) H.push(focusCard + studyFull(url));
+    else H.push(focusCard);
+    H.push(primaryRow);
+    H.push(pollRow + secondaryRow(seconds));
+    if (!ria && !studyLead) H.push(studyCompact(url));
+    H.push(weeklyIssue(o, url, n === 1));
     H.push(row(P(DISCOUNT + ' ' + NOBROKER, 13, C.muted)));
     H.push(row(P('Reply to this email or write to me at eric@trademind.bot.', 14, C.body)));
     H.push(row(`<p style="margin:0 0 2px;${F}font-size:15px;color:${C.fg};font-weight:700;">Eric Huang</p><p style="margin:0 0 20px;${F}font-size:13px;color:${C.muted};">Founder, TradeMind &middot; Queens, New York</p>`));
@@ -284,14 +297,20 @@ export function renderSeq7(o: Seq7Opts): { subject: string; text: string; html: 
 
     // Plain text
     const facts = o.facts ?? SAMPLE_FACTS;
-    const T: string[] = [hi, '', `STUDY PROGRAM: ${STUDY_BANNER.title}. ${STUDY_BANNER.text}`, `Apply: ${url('f')}`, '', f.title.toUpperCase(), ...f.body, ''];
-    if (o.audience === 'ria') T.push(COOP.title.toUpperCase(), ...COOP.items.map(([t, d]) => `- ${t}. ${d}`), `Schedule a meeting: ${url('mt')}`, '');
+    const T: string[] = [hi, ''];
+    if (ria) T.push(`${STUDY_COMPACT} Learn more: ${url('f')}`, '');
+    T.push(f.title.toUpperCase(), ...f.body, '');
     if (n === 2) T.push('Decline 20%: gain needed 25%', 'Decline 33%: gain needed 50%', 'Decline 50%: gain needed 100%', '');
-    if (n === 7) T.push(...STUDY_RULES.map((r) => `- ${r}`), '');
     T.push(`Why it matters: ${f.why}`, '');
+    if (ria) T.push(COOP.title.toUpperCase(), COOP.intro, COOP.more, '');
+    if (studyLead) T.push(STUDY_FULL.title.toUpperCase(), ...STUDY_FULL.body, STUDY_FULL.value, '');
+    T.push(`${primary[1]}: ${url(primary[0])}`);
+    if (primary[0] === 'sw') T.push('Weekly by default. Switch to daily any time.');
+    T.push('');
     if (n === 5) T.push('Would you have kept following it?', `A. Yes, I would have waited: ${url('qa')}`, `B. I would want a clearer explanation first: ${url('qb')}`, `C. I would have walked away: ${url('qc')}`, '');
-    else { T.push(`${f.primary.label}: ${url(f.primary.kind)}`); if (f.secondary) T.push(`${f.secondary.label}: ${url(f.secondary.kind)}`); T.push(''); }
-    if (n !== 1) T.push(`Free weekly: ${url('sw')}`, `Free daily: ${url('sd')}`, '');
+    for (const [k, l] of seconds) T.push(`${l}: ${url(k)}`);
+    if (seconds.length) T.push('');
+    if (!ria && !studyLead) T.push(`${STUDY_COMPACT} Learn more: ${url('f')}`, '');
     T.push(`THIS WEEK'S FREE ISSUE${facts.sample ? ' (SAMPLE)' : ''}: ${facts.weekLabel}`,
         `Market weather: regime ${facts.regime}. ${facts.trend ? `QQQ is ${facts.trend} its 200 day average.` : ''}`,
         o.strategyMember ? `Copilot readout: ${facts.defensive.map((d) => `${d.level} ${d.text}`).join('; ')}. QQQ LEAPS: ${facts.leaps}` : `Copilot readout: the allocation for each risk level goes to plan members. Subscribe to a strategy: ${url('pl')}`,

@@ -72,8 +72,8 @@ export function renderDaily(o: DailyOpts): { subject: string; text: string; html
         : f.status === 'CHANGE' ? `The Defensive model reads ${f.regime}, and at least one strategy published a change today.`
         : `The Defensive model reads ${f.regime}${f.trend ? f.trendChanged ? ' and its trend reading changed.' : ' and its trend reading did not change.' : ', with no change published today.'}`;
     const subject = failed ? 'Daily brief: no new instruction today'
-        : a ? `Your daily brief: ${f.status === 'CHANGE' ? 'a change was published' : 'no change today'}`
-        : `Daily brief: ${f.regime}${f.status === 'NO_CHANGE' ? ', no change' : ', a change was published'}`;
+        : a ? `Your ${a.strategy} account: ${f.status === 'CHANGE' ? 'a change was published' : 'no change today'}`
+        : f.status === 'NO_CHANGE' ? 'Daily: no change, and why' : 'Daily: a change was published, and why';
 
     const chipDefs: Array<[string, string, string, string]> = [
         [ICON.weather, 'Market weather', vaUrl, 'See the live record'],
@@ -87,7 +87,7 @@ export function renderDaily(o: DailyOpts): { subject: string; text: string; html
     const acctCard = a ? card(`${pill(ICON.acct + ' Your account', C.blue, '#121a2e')}${gap}${title(a.strategy)}<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${statusLine(a.label, myStatus, failed ? C.amber : C.green)}</table><div style="height:12px;"></div>${btn(acctUrl, 'Open your virtual account')}`, C.blue) : '';
 
     const readout = a
-        ? P(`Your account follows ${a.strategy}. Today\u2019s status for that strategy is above. Open your account to see the full published instruction.`, 14)
+        ? P(`Your account follows ${a.strategy}. Today\u2019s published status for it: ${myStatus} Open your account to see the full instruction.`, 14)
         : `${P('The model publishes a status for each strategy every day. It is research, not an instruction for your account.', 14)}${locked('Today\u2019s QQQ Defensive and QQQ LEAPS statuses go to readers with a plan for that strategy. Each plan covers one brokerage account.', plansUrl, 'Subscribe to a strategy')}`;
 
     const weatherRows = `${statusLine('Defensive model regime', f.regime)}${trend ? statusLine('Trend reading', trend) : ''}`;

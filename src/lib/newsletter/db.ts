@@ -336,9 +336,9 @@ export type SignupOutcome =
 
 // ---------- tokens ----------
 
-async function issueToken(subscriberId: number, purpose: string, targetEmail?: string): Promise<string> {
+async function issueToken(subscriberId: number, purpose: string, targetEmail?: string, ttlDays = TOKEN_TTL_DAYS): Promise<string> {
     const { raw, hash } = newToken();
-    const expires = new Date(Date.now() + TOKEN_TTL_DAYS * 864e5);
+    const expires = new Date(Date.now() + ttlDays * 864e5);
     await query(
         `INSERT INTO newsletter_tokens (token_hash, subscriber_id, purpose, target_email, expires_at)
          VALUES ($1, $2, $3, $4, $5)`,
@@ -919,6 +919,11 @@ export async function makeCancelToken(subscriberId: number): Promise<string> {
 
 export async function makeUnsubscribeToken(subscriberId: number): Promise<string> {
     return issueToken(subscriberId, 'unsubscribe');
+}
+
+/** Unsubscribe token for the daily brief: valid a year, so the link in an older email still works. */
+export async function makeLongUnsubscribeToken(subscriberId: number): Promise<string> {
+    return issueToken(subscriberId, 'unsubscribe', undefined, 365);
 }
 
 export async function unsubscribeByToken(raw: string): Promise<'done' | 'already' | 'not-found'> {

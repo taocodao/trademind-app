@@ -23,13 +23,13 @@ export function readDailyLinkToken(tok: string): number | null {
 export const DAILY_KINDS = ['acct', 'va', 'sim', 'pl', 'wk', 'h'] as const;
 export type DailyKind = typeof DAILY_KINDS[number];
 
-export function dailyDestination(kind: DailyKind, accountId: number | null, utm: string): string {
+export function dailyDestination(kind: DailyKind, accountId: number | null, utm: string, tok = ''): string {
     switch (kind) {
         case 'acct': return accountId ? `/account/${accountId}?${utm}` : `/accounts?${utm}`;
         case 'va': return `/live-record?${utm}`;
         case 'sim': return `/simulated-record?${utm}`;
         case 'pl': return `/plans?${utm}`;
-        case 'wk': return `/newsletter/join?cadence=weekly&${utm}`;
+        case 'wk': return `/newsletter/preferences?k=${encodeURIComponent(tok)}&${utm}`;
         default: return `/?${utm}`;
     }
 }

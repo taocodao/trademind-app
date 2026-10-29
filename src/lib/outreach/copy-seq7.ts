@@ -154,7 +154,13 @@ export const C = { bg: '#0b0f17', card: '#121826', line: '#232c3d', fg: '#f3f5f9
 
 export const sp = (h: number) => `<tr><td style="height:${h}px;line-height:${h}px;font-size:0;">&nbsp;</td></tr>`;
 export const row = (inner: string) => `<tr><td style="${F}">${inner}</td></tr>`;
-export const pill = (t: string, color = C.green, bg = C.greenBg) => `<span style="display:inline-block;${F}font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${color};background:${bg};border:1px solid ${color};border-radius:20px;padding:4px 10px;">${esc(t)}</span>`;
+export const pill = (t: string, color = C.green, bg = C.greenBg) => {
+    // A leading emoji is shown larger than the label so it stays visible.
+    const m = /^(\P{ASCII}+?)\s+(.*)$/u.exec(t);
+    const icon = m ? `<span style="font-size:18px;line-height:1;letter-spacing:0;vertical-align:middle;">${m[1]}</span>&nbsp;&nbsp;` : '';
+    const label = m ? m[2] : t;
+    return `<span style="display:inline-block;${F}font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${color};background:${bg};border:1px solid ${color};border-radius:20px;padding:${m ? '3px 12px 3px 8px' : '4px 10px'};">${icon}<span style="vertical-align:middle;">${esc(label)}</span></span>`;
+};
 export const P = (t: string, size = 15, color = C.body, extra = '') => `<p style="margin:0 0 12px;${F}font-size:${size}px;line-height:1.65;color:${color};${extra}">${esc(t)}</p>`;
 
 export function btn(url: string, label: string, kind: 'primary' | 'outline' = 'primary', full = false): string {

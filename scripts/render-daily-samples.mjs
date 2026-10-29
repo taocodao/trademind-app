@@ -11,7 +11,7 @@ const base = { linkToken: '1.SAMPLEsampleSAMPLEsamp', unsubscribeUrl: 'https://t
 const cases = [
     ['no-account', null],
     ['defensive-account', SAMPLE_ACCOUNT],
-    ['leaps-account', { label: 'Brokerage account', strategy: 'QQQ LEAPS', status: 'Position held. The next review follows the LEAPS schedule.' }],
+    ['leaps-account', { label: 'Brokerage account', strategy: 'QQQ LEAPS' }],
 ];
 fs.mkdirSync(path.join(root, 'out'), { recursive: true });
 let bad = 0;

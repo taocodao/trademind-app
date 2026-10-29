@@ -47,10 +47,10 @@ export const STUDY_RULES = [
     'You never need to trade, deposit money, write a review or refer anyone',
 ];
 
-const SIM = { leaps: '+229.48%', leapsDd: '14.59%', qqq: '+49.46%', qqqDd: '22.88%', window: 'October 14, 2024 to October 13, 2026' };
-const LIMITS = 'Hypothetical results from a simulation, not a real account. Options were model-priced, the rules were developed with hindsight, and this was one favorable period for QQQ and semiconductors.';
-const NOBROKER = 'You keep your own brokerage account and place every order yourself. TradeMind never connects to a broker and never places trades.';
-const DISCOUNT = 'Free subscribers get 30% off any TradeMind strategy plan.';
+export const SIM = { leaps: '+229.48%', leapsDd: '14.59%', qqq: '+49.46%', qqqDd: '22.88%', window: 'October 14, 2024 to October 13, 2026' };
+export const LIMITS = 'Hypothetical results from a simulation, not a real account. Options were model-priced, the rules were developed with hindsight, and this was one favorable period for QQQ and semiconductors.';
+export const NOBROKER = 'You keep your own brokerage account and place every order yourself. TradeMind never connects to a broker and never places trades.';
+export const DISCOUNT = 'Free subscribers get 30% off any TradeMind strategy plan.';
 
 interface Focus {
     subject: string; pre: string; pill: string; title: string; body: string[];
@@ -58,7 +58,7 @@ interface Focus {
     primary: { label: string; kind: string }; secondary?: { label: string; kind: string };
 }
 
-const FOCUS: Record<number, Focus> = {
+export const FOCUS: Record<number, Focus> = {
     1: {
         subject: 'A free weekly QQQ brief, risk first',
         pre: 'Four parts, about five minutes, the same order every week. This week\u2019s issue is at the bottom.',
@@ -139,6 +139,8 @@ const FOCUS: Record<number, Focus> = {
     },
 };
 
+const FOCUS_ICON: Record<number, string> = { 1: '\u{1F4EC}', 2: '\u{1F4C9}', 3: '\u{1F9ED}', 4: '\u{1F916}', 5: '\u23F3', 6: '\u{1F50E}', 7: '\u{1FA91}' };
+
 export interface Seq7Opts {
     token: string; firstName: string | null; baseUrl: string; mailingAddress: string;
     step: number; n?: number; facts?: IssueFacts;
@@ -146,27 +148,27 @@ export interface Seq7Opts {
     strategyMember?: boolean;
 }
 
-const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const F = "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;";
-const C = { bg: '#0b0f17', card: '#121826', line: '#232c3d', fg: '#f3f5f9', body: '#d5dae3', muted: '#9aa4b5', blue: '#7aa2ff', btn: '#2f6bff', green: '#34d399', greenBg: '#0f2a22', amber: '#f2c14e', lock: '#1a2133' };
+export const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+export const F = "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;";
+export const C = { bg: '#0b0f17', card: '#121826', line: '#232c3d', fg: '#f3f5f9', body: '#d5dae3', muted: '#9aa4b5', blue: '#7aa2ff', btn: '#2f6bff', green: '#34d399', greenBg: '#0f2a22', amber: '#f2c14e', lock: '#1a2133' };
 
-const sp = (h: number) => `<tr><td style="height:${h}px;line-height:${h}px;font-size:0;">&nbsp;</td></tr>`;
-const row = (inner: string) => `<tr><td style="${F}">${inner}</td></tr>`;
-const pill = (t: string, color = C.green, bg = C.greenBg) => `<span style="display:inline-block;${F}font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${color};background:${bg};border:1px solid ${color};border-radius:20px;padding:4px 10px;">${esc(t)}</span>`;
-const P = (t: string, size = 15, color = C.body, extra = '') => `<p style="margin:0 0 12px;${F}font-size:${size}px;line-height:1.65;color:${color};${extra}">${esc(t)}</p>`;
+export const sp = (h: number) => `<tr><td style="height:${h}px;line-height:${h}px;font-size:0;">&nbsp;</td></tr>`;
+export const row = (inner: string) => `<tr><td style="${F}">${inner}</td></tr>`;
+export const pill = (t: string, color = C.green, bg = C.greenBg) => `<span style="display:inline-block;${F}font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${color};background:${bg};border:1px solid ${color};border-radius:20px;padding:4px 10px;">${esc(t)}</span>`;
+export const P = (t: string, size = 15, color = C.body, extra = '') => `<p style="margin:0 0 12px;${F}font-size:${size}px;line-height:1.65;color:${color};${extra}">${esc(t)}</p>`;
 
-function btn(url: string, label: string, kind: 'primary' | 'outline' = 'primary', full = false): string {
+export function btn(url: string, label: string, kind: 'primary' | 'outline' = 'primary', full = false): string {
     const prim = kind === 'primary';
     return `<table role="presentation" cellpadding="0" cellspacing="0" ${full ? 'width="100%"' : ''} style="border-collapse:separate;"><tr><td align="center" bgcolor="${prim ? C.btn : C.card}" style="border-radius:10px;background:${prim ? C.btn : C.card};border:1px solid ${prim ? C.btn : '#3a4a70'};"><a href="${esc(url)}" style="display:block;padding:${prim ? '14px 26px' : '12px 18px'};${F}font-size:${prim ? 16 : 14}px;font-weight:800;color:${prim ? '#ffffff' : C.blue};text-decoration:none;line-height:1.2;">${esc(label)}</a></td></tr></table>`;
 }
-function btnPair(a: string, al: string, b: string, bl: string): string {
+export function btnPair(a: string, al: string, b: string, bl: string): string {
     return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td width="50%" style="padding-right:5px;" valign="top">${btn(a, al, 'primary', true)}</td><td width="50%" style="padding-left:5px;" valign="top">${btn(b, bl, 'outline', true)}</td></tr></table>`;
 }
-function card(inner: string, accent?: string): string {
+export function card(inner: string, accent?: string): string {
     return row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.card};border:1px solid ${C.line};${accent ? `border-top:3px solid ${accent};` : ''}border-radius:12px;"><tr><td style="padding:18px 20px;${F}">${inner}</td></tr></table>`) + sp(14);
 }
-function why(t: string): string { return `<p style="margin:4px 0 12px;${F}font-size:14px;line-height:1.6;color:${C.muted};"><strong style="color:${C.fg};">Why it matters:</strong> ${esc(t)}</p>`; }
-function example(t: string): string { return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-left:3px solid ${C.blue};padding:2px 0 2px 12px;${F}font-size:14px;line-height:1.6;color:${C.body};">Example: ${esc(t)}</td></tr></table>`; }
+export function why(t: string): string { return `<p style="margin:4px 0 12px;${F}font-size:14px;line-height:1.6;color:${C.muted};"><strong style="color:${C.fg};">Why it matters:</strong> ${esc(t)}</p>`; }
+export function example(t: string): string { return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-left:3px solid ${C.blue};padding:2px 0 2px 12px;${F}font-size:14px;line-height:1.6;color:${C.body};">Example: ${esc(t)}</td></tr></table>`; }
 
 function recoveryTable(): string {
     const rows = [['Decline', 'Gain needed to recover'], ['20%', '25%'], ['33%', '50%'], ['50%', '100%']];
@@ -176,25 +178,25 @@ function simTiles(): string {
     const t = (label: string, big: string, small: string, color: string) => `<td width="50%" valign="top" style="padding:0 4px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0f1626;border:1px solid ${C.line};border-radius:10px;"><tr><td style="padding:14px;${F}"><div style="font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:${C.muted};">${label}</div><div style="font-size:26px;font-weight:800;color:${color};padding:4px 0;">${big}</div><div style="font-size:12px;color:${C.muted};">${small}</div></td></tr></table></td>`;
     return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>${t('QQQ LEAPS, simulated', SIM.leaps, `Largest decline ${SIM.leapsDd}`, C.green)}${t('QQQ buy and hold', SIM.qqq, `Largest decline ${SIM.qqqDd}`, C.fg)}</tr></table><p style="margin:10px 4px 0;${F}font-size:12px;line-height:1.55;color:${C.muted};">${esc(SIM.window)}. ${esc(LIMITS)}</p>`;
 }
-function statusLine(name: string, text: string, dot = C.green): string {
+export function statusLine(name: string, text: string, dot = C.green): string {
     return `<tr><td style="padding:10px 0;border-top:1px solid ${C.line};${F}font-size:14px;line-height:1.5;color:${C.fg};"><span style="display:inline-block;width:8px;height:8px;border-radius:4px;background:${dot};margin-right:8px;"></span><strong>${esc(name)}</strong><br><span style="color:${C.muted};padding-left:16px;display:inline-block;">${esc(text)}</span></td></tr>`;
 }
-function locked(label: string, url: string, cta: string): string {
+export function locked(label: string, url: string, cta: string): string {
     return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:10px 0 4px;background:${C.lock};border:1px dashed #3a4a70;border-radius:10px;"><tr><td style="padding:14px 16px;${F}"><div style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:${C.amber};padding-bottom:6px;">Plan members only</div><div style="font-size:14px;line-height:1.6;color:${C.body};padding-bottom:12px;">${esc(label)}</div>${btn(url, cta, 'outline')}</td></tr></table>`;
 }
 
 function weeklyIssue(o: Seq7Opts, url: (k: string, x?: string) => string): string {
     const f = o.facts ?? SAMPLE_FACTS;
-    const chips = ['Market weather', 'Copilot readout', 'Flight plan', 'Turbulence test'].map((c) => `<td style="padding:0 6px 6px 0;"><span style="display:inline-block;${F}font-size:12px;font-weight:700;color:${C.fg};border:1px solid ${C.line};border-radius:8px;padding:7px 10px;background:${C.card};">${c}</span></td>`).join('');
+    const chips = [['\u2601\uFE0F','Market weather'], ['\u{1F9ED}','Copilot readout'], ['\u2708\uFE0F','Flight plan'], ['\u26A0\uFE0F','Turbulence test']].map(([i, c]) => `<td style="padding:0 6px 6px 0;"><span style="display:inline-block;${F}font-size:12px;font-weight:700;color:${C.fg};border:1px solid ${C.line};border-radius:8px;padding:7px 10px;background:${C.card};">${i}&nbsp;${c}</span></td>`).join('');
     const trend = f.trend ? `QQQ is ${f.trend} its 200 day average${f.trendChanged ? ', changed since the last reading.' : ', unchanged since the last reading.'}` : 'Not included this week.';
     const alloc = o.strategyMember
         ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${f.defensive.map((d) => statusLine(`QQQ Defensive, ${d.level.toLowerCase()} risk level`, d.text)).join('')}${statusLine('QQQ LEAPS', f.leaps)}</table>`
         : locked('This week\u2019s QQQ Defensive allocation for each risk level, and the QQQ LEAPS position status, go to readers with a plan for that strategy. Each plan covers one brokerage account.', url('pl'), 'Subscribe to a strategy');
     const parts = [
-        card(`${pill('Market weather')}<div style="height:10px;"></div><div style="font-size:17px;font-weight:800;color:${C.fg};padding-bottom:8px;">Regime read</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${statusLine('Defensive model regime', f.regime)}${statusLine('Trend reading', trend)}</table>`),
-        card(`${pill('Copilot readout')}<div style="height:10px;"></div><div style="font-size:17px;font-weight:800;color:${C.fg};padding-bottom:8px;">What the model indicates</div>${P(f.readout, 14)}${alloc}`),
-        card(`${pill('Flight plan')}<div style="height:10px;"></div><div style="font-size:17px;font-weight:800;color:${C.fg};padding-bottom:8px;">One idea: why a defensive model can lag</div>${P('A defensive model holds less exposure when its rules say conditions are weaker. If the market keeps rising anyway, that lower exposure lags. The lag is the cost of the same rule that limits declines.', 14)}${why('Knowing the cost of a rule in advance makes it easier to keep following it.')}`),
-        card(`${pill('Turbulence test')}<div style="height:10px;"></div><div style="font-size:17px;font-weight:800;color:${C.fg};padding-bottom:8px;">What could go wrong</div>${P('QLD and TQQQ aim for a multiple of one day of QQQ movement. Over longer periods the result can differ from that multiple, and declines can be deep. LEAPS values in a simulation are model-priced, and live quotes, spreads and fills can differ.', 14)}`),
+        card(`${pill('\u2601\uFE0F Market weather')}<div style="height:10px;"></div><div style="font-size:17px;font-weight:800;color:${C.fg};padding-bottom:8px;">Regime read</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${statusLine('Defensive model regime', f.regime)}${statusLine('Trend reading', trend)}</table>`),
+        card(`${pill('\u{1F9ED} Copilot readout')}<div style="height:10px;"></div><div style="font-size:17px;font-weight:800;color:${C.fg};padding-bottom:8px;">What the model indicates</div>${P(f.readout, 14)}${alloc}`),
+        card(`${pill('\u2708\uFE0F Flight plan')}<div style="height:10px;"></div><div style="font-size:17px;font-weight:800;color:${C.fg};padding-bottom:8px;">One idea: why a defensive model can lag</div>${P('A defensive model holds less exposure when its rules say conditions are weaker. If the market keeps rising anyway, that lower exposure lags. The lag is the cost of the same rule that limits declines.', 14)}${why('Knowing the cost of a rule in advance makes it easier to keep following it.')}`),
+        card(`${pill('\u26A0\uFE0F Turbulence test')}<div style="height:10px;"></div><div style="font-size:17px;font-weight:800;color:${C.fg};padding-bottom:8px;">What could go wrong</div>${P('QLD and TQQQ aim for a multiple of one day of QQQ movement. Over longer periods the result can differ from that multiple, and declines can be deep. LEAPS values in a simulation are model-priced, and live quotes, spreads and fills can differ.', 14)}`),
     ];
     return row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid ${C.line};padding-top:22px;${F}"><div style="font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:${C.blue};">This week\u2019s free issue${f.sample ? ' (sample)' : ''}</div><div style="font-size:24px;font-weight:800;color:${C.fg};padding:6px 0 4px;">Flight Plan: <span style="color:${C.blue};">${esc(f.weekLabel)}</span></div><div style="font-size:13px;color:${C.muted};padding-bottom:12px;">About 5 minutes. Four parts, in the same order every week.</div><table role="presentation" cellpadding="0" cellspacing="0"><tr>${chips}</tr></table></td></tr></table>`) + sp(10)
         + parts.join('')
@@ -214,7 +216,7 @@ export function renderSeq7(o: Seq7Opts): { subject: string; text: string; html: 
     if (n === 2) extra = recoveryTable();
     if (n === 5) extra = `<p style="margin:0 0 6px;"><img src="${esc(WS_IMG)}" alt="${esc(WS_ALT)}" width="520" style="display:block;width:100%;max-width:520px;height:auto;border-radius:8px;border:0;"></p><p style="margin:0 0 12px;${F}font-size:12px;color:${C.muted};">${esc(WS_CAP)}</p>`;
     if (n === 7) extra = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px;">${STUDY_RULES.map((r) => `<tr><td style="padding:4px 0;${F}font-size:14px;line-height:1.5;color:${C.body};"><span style="color:${C.green};font-weight:800;">&#10003;</span>&nbsp; ${esc(r)}</td></tr>`).join('')}</table>`;
-    const focusCard = card(`${pill(f.pill)}<div style="height:10px;"></div><div style="${F}font-size:20px;font-weight:800;color:${C.fg};line-height:1.3;padding-bottom:10px;">${esc(f.title)}</div>${f.body.map((b) => P(b)).join('')}${extra}${why(f.why)}${f.example ? example(f.example) : ''}`, C.green);
+    const focusCard = card(`${pill((FOCUS_ICON[n] ?? '') + ' ' + f.pill)}<div style="height:10px;"></div><div style="${F}font-size:20px;font-weight:800;color:${C.fg};line-height:1.3;padding-bottom:10px;">${esc(f.title)}</div>${f.body.map((b) => P(b)).join('')}${extra}${why(f.why)}${f.example ? example(f.example) : ''}`, C.green);
 
     // Response block, different in each email
     let response: string;

@@ -19,7 +19,7 @@ export default async function JoinPage({
     searchParams: Promise<{ t?: string; email?: string; next?: string; cadence?: string }>;
 }) {
     const { t, email: emailParam, next: nextParam, cadence: cadenceParam } = await searchParams;
-    const cadence = cadenceParam === 'daily' ? 'daily' : 'weekly';
+    const cadence = cadenceParam === 'daily' ? 'daily' : cadenceParam === 'both' ? 'both' : 'weekly';
     // The personal link carries ?t=. If a visitor reaches this page some other way (a menu link, a second visit),
     // fall back to the token remembered from their last click on one of our email links.
     const remembered = (await cookies()).get('tm_t')?.value;

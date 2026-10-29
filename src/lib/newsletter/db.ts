@@ -1056,7 +1056,7 @@ export async function markLifecycle(subscriberId: number, key: string): Promise<
 }
 
 /** Set how often a confirmed subscriber wants the free issue: weekly (default) or daily. */
-export async function setCadence(subscriberId: number, cadence: 'weekly' | 'daily'): Promise<void> {
+export async function setCadence(subscriberId: number, cadence: 'weekly' | 'daily' | 'both'): Promise<void> {
     await ensureNewsletterTables();
     await query('UPDATE newsletter_subscribers SET cadence = $2, updated_at = NOW() WHERE id = $1', [subscriberId, cadence]);
 }

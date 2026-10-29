@@ -419,6 +419,7 @@ export async function countDueNow(s: NewsletterSettings, cadenceDays: number): P
              LEFT JOIN newsletter_subscribers sub ON sub.id = d.subscriber_id
              WHERE d.subscriber_id IS NOT NULL
                AND (sub.status IS NULL OR sub.status IN ('confirmed','email_change_pending'))
+               AND COALESCE(sub.cadence, 'weekly') <> 'daily'
                AND NOT EXISTS (SELECT 1 FROM newsletter_suppression x WHERE x.email = d.email)
                ${excludesImported(s) ? "AND d.source <> 'lead-import'" : ''}
          ), last AS (
@@ -497,6 +498,7 @@ export async function previewTodaysRun() {
              LEFT JOIN newsletter_subscribers sub ON sub.id = d.subscriber_id
              WHERE d.subscriber_id IS NOT NULL
                AND (sub.status IS NULL OR sub.status IN ('confirmed','email_change_pending'))
+               AND COALESCE(sub.cadence, 'weekly') <> 'daily'
                AND NOT EXISTS (SELECT 1 FROM newsletter_suppression x WHERE x.email = d.email)
                ${excludesImported(s) ? "AND d.source <> 'lead-import'" : ''}
          ), last AS (

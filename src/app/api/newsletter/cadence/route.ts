@@ -10,7 +10,7 @@ export const runtime = 'nodejs';
 export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const id = readDailyLinkToken(String(body.k ?? ''));
-    const cadence = body.cadence === 'daily' ? 'daily' : body.cadence === 'weekly' ? 'weekly' : null;
+    const cadence = body.cadence === 'daily' ? 'daily' : body.cadence === 'weekly' ? 'weekly' : body.cadence === 'both' ? 'both' : null;
     if (!id || !cadence) return NextResponse.json({ error: 'Invalid link' }, { status: 400 });
     await ensureNewsletterTables();
     const r = await query(`SELECT status FROM newsletter_subscribers WHERE id = $1`, [id]);

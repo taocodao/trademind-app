@@ -7,7 +7,7 @@
  */
 import { useEffect } from 'react';
 
-const TOKEN_RE = /^[a-z2-9]{10}$/;
+const TOKEN_RE = /^[A-Za-z0-9_-]{10,11}$/;
 
 export default function OutreachEngage() {
     useEffect(() => {

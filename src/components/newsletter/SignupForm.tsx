@@ -30,12 +30,12 @@ function attribution() {
     };
 }
 
-export default function SignupForm({ source, initialEmail, implicitConsent = false, outreachToken = '', nextPath = '', cadence = 'weekly' }: { source: string; initialEmail?: string; implicitConsent?: boolean; outreachToken?: string; nextPath?: string; cadence?: 'weekly' | 'daily' }) {
+export default function SignupForm({ source, initialEmail, implicitConsent = false, outreachToken = '', nextPath = '', cadence: cadenceProp = 'weekly' }: { source: string; initialEmail?: string; implicitConsent?: boolean; outreachToken?: string; nextPath?: string; cadence?: 'weekly' | 'daily' | 'both' }) {
     const [email, setEmail] = useState(initialEmail ?? '');
+    const [cadence, setCadence] = useState<'weekly' | 'daily' | 'both'>(cadenceProp);
     const [experience, setExperience] = useState('');
-    const [consentBox, setConsent] = useState(false);
-    // implicitConsent: the join page shows the consent sentence next to the button instead of a checkbox.
-    const consent = implicitConsent || consentBox;
+    // The consent sentence sits under the button, so there is no checkbox.
+    const consent = true;
     const [honeypot, setHoneypot] = useState('');
     const [busy, setBusy] = useState(false);
     const [done, setDone] = useState<'pending' | 'already' | 'subscribed' | null>(null);
@@ -164,26 +164,22 @@ export default function SignupForm({ source, initialEmail, implicitConsent = fal
                     <option key={l.value} value={l.value}>{l.label}</option>
                 ))}
             </select>
-            {implicitConsent ? null : (
-                <label className="tm-nl-consent">
-                    <input
-                        type="checkbox"
-                        checked={consentBox}
-                        onChange={(e) => setConsent(e.target.checked)}
-                        required
-                    />
-                    <span>Send me The AI Systematic Investor and TradeMind offers</span>
-                </label>
-            )}
+            <fieldset className="tm-nl-cadence" style={{ border: 'none', padding: 0, margin: '2px 0 4px' }}>
+                <legend className="tm-nl-muted" style={{ fontSize: 13.5, padding: 0, marginBottom: 6 }}>How often would you like it?</legend>
+                {([['weekly', 'Weekly', 'one issue a week'], ['daily', 'Daily', 'a short brief every market day'], ['both', 'Both', 'the weekly issue and the daily brief']] as const).map(([v, label, hint]) => (
+                    <label key={v} style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '4px 0', fontSize: 14.5, cursor: 'pointer' }}>
+                        <input type="radio" name="cadence" value={v} checked={cadence === v} onChange={() => setCadence(v)} />
+                        <span><strong>{label}</strong> <span className="tm-nl-muted">{hint}</span></span>
+                    </label>
+                ))}
+            </fieldset>
             {error && <p className="tm-nl-error" role="alert">{error}</p>}
-            <button type="submit" disabled={busy || !consent} className="tm-nl-btn tm-nl-btn-primary">
+            <button type="submit" disabled={busy} className="tm-nl-btn tm-nl-btn-primary">
                 {busy ? 'Subscribing...' : 'Subscribe'}
             </button>
-            {implicitConsent ? (
-                <p className="tm-nl-consent" style={{ margin: '4px 0 0' }}>
-                    By subscribing you agree to receive The AI Systematic Investor and TradeMind offers. Unsubscribe any time.
-                </p>
-            ) : null}
+            <p className="tm-nl-consent" style={{ margin: '4px 0 0' }}>
+                By subscribing you agree to receive The AI Systematic Investor and TradeMind offers. Unsubscribe any time.
+            </p>
         </form>
     );
 }

@@ -169,7 +169,7 @@ export function hashIp(ip: string | null | undefined): string | null {
     return createHash('sha256').update(`${salt}:${ip}`).digest('hex').slice(0, 24);
 }
 
-const TOKEN_RE = /^[a-z2-9]{10}$/;
+const TOKEN_RE = /^[A-Za-z0-9_-]{10,11}$/;
 export function validToken(t: string): boolean {
     return TOKEN_RE.test(t);
 }

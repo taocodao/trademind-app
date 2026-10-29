@@ -28,7 +28,7 @@ const td = { padding: '12px 18px' };
 
 export default async function VerifyPage({ searchParams }: { searchParams: Promise<{ t?: string }> }) {
     const { t } = await searchParams;
-    const q = t && /^[a-z2-9]{10}$/.test(t) ? `?t=${t}` : '';
+    const q = t && /^[A-Za-z0-9_-]{10,11}$/.test(t) ? `?t=${t}` : '';
     return (
         <main className="tm-nl">
             <OutreachEngage />

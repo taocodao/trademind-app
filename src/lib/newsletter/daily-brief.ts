@@ -59,7 +59,7 @@ export async function dailyRecipients(opts: { limit: number; date: string; onlyE
                   WHERE m.status IN ('free_month','active') AND lower(coalesce(us.login_email, u.email)) IN (lower(s.email), lower(coalesce(s.canonical_email, s.email)))
                   ORDER BY a.id LIMIT 1) AS account_id
            FROM newsletter_subscribers s
-          WHERE s.status = 'confirmed' AND s.cadence = 'daily'
+          WHERE s.status = 'confirmed' AND s.cadence IN ('daily','both')
             AND NOT EXISTS (SELECT 1 FROM newsletter_suppression sup WHERE sup.email = s.email)
             AND NOT EXISTS (SELECT 1 FROM newsletter_daily_sends d WHERE d.run_date = $1::date AND d.subscriber_id = s.id AND d.status IN ('sent','sending'))
             ${opts.onlyEmail ? 'AND lower(s.email) = lower($3)' : ''}

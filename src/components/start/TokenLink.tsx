@@ -3,7 +3,7 @@
 /** A link that carries the campaign token (t or k) from the current address, so in-site navigation stays attributed. */
 import { useEffect, useState } from 'react';
 
-const TOKEN_RE = /^[a-z2-9]{10}$/;
+const TOKEN_RE = /^[A-Za-z0-9_-]{10,11}$/;
 
 export function useToken(): string {
     const [tok, setTok] = useState('');

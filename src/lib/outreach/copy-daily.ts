@@ -52,6 +52,13 @@ const ICON = { weather: '\u2601\uFE0F', readout: '\u{1F9ED}', plan: '\u2708\uFE0
 const title = (t: string) => `<div style="font-size:17px;font-weight:800;color:${C.fg};padding-bottom:8px;">${esc(t)}</div>`;
 const gap = '<div style="height:10px;"></div>';
 
+const SHARE_URL = 'https://trademind.bot/newsletter';
+const SHARE = {
+    mail: `mailto:?subject=${encodeURIComponent('A QQQ brief that explains the risk first')}&body=${encodeURIComponent('Thought you might find this useful: ' + SHARE_URL)}`,
+    x: `https://twitter.com/intent/tweet?url=${encodeURIComponent(SHARE_URL)}&text=${encodeURIComponent('A QQQ brief that explains the risk first')}`,
+    li: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(SHARE_URL)}`,
+};
+
 export function renderDaily(o: DailyOpts): { subject: string; text: string; html: string; unsubUrl: string } {
     const f = o.facts ?? SAMPLE_DAILY;
     const a = o.account ?? null;
@@ -111,6 +118,7 @@ export function renderDaily(o: DailyOpts): { subject: string; text: string; html
         + row(P(hi, 16, C.fg))
         + parts + cta
         + row(P(NOBROKER, 13, C.muted))
+        + (a ? '' : row(`<p style="margin:0 0 12px;${F}font-size:13px;line-height:1.7;color:${C.muted};">Know someone who invests in QQQ? Share it: <a href="${esc(SHARE.mail)}" style="color:${C.blue};">Email</a> &middot; <a href="${esc(SHARE.x)}" style="color:${C.blue};">X</a> &middot; <a href="${esc(SHARE.li)}" style="color:${C.blue};">LinkedIn</a></p>`))
         + row(`<p style="margin:0 0 12px;${F}font-size:13px;line-height:1.65;color:${C.muted};">Prefer one email a week? <a href="${esc(weeklyUrl)}" style="color:${C.blue};">Switch to the weekly brief</a>. Reply to this email or write to me at eric@trademind.bot.</p>`)
         + row(`<p style="margin:0 0 2px;${F}font-size:15px;color:${C.fg};font-weight:700;">Eric Huang</p><p style="margin:0 0 20px;${F}font-size:13px;color:${C.muted};">Founder, TradeMind &middot; Queens, New York</p>`)
         + row(`<div style="border-top:1px solid ${C.line};padding-top:14px;${F}font-size:11px;line-height:1.6;color:${C.muted};">You are getting this because you subscribed to the free TradeMind daily brief. <a href="${esc(unsubUrl)}" style="color:${C.muted};text-decoration:underline;">Unsubscribe or snooze</a>.<br>TradeMind publishes educational research for self-directed investors. It is not personalized investment advice. Options and leveraged ETFs involve substantial risk, including loss of the amount invested.<br><br>${esc(o.mailingAddress)}</div>`)
@@ -125,6 +133,7 @@ export function renderDaily(o: DailyOpts): { subject: string; text: string; html
             `TURBULENCE TEST: ${f.risk}`, '']),
         `Virtual accounts: ${vaUrl}`, ...(a ? [`Simulation details: ${simUrl}`] : [`Subscribe to a strategy: ${plansUrl}`, DISCOUNT]), '',
         NOBROKER, `Switch to the weekly brief: ${weeklyUrl}`, '', 'Eric Huang', 'Founder, TradeMind', '',
+        ...(a ? [] : [`Share this brief: ${SHARE_URL}`]),
         `Unsubscribe or snooze: ${unsubUrl}`, o.mailingAddress, 'Educational research, not personalized investment advice. Investing involves risk, including loss.'];
     return { subject, text: T.join('\n'), html, unsubUrl };
 }

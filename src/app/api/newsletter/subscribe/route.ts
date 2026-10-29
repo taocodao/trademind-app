@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
         if (body.outreachToken && 'email' in result && result.email) {
             void markContactByToken(String(body.outreachToken), String(result.email), 'subscribed');
         }
-        if ('subscriberId' in result && result.subscriberId && (body.cadence === 'daily' || body.cadence === 'weekly')) {
+        if ('subscriberId' in result && result.subscriberId && (body.cadence === 'daily' || body.cadence === 'weekly' || body.cadence === 'both')) {
             await setCadence(result.subscriberId, body.cadence);
         }
         if (result.kind === 'already-confirmed') {

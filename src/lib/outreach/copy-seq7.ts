@@ -280,6 +280,7 @@ export function renderSeq7(o: Seq7Opts): { subject: string; text: string; html: 
     H.push(row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="${F}font-size:18px;font-weight:800;color:${C.fg};"><a href="${esc(url('h'))}" style="color:${C.fg};text-decoration:none;">TradeMind<span style="color:${C.blue};">.bot</span></a></td><td align="right">${pill('Free research', C.blue, '#121a2e')}</td></tr></table>`) + sp(18));
     H.push(row(`<div style="${F}font-size:26px;font-weight:800;line-height:1.25;color:${C.fg};">${esc(THEME.split('.')[0])}. <span style="color:${C.blue};">${esc(THEME.split('.').slice(1).join('.').trim())}</span></div><div style="${F}font-size:13px;color:${C.muted};padding-top:6px;">${esc(THEME_SUB)}</div>`) + sp(20));
     H.push(row(P(hi, 16, C.fg)));
+    H.push(row(`<div style="${F}font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.muted};padding:4px 4px 8px;">Explore</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td width="50%" style="padding:4px;">${btn(url('pl'), 'Plans and pricing', 'outline', true)}</td><td width="50%" style="padding:4px;">${btn(url('f'), 'Study program', 'outline', true)}</td></tr><tr><td width="50%" style="padding:4px;">${btn(url('va'), 'Virtual accounts', 'outline', true)}</td><td width="50%" style="padding:4px;">${btn(url('h'), 'trademind.bot', 'outline', true)}</td></tr></table>`) + sp(14));
     if (ria) H.push(studyCompact(url));
     if (ria) H.push(focusCard + coopCard(url));
     else if (studyLead) H.push(focusCard + studyFull(url));
@@ -297,7 +298,7 @@ export function renderSeq7(o: Seq7Opts): { subject: string; text: string; html: 
 
     // Plain text
     const facts = o.facts ?? SAMPLE_FACTS;
-    const T: string[] = [hi, ''];
+    const T: string[] = [hi, '', `EXPLORE: Plans ${url('pl')} | Study program ${url('f')} | Virtual accounts ${url('va')} | trademind.bot ${url('h')}`, ''];
     if (ria) T.push(`${STUDY_COMPACT} Learn more: ${url('f')}`, '');
     T.push(f.title.toUpperCase(), ...f.body, '');
     if (n === 2) T.push('Decline 20%: gain needed 25%', 'Decline 33%: gain needed 50%', 'Decline 50%: gain needed 100%', '');

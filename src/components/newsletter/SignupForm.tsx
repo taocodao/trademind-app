@@ -32,7 +32,9 @@ function attribution() {
 
 export default function SignupForm({ source, initialEmail, implicitConsent = false, outreachToken = '', nextPath = '', cadence: cadenceProp = 'weekly' }: { source: string; initialEmail?: string; implicitConsent?: boolean; outreachToken?: string; nextPath?: string; cadence?: 'weekly' | 'daily' | 'both' }) {
     const [email, setEmail] = useState(initialEmail ?? '');
-    const [cadence, setCadence] = useState<'weekly' | 'daily' | 'both'>(cadenceProp);
+    const [wantWeekly, setWantWeekly] = useState(cadenceProp !== 'daily');
+    const [wantDaily, setWantDaily] = useState(cadenceProp !== 'weekly');
+    const cadence: 'weekly' | 'daily' | 'both' = wantWeekly && wantDaily ? 'both' : wantDaily ? 'daily' : 'weekly';
     const [experience, setExperience] = useState('');
     // The consent sentence sits under the button, so there is no checkbox.
     const consent = true;
@@ -165,13 +167,14 @@ export default function SignupForm({ source, initialEmail, implicitConsent = fal
                 ))}
             </select>
             <fieldset className="tm-nl-cadence" style={{ border: 'none', padding: 0, margin: '2px 0 4px' }}>
-                <legend className="tm-nl-muted" style={{ fontSize: 13.5, padding: 0, marginBottom: 6 }}>How often would you like it?</legend>
-                {([['weekly', 'Weekly', 'one issue a week'], ['daily', 'Daily', 'a short brief every market day'], ['both', 'Both', 'the weekly issue and the daily brief']] as const).map(([v, label, hint]) => (
-                    <label key={v} style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '4px 0', fontSize: 14.5, cursor: 'pointer' }}>
-                        <input type="radio" name="cadence" value={v} checked={cadence === v} onChange={() => setCadence(v)} />
+                <legend className="tm-nl-muted" style={{ fontSize: 13.5, padding: 0, marginBottom: 6 }}>What would you like to receive?</legend>
+                {([['Weekly', 'one issue a week', wantWeekly, setWantWeekly, wantDaily], ['Daily', 'a short brief every market day', wantDaily, setWantDaily, wantWeekly]] as const).map(([label, hint, on, set, other]) => (
+                    <label key={label} style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '4px 0', fontSize: 14.5, cursor: 'pointer' }}>
+                        <input type="checkbox" checked={on} onChange={(e) => set(e.target.checked || !other)} />
                         <span><strong>{label}</strong> <span className="tm-nl-muted">{hint}</span></span>
                     </label>
                 ))}
+                <span className="tm-nl-muted" style={{ fontSize: 12.5 }}>Check both to get both. At least one stays selected.</span>
             </fieldset>
             {error && <p className="tm-nl-error" role="alert">{error}</p>}
             <button type="submit" disabled={busy} className="tm-nl-btn tm-nl-btn-primary">

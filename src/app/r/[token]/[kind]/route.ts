@@ -40,7 +40,7 @@ async function handle(req: NextRequest, params: Promise<{ token: string; kind: s
     else if (kind === 's') dest = `/newsletter/join?t=${token}&${utm}`;
     else if (kind === 'sw') dest = `/newsletter/join?t=${token}&cadence=weekly&${utm}`;
     else if (kind === 'sd') dest = `/newsletter/join?t=${token}&cadence=daily&${utm}`;
-    else if (kind === 'va') dest = `/live-record?t=${token}&${utm}`;
+    else if (kind === 'va') dest = `/live-record?demo=1&t=${token}&${utm}`;
     else if (kind === 'pl') dest = `/plans?t=${token}&${utm}`;
     else if (kind === 'i') {
         const a = req.nextUrl.searchParams.get('a') ?? '';

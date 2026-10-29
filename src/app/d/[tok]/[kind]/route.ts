@@ -27,7 +27,7 @@ async function handle(req: NextRequest, params: Promise<{ tok: string; kind: str
     }
     if (method === 'HEAD') return new NextResponse(null, { status: 200 });
     const utm = `utm_source=daily&utm_medium=email&utm_campaign=daily_brief${edition ? `&utm_content=${edition}` : ''}`;
-    return NextResponse.redirect(new URL(dailyDestination(kind as DailyKind, accountId, utm, tok), BASE_URL), 302);
+    return NextResponse.redirect(new URL(dailyDestination(kind as DailyKind, accountId, utm, tok, req.nextUrl.searchParams.get('d') === '1'), BASE_URL), 302);
 }
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ tok: string; kind: string }> }) { return handle(req, ctx.params, 'GET'); }

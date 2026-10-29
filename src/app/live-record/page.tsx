@@ -135,7 +135,8 @@ function AccountBlock({ a, delay }: { a: PublicAccountRecord; delay: number }) {
     );
 }
 
-export default async function LiveRecordPage() {
+export default async function LiveRecordPage({ searchParams }: { searchParams?: Promise<{ demo?: string }> }) {
+    const demo = (await searchParams)?.demo === '1';
     let record: Awaited<ReturnType<typeof getPublicRecord>> | null = null;
     try {
         record = await getPublicRecord();
@@ -147,6 +148,15 @@ export default async function LiveRecordPage() {
         <main className="min-h-screen flex flex-col bg-[#0A0A0F] overflow-x-hidden pt-16">
             <MarketingHeader />
             <div className="lr-wrap">
+                {demo && (
+                    <div className="lr-demo" role="note">
+                        <div>
+                            <strong>This page is a demo.</strong> It shows how a TradeMind virtual account looks. These are TradeMind&apos;s own
+                            virtual accounts, not yours. Subscribe to a strategy to get an account page of your own that follows the same signals.
+                        </div>
+                        <Link href="/plans?utm_source=daily&utm_medium=email&utm_campaign=daily_brief&utm_content=demo_banner" className="lr-demo-btn">Subscribe to a strategy</Link>
+                    </div>
+                )}
                 <div className="lr-back-row"><Link href="/verify" className="lr-back">Back to verify the record</Link></div>
                 <header>
                     <div className="lr-eyebrow">Live record</div>

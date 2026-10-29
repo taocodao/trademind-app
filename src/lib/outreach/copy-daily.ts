@@ -60,7 +60,7 @@ export function renderDaily(o: DailyOpts): { subject: string; text: string; html
     const link = (kind: string, extra = '') => `${b}/d/${o.linkToken}/${kind}?e=${o.editionDate}${extra}`;
     const plansUrl = link('pl');
     const acctUrl = link('acct', o.accountId ? `&a=${o.accountId}` : '');
-    const vaUrl = link('va');
+    const vaUrl = link('va', a ? '' : '&d=1');
     const simUrl = link('sim');
     const weeklyUrl = link('wk');
     const homeUrl = link('h');

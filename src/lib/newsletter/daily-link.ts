@@ -23,10 +23,11 @@ export function readDailyLinkToken(tok: string): number | null {
 export const DAILY_KINDS = ['acct', 'va', 'sim', 'pl', 'wk', 'h'] as const;
 export type DailyKind = typeof DAILY_KINDS[number];
 
-export function dailyDestination(kind: DailyKind, accountId: number | null, utm: string, tok = ''): string {
+export function dailyDestination(kind: DailyKind, accountId: number | null, utm: string, tok = '', demo = false): string {
     switch (kind) {
-        case 'acct': return accountId ? `/account/${accountId}?${utm}` : `/accounts?${utm}`;
-        case 'va': return `/live-record?${utm}`;
+        // Without a known account the button opens a labeled demo, never a sign-in wall.
+        case 'acct': return accountId ? `/account/${accountId}?${utm}` : `/live-record?demo=1&${utm}`;
+        case 'va': return `/live-record?${demo ? 'demo=1&' : ''}${utm}`;
         case 'sim': return `/simulated-record?${utm}`;
         case 'pl': return `/plans?${utm}`;
         case 'wk': return `/newsletter/preferences?k=${encodeURIComponent(tok)}&${utm}`;

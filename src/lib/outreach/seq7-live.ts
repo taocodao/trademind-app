@@ -193,9 +193,15 @@ async function liveFacts(now: Date): Promise<IssueFacts> {
     let regime = 'not available';
     try {
         const { buildFacts } = await import('@/lib/briefing/facts');
-        const run = await buildFacts(et.date);
-        const def = run.strategies.find((x) => x.strategy === 'TQQQ_TURBOCORE_PRO');
-        if (def && def.run_verified && def.regime) regime = String(def.regime);
+        const { previousMarketDay } = await import('@/lib/briefing/calendar');
+        // Use the newest verified model run: today's, or the last market day before it (morning, weekends, holidays).
+        let day = et.date;
+        for (let i = 0; i < 5 && regime === 'not available'; i++) {
+            const run = await buildFacts(day);
+            const def = run.strategies.find((x) => x.strategy === 'TQQQ_TURBOCORE_PRO');
+            if (def && def.run_verified && def.regime) regime = String(def.regime);
+            else day = previousMarketDay(day);
+        }
     } catch { /* keep not available */ }
     const facts: IssueFacts = {
         weekLabel, regime, trend: null, trendChanged: null, defensive: [], leaps: SAMPLE_FACTS.leaps,

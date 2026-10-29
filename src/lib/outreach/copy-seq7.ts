@@ -267,10 +267,11 @@ export function renderSeq7(o: Seq7Opts): { subject: string; text: string; html: 
     const focusCard = card(`${pill((FOCUS_ICON[n] ?? '') + ' ' + f.pill)}<div style="height:10px;"></div><div style="${F}font-size:20px;font-weight:800;color:${C.fg};line-height:1.3;padding-bottom:10px;">${esc(f.title)}</div>${f.body.map((b) => P(b)).join('')}${extra}${why(f.why)}${f.example ? example(f.example) : ''}`, C.green);
 
     const ria = o.audience === 'ria';
-    const studyLead = STUDY_LEAD.has(n) && !ria;
+    const studyLead = STUDY_LEAD.has(n);
     // One primary action per email. Everything else is a quiet text link.
     const primary: [string, string] = ria ? ['mt', 'Book 30 minutes'] : studyLead ? ['f', 'Apply to the study program'] : ['sw', 'Subscribe free'];
-    const seconds = (SECOND[n] ?? []).filter(([k]) => k !== primary[0] && !(ria && k === 'f'));
+    const riaStudyFull = ria && studyLead;
+    const seconds = (SECOND[n] ?? []).filter(([k]) => k !== primary[0]);
     if (ria && !seconds.some(([k]) => k === 'sw')) seconds.push(['sw', 'Subscribe free']);
     const secondaryRow = (links: [string, string][]) => links.length ? row(`<div style="${F}font-size:14px;line-height:1.9;padding:4px 4px 14px;">${links.map(([k, l]) => tl(url(k), l)).join('&nbsp;&nbsp;&nbsp;')}</div>`) : '';
     const pollRow = n === 5 ? row(`<div style="${F}font-size:15px;font-weight:800;color:${C.fg};padding:2px 4px 6px;">Would you have kept following it?</div><div style="${F}font-size:14px;line-height:1.9;padding:0 4px 4px;">${[['qa', 'A. Yes, I would have waited'], ['qb', 'B. I would want a clearer explanation first'], ['qc', 'C. I would have walked away']].map(([k, l]) => tl(url(k), l)).join('<br>')}</div><div style="${F}font-size:12px;line-height:1.5;color:${C.muted};padding:4px 4px 14px;">There is no right answer. If you picked C, you are exactly who should test this for free.</div>`) : '';
@@ -281,7 +282,7 @@ export function renderSeq7(o: Seq7Opts): { subject: string; text: string; html: 
     H.push(row(`<div style="${F}font-size:26px;font-weight:800;line-height:1.25;color:${C.fg};">${esc(THEME.split('.')[0])}. <span style="color:${C.blue};">${esc(THEME.split('.').slice(1).join('.').trim())}</span></div><div style="${F}font-size:13px;color:${C.muted};padding-top:6px;">${esc(THEME_SUB)}</div>`) + sp(20));
     H.push(row(P(hi, 16, C.fg)));
     H.push(row(`<div style="${F}font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.muted};padding:4px 4px 8px;">Explore</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td width="50%" style="padding:4px;">${btn(url('pl'), 'Plans and pricing', 'outline', true)}</td><td width="50%" style="padding:4px;">${btn(url('f'), 'Study program', 'outline', true)}</td></tr><tr><td width="50%" style="padding:4px;">${btn(url('va'), 'Virtual accounts', 'outline', true)}</td><td width="50%" style="padding:4px;">${btn(url('h'), 'trademind.bot', 'outline', true)}</td></tr></table>`) + sp(14));
-    if (ria) H.push(studyCompact(url));
+    if (ria) H.push(riaStudyFull ? studyFull(url) : studyCompact(url));
     if (ria) H.push(focusCard + coopCard(url));
     else if (studyLead) H.push(focusCard + studyFull(url));
     else H.push(focusCard);
@@ -299,7 +300,7 @@ export function renderSeq7(o: Seq7Opts): { subject: string; text: string; html: 
     // Plain text
     const facts = o.facts ?? SAMPLE_FACTS;
     const T: string[] = [hi, '', `EXPLORE: Plans ${url('pl')} | Study program ${url('f')} | Virtual accounts ${url('va')} | trademind.bot ${url('h')}`, ''];
-    if (ria) T.push(`${STUDY_COMPACT} Learn more: ${url('f')}`, '');
+    if (ria && !studyLead) T.push(`${STUDY_COMPACT} Apply: ${url('f')}`, '');
     T.push(f.title.toUpperCase(), ...f.body, '');
     if (n === 2) T.push('Decline 20%: gain needed 25%', 'Decline 33%: gain needed 50%', 'Decline 50%: gain needed 100%', '');
     T.push(`Why it matters: ${f.why}`, '');

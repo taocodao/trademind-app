@@ -34,8 +34,8 @@ export async function POST(req: NextRequest) {
     const cohort = Number(b.cohort) > 0 ? Number(b.cohort) : 1;
     const total = Number((await pool.query(`SELECT count(*) FROM program_participant WHERE left_at IS NULL`)).rows[0].count);
     const inCohort = Number((await pool.query(`SELECT count(*) FROM program_participant WHERE cohort = $1 AND left_at IS NULL`, [cohort])).rows[0].count);
-    if (total >= HARD_LIMIT) return NextResponse.json({ error: `Hard limit of ${HARD_LIMIT} reached.` }, { status: 409 });
-    if (inCohort >= (cohort === 1 ? FIRST_GROUP : WAVE_SIZE_MAX)) return NextResponse.json({ error: 'That group is full.' }, { status: 409 });
+    // The published copy says 20 seats, but no internal limit is enforced: every accepted application is admitted.
+    void total; void inCohort;
 
     const started = new Date().toISOString();
     const end = addDays(started, PREVIEW_DAYS);

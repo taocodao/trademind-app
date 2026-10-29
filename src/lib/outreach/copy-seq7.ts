@@ -1,0 +1,271 @@
+/**
+ * Seven-email retail sequence, newsletter style (draft, not wired into the sender).
+ * Each email has one focus card and asks for one different response. Every email ends with this week's
+ * free issue, where the strategy allocation is a locked placeholder for readers without a strategy plan.
+ * No email announces a last contact. Links are the campaign's tracked redirects, /r/<token>/<kind>?s=<step>.
+ * Steps reuse the existing ladder: 1, 2, 5, 6, 7, 8, 9 (days 0, 7, 14, 21, 28, 35, 42).
+ */
+import { IMG as WS_IMG, ALT as WS_ALT, CAP as WS_CAP } from './copy-ws';
+
+export const SEQ7_STEPS = [1, 2, 5, 6, 7, 8, 9] as const;
+export const SEQ7_DAYS: Record<number, number> = { 1: 0, 2: 7, 5: 14, 6: 21, 7: 28, 8: 35, 9: 42 };
+export const SEQ7_N_BY_STEP: Record<number, number> = { 1: 1, 2: 2, 5: 3, 6: 4, 7: 5, 8: 6, 9: 7 };
+export const seq7Label = (n: number) => `N${n}`;
+
+export const THEME = 'Control the risk first. Give compounding the time it needs.';
+export const THEME_SUB = 'AI-modeled QQQ research for self-directed investors.';
+
+/** Weekly issue facts. Defaults are a labeled sample; the live sender must pass the published record. */
+export interface IssueFacts {
+    weekLabel: string;
+    regime: string;                          // e.g. BULL
+    trend: 'above' | 'below' | null;         // QQQ vs its 200 day average
+    trendChanged: boolean | null;
+    defensive: { level: string; text: string }[];
+    leaps: string;
+    readout: string;
+    sample: boolean;
+}
+export const SAMPLE_FACTS: IssueFacts = {
+    weekLabel: 'Week of October 26, 2026', regime: 'BULL', trend: 'above', trendChanged: false,
+    defensive: [
+        { level: 'Conservative', text: '25% QQQ, 75% SGOV' },
+        { level: 'Moderate', text: '85% QQQ, 15% SGOV' },
+        { level: 'Aggressive', text: '100% QQQ' },
+    ],
+    leaps: 'Position held. The next review follows the LEAPS schedule.',
+    readout: 'Each risk level has its own published allocation from the October 28 run. The allocation score helps set exposure. It is not a probability of any outcome.',
+    sample: true,
+};
+
+/** Study rules as published on /founding today. Change here when the page changes. */
+export const STUDY_RULES = [
+    '20 seats, and every application is read by hand',
+    '30 days free to start, with a virtual account that follows the signals',
+    'Each short activity you complete adds 30 more days, up to 90 days in total',
+    'No card, and nothing turns into a paid plan on its own',
+    'You never need to trade, deposit money, write a review or refer anyone',
+];
+
+const SIM = { leaps: '+229.48%', leapsDd: '14.59%', qqq: '+49.46%', qqqDd: '22.88%', window: 'October 14, 2024 to October 13, 2026' };
+const LIMITS = 'Hypothetical results from a simulation, not a real account. Options were model-priced, the rules were developed with hindsight, and this was one favorable period for QQQ and semiconductors.';
+const NOBROKER = 'You keep your own brokerage account and place every order yourself. TradeMind never connects to a broker and never places trades.';
+const DISCOUNT = 'Free subscribers get 30% off any TradeMind strategy plan.';
+
+interface Focus {
+    subject: string; pre: string; pill: string; title: string; body: string[];
+    why: string; example?: string;
+    primary: { label: string; kind: string }; secondary?: { label: string; kind: string };
+}
+
+const FOCUS: Record<number, Focus> = {
+    1: {
+        subject: 'A free weekly QQQ brief, risk first',
+        pre: 'Four parts, about five minutes, the same order every week. This week\u2019s issue is at the bottom.',
+        pill: 'The weekly brief', title: 'One brief a week, built around risk',
+        body: [
+            'I publish a free weekly brief for investors who hold QQQ or think about it. It reads the market with an AI model and fixed rules, then explains what the model sees in plain English.',
+            'Every issue has the same four parts: Market weather, Copilot readout, Flight plan and Turbulence test. This week\u2019s issue is below, so you can judge it before you decide anything.',
+        ],
+        why: 'A loss you planned for is easier to live with than one you did not. Each issue names the risk before it names the idea.',
+        example: '\u201cThe model reads BULL and its trend reading did not change this week. Here is what would change it.\u201d',
+        primary: { label: 'Subscribe to the free weekly', kind: 'sw' }, secondary: { label: 'Prefer it daily', kind: 'sd' },
+    },
+    2: {
+        subject: 'The math of getting back to even',
+        pre: 'A 50% loss needs a 100% gain to recover. That one fact shapes everything we publish.',
+        pill: 'Risk first', title: 'Why we limit declines before chasing gains',
+        body: [
+            'A loss and the gain needed to repair it are not the same size. Lose 20% and you need 25% to get back. Lose 33% and you need 50%. Lose 50% and you need 100%.',
+            'In our two-year simulation, the largest decline of the QQQ LEAPS rules was 14.59%, which needs about a 17% gain to recover. QQQ buy and hold fell 22.88% at its worst, which needs about 30%.',
+        ],
+        why: 'Smaller declines leave more capital working, and they make a plan easier to stick with on a bad day. That is what lets compounding do its work over time.',
+        example: '\u201cDown 50% means up 100% just to break even.\u201d',
+        primary: { label: 'See the full simulation', kind: 'v' }, secondary: { label: 'Subscribe to the free weekly', kind: 'sw' },
+    },
+    3: {
+        subject: 'Two QQQ strategies, with the rules written out',
+        pre: 'One uses a long-dated QQQ option. One moves among four ETFs. Both publish their rules first.',
+        pill: 'The strategies', title: 'QQQ LEAPS and QQQ Defensive',
+        body: [
+            'QQQ LEAPS owns a long-dated QQQ call option, which magnifies QQQ\u2019s moves, and sells shorter covered calls against it to collect premium. The most the long option can lose is what was paid for it. It needs options permission at your broker.',
+            'QQQ Defensive moves among QQQ, QLD, TQQQ and SGOV, including leveraged ETFs, and is built to keep its declines shallow. Each account picks a conservative, moderate or aggressive risk level. It needs no options permission.',
+        ],
+        why: 'A strategy is only useful if you know its rules before you start, including when it does nothing.',
+        primary: { label: 'See how the strategies work', kind: 'st' }, secondary: { label: 'See plans and pricing', kind: 'pl' },
+    },
+    4: {
+        subject: 'What our AI model reads, and what it does not do',
+        pre: 'Hourly prices, volatility and a few market gauges in. A score that helps set exposure out.',
+        pill: 'The AI model', title: 'The model in plain English',
+        body: [
+            'The Defensive model reads hourly prices for QQQ, QLD, TQQQ, SGOV and HYG, plus several VIX volatility measures. It was trained on whether a moving average crossover signal would have paid off within about a month. Its output is an allocation score that helps set how much exposure each risk level holds.',
+            'It does not predict prices, it is not a probability of profit, and it never trades. The rules around it are fixed and published, and it runs once each market day.',
+        ],
+        why: 'An AI model is only trustworthy if you can see what goes in, what comes out and what it is not allowed to do.',
+        example: '\u201cNo change today. The model\u2019s reading held, so the published allocation stays as it was.\u201d',
+        primary: { label: 'See a sample daily briefing', kind: 'x' }, secondary: { label: 'Subscribe to the free daily', kind: 'sd' },
+    },
+    5: {
+        subject: 'Would you have kept following this?',
+        pre: 'Almost 11 months with no positions in a QQQ simulation. One click to answer.',
+        pill: 'The waiting test', title: 'The flat stretch at the start',
+        body: [
+            'After one early SMH loss, the simulation held no positions until September 2, 2025, when its QQQ LEAPS entry conditions first passed. On the day it entered, it was down about 5% and QQQ buy and hold was up about 14%.',
+        ],
+        why: 'Rules that wait can look broken for months. Knowing whether you would wait matters more than any single number.',
+        primary: { label: '', kind: '' },
+    },
+    6: {
+        subject: 'See the virtual accounts, losses included',
+        pre: 'Two virtual accounts follow the published signals. Every trade and every drop is shown.',
+        pill: 'Check our work', title: 'The virtual accounts in the app',
+        body: [
+            'Since mid October, two virtual accounts have followed the published signals for QQQ LEAPS and QQQ Defensive. The app shows each account\u2019s value, change since start, largest drop and every trade, five days delayed.',
+            'They are virtual accounts, not brokerage accounts, and the record is short. Losing stretches are shown as they happened.',
+        ],
+        why: 'A simulation shows what the rules would have done. The virtual accounts show what the published signals are doing now.',
+        primary: { label: 'Open the virtual accounts', kind: 'va' }, secondary: { label: 'Open the verification kit', kind: 'vf' },
+    },
+    7: {
+        subject: '20 seats to help test TradeMind',
+        pre: 'Free access with a virtual account, no card, and nothing turns into a paid plan on its own.',
+        pill: 'Study program', title: 'Help test the model, free',
+        body: [
+            'I am running a small study with QQQ investors. Members follow the signals with a virtual account and tell me what is unclear, what is missing and what they would change.',
+        ],
+        why: 'The people who use the briefings shape what goes into them.',
+        primary: { label: 'Apply to the study program', kind: 'f' }, secondary: { label: 'Subscribe to the free weekly', kind: 'sw' },
+    },
+};
+
+export interface Seq7Opts {
+    token: string; firstName: string | null; baseUrl: string; mailingAddress: string;
+    step: number; n?: number; facts?: IssueFacts;
+    /** True when the reader already has a plan for the strategy; shows the allocation instead of the placeholder. */
+    strategyMember?: boolean;
+}
+
+const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const F = "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;";
+const C = { bg: '#0b0f17', card: '#121826', line: '#232c3d', fg: '#f3f5f9', body: '#d5dae3', muted: '#9aa4b5', blue: '#7aa2ff', btn: '#2f6bff', green: '#34d399', greenBg: '#0f2a22', amber: '#f2c14e', lock: '#1a2133' };
+
+const sp = (h: number) => `<tr><td style="height:${h}px;line-height:${h}px;font-size:0;">&nbsp;</td></tr>`;
+const row = (inner: string) => `<tr><td style="${F}">${inner}</td></tr>`;
+const pill = (t: string, color = C.green, bg = C.greenBg) => `<span style="display:inline-block;${F}font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${color};background:${bg};border:1px solid ${color};border-radius:20px;padding:4px 10px;">${esc(t)}</span>`;
+const P = (t: string, size = 15, color = C.body, extra = '') => `<p style="margin:0 0 12px;${F}font-size:${size}px;line-height:1.65;color:${color};${extra}">${esc(t)}</p>`;
+
+function btn(url: string, label: string, kind: 'primary' | 'outline' = 'primary', full = false): string {
+    const prim = kind === 'primary';
+    return `<table role="presentation" cellpadding="0" cellspacing="0" ${full ? 'width="100%"' : ''} style="border-collapse:separate;"><tr><td align="center" bgcolor="${prim ? C.btn : C.card}" style="border-radius:10px;background:${prim ? C.btn : C.card};border:1px solid ${prim ? C.btn : '#3a4a70'};"><a href="${esc(url)}" style="display:block;padding:${prim ? '14px 26px' : '12px 18px'};${F}font-size:${prim ? 16 : 14}px;font-weight:800;color:${prim ? '#ffffff' : C.blue};text-decoration:none;line-height:1.2;">${esc(label)}</a></td></tr></table>`;
+}
+function btnPair(a: string, al: string, b: string, bl: string): string {
+    return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td width="50%" style="padding-right:5px;" valign="top">${btn(a, al, 'primary', true)}</td><td width="50%" style="padding-left:5px;" valign="top">${btn(b, bl, 'outline', true)}</td></tr></table>`;
+}
+function card(inner: string, accent?: string): string {
+    return row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.card};border:1px solid ${C.line};${accent ? `border-top:3px solid ${accent};` : ''}border-radius:12px;"><tr><td style="padding:18px 20px;${F}">${inner}</td></tr></table>`) + sp(14);
+}
+function why(t: string): string { return `<p style="margin:4px 0 12px;${F}font-size:14px;line-height:1.6;color:${C.muted};"><strong style="color:${C.fg};">Why it matters:</strong> ${esc(t)}</p>`; }
+function example(t: string): string { return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-left:3px solid ${C.blue};padding:2px 0 2px 12px;${F}font-size:14px;line-height:1.6;color:${C.body};">Example: ${esc(t)}</td></tr></table>`; }
+
+function recoveryTable(): string {
+    const rows = [['Decline', 'Gain needed to recover'], ['20%', '25%'], ['33%', '50%'], ['50%', '100%']];
+    return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 14px;border:1px solid ${C.line};border-radius:8px;">${rows.map((r, i) => `<tr><td style="padding:8px 12px;${F}font-size:14px;${i ? `color:${C.body};border-top:1px solid ${C.line};` : `color:${C.muted};font-weight:700;`}">${r[0]}</td><td align="right" style="padding:8px 12px;${F}font-size:14px;${i ? `color:${C.fg};font-weight:800;border-top:1px solid ${C.line};` : `color:${C.muted};font-weight:700;`}">${r[1]}</td></tr>`).join('')}</table>`;
+}
+function simTiles(): string {
+    const t = (label: string, big: string, small: string, color: string) => `<td width="50%" valign="top" style="padding:0 4px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0f1626;border:1px solid ${C.line};border-radius:10px;"><tr><td style="padding:14px;${F}"><div style="font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:${C.muted};">${label}</div><div style="font-size:26px;font-weight:800;color:${color};padding:4px 0;">${big}</div><div style="font-size:12px;color:${C.muted};">${small}</div></td></tr></table></td>`;
+    return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>${t('QQQ LEAPS, simulated', SIM.leaps, `Largest decline ${SIM.leapsDd}`, C.green)}${t('QQQ buy and hold', SIM.qqq, `Largest decline ${SIM.qqqDd}`, C.fg)}</tr></table><p style="margin:10px 4px 0;${F}font-size:12px;line-height:1.55;color:${C.muted};">${esc(SIM.window)}. ${esc(LIMITS)}</p>`;
+}
+function statusLine(name: string, text: string, dot = C.green): string {
+    return `<tr><td style="padding:10px 0;border-top:1px solid ${C.line};${F}font-size:14px;line-height:1.5;color:${C.fg};"><span style="display:inline-block;width:8px;height:8px;border-radius:4px;background:${dot};margin-right:8px;"></span><strong>${esc(name)}</strong><br><span style="color:${C.muted};padding-left:16px;display:inline-block;">${esc(text)}</span></td></tr>`;
+}
+function locked(label: string, url: string, cta: string): string {
+    return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:10px 0 4px;background:${C.lock};border:1px dashed #3a4a70;border-radius:10px;"><tr><td style="padding:14px 16px;${F}"><div style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:${C.amber};padding-bottom:6px;">Plan members only</div><div style="font-size:14px;line-height:1.6;color:${C.body};padding-bottom:12px;">${esc(label)}</div>${btn(url, cta, 'outline')}</td></tr></table>`;
+}
+
+function weeklyIssue(o: Seq7Opts, url: (k: string, x?: string) => string): string {
+    const f = o.facts ?? SAMPLE_FACTS;
+    const chips = ['Market weather', 'Copilot readout', 'Flight plan', 'Turbulence test'].map((c) => `<td style="padding:0 6px 6px 0;"><span style="display:inline-block;${F}font-size:12px;font-weight:700;color:${C.fg};border:1px solid ${C.line};border-radius:8px;padding:7px 10px;background:${C.card};">${c}</span></td>`).join('');
+    const trend = f.trend ? `QQQ is ${f.trend} its 200 day average${f.trendChanged ? ', changed since the last reading.' : ', unchanged since the last reading.'}` : 'Not included this week.';
+    const alloc = o.strategyMember
+        ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${f.defensive.map((d) => statusLine(`QQQ Defensive, ${d.level.toLowerCase()} risk level`, d.text)).join('')}${statusLine('QQQ LEAPS', f.leaps)}</table>`
+        : locked('This week\u2019s QQQ Defensive allocation for each risk level, and the QQQ LEAPS position status, go to readers with a plan for that strategy. Each plan covers one brokerage account.', url('pl'), 'Subscribe to a strategy');
+    const parts = [
+        card(`${pill('Market weather')}<div style="height:10px;"></div><div style="font-size:17px;font-weight:800;color:${C.fg};padding-bottom:8px;">Regime read</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${statusLine('Defensive model regime', f.regime)}${statusLine('Trend reading', trend)}</table>`),
+        card(`${pill('Copilot readout')}<div style="height:10px;"></div><div style="font-size:17px;font-weight:800;color:${C.fg};padding-bottom:8px;">What the model indicates</div>${P(f.readout, 14)}${alloc}`),
+        card(`${pill('Flight plan')}<div style="height:10px;"></div><div style="font-size:17px;font-weight:800;color:${C.fg};padding-bottom:8px;">One idea: why a defensive model can lag</div>${P('A defensive model holds less exposure when its rules say conditions are weaker. If the market keeps rising anyway, that lower exposure lags. The lag is the cost of the same rule that limits declines.', 14)}${why('Knowing the cost of a rule in advance makes it easier to keep following it.')}`),
+        card(`${pill('Turbulence test')}<div style="height:10px;"></div><div style="font-size:17px;font-weight:800;color:${C.fg};padding-bottom:8px;">What could go wrong</div>${P('QLD and TQQQ aim for a multiple of one day of QQQ movement. Over longer periods the result can differ from that multiple, and declines can be deep. LEAPS values in a simulation are model-priced, and live quotes, spreads and fills can differ.', 14)}`),
+    ];
+    return row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid ${C.line};padding-top:22px;${F}"><div style="font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:${C.blue};">This week\u2019s free issue${f.sample ? ' (sample)' : ''}</div><div style="font-size:24px;font-weight:800;color:${C.fg};padding:6px 0 4px;">Flight Plan: <span style="color:${C.blue};">${esc(f.weekLabel)}</span></div><div style="font-size:13px;color:${C.muted};padding-bottom:12px;">About 5 minutes. Four parts, in the same order every week.</div><table role="presentation" cellpadding="0" cellspacing="0"><tr>${chips}</tr></table></td></tr></table>`) + sp(10)
+        + parts.join('')
+        + card(`<div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.blue};padding-bottom:10px;">The two year simulation</div>${simTiles()}<div style="height:14px;"></div>${btnPair(url('va'), 'See the virtual accounts', url('v'), 'Simulation details')}`);
+}
+
+export function renderSeq7(o: Seq7Opts): { subject: string; text: string; html: string; unsubUrl: string; n: number } {
+    const n = o.n ?? SEQ7_N_BY_STEP[o.step] ?? 1;
+    const f = FOCUS[n];
+    const url = (kind: string, extra = '') => `${o.baseUrl}/r/${o.token}/${kind}?s=${o.step}${extra}`;
+    const unsubUrl = `${o.baseUrl}/u/${o.token}`;
+    const first = (o.firstName ?? '').trim();
+    const hi = first ? `Hi ${first},` : 'Hi,';
+
+    // Focus card
+    let extra = '';
+    if (n === 2) extra = recoveryTable();
+    if (n === 5) extra = `<p style="margin:0 0 6px;"><img src="${esc(WS_IMG)}" alt="${esc(WS_ALT)}" width="520" style="display:block;width:100%;max-width:520px;height:auto;border-radius:8px;border:0;"></p><p style="margin:0 0 12px;${F}font-size:12px;color:${C.muted};">${esc(WS_CAP)}</p>`;
+    if (n === 7) extra = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px;">${STUDY_RULES.map((r) => `<tr><td style="padding:4px 0;${F}font-size:14px;line-height:1.5;color:${C.body};"><span style="color:${C.green};font-weight:800;">&#10003;</span>&nbsp; ${esc(r)}</td></tr>`).join('')}</table>`;
+    const focusCard = card(`${pill(f.pill)}<div style="height:10px;"></div><div style="${F}font-size:20px;font-weight:800;color:${C.fg};line-height:1.3;padding-bottom:10px;">${esc(f.title)}</div>${f.body.map((b) => P(b)).join('')}${extra}${why(f.why)}${f.example ? example(f.example) : ''}`, C.green);
+
+    // Response block, different in each email
+    let response: string;
+    if (n === 5) {
+        const opts: [string, string][] = [['qa', 'A. Yes, I would have waited'], ['qb', 'B. I would want a clearer explanation first'], ['qc', 'C. I would have walked away']];
+        response = row(`<div style="${F}font-size:16px;font-weight:800;color:${C.fg};padding-bottom:10px;">Would you have kept following it?</div>`) + opts.map(([k, l]) => row(btn(url(k), l, 'outline', true)) + sp(8)).join('') + row(P('There is no right answer. Each choice is one click, then one short question on our site.', 13, C.muted));
+    } else {
+        const sec = f.secondary && !(n !== 1 && ['sw', 'sd'].includes(f.secondary.kind)) ? f.secondary : undefined;
+        response = row(sec ? btnPair(url(f.primary.kind), f.primary.label, url(sec.kind), sec.label) : btn(url(f.primary.kind), f.primary.label));
+    }
+
+    // Subscribe chooser (all emails except the first, where it is the main response)
+    const chooser = n === 1 ? '' : card(`<div style="${F}font-size:16px;font-weight:800;color:${C.fg};padding-bottom:6px;">Get the brief in your inbox</div>${P('Free. Choose weekly or daily, and change or stop any time.', 14, C.muted)}${btnPair(url('sw'), 'Free weekly', url('sd'), 'Free daily')}`);
+
+    const links = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td width="50%" style="padding:4px;">${btn(url('pl'), 'Plans and pricing', 'outline', true)}</td><td width="50%" style="padding:4px;">${btn(url('f'), 'Study program', 'outline', true)}</td></tr><tr><td width="50%" style="padding:4px;">${btn(url('va'), 'Virtual accounts', 'outline', true)}</td><td width="50%" style="padding:4px;">${btn(url('h'), 'trademind.bot', 'outline', true)}</td></tr></table>`;
+
+    const H: string[] = [];
+    H.push(row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="${F}font-size:18px;font-weight:800;color:${C.fg};"><a href="${esc(url('h'))}" style="color:${C.fg};text-decoration:none;">TradeMind<span style="color:${C.blue};">.bot</span></a></td><td align="right">${pill('Free research', C.blue, '#121a2e')}</td></tr></table>`) + sp(18));
+    H.push(row(`<div style="${F}font-size:26px;font-weight:800;line-height:1.25;color:${C.fg};">${esc(THEME.split('.')[0])}. <span style="color:${C.blue};">${esc(THEME.split('.').slice(1).join('.').trim())}</span></div><div style="${F}font-size:13px;color:${C.muted};padding-top:6px;">${esc(THEME_SUB)}</div>`) + sp(20));
+    H.push(row(P(hi, 16, C.fg)));
+    H.push(focusCard);
+    H.push(response + sp(18));
+    H.push(chooser);
+    H.push(weeklyIssue(o, url));
+    H.push(row(`<div style="${F}font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.muted};padding:4px 4px 8px;">Explore</div>${links}`) + sp(16));
+    H.push(row(P(DISCOUNT + ' ' + NOBROKER, 13, C.muted)));
+    H.push(row(P('Reply to this email or write to me at eric@trademind.bot.', 14, C.body)));
+    H.push(row(`<p style="margin:0 0 2px;${F}font-size:15px;color:${C.fg};font-weight:700;">Eric Huang</p><p style="margin:0 0 20px;${F}font-size:13px;color:${C.muted};">Founder, TradeMind &middot; Queens, New York</p>`));
+    H.push(row(`<div style="border-top:1px solid ${C.line};padding-top:14px;${F}font-size:11px;line-height:1.6;color:${C.muted};">You are getting this invitation because you subscribed to an investing publication. <a href="${esc(unsubUrl)}" style="color:${C.muted};text-decoration:underline;">Unsubscribe or snooze</a>.<br>TradeMind publishes educational research for self-directed investors. It is not personalized investment advice. All performance shown is hypothetical simulation unless labeled as a virtual account. Options and leveraged ETFs involve substantial risk, including loss of the amount invested.<br><br>${esc(o.mailingAddress)}</div>`));
+
+    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><title>${esc(f.subject)}</title></head><body style="margin:0;padding:0;background:${C.bg};"><div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(f.pre)}&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${C.bg}" style="background:${C.bg};"><tr><td align="center" style="padding:26px 14px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">${H.join('')}</table></td></tr></table></body></html>`;
+
+    // Plain text
+    const facts = o.facts ?? SAMPLE_FACTS;
+    const T: string[] = [hi, '', f.title.toUpperCase(), ...f.body, ''];
+    if (n === 2) T.push('Decline 20%: gain needed 25%', 'Decline 33%: gain needed 50%', 'Decline 50%: gain needed 100%', '');
+    if (n === 7) T.push(...STUDY_RULES.map((r) => `- ${r}`), '');
+    T.push(`Why it matters: ${f.why}`, '');
+    if (n === 5) T.push('Would you have kept following it?', `A. Yes, I would have waited: ${url('qa')}`, `B. I would want a clearer explanation first: ${url('qb')}`, `C. I would have walked away: ${url('qc')}`, '');
+    else { T.push(`${f.primary.label}: ${url(f.primary.kind)}`); if (f.secondary) T.push(`${f.secondary.label}: ${url(f.secondary.kind)}`); T.push(''); }
+    if (n !== 1) T.push(`Free weekly: ${url('sw')}`, `Free daily: ${url('sd')}`, '');
+    T.push(`THIS WEEK'S FREE ISSUE${facts.sample ? ' (SAMPLE)' : ''}: ${facts.weekLabel}`,
+        `Market weather: regime ${facts.regime}. ${facts.trend ? `QQQ is ${facts.trend} its 200 day average.` : ''}`,
+        o.strategyMember ? `Copilot readout: ${facts.defensive.map((d) => `${d.level} ${d.text}`).join('; ')}. QQQ LEAPS: ${facts.leaps}` : `Copilot readout: the allocation for each risk level goes to plan members. Subscribe to a strategy: ${url('pl')}`,
+        'Flight plan: why a defensive model can lag a rising market.',
+        'Turbulence test: leveraged ETFs and model-priced options.',
+        `Simulation, ${SIM.window}: QQQ LEAPS ${SIM.leaps} (largest decline ${SIM.leapsDd}) vs QQQ ${SIM.qqq} (${SIM.qqqDd}). ${LIMITS}`,
+        `Virtual accounts: ${url('va')}`, `Simulation details: ${url('v')}`, '',
+        `Plans and pricing: ${url('pl')}`, `Study program: ${url('f')}`, `trademind.bot: ${url('h')}`, '',
+        DISCOUNT, NOBROKER, '', 'Reply to this email or write to me at eric@trademind.bot.', '', 'Eric Huang', 'Founder, TradeMind', '',
+        `You are getting this invitation because you subscribed to an investing publication. Unsubscribe or snooze: ${unsubUrl}`,
+        o.mailingAddress, 'Educational research, not personalized investment advice. Investing involves risk, including loss.');
+    return { subject: f.subject, text: T.join('\n'), html, unsubUrl, n };
+}

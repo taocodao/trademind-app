@@ -65,6 +65,7 @@ export async function ensureNewsletterTables(): Promise<void> {
         ['unsubscribed_at', 'TIMESTAMPTZ'], ['change_count_90d', 'INTEGER NOT NULL DEFAULT 0'],
         ['change_count_reset_at', 'TIMESTAMPTZ'],
         ['lifecycle_marks', `JSONB NOT NULL DEFAULT '{}'::jsonb`], ['pending_email', 'TEXT'],
+        ['cadence', "TEXT NOT NULL DEFAULT 'weekly'"],
     ];
     for (const [col, type] of adds) {
         await query(`ALTER TABLE newsletter_subscribers ADD COLUMN IF NOT EXISTS ${col} ${type}`);
@@ -1047,4 +1048,10 @@ export async function markLifecycle(subscriberId: number, key: string): Promise<
         [subscriberId, JSON.stringify({ [key]: new Date().toISOString() }), key]
     );
     return res.rowCount! > 0;
+}
+
+/** Set how often a confirmed subscriber wants the free issue: weekly (default) or daily. */
+export async function setCadence(subscriberId: number, cadence: 'weekly' | 'daily'): Promise<void> {
+    await ensureNewsletterTables();
+    await query('UPDATE newsletter_subscribers SET cadence = $2, updated_at = NOW() WHERE id = $1', [subscriberId, cadence]);
 }

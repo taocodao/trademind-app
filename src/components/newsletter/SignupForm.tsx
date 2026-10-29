@@ -30,7 +30,7 @@ function attribution() {
     };
 }
 
-export default function SignupForm({ source, initialEmail, implicitConsent = false, outreachToken = '', nextPath = '' }: { source: string; initialEmail?: string; implicitConsent?: boolean; outreachToken?: string; nextPath?: string }) {
+export default function SignupForm({ source, initialEmail, implicitConsent = false, outreachToken = '', nextPath = '', cadence = 'weekly' }: { source: string; initialEmail?: string; implicitConsent?: boolean; outreachToken?: string; nextPath?: string; cadence?: 'weekly' | 'daily' }) {
     const [email, setEmail] = useState(initialEmail ?? '');
     const [experience, setExperience] = useState('');
     const [consentBox, setConsent] = useState(false);
@@ -58,6 +58,7 @@ export default function SignupForm({ source, initialEmail, implicitConsent = fal
                     consent,
                     website: honeypot, // honeypot; always empty for humans
                     source,
+                    cadence,
                     ...attribution(),
                     ...(outreachToken ? { outreachToken } : {}),
                 }),

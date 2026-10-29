@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-    signup, signupRateLimited, confirmInstantly, logNewsletterSend,
+    signup, signupRateLimited, confirmInstantly, logNewsletterSend, setCadence,
 } from '@/lib/newsletter/db';
 import { sendConfirmationEmail, sendWelcomeEmail } from '@/lib/newsletter/email';
 import { markContactByToken, getContact } from '@/lib/outreach/db';
@@ -60,6 +60,9 @@ export async function POST(req: NextRequest) {
         // Invitation campaign: tie this signup to the contact whose personal link was used.
         if (body.outreachToken && 'email' in result && result.email) {
             void markContactByToken(String(body.outreachToken), String(result.email), 'subscribed');
+        }
+        if ('subscriberId' in result && result.subscriberId && (body.cadence === 'daily' || body.cadence === 'weekly')) {
+            await setCadence(result.subscriberId, body.cadence);
         }
         if (result.kind === 'already-confirmed') {
             return NextResponse.json({ ok: true, status: 'already-confirmed', message: "You're already subscribed" });

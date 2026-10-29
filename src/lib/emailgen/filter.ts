@@ -36,7 +36,7 @@ export function checkDraft(plan: EditionPlan, d: DraftSections, html: string): C
     const declared = d.used_numbers.filter((n) => !plan.allowed_numbers.includes(n));
     out.push({ name: 'declared_numbers_allowed', pass: declared.length === 0, detail: declared.join(', ') });
     for (const [k, u] of Object.entries(FIXED_LINKS)) out.push({ name: 'link_' + k, pass: html.includes(u) });
-    out.push({ name: 'unsubscribe_present', pass: html.includes('{{one_click_unsubscribe_url}}') || html.includes('unsubscribe') });
+    out.push({ name: 'unsubscribe_present', pass: html.includes('{{one_click_unsubscribe_url}}') || html.toLowerCase().includes('unsubscribe') });
     out.push({ name: 'address_present', pass: html.includes('151-58 24th Rd') });
     out.push({ name: 'no_unresolved_braces', pass: !/\{\{(?!token\}\}|one_click_unsubscribe_url\}\}|preferences_url\}\})[^}]*\}\}/.test(html) && !/\bcolor:\{/.test(html) });
     if (plan.status_fallback) {

@@ -74,6 +74,7 @@ for (const ed of ['weekly_free', 'outreach_weekly', 'daily_quiet', 'daily_action
     ok('dash filter', !passed(checkDraft(plan, d, r.html + '\u2014')));
     ok('no @bot masthead', !r.html.includes('@bot') && r.html.includes('.bot</span>'));
     ok('study rules listed', r.html.includes('20 seats'));
+    ok('buttons rendered', (r.html.match(/border-radius:10px;border:1px solid/g) ?? []).length >= 6);
 }
 // model failure falls back
 {

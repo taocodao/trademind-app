@@ -60,3 +60,4 @@ git_*.txt
 git_*.json
 scratch_*
 tmp_*
+out

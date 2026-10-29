@@ -41,7 +41,14 @@ export const SAMPLE_ACCOUNT: DailyAccount = {
 };
 
 export interface DailyOpts {
-    token: string; firstName: string | null; baseUrl: string; mailingAddress: string;
+    /** Signed per-subscriber link token from makeDailyLinkToken (src/lib/newsletter/daily-link.ts). */
+    linkToken: string; firstName: string | null; baseUrl: string; mailingAddress: string;
+    /** Per-subscriber unsubscribe URL, from makeUnsubscribeToken. */
+    unsubscribeUrl: string;
+    /** The subscriber's account id, so the account button opens that account. */
+    accountId?: number | null;
+    /** Edition date, YYYY-MM-DD, recorded with each click. */
+    editionDate: string;
     facts?: DailyFacts; account?: DailyAccount | null;
 }
 
@@ -53,11 +60,14 @@ export function renderDaily(o: DailyOpts): { subject: string; text: string; html
     const f = o.facts ?? SAMPLE_DAILY;
     const a = o.account ?? null;
     const b = o.baseUrl;
-    const unsubUrl = `${b}/u/${o.token}`;
-    const plansUrl = `${b}/plans?t=${o.token}&utm_source=daily&utm_medium=email`;
-    const acctUrl = `${b}/accounts?utm_source=daily&utm_medium=email`;
-    const vaUrl = `${b}/live-record?t=${o.token}&utm_source=daily&utm_medium=email`;
-    const weeklyUrl = `${b}/newsletter/join?t=${o.token}&cadence=weekly`;
+    const unsubUrl = o.unsubscribeUrl;
+    const link = (kind: string, extra = '') => `${b}/d/${o.linkToken}/${kind}?e=${o.editionDate}${extra}`;
+    const plansUrl = link('pl');
+    const acctUrl = link('acct', o.accountId ? `&a=${o.accountId}` : '');
+    const vaUrl = link('va');
+    const simUrl = link('sim');
+    const weeklyUrl = link('wk');
+    const homeUrl = link('h');
     const hi = (o.firstName ?? '').trim() ? `Hi ${(o.firstName ?? '').trim()},` : 'Hi,';
     const trend = f.trend ? `QQQ is ${f.trend} its 200 day average${f.trendChanged ? ', changed since the last reading.' : ', unchanged since the last reading.'}` : 'Not included today.';
     const oneLine = `The Defensive model reads ${f.regime}${f.trend ? f.trendChanged ? ' and its trend reading changed.' : ' and its trend reading did not change.' : '.'}`;
@@ -81,11 +91,11 @@ export function renderDaily(o: DailyOpts): { subject: string; text: string; html
     ].join('');
 
     const cta = a
-        ? card(`<div style="${F}font-size:16px;font-weight:800;color:${C.fg};padding-bottom:6px;">Check the record</div>${P('The virtual accounts show every published signal, losses included, with a short delay.', 14, C.muted)}${btnPair(vaUrl, 'See the virtual accounts', `${b}/simulated-record?t=${o.token}`, 'Simulation details')}`)
+        ? card(`<div style="${F}font-size:16px;font-weight:800;color:${C.fg};padding-bottom:6px;">Check the record</div>${P('The virtual accounts show every published signal, losses included, with a short delay.', 14, C.muted)}${btnPair(vaUrl, 'See the virtual accounts', simUrl, 'Simulation details')}`)
         : card(`<div style="${F}font-size:16px;font-weight:800;color:${C.fg};padding-bottom:6px;">See the full readout for your account</div>${P('A strategy plan adds the allocation for your risk level, your account card and a virtual account that follows the signals. ' + DISCOUNT, 14, C.muted)}${btnPair(plansUrl, 'Subscribe to a strategy', vaUrl, 'See the virtual accounts')}`, C.green);
 
     const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><title>${esc(subject)}</title></head><body style="margin:0;padding:0;background:${C.bg};"><div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(oneLine)}&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${C.bg}" style="background:${C.bg};"><tr><td align="center" style="padding:26px 14px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">`
-        + row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="${F}font-size:18px;font-weight:800;color:${C.fg};"><a href="${esc(b)}" style="color:${C.fg};text-decoration:none;">TradeMind<span style="color:${C.blue};">.bot</span></a></td><td align="right">${pill('\u2600\uFE0F Daily brief', C.blue, '#121a2e')}</td></tr></table>`) + sp(18)
+        + row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="${F}font-size:18px;font-weight:800;color:${C.fg};"><a href="${esc(homeUrl)}" style="color:${C.fg};text-decoration:none;">TradeMind<span style="color:${C.blue};">.bot</span></a></td><td align="right">${pill('\u2600\uFE0F Daily brief', C.blue, '#121a2e')}</td></tr></table>`) + sp(18)
         + row(`<div style="${F}font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:${C.blue};">${esc(f.dateLabel)}${f.sample ? ' (sample)' : ''}</div><div style="${F}font-size:26px;font-weight:800;line-height:1.25;color:${C.fg};padding:6px 0 4px;">Daily Flight Plan: <span style="color:${C.blue};">${esc(f.regime)}</span></div><div style="${F}font-size:14px;color:${C.body};padding-bottom:6px;">${esc(oneLine)}</div><div style="${F}font-size:13px;color:${C.muted};padding-bottom:12px;">About 2 minutes. Based on ${esc(f.runLabel)}.</div><table role="presentation" cellpadding="0" cellspacing="0"><tr>${chips}</tr></table>`) + sp(14)
         + row(P(hi, 16, C.fg))
         + parts + cta

@@ -7,7 +7,7 @@ for (const f of ['copy-seq7.ts', 'copy-ws.ts', 'copy-v8.ts', 'templates-v5.ts', 
     fs.writeFileSync(path.join(tmp, f.replace('.ts', '.js')), ts.transpileModule(fs.readFileSync(path.join(root, 'src/lib/outreach', f), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText);
 }
 const { renderDaily, SAMPLE_ACCOUNT } = createRequire(path.join(tmp, 'x.js'))('./copy-daily.js');
-const base = { token: 'cddf0962bc', firstName: 'Eric', baseUrl: 'https://trademind.bot', mailingAddress: 'TradeMind, 151-58 24th Rd, Whitestone, NY 11357, United States' };
+const base = { linkToken: '1.SAMPLEsampleSAMPLEsamp', unsubscribeUrl: 'https://trademind.bot/newsletter/unsubscribe?token=SAMPLE', editionDate: '2026-10-28', accountId: null, firstName: 'Eric', baseUrl: 'https://trademind.bot', mailingAddress: 'TradeMind, 151-58 24th Rd, Whitestone, NY 11357, United States' };
 const cases = [
     ['no-account', null],
     ['defensive-account', SAMPLE_ACCOUNT],
@@ -22,7 +22,7 @@ for (const [name, account] of cases) {
     if (/[\u2013\u2014]|--/.test(vis)) probs.push('dash');
     if (/!/.test(r.text)) probs.push('exclamation');
     if (/confidence|compound quietly|worst fall shallow|guarantee|probability of profit|exposure tier|protect capital/i.test(vis)) probs.push('banned phrase');
-    if (!r.html.includes('/u/' + base.token)) probs.push('no unsubscribe');
+    if (!r.html.includes('newsletter/unsubscribe')) probs.push('no unsubscribe');
     if (probs.length) { bad++; console.log('FAIL', name, probs.join(', ')); }
     fs.writeFileSync(path.join(root, 'out', `daily-${name}.html`), r.html);
     fs.writeFileSync(path.join(root, 'out', `daily-${name}.json`), JSON.stringify({ subject: r.subject, text: r.text }));

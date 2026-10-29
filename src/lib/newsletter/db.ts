@@ -1010,7 +1010,7 @@ export async function markRedeemed(subscriberId: number, orderId: string, accoun
 
 const ALLOWED_EVENTS = new Set([
     'page_view', 'signup_started', 'signup_submitted', 'share_clicked',
-    'offer_cta_clicked', 'deep_link_clicked', 'eligibility_checked',
+    'offer_cta_clicked', 'deep_link_clicked', 'daily_click', 'eligibility_checked',
     'confirmation_sent', 'confirmation_page_viewed', 'subscription_confirmed',
     'confirmation_reminder_sent', 'email_change_requested', 'email_change_confirmed',
     'email_change_cancelled', 'issue_sent', 'issue_opened', 'issue_link_clicked',

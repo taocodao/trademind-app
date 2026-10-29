@@ -1,0 +1,20 @@
+#!/usr/bin/env node
+import fs from 'node:fs'; import path from 'node:path'; import os from 'node:os'; import assert from 'node:assert';
+import { createRequire } from 'node:module'; import ts from 'typescript';
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'dlk-'));
+fs.writeFileSync(path.join(tmp, 'm.js'), ts.transpileModule(fs.readFileSync('src/lib/newsletter/daily-link.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText);
+process.env.DAILY_LINK_SECRET = 'test-secret';
+const m = createRequire(path.join(tmp, 'x.js'))('./m.js');
+const t = m.makeDailyLinkToken(42);
+assert.equal(m.readDailyLinkToken(t), 42);
+assert.equal(m.readDailyLinkToken('43.' + t.split('.')[1]), null, 'signature is bound to the id');
+assert.equal(m.readDailyLinkToken('42.' + 'A'.repeat(22)), null);
+assert.equal(m.readDailyLinkToken('garbage'), null);
+assert.equal(m.dailyDestination('acct', 7, 'x=1'), '/account/7?x=1');
+assert.equal(m.dailyDestination('acct', null, 'x=1'), '/accounts?x=1');
+assert.equal(m.dailyDestination('wk', null, 'x=1'), '/newsletter/join?cadence=weekly&x=1');
+for (const k of m.DAILY_KINDS) assert.ok(m.dailyDestination(k, null, 'u=1').startsWith('/'), k);
+delete process.env.DAILY_LINK_SECRET; delete process.env.CRON_SECRET; delete process.env.PRIVY_APP_SECRET;
+assert.equal(m.readDailyLinkToken(t), null, 'no secret means nothing verifies');
+fs.rmSync(tmp, { recursive: true, force: true });
+console.log('daily link tests passed');

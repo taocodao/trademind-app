@@ -15,13 +15,13 @@ export function programEmail(kind: LifecycleEmail | 'accepted' | 'founding_confi
         case 'accepted':
         case 'preview_started':
             return {
-                to: c.to, subject: 'Your TradeMind study preview is active',
-                heading: 'Your 30 day study preview has started',
+                to: c.to, subject: 'Your TradeMind study is active',
+                heading: 'Your 4 month study has started',
                 intro: `Your preview is active until ${fmt(c.endDate)}. No card is on file and nothing will be charged.`,
                 bullets: [
-                    'You can follow the signals with a virtual account for the full 30 days.',
-                    'Your first short activity opens on day 7. It takes about 5 minutes and adds 30 more days.',
-                    'You can earn up to 90 days in total. Nothing turns into a paid plan unless you buy one yourself.',
+                    'You can follow the signals with a virtual account for the full 4 months at no charge.',
+                    'A short survey opens near the end of each month and takes about 5 minutes. Every month you pass adds 3 free months for one account at the end.',
+                    'Stay 2 months and pass both and you have 2 months plus 6 months; stay all 4 and you have 4 plus 12. You can leave at any time. Nothing turns into a paid plan unless you buy one yourself.',
                 ],
                 cta: { label: 'Open your preview', url: CHOOSE_URL },
                 note: 'Sign in with the email address this message was sent to.',
@@ -36,10 +36,10 @@ export function programEmail(kind: LifecycleEmail | 'accepted' | 'founding_confi
             };
         case 'activity_due':
             return {
-                to: c.to, subject: `TradeMind study activity ${c.month}: about 5 minutes`,
-                heading: 'Your study activity is ready',
-                intro: 'Completing it adds 30 more days of free access, up to 90 days in total. Credit comes from a real attempt to answer. "I did not use it" is a valid answer, and you never need to give positive feedback.',
-                cta: { label: 'Open the activity', url: CHOOSE_URL },
+                to: c.to, subject: `TradeMind month ${c.month} survey: about 5 minutes`,
+                heading: 'Your month survey is ready',
+                intro: 'Completing it adds 3 free months for one account at the end, so two months in with both surveys done means 2 months plus 6 months. Credit comes from a real attempt to answer. "I did not use it" is a valid answer, and you never need to give positive feedback.',
+                cta: { label: 'Open the survey', url: CHOOSE_URL },
             };
         case 'founding_ready':
         case 'founding_confirmed':

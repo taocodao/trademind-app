@@ -41,11 +41,25 @@ export const SAMPLE_FACTS: IssueFacts = {
 /** Study rules as published on /founding today. Change here when the page changes. */
 export const STUDY_RULES = [
     '20 seats, and every application is read by hand',
-    '30 days free to start, with a virtual account that follows the signals',
-    'Each short activity you complete adds 30 more days, up to 90 days in total',
+    '4 months free, with a virtual account that follows the signals',
+    'A short survey at the end of each month, about 5 minutes',
+    'Every month you pass adds 3 free months for one account at the end',
+    'Stay 2 months and pass both: 2 months plus 6 months. Stay all 4: 4 months plus 12',
+    'Leave at any time and keep the months you earned',
     'No card, and nothing turns into a paid plan on its own',
-    'You never need to trade, deposit money, write a review or refer anyone',
 ];
+
+export const MEETING_URL = 'https://calendar.app.google/dKsXK6G3cV3ppbAo7';
+export const STUDY_BANNER = { title: 'Join the 4 month study program', text: '4 months free with a virtual account that follows the signals. A short survey at the end of each month, and every month you pass adds 3 free months for one account at the end. Stay 2 months and pass both, and you have 2 months plus 6 months. Stay all 4 and you have 4 plus 12. You can leave at any time.' };
+export const COOP = {
+    title: 'Ways we could work together',
+    items: [
+        ['Newsletter for professionals', 'A research edition written for advisers, with the model\u2019s reading, the rules behind it and the limits, for your own review or your client conversations.'],
+        ['Research on the model', 'Review the rules and the simulation, challenge the assumptions, or run your own tests. Critical feedback is welcome.'],
+        ['Custodian account implementation', 'A conversation about how published signals could be followed on a custodian account, with orders placed by your firm or custodian. This is only a possibility to discuss. TradeMind does not connect to any brokerage today and places no trades.'],
+        ['Something else', 'If you see another fit, tell me.'],
+    ] as [string, string][],
+};
 
 export const SIM = { leaps: '+229.48%', leapsDd: '14.59%', qqq: '+49.46%', qqqDd: '22.88%', window: 'October 14, 2024 to October 13, 2026' };
 export const LIMITS = 'Hypothetical results from a simulation, not a real account. Options were model-priced, the rules were developed with hindsight, and this was one favorable period for QQQ and semiconductors.';
@@ -146,6 +160,8 @@ export interface Seq7Opts {
     step: number; n?: number; facts?: IssueFacts;
     /** True when the reader already has a plan for the strategy; shows the allocation instead of the placeholder. */
     strategyMember?: boolean;
+    /** 'ria' adds the professional cooperation card and the meeting button, and uses an adviser footer. Default retail. */
+    audience?: 'retail' | 'ria';
 }
 
 export const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -209,6 +225,14 @@ function weeklyIssue(o: Seq7Opts, url: (k: string, x?: string) => string): strin
         + card(`<div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.blue};padding-bottom:10px;">The two year simulation</div>${simTiles()}<div style="height:14px;"></div>${btnPair(url('va'), 'See the virtual accounts', url('v'), 'Simulation details')}`);
 }
 
+function studyBanner(url: (k: string, x?: string) => string): string {
+    return card(`<div style="${F}font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.blue};padding-bottom:6px;">\u{1F393}&nbsp;Study program</div><div style="${F}font-size:18px;font-weight:800;color:${C.fg};padding-bottom:8px;">${esc(STUDY_BANNER.title)}</div>${P(STUDY_BANNER.text, 14)}${btn(url('f'), 'Apply to the study program')}`, C.blue);
+}
+function coopCard(url: (k: string, x?: string) => string): string {
+    const items = COOP.items.map(([t, d]) => `<tr><td style="padding:8px 0;border-top:1px solid ${C.line};${F}font-size:14px;line-height:1.55;color:${C.body};"><strong style="color:${C.fg};">${esc(t)}.</strong> ${esc(d)}</td></tr>`).join('');
+    return card(`<div style="${F}font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.green};padding-bottom:6px;">\u{1F91D}&nbsp;For professionals</div><div style="${F}font-size:18px;font-weight:800;color:${C.fg};padding-bottom:8px;">${esc(COOP.title)}</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${items}</table><div style="height:12px;"></div>${btn(url('mt'), 'Schedule a meeting')}`, C.green);
+}
+
 export function renderSeq7(o: Seq7Opts): { subject: string; text: string; html: string; unsubUrl: string; n: number } {
     const n = o.n ?? SEQ7_N_BY_STEP[o.step] ?? 1;
     const f = FOCUS[n];
@@ -243,7 +267,9 @@ export function renderSeq7(o: Seq7Opts): { subject: string; text: string; html: 
     H.push(row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="${F}font-size:18px;font-weight:800;color:${C.fg};"><a href="${esc(url('h'))}" style="color:${C.fg};text-decoration:none;">TradeMind<span style="color:${C.blue};">.bot</span></a></td><td align="right">${pill('Free research', C.blue, '#121a2e')}</td></tr></table>`) + sp(18));
     H.push(row(`<div style="${F}font-size:26px;font-weight:800;line-height:1.25;color:${C.fg};">${esc(THEME.split('.')[0])}. <span style="color:${C.blue};">${esc(THEME.split('.').slice(1).join('.').trim())}</span></div><div style="${F}font-size:13px;color:${C.muted};padding-top:6px;">${esc(THEME_SUB)}</div>`) + sp(20));
     H.push(row(P(hi, 16, C.fg)));
+    H.push(studyBanner(url));
     H.push(focusCard);
+    if (o.audience === 'ria') H.push(coopCard(url));
     H.push(response + sp(18));
     H.push(chooser);
     H.push(weeklyIssue(o, url));
@@ -251,13 +277,14 @@ export function renderSeq7(o: Seq7Opts): { subject: string; text: string; html: 
     H.push(row(P(DISCOUNT + ' ' + NOBROKER, 13, C.muted)));
     H.push(row(P('Reply to this email or write to me at eric@trademind.bot.', 14, C.body)));
     H.push(row(`<p style="margin:0 0 2px;${F}font-size:15px;color:${C.fg};font-weight:700;">Eric Huang</p><p style="margin:0 0 20px;${F}font-size:13px;color:${C.muted};">Founder, TradeMind &middot; Queens, New York</p>`));
-    H.push(row(`<div style="border-top:1px solid ${C.line};padding-top:14px;${F}font-size:11px;line-height:1.6;color:${C.muted};">You are getting this invitation because you subscribed to an investing publication. <a href="${esc(unsubUrl)}" style="color:${C.muted};text-decoration:underline;">Unsubscribe or snooze</a>.<br>TradeMind publishes educational research for self-directed investors. It is not personalized investment advice. All performance shown is hypothetical simulation unless labeled as a virtual account. Options and leveraged ETFs involve substantial risk, including loss of the amount invested.<br><br>${esc(o.mailingAddress)}</div>`));
+    H.push(row(`<div style="border-top:1px solid ${C.line};padding-top:14px;${F}font-size:11px;line-height:1.6;color:${C.muted};">${o.audience === 'ria' ? 'You are getting this note at your business address because your firm is listed as an investment professional.' : 'You are getting this invitation because you subscribed to an investing publication.'} <a href="${esc(unsubUrl)}" style="color:${C.muted};text-decoration:underline;">Unsubscribe or snooze</a>.<br>TradeMind publishes educational research for self-directed investors. It is not personalized investment advice. All performance shown is hypothetical simulation unless labeled as a virtual account. Options and leveraged ETFs involve substantial risk, including loss of the amount invested.<br><br>${esc(o.mailingAddress)}</div>`));
 
     const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><title>${esc(f.subject)}</title></head><body style="margin:0;padding:0;background:${C.bg};"><div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(f.pre)}&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${C.bg}" style="background:${C.bg};"><tr><td align="center" style="padding:26px 14px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">${H.join('')}</table></td></tr></table></body></html>`;
 
     // Plain text
     const facts = o.facts ?? SAMPLE_FACTS;
-    const T: string[] = [hi, '', f.title.toUpperCase(), ...f.body, ''];
+    const T: string[] = [hi, '', `STUDY PROGRAM: ${STUDY_BANNER.title}. ${STUDY_BANNER.text}`, `Apply: ${url('f')}`, '', f.title.toUpperCase(), ...f.body, ''];
+    if (o.audience === 'ria') T.push(COOP.title.toUpperCase(), ...COOP.items.map(([t, d]) => `- ${t}. ${d}`), `Schedule a meeting: ${url('mt')}`, '');
     if (n === 2) T.push('Decline 20%: gain needed 25%', 'Decline 33%: gain needed 50%', 'Decline 50%: gain needed 100%', '');
     if (n === 7) T.push(...STUDY_RULES.map((r) => `- ${r}`), '');
     T.push(`Why it matters: ${f.why}`, '');
@@ -273,7 +300,7 @@ export function renderSeq7(o: Seq7Opts): { subject: string; text: string; html: 
         `Virtual accounts: ${url('va')}`, `Simulation details: ${url('v')}`, '',
         `Plans and pricing: ${url('pl')}`, `Study program: ${url('f')}`, `trademind.bot: ${url('h')}`, '',
         DISCOUNT, NOBROKER, '', 'Reply to this email or write to me at eric@trademind.bot.', '', 'Eric Huang', 'Founder, TradeMind', '',
-        `You are getting this invitation because you subscribed to an investing publication. Unsubscribe or snooze: ${unsubUrl}`,
+        `${o.audience === 'ria' ? 'You are getting this note at your business address because your firm is listed as an investment professional.' : 'You are getting this invitation because you subscribed to an investing publication.'} Unsubscribe or snooze: ${unsubUrl}`,
         o.mailingAddress, 'Educational research, not personalized investment advice. Investing involves risk, including loss.');
     return { subject: f.subject, text: T.join('\n'), html, unsubUrl, n };
 }

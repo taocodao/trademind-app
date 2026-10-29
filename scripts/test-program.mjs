@@ -17,27 +17,30 @@ const S = '2026-11-02T14:00:00.000Z';
 const at = (d) => r.addDays(S, d);
 const st = (o = {}) => ({ started_at: S, completed_months: [], path: 'undecided', founding_selected_at: null, paid_started_at: null, ...o });
 
-t('preview is 30 days', r.freeAccessEnd(st()) === at(30));
-t('one activity gives 60 days', r.freeAccessEnd(st({ completed_months: [1] })) === at(60));
-t('two activities give 90 days', r.freeAccessEnd(st({ completed_months: [1, 2] })) === at(90));
-t('free time capped at 90 days', r.freeAccessEnd(st({ completed_months: [1, 2, 3, 4, 5, 6] })) === at(90));
-t('same activity counted once', r.freeAccessEnd(st({ completed_months: [1, 1, 1] })) === at(60));
+t('study is 4 months (120 days)', r.freeAccessEnd(st()) === at(120));
+t('one survey earns 3 months', r.freeAccessEnd(st({ completed_months: [1] })) === at(210));
+t('two surveys earn 6 months', r.freeAccessEnd(st({ completed_months: [1, 2] })) === at(300));
+t('four surveys earn 12 months, 16 months in total', r.freeAccessEnd(st({ completed_months: [1, 2, 3, 4] })) === at(480));
+t('credit capped at four surveys', r.freeAccessEnd(st({ completed_months: [1, 2, 3, 4, 5, 6] })) === at(480));
+t('same survey counted once', r.freeAccessEnd(st({ completed_months: [1, 1, 1] })) === at(210));
+t('leave after 2 months with 2 surveys: 2 months plus 6 months', r.freeAccessEnd(st({ left_at: at(60), completed_months: [1, 2] })) === at(60 + 180));
+t('leaving never extends the study past 4 months', r.freeAccessEnd(st({ left_at: at(300), completed_months: [1] })) === at(210));
 t('seats are 20', r.FIRST_GROUP === 20 && r.WAVE_SIZE_MAX === 20 && r.HARD_LIMIT === 20);
 
 t('during the preview access is open', r.accessNow(st(), at(10)) === 'research_plus_tracking');
-t('doing nothing: access ends, no charge', r.accessNow(st(), at(31)) === 'free_weekly');
+t('doing nothing: access ends, no charge', r.accessNow(st(), at(121)) === 'free_weekly');
 t('paid member stays paid', r.accessNow(st({ paid_started_at: at(31) }), at(300)) === 'paid');
 
 const keys = (x) => x.map((e) => e.key);
 t('welcome email once', keys(r.dueEmails(st(), at(0), new Set())).includes('preview_started') && !keys(r.dueEmails(st(), at(1), new Set(['preview_started']))).includes('preview_started'));
-t('first activity opens day 7', r.activityDue(S, 1) === at(7));
-t('second activity opens day 37', r.activityDue(S, 2) === at(37));
-t('activity email on day 7 for everyone not stepped away', keys(r.dueEmails(st(), at(7), new Set(['preview_started']))).includes('activity_due_1'));
-t('no activity email after stepping away', !keys(r.dueEmails(st({ path: 'free' }), at(7), new Set(['preview_started']))).some((k) => k.startsWith('activity_due')));
-t('activity email stops after grace period', !keys(r.dueEmails(st(), at(7 + 15), new Set(['preview_started']))).includes('activity_due_1'));
-t('no third activity', !keys(r.dueEmails(st({ completed_months: [1, 2] }), at(70), new Set(['preview_started']))).includes('activity_due_3'));
-t('free time ending notice 7 days before', keys(r.dueEmails(st(), at(23), new Set(['preview_started']))).some((k) => k.startsWith('free_time_ending')));
-t('no ending notice once paid', !keys(r.dueEmails(st({ paid_started_at: at(20) }), at(23), new Set(['preview_started']))).some((k) => k.startsWith('free_time_ending')));
+t('first survey opens day 23', r.activityDue(S, 1) === at(23));
+t('fourth survey opens day 113', r.activityDue(S, 4) === at(113));
+t('survey email on day 23 for everyone not stepped away', keys(r.dueEmails(st(), at(23), new Set(['preview_started']))).includes('activity_due_1'));
+t('no activity email after stepping away', !keys(r.dueEmails(st({ path: 'free' }), at(23), new Set(['preview_started']))).some((k) => k.startsWith('activity_due')));
+t('activity email stops after grace period', !keys(r.dueEmails(st(), at(23 + 15), new Set(['preview_started']))).includes('activity_due_1'));
+t('no fifth survey', !keys(r.dueEmails(st({ completed_months: [1, 2, 3, 4] }), at(150), new Set(['preview_started']))).includes('activity_due_5'));
+t('free time ending notice 7 days before', keys(r.dueEmails(st(), at(115), new Set(['preview_started']))).some((k) => k.startsWith('free_time_ending')));
+t('no ending notice once paid', !keys(r.dueEmails(st({ paid_started_at: at(20) }), at(115), new Set(['preview_started']))).some((k) => k.startsWith('free_time_ending')));
 t('no founding or choice emails any more', !keys(r.dueEmails(st({ path: 'founding' }), at(30), new Set())).some((k) => k === 'founding_ready' || k === 'choice_reminder'));
 
 // Invite copy

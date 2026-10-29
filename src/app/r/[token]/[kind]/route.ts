@@ -13,7 +13,7 @@ export const runtime = 'nodejs';
  * script after 3 visible seconds (POST /api/engage). No click ever subscribes anyone: the
  * subscribe link only opens a form the person submits themselves.
  */
-const KINDS = ['p', 's', 'i', 'h', 'n', 'v', 'c', 'f', 'x', 'br', 'st', 'ru', 'ch', 'vf', 'pn', 'qa', 'qb', 'qc', 'sw', 'sd', 'va', 'pl'];
+const KINDS = ['p', 's', 'i', 'h', 'n', 'v', 'c', 'f', 'x', 'br', 'st', 'ru', 'ch', 'vf', 'pn', 'qa', 'qb', 'qc', 'sw', 'sd', 'va', 'pl', 'mt'];
 /** Start here sections: link kind to section key and page. */
 const SECTION_BY_KIND: Record<string, string> = { br: 'brief', st: 'strategies', ru: 'rules', ch: 'challenge', vf: 'verify', pn: 'panel' };
 
@@ -41,6 +41,7 @@ async function handle(req: NextRequest, params: Promise<{ token: string; kind: s
     else if (kind === 'sw') dest = `/newsletter/join?t=${token}&cadence=weekly&${utm}`;
     else if (kind === 'sd') dest = `/newsletter/join?t=${token}&cadence=daily&${utm}`;
     else if (kind === 'va') dest = `/live-record?demo=1&t=${token}&${utm}`;
+    else if (kind === 'mt') dest = 'https://calendar.app.google/dKsXK6G3cV3ppbAo7';
     else if (kind === 'pl') dest = `/plans?t=${token}&${utm}`;
     else if (kind === 'i') {
         const a = req.nextUrl.searchParams.get('a') ?? '';

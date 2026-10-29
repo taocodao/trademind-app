@@ -69,7 +69,7 @@ export default function ChoosePage() {
 
     return (
         <main className="mx-auto max-w-xl px-5 py-12">
-            <h1 className="text-2xl font-semibold">Your TradeMind study preview</h1>
+            <h1 className="text-2xl font-semibold">Your TradeMind 4 month study</h1>
             <p className="mt-3 text-gray-300">
                 {me.paid ? 'You have a paid plan.' : active ? `Your free study access runs until ${date(me.free_access_ends)}. No card is on file.` : 'Your free study access has ended. You are not being charged.'}
             </p>
@@ -77,8 +77,8 @@ export default function ChoosePage() {
 
             {!me.paid && me.path !== 'free' && (
                 <section className="mt-8">
-                    <h2 className="text-lg font-semibold">Study activities</h2>
-                    <p className="mt-1 text-sm text-gray-300">Each short activity adds 30 more days free, up to 90 days in total. A real attempt counts, and "I did not use it" is a valid answer.</p>
+                    <h2 className="text-lg font-semibold">Monthly surveys</h2>
+                    <p className="mt-1 text-sm text-gray-300">Every month you pass adds 3 free months for one account at the end. Stay 2 months and pass both, and you have 2 months plus 6 months. You can leave at any time. A real attempt counts, and "I did not use it" is a valid answer.</p>
                     <ul className="mt-3 space-y-3 text-sm text-gray-300">
                         {me.activities!.map((a) => {
                             const open = !a.done && new Date() >= new Date(a.due);
@@ -103,7 +103,7 @@ export default function ChoosePage() {
                     <h2 className="text-lg font-semibold">Keep the signals</h2>
                     <p className="text-sm text-gray-300">You can buy a plan yourself at any time. Newsletter subscribers pay 30% less. Nothing is charged unless you complete checkout.</p>
                     <a href="/plans" className={`${btn} inline-block bg-blue-600`}>See plans</a>
-                    {me.path !== 'free' && <div><button className={`${btn} mt-2 bg-white/10`} onClick={stepAway}>End my preview now</button></div>}
+                    {me.path !== 'free' && <div><button className={`${btn} mt-2 bg-white/10`} onClick={stepAway}>End my study access now</button></div>}
                     <p className="text-xs text-gray-400">If you do nothing, access ends on the date above and you are not charged.</p>
                 </section>
             )}

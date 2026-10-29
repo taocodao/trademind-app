@@ -1,15 +1,17 @@
 /**
- * Study preview rules (30 days free, each completed activity adds 30 days, 90 days at most, 20 seats, no card).
+ * Study program rules (4 months free, a short survey at the end of each month, and each survey completed earns 3 more free months
+ * for one account after the program, up to 12 months. People can leave at any time and keep what they earned. 20 seats, no card).
  * The founding price tables below are retired and kept only until the old billing code is removed. Pure functions, no I/O, so they can be tested.
  * Dates are ISO strings in UTC; the program works in whole days.
  */
 
-export const PREVIEW_DAYS = 30;
-export const CREDIT_DAYS_PER_ACTIVITY = 30;
-/** Total free access (preview plus earned credit) never exceeds 90 days from the start. */
-export const MAX_FREE_DAYS = 90;
-/** At most two extensions: 30 + 30 + 30 days. */
-export const MAX_ACTIVITIES = 2;
+/** The study runs 4 months, counted as 120 days. */
+export const PREVIEW_DAYS = 120;
+/** Each month survey completed earns 3 months (90 days) of free access for one account after the study. */
+export const CREDIT_DAYS_PER_ACTIVITY = 90;
+/** Four surveys, so at most 12 months (360 days) of credit after the study. */
+export const MAX_ACTIVITIES = 4;
+export const MAX_FREE_DAYS = PREVIEW_DAYS + CREDIT_DAYS_PER_ACTIVITY * MAX_ACTIVITIES;
 export const ACTIVITY_GRACE_DAYS = 14;
 /** Study preview seats. */
 export const FIRST_GROUP = 20;
@@ -45,18 +47,22 @@ export interface ParticipantState {
     /** Set when a partner has asked to become a founding member. */
     founding_selected_at: string | null;
     paid_started_at: string | null;
+    /** Set when the person leaves the study. Study time stops then, and earned months start from that day. */
+    left_at?: string | null;
 }
 
-/** End of free access: the 30 day preview plus 30 days for each completed activity, capped at 90 days. */
+/** End of free access: the months actually stayed in the study (up to 4) plus 90 days for each completed monthly survey, up to four. */
 export function freeAccessEnd(s: ParticipantState): string {
     const credit = new Set(s.completed_months.filter((m) => m >= 1 && m <= MAX_ACTIVITIES)).size * CREDIT_DAYS_PER_ACTIVITY;
-    const days = Math.min(MAX_FREE_DAYS, PREVIEW_DAYS + credit);
-    return addDays(s.started_at, days);
+    const studyEnd = addDays(s.started_at, PREVIEW_DAYS);
+    // Leaving early cuts the study time short. Each survey passed still adds its 3 months.
+    const base = s.left_at && s.left_at < studyEnd ? s.left_at : studyEnd;
+    return addDays(base, credit);
 }
 
 /** When the activity for a month is due: monthly from the start date. */
 export function activityDue(startedAt: string, month: number): string {
-    return addDays(startedAt, 30 * month - 23); // month 1 due on day 7, then every 30 days
+    return addDays(startedAt, 30 * month - 7); // each survey opens one week before the month ends: days 23, 53, 83 and 113
 }
 
 export type LifecycleEmail =

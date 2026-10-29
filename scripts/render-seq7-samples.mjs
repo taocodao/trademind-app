@@ -11,10 +11,10 @@ const { renderSeq7, SEQ7_STEPS } = createRequire(path.join(tmp, 'x.js'))('./copy
 const token = process.argv[2] || 'cddf0962bc';
 fs.mkdirSync(path.join(root, 'out'), { recursive: true });
 let bad = 0;
-const all = [...SEQ7_STEPS.map((step) => ({ step })), { step: 1, member: true }];
+const all = [...SEQ7_STEPS.map((step) => ({ step })), { step: 1, member: true }, ...SEQ7_STEPS.map((step) => ({ step, ria: true }))];
 for (const c of all) {
-    const r = renderSeq7({ token, firstName: 'Eric', baseUrl: 'https://trademind.bot', mailingAddress: 'TradeMind, 151-58 24th Rd, Whitestone, NY 11357, United States', step: c.step, strategyMember: !!c.member });
-    const name = `seq7-${r.n}${c.member ? '-member' : ''}`;
+    const r = renderSeq7({ token, firstName: 'Eric', baseUrl: 'https://trademind.bot', mailingAddress: 'TradeMind, 151-58 24th Rd, Whitestone, NY 11357, United States', step: c.step, strategyMember: !!c.member, audience: c.ria ? 'ria' : 'retail' });
+    const name = `seq7-${r.n}${c.member ? '-member' : ''}${c.ria ? '-ria' : ''}`;
     const vis = (r.html + r.text).replace(/<[^>]+>/g, ' ');
     const probs = [];
     if (/[\u2013\u2014]|--/.test(vis)) probs.push('dash');

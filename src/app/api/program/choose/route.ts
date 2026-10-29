@@ -15,15 +15,16 @@ export async function POST(req: NextRequest) {
     const email = await verifiedEmail(req);
     if (!email) return NextResponse.json({ error: 'Sign in with a verified email.' }, { status: 401 });
     const p = await loadParticipant(email);
-    if (!p || p.left_at) return NextResponse.json({ error: 'No program membership for this email.' }, { status: 404 });
+    if (!p) return NextResponse.json({ error: 'No program membership for this email.' }, { status: 404 });
     const b = await req.json().catch(() => ({}));
     const now = new Date().toISOString();
 
     if (b.action === 'path') {
         // The only choice left is to step away. Buying a plan happens on the plans page.
         if (b.path !== 'free') return NextResponse.json({ error: 'Invalid choice.' }, { status: 400 });
-        await pool.query(`UPDATE program_participant SET path = 'free' WHERE id = $1`, [p.id]);
-        await pool.query(`UPDATE entitlement SET ends_at = LEAST(COALESCE(ends_at, NOW()), NOW()) WHERE email_norm = $1 AND source = 'program_preview'`, [email]);
+        await pool.query(`UPDATE program_participant SET path = 'free', left_at = NOW() WHERE id = $1`, [p.id]);
+        const left = await loadParticipant(email);
+        if (left) await pool.query(`UPDATE entitlement SET ends_at = $2 WHERE email_norm = $1 AND source = 'program_preview'`, [email, freeAccessEnd(left)]);
         return NextResponse.json({ ok: true });
     }
 
@@ -48,7 +49,9 @@ export async function POST(req: NextRequest) {
     }
 
     if (b.action === 'leave') {
-        await pool.query(`UPDATE program_participant SET left_at = NOW() WHERE id = $1`, [p.id]); // earned credit is kept in the records
+        await pool.query(`UPDATE program_participant SET left_at = NOW() WHERE id = $1`, [p.id]);
+        const gone = await loadParticipant(email);
+        if (gone) await pool.query(`UPDATE entitlement SET ends_at = $2 WHERE email_norm = $1 AND source = 'program_preview'`, [email, freeAccessEnd(gone)]); // months stayed plus 3 per survey passed
         return NextResponse.json({ ok: true });
     }
     return NextResponse.json({ error: 'Unknown action.' }, { status: 400 });

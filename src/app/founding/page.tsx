@@ -29,17 +29,17 @@ export default function FoundingApply() {
         return (
             <main className="mx-auto max-w-xl px-5 py-16">
                 <h1 className="text-2xl font-semibold">Thank you for applying</h1>
-                <p className="mt-3 text-gray-300">We review every application by hand. If you are selected, we email you with the start of your 30 day study preview. No card is needed and nothing is charged.</p>
+                <p className="mt-3 text-gray-300">We review every application by hand. If you are selected, we email you with the start of your 4 month study. No card is needed and nothing is charged.</p>
             </main>
         );
     }
 
     return (
         <main className="mx-auto max-w-xl px-5 py-12">
-            <h1 className="text-3xl font-semibold">Join the TradeMind study preview</h1>
+            <h1 className="text-3xl font-semibold">Join the TradeMind 4 month study</h1>
             <p className="mt-4 text-gray-300">
-                We are opening a small study preview for readers who follow rules based QQQ strategies. There are 20 seats, and we review every application by hand.
-                Accepted readers follow the signals with a virtual account for 30 days at no charge. Each short activity you complete adds 30 more days, up to 90 days in total.
+                We are opening a small 4 month study for readers who follow rules based QQQ strategies. There are 20 seats, and we review every application by hand.
+                Accepted readers follow the signals with a virtual account for 4 months at no charge. At the end of each month there is a short survey. Every month you pass adds 3 free months for one account at the end. Stay 2 months and pass both, and you have 2 months plus 6 months. Stay all 4 and you have 4 plus 12. You can leave at any time.
             </p>
             <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-gray-300">
                 <li>No card is needed. Nothing turns into a paid plan automatically. You only pay if you choose to buy a plan yourself.</li>
@@ -69,7 +69,7 @@ export default function FoundingApply() {
                 <label className="block text-sm">How often do you want to hear from us?
                     <select name="delivery" className={input} defaultValue="daily"><option value="daily">Daily briefing plus alerts</option><option value="weekly">Weekly summary plus alerts</option><option value="alerts">Strategy change alerts only</option></select>
                 </label>
-                <label className="block text-sm">Could you do one 5 minute activity a month?
+                <label className="block text-sm">Could you do one 5 minute survey a month?
                     <select name="activity" className={input} defaultValue="yes"><option value="yes">Yes</option><option value="no">No</option></select>
                 </label>
                 <label className="flex items-start gap-2 text-sm"><input type="checkbox" name="interview" className="mt-1" />I am open to an optional short interview.</label>

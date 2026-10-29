@@ -557,7 +557,7 @@ async function sendAlert(subject: string, body: string): Promise<void> {
 // ---------- sending ----------
 
 async function sendOne(row: { id: number; token: string; step: number; domain: string }, s: Record<string, string>, fromLocal: string, transport: Transport): Promise<'sent' | 'skipped' | 'failed'> {
-    const cr = await query(`SELECT token, email, first_name, template, wave, status, snooze_until, subscriber_email FROM outreach_contacts WHERE token = $1`, [row.token]);
+    const cr = await query(`SELECT token, email, first_name, template, wave, status, snooze_until, subscriber_email, age FROM outreach_contacts WHERE token = $1`, [row.token]);
     const c = cr.rows[0];
     if (c && isSeq7Row(row.step)) return sendSeq7(row, s, c, fromLocal, transport);
     const skip = async (note: string) => { await query(`UPDATE outreach_queue SET state = 'skipped', note = $2 WHERE id = $1`, [row.id, note]); return 'skipped' as const; };

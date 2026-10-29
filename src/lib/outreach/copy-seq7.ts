@@ -166,6 +166,88 @@ export interface Seq7Opts {
     strategyMember?: boolean;
     /** 'ria' adds the professional cooperation card and the meeting button, and uses an adviser footer. Default retail. */
     audience?: 'retail' | 'ria';
+    /** Life stage wording for retail readers. null or undefined keeps the generic copy (control group, seeds, advisers). */
+    stage?: Stage | null;
+}
+
+export type Stage = 'starter' | 'builder' | 'accelerator' | 'finisher' | 'grower';
+export const STAGES: Stage[] = ['starter', 'builder', 'accelerator', 'finisher', 'grower'];
+
+/** Life stage from the contact's age field. Unknown or odd values return null (generic copy). */
+export function stageForAge(age: string | number | null | undefined): Stage | null {
+    const a = Number(String(age ?? '').match(/\d+/)?.[0]);
+    if (!Number.isFinite(a) || a < 18 || a > 110) return null;
+    return a < 35 ? 'starter' : a < 45 ? 'builder' : a < 55 ? 'accelerator' : a < 65 ? 'finisher' : 'grower';
+}
+
+/** 20% of contacts per stage keep the generic copy. Stable per token. */
+export function isStageControl(token: string): boolean {
+    let h = 0;
+    for (let i = 0; i < token.length; i++) h = (h * 31 + token.charCodeAt(i)) >>> 0;
+    return h % 5 === 0;
+}
+
+/** Local send hours (ET) by stage, inside the 9:00 AM to 11:00 PM retail window. */
+export const STAGE_HOURS: Record<Stage, [string, string]> = {
+    starter: ['18:00', '22:00'], builder: ['18:00', '22:00'],
+    accelerator: ['11:00', '20:00'], finisher: ['11:00', '20:00'], grower: ['09:00', '14:00'],
+};
+
+const STAGE_EMAIL1: Record<Stage, { subject: string; pre: string; open: string }> = {
+    starter: { subject: 'Start early, retire rich: a weekly QQQ brief', pre: 'The years you have are the biggest edge you will ever get.',
+        open: 'You have something older investors would pay for: decades of compounding ahead. This is one brief a week on QQQ, with the rules and the risks written out, so those years work to a plan.' },
+    builder: { subject: 'Are you on track to retire rich?', pre: 'One brief a week on QQQ, with the rules written out.',
+        open: 'Somewhere between the mortgage and the kids, retirement saving turns into guesswork. This brief gives it rules: what our model sees each week, what it would do, and what could go wrong.' },
+    accelerator: { subject: 'Not too late to retire rich', pre: 'When saving more is hard, make what you have work to rules.',
+        open: 'Most people\u2019s best earning years are also their busiest. You may not be able to save much more, but you can put a clear plan behind what you already have. One brief a week, risk first.' },
+    finisher: { subject: 'Finish strong: the last ten years before retirement', pre: 'One brief a week on QQQ, built around the years that count most.',
+        open: 'The last decade before retirement is when gains and losses are largest in dollars. This brief shows each week what our model sees and how its rules handle a bad stretch.' },
+    grower: { subject: 'Keep growing in retirement', pre: 'Retirement can last decades. Your savings can keep working too.',
+        open: 'Retiring does not mean your money stops working. This is one brief a week on QQQ for people who want their savings to keep growing, with the declines kept in view.' },
+};
+const STAGE_LINE: Record<number, Record<Stage, string>> = {
+    2: {
+        starter: 'A big loss at 25 costs years of compounding later. Avoiding it early is worth more than any single win.',
+        builder: 'The habit you build now decides your number at 65.',
+        accelerator: 'Catching up works best when you do not have to recover a large decline first.',
+        finisher: 'A 30% drop at 60 needs a 43% gain right when you want to start spending.',
+        grower: 'Growth in retirement only helps if the declines along the way are survivable.',
+    },
+    3: {
+        starter: 'QQQ LEAPS is built for growth, with the most it can lose known up front.',
+        builder: 'QQQ LEAPS comes first for growth. QQQ Defensive is the option that needs no options permission.',
+        accelerator: 'One is built for growth, the other to keep its declines shallow. Many readers follow both.',
+        finisher: 'One is built for growth, the other to keep its declines shallow. QQQ Defensive needs no options permission at your broker.',
+        grower: 'QQQ Defensive comes first, built to keep its declines shallow. QQQ LEAPS is the growth option.',
+    },
+    5: {
+        starter: 'You have time to wait. The question is whether you would.',
+        builder: 'Ten months of looking wrong is a lot while you are juggling everything else. The rules decide, so you do not have to.',
+        accelerator: 'Waiting for the right setup is part of catching up, not a delay.',
+        finisher: 'Patience is easier when you know the rules ahead of time.',
+        grower: 'The rules held no positions until conditions passed. Watching it wait is the point.',
+    },
+};
+const STAGE_ACCOUNT: Record<Stage, string> = {
+    starter: 'Many people follow plans like these inside a Roth IRA. Check your broker\u2019s rules for options in an IRA.',
+    builder: 'Many people follow plans like these inside a Roth IRA. Check your broker\u2019s rules for options in an IRA.',
+    accelerator: 'Works in a taxable account or an IRA at most major brokers. Check your broker\u2019s rules for options in an IRA.',
+    finisher: 'Works in a taxable account or an IRA at most major brokers. Check your broker\u2019s rules for options in an IRA.',
+    grower: 'QQQ Defensive uses ETFs only, which most IRAs allow. QQQ LEAPS needs options permission.',
+};
+
+/** Returns a copy of the focus block with the life stage wording applied. Facts, numbers and disclosures are untouched. */
+export function applyStage(f: Focus, n: number, stage: Stage | null | undefined): Focus {
+    if (!stage) return f;
+    const g: Focus = { ...f, body: [...f.body] };
+    if (n === 1) { const e = STAGE_EMAIL1[stage]; g.subject = e.subject; g.pre = e.pre; g.body[0] = e.open; }
+    if (n === 2 || n === 5) g.body.push(STAGE_LINE[n][stage]);
+    if (n === 3) {
+        if (stage === 'grower') g.body = [g.body[1], g.body[0]];
+        g.body.push(STAGE_LINE[3][stage], STAGE_ACCOUNT[stage]);
+    }
+    if (n === 7) g.title = stage === 'starter' || stage === 'builder' ? 'Help shape a QQQ brief for people starting to build' : 'Help shape a QQQ brief for retirement savers';
+    return g;
 }
 
 export const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -254,7 +336,7 @@ function coopCard(url: UrlFn): string {
 
 export function renderSeq7(o: Seq7Opts): { subject: string; text: string; html: string; unsubUrl: string; n: number } {
     const n = o.n ?? SEQ7_N_BY_STEP[o.step] ?? 1;
-    const f = FOCUS[n];
+    const f = applyStage(FOCUS[n], n, o.audience === 'ria' ? null : o.stage);
     const url = (kind: string, extra = '') => `${o.baseUrl}/r/${o.token}/${kind}?s=${o.step}${extra}`;
     const unsubUrl = `${o.baseUrl}/u/${o.token}`;
     const first = (o.firstName ?? '').trim();

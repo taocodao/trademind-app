@@ -13,7 +13,7 @@ import { query } from '@/lib/db';
 import { MAILING_ADDRESS } from '@/lib/newsletter/email';
 import { BASE_URL, CAMPAIGN, getSettings } from './db';
 import { sendMail, transportKeyPresent, type Transport } from './transport';
-import { renderSeq7, SAMPLE_FACTS, type IssueFacts } from './copy-seq7';
+import { renderSeq7, SAMPLE_FACTS, stageForAge, isStageControl, STAGES, STAGE_HOURS, type IssueFacts, type Stage } from './copy-seq7';
 import { etParts, zonedInstant, allocateBudget, activeDomains, isBusinessDay } from './sender';
 
 const ET = 'America/New_York';
@@ -79,11 +79,11 @@ async function planAudience(aud: 'retail' | 'ria', now: Date, s: Record<string, 
         const used = new Map<string, number>();
         const room = (d: string) => (cap.get(d) ?? 0) - (used.get(d) ?? 0);
         const best = () => doms.map((d) => d.domain).sort((a, b) => room(b) - room(a))[0];
-        const picks: { token: string; tz: string; domain: string; step: number }[] = [];
+        const picks: { token: string; tz: string; age?: string | null; domain: string; step: number }[] = [];
 
         // Follow-ups: emails 2 to 7 on the schedule, at least 4 days after the last email.
         const fu = await query(`
-            SELECT c.token, c.tz, s1.domain, (s1.sent_at AT TIME ZONE 'America/New_York')::date AS first_day,
+            SELECT c.token, c.tz, c.age, s1.domain, (s1.sent_at AT TIME ZONE 'America/New_York')::date AS first_day,
                    COALESCE((SELECT array_agg(x.step) FROM outreach_sends x WHERE x.token = c.token AND x.step BETWEEN 21 AND 27), '{}') AS sent_steps,
                    COALESCE((SELECT array_agg(q.step) FROM outreach_queue q WHERE q.token = c.token AND q.state = 'pending' AND q.step BETWEEN 21 AND 27), '{}') AS queued,
                    (SELECT MAX(x.sent_at AT TIME ZONE 'America/New_York')::date FROM outreach_sends x WHERE x.token = c.token AND x.step < 100) AS last_day
@@ -101,14 +101,14 @@ async function planAudience(aud: 'retail' | 'ria', now: Date, s: Record<string, 
             if (r.last_day && dayDiff(et.date, dstr(r.last_day)) < 4) continue;
             const d = cap.has(String(r.domain)) && room(String(r.domain)) > 0 ? String(r.domain) : best();
             if (room(d) <= 0) continue;
-            picks.push({ token: r.token, tz: r.tz, domain: d, step: next }); used.set(d, (used.get(d) ?? 0) + 1);
+            picks.push({ token: r.token, tz: r.tz, age: r.age, domain: d, step: next }); used.set(d, (used.get(d) ?? 0) + 1);
         }
 
         // First emails: people never emailed come first. People emailed before the new sequence start fresh afterwards.
         const want = budget - picks.length;
         if (want > 0) {
             const inv = await query(`
-                SELECT c.token, c.tz FROM outreach_contacts c
+                SELECT c.token, c.tz, c.age FROM outreach_contacts c
                 WHERE ${ELIGIBLE} AND c.status IN ('pending','sent','clicked')
                   AND NOT EXISTS (SELECT 1 FROM outreach_sends x WHERE x.token = c.token AND x.step = 21)
                   AND NOT EXISTS (SELECT 1 FROM outreach_queue q WHERE q.token = c.token AND q.step = 21)
@@ -118,14 +118,22 @@ async function planAudience(aud: 'retail' | 'ria', now: Date, s: Record<string, 
                 if (picks.length >= budget) break;
                 const d = best();
                 if (room(d) <= 0) break;
-                picks.push({ token: r.token, tz: r.tz, domain: d, step: 21 }); used.set(d, (used.get(d) ?? 0) + 1);
+                picks.push({ token: r.token, tz: r.tz, age: r.age, domain: d, step: 21 }); used.set(d, (used.get(d) ?? 0) + 1);
             }
         }
         for (const p of picks) {
             // Never before 9:00 AM local for the reader; spread evenly through the rest of the window.
             const localStart = ria ? 0 : zonedInstant(et.date, '09:00', p.tz || ET).getTime();
-            const st = Math.max(startAt, localStart);
-            const span = Math.max(Math.floor((endAt - st) / 1000), 60);
+            // Life stage send hours (ET), kept inside the day's window; falls back to the full window late in the day.
+            const sg = !ria && !isStageControl(p.token) ? stageForAge(p.age) : null;
+            let winStart = Math.max(startAt, localStart), winEnd = endAt;
+            if (sg) {
+                const hs = zonedInstant(et.date, STAGE_HOURS[sg][0], ET).getTime(), he = zonedInstant(et.date, STAGE_HOURS[sg][1], ET).getTime();
+                const a = Math.max(winStart, hs), b = Math.min(winEnd, he);
+                if (b - a >= 15 * 60_000) { winStart = a; winEnd = b; }
+            }
+            const st = winStart;
+            const span = Math.max(Math.floor((winEnd - st) / 1000), 60);
             const at = st + randomInt(0, span) * 1000;
             await query(`INSERT INTO outreach_queue (plan_date, token, step, domain, scheduled_at) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (token, step) DO NOTHING`,
                 [et.date, p.token, p.step, p.domain, new Date(Math.min(at, endAt))]);
@@ -227,7 +235,13 @@ export async function sendSeq7(row: { id: number; token: string; step: number; d
         if (ria && c.wave !== 'ria') return skip('audience mismatch');
     }
     const facts = await liveFacts(new Date());
-    const msg = renderSeq7({ token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, step: n, n, facts, audience: ria ? 'ria' : 'retail' });
+    // Life stage wording: from the age field; seeds rotate through the stages so the daily test shows each one.
+    let stage: Stage | null = null;
+    if (!ria) {
+        if (isSeed) stage = STAGES[Math.floor(row.step / 10) % STAGES.length];
+        else if (!isStageControl(c.token)) stage = stageForAge(c.age);
+    }
+    const msg = renderSeq7({ token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, step: n, n, facts, audience: ria ? 'ria' : 'retail', stage });
     if (!transportKeyPresent(transport)) return 'failed';
     const from = `${s.from_display || 'Eric Huang'} <${fromLocal}@${row.domain}>`;
     let res;

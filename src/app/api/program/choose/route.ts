@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { ACTIVITY_GRACE_DAYS, MAX_ACTIVITIES, activityDue, daysBetween, freeAccessEnd } from '@/lib/program/rules';
+import { ACTIVITY_GRACE_DAYS, MAX_ACTIVITIES, MIN_FEEDBACK_PER_MONTH, countFeedback, activityDue, daysBetween, freeAccessEnd } from '@/lib/program/rules';
 import { loadParticipant, verifiedEmail } from '@/lib/program/session';
 
 export const dynamic = 'force-dynamic';
@@ -35,6 +35,9 @@ export async function POST(req: NextRequest) {
         if (now < due) return NextResponse.json({ error: 'This activity is not open yet.' }, { status: 400 });
         if (daysBetween(due, now) > ACTIVITY_GRACE_DAYS && !p.completed_months.includes(month)) return NextResponse.json({ error: 'The grace period for this activity has passed.' }, { status: 410 });
         const answers = typeof b.answers === 'object' && b.answers ? b.answers : {};
+        if (!p.completed_months.includes(month) && countFeedback((answers as { items?: unknown }).items) < MIN_FEEDBACK_PER_MONTH) {
+            return NextResponse.json({ error: `Please send at least ${MIN_FEEDBACK_PER_MONTH} pieces of feedback. A suggestion, a problem you hit or a question each count as one.` }, { status: 400 });
+        }
         const ins = await pool.query(
             `INSERT INTO program_activity (participant_id, month, answers) VALUES ($1, $2, $3) ON CONFLICT (participant_id, month) DO NOTHING RETURNING 1`,
             [p.id, month, JSON.stringify(answers).slice(0, 8000)]

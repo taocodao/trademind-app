@@ -25,6 +25,9 @@ t('credit capped at four surveys', r.freeAccessEnd(st({ completed_months: [1, 2,
 t('same survey counted once', r.freeAccessEnd(st({ completed_months: [1, 1, 1] })) === at(210));
 t('leave after 2 months with 2 surveys: 2 months plus 6 months', r.freeAccessEnd(st({ left_at: at(60), completed_months: [1, 2] })) === at(60 + 180));
 t('leaving never extends the study past 4 months', r.freeAccessEnd(st({ left_at: at(300), completed_months: [1] })) === at(210));
+t('three feedback items pass a month', r.countFeedback(['a real suggestion', 'an issue I hit', 'a question here']) === 3);
+t('short or empty items do not count', r.countFeedback(['ok', '', 'a real suggestion']) === 1);
+t('reward values', r.rewardUsd('defensive') === 90 && r.rewardUsd('leaps') === 120 && r.rewardUsd('defensive', 4) === 360 && r.rewardUsd('leaps', 4) === 480);
 t('seats are 20', r.FIRST_GROUP === 20 && r.WAVE_SIZE_MAX === 20 && r.HARD_LIMIT === 20);
 
 t('during the preview access is open', r.accessNow(st(), at(10)) === 'research_plus_tracking');

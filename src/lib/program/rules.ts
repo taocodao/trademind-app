@@ -13,6 +13,16 @@ export const CREDIT_DAYS_PER_ACTIVITY = 90;
 export const MAX_ACTIVITIES = 4;
 export const MAX_FREE_DAYS = PREVIEW_DAYS + CREDIT_DAYS_PER_ACTIVITY * MAX_ACTIVITIES;
 export const ACTIVITY_GRACE_DAYS = 14;
+/** A month counts as passed when the person sends at least this many feedback items in the monthly survey. Suggestions, issues and questions all count. */
+export const MIN_FEEDBACK_PER_MONTH = 3;
+/** Standard monthly prices in dollars, used to describe what a reward is worth. */
+export const REWARD_MONTHLY_USD = { defensive: 30, leaps: 40 } as const;
+/** Dollar value of one passed month (3 free months) and of all four. */
+export const rewardUsd = (plan: 'defensive' | 'leaps', months = 1) => REWARD_MONTHLY_USD[plan] * 3 * months;
+/** Counts feedback items that are real attempts: non-empty text of at least 8 characters. */
+export function countFeedback(items: unknown): number {
+    return Array.isArray(items) ? items.filter((x) => typeof x === 'string' && x.trim().length >= 8).length : 0;
+}
 /** Study preview seats. */
 export const FIRST_GROUP = 20;
 export const WAVE_SIZE_MAX = 20;

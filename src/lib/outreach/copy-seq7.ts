@@ -43,14 +43,15 @@ export const STUDY_RULES = [
     '20 seats, and every application is read by hand',
     '4 months free, with a virtual account that follows the signals',
     'A short survey at the end of each month, about 5 minutes',
-    'Every month you pass adds 3 free months for one account at the end',
+    'At least 3 pieces of feedback a month: suggestions, problems you hit in the app and questions all count',
+    'Every month you pass adds 3 free months for one account, worth about $90 on QQQ Defensive or $120 on QQQ LEAPS',
     'Stay 2 months and pass both: 2 months plus 6 months. Stay all 4: 4 months plus 12',
     'Leave at any time and keep the months you earned',
     'No card, and nothing turns into a paid plan on its own',
 ];
 
 export const MEETING_URL = 'https://calendar.app.google/dKsXK6G3cV3ppbAo7';
-export const STUDY_BANNER = { title: 'Join the 4 month study program', text: '4 months free with a virtual account that follows the signals. A short survey at the end of each month, and every month you pass adds 3 free months for one account at the end. Stay 2 months and pass both, and you have 2 months plus 6 months. Stay all 4 and you have 4 plus 12. You can leave at any time.' };
+export const STUDY_BANNER = { title: 'Join the 4 month study program', text: '4 months free with a virtual account that follows the signals. To pass a month, send at least 3 pieces of feedback that month. Suggestions, problems you hit in the app and questions all count. Each month you pass is worth 3 free months for one account, about $90 on QQQ Defensive or $120 on QQQ LEAPS at standard monthly prices. Pass all four and it is worth up to $360 or $480. Stay 2 months and pass both, and you have 2 months plus 6 months. You can leave at any time.' };
 export const COOP = {
     title: 'Ways we could work together',
     items: [

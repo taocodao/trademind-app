@@ -16,7 +16,7 @@ export default function ChoosePage() {
     const { ready, authenticated, login, getAccessToken } = usePrivy();
     const [me, setMe] = useState<Me | null>(null);
     const [msg, setMsg] = useState('');
-    const [note, setNote] = useState('');
+    const [items, setItems] = useState<string[]>(['', '', '']);
 
     const call = useCallback(async (url: string, init?: RequestInit) => {
         const token = await getAccessToken();
@@ -39,9 +39,9 @@ export default function ChoosePage() {
     }
     async function complete(month: number) {
         setMsg('');
-        const r = await call('/api/program/choose', { method: 'POST', body: JSON.stringify({ action: 'activity', month, answers: { note: note.trim() } }) });
+        const r = await call('/api/program/choose', { method: 'POST', body: JSON.stringify({ action: 'activity', month, answers: { items: items.map((x) => x.trim()) } }) });
         setMsg(r.ok ? 'Thank you. Your access has been extended.' : (await r.json().catch(() => ({}))).error || 'Failed.');
-        setNote('');
+        if (r.ok) setItems(['', '', '']);
         await load();
     }
 
@@ -84,10 +84,14 @@ export default function ChoosePage() {
                             const open = !a.done && new Date() >= new Date(a.due);
                             return (
                                 <li key={a.month} className="rounded-xl border border-white/10 p-3">
-                                    Activity {a.month}: {a.done ? 'completed' : open ? 'open now' : `opens ${date(a.due)}`}
+                                    Month {a.month} survey: {a.done ? 'completed' : open ? 'open now' : `opens ${date(a.due)}`}
                                     {open && (
                                         <div className="mt-2">
-                                            <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder="What was useful, and what was not?" className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm" />
+                                            <p className="mb-2 text-xs text-gray-400">Send at least 3 pieces of feedback. A suggestion, a problem you hit while using the app or a question each count as one.</p>
+                                            {items.map((v, i) => (
+                                                <textarea key={i} value={v} onChange={(e) => setItems(items.map((x, j) => (j === i ? e.target.value : x)))} rows={2} placeholder={`Feedback ${i + 1}: a suggestion, an issue or a question`} className="mb-2 w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm" />
+                                            ))}
+                                            <button type="button" className="mb-2 text-xs text-blue-300 underline" onClick={() => setItems([...items, ''])}>Add another</button><br />
                                             <button className={`${btn} mt-2 bg-blue-600`} onClick={() => complete(a.month)}>Submit</button>
                                         </div>
                                     )}

@@ -39,7 +39,7 @@ export default function FoundingApply() {
             <h1 className="text-3xl font-semibold">Join the TradeMind 4 month study</h1>
             <p className="mt-4 text-gray-300">
                 We are opening a small 4 month study for readers who follow rules based QQQ strategies. There are 20 seats, and we review every application by hand.
-                Accepted readers follow the signals with a virtual account for 4 months at no charge. At the end of each month there is a short survey. Every month you pass adds 3 free months for one account at the end. Stay 2 months and pass both, and you have 2 months plus 6 months. Stay all 4 and you have 4 plus 12. You can leave at any time.
+                Accepted readers follow the signals with a virtual account for 4 months at no charge. At the end of each month there is a short survey. To pass a month, send at least 3 pieces of feedback that month. Suggestions, problems you hit in the app and questions all count. Each month you pass is worth 3 free months for one account, about $90 on QQQ Defensive or $120 on QQQ LEAPS at standard monthly prices. All four months passed is worth up to $360 or $480. Stay 2 months and pass both, and you have 2 months plus 6 months. You can leave at any time.
             </p>
             <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-gray-300">
                 <li>No card is needed. Nothing turns into a paid plan automatically. You only pay if you choose to buy a plan yourself.</li>

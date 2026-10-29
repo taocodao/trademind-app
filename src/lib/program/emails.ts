@@ -20,7 +20,7 @@ export function programEmail(kind: LifecycleEmail | 'accepted' | 'founding_confi
                 intro: `Your preview is active until ${fmt(c.endDate)}. No card is on file and nothing will be charged.`,
                 bullets: [
                     'You can follow the signals with a virtual account for the full 4 months at no charge.',
-                    'A short survey opens near the end of each month and takes about 5 minutes. Every month you pass adds 3 free months for one account at the end.',
+                    'A short survey opens near the end of each month. To pass a month, send at least 3 pieces of feedback: suggestions, problems you hit in the app and questions all count. Every month you pass adds 3 free months for one account at the end, worth about $90 on QQQ Defensive or $120 on QQQ LEAPS at standard monthly prices.',
                     'Stay 2 months and pass both and you have 2 months plus 6 months; stay all 4 and you have 4 plus 12. You can leave at any time. Nothing turns into a paid plan unless you buy one yourself.',
                 ],
                 cta: { label: 'Open your preview', url: CHOOSE_URL },
@@ -38,7 +38,7 @@ export function programEmail(kind: LifecycleEmail | 'accepted' | 'founding_confi
             return {
                 to: c.to, subject: `TradeMind month ${c.month} survey: about 5 minutes`,
                 heading: 'Your month survey is ready',
-                intro: 'Completing it adds 3 free months for one account at the end, so two months in with both surveys done means 2 months plus 6 months. Credit comes from a real attempt to answer. "I did not use it" is a valid answer, and you never need to give positive feedback.',
+                intro: 'Send at least 3 pieces of feedback to pass the month. A suggestion, a problem you hit in the app or a question each count. Passing adds 3 free months for one account at the end, worth about $90 on QQQ Defensive or $120 on QQQ LEAPS, so two months in with both surveys done means 2 months plus 6 months. Credit comes from a real attempt to answer. "I did not use it" is a valid answer, and you never need to give positive feedback.',
                 cta: { label: 'Open the survey', url: CHOOSE_URL },
             };
         case 'founding_ready':

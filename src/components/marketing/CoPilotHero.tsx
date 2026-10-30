@@ -140,16 +140,19 @@ export function CoPilotHero() {
                     <Link href="/verify/ledger" className="tm-cta-hero tm-cta-tertiary tm-cta-arrow">{c.ctaLedger}</Link>
                 </div>
                 <div className="tm-sim-wrap">
-                    <Link href="/simulated-record" className="tm-sim-link">
-                        <span className="tm-sim-line">{c.simLink.split('|')[0]}</span>
+                    <div className="tm-sim-link">
+                        <Link href="/simulated-record" className="tm-sim-line tm-sim-a">{c.simLink.split('|')[0]}</Link>
                         <span className="tm-sim-line">
-                            <span className="tm-sim-tag">{c.simTag}</span>
-                            <span>{c.simLink.split('|')[1] ?? ''}</span>
+                            <Link href="/simulated-record" className="tm-sim-line tm-sim-a">
+                                <span className="tm-sim-tag">{c.simTag}</span>
+                                <span>{c.simLink.split('|')[1] ?? ''}</span>
+                            </Link>
+                            <Link href="/live-record" className="tm-sim-line tm-sim-a tm-sim-live">
+                                <span className="tm-sim-tag tm-live-tag">{c.liveLink}</span>
+                                <span>{c.liveLine}</span>
+                            </Link>
                         </span>
-                    </Link>
-                    <p className="tm-live-line">
-                        {c.liveLine} <Link href="/live-record" className="tm-live-link">{c.liveLink}</Link>
-                    </p>
+                    </div>
                 </div>
 
                 <div className="tm-herocards" ref={cardsRef}>

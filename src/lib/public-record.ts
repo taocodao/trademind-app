@@ -77,6 +77,11 @@ export interface PublicAccountRecord {
         combinedReturnPct: number | null;
         combinedWorstDropPct: number | null;
         combinedSeries: Array<{ date: string; value: number; live: boolean }>;
+        /** QQQ buy and hold, same dates and same starting money as combinedSeries. Empty when prices are unavailable. */
+        benchmarkSeries: number[];
+        benchmarkSimReturnPct: number;
+        benchmarkReturnPct: number | null;
+        benchmarkWorstDropPct: number | null;
     } | null;
     lots: PublicLot[];
     legs: PublicLeg[];
@@ -102,7 +107,23 @@ function contractLabel(symbol: string): string {
     return p ? `${p.underlying} $${p.strike} ${p.right === 'C' ? 'call' : 'put'}, expires ${p.expiry}` : symbol;
 }
 
-function buildSim(key: string, live: Array<{ date: string; value: number }>, lastValue: number | null): PublicAccountRecord['sim'] {
+async function qqqCloses(from: string, to: string): Promise<Record<string, number>> {
+    try {
+        const p1 = Math.floor(new Date(`${from}T00:00:00Z`).getTime() / 1000) - 86400;
+        const p2 = Math.floor(new Date(`${to}T00:00:00Z`).getTime() / 1000) + 86400 * 2;
+        const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/QQQ?interval=1d&period1=${p1}&period2=${p2}`, { headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' }, next: { revalidate: 3600 } });
+        if (!res.ok) return {};
+        const r = (await res.json()).chart?.result?.[0];
+        const out: Record<string, number> = {};
+        (r?.timestamp ?? []).forEach((t: number, i: number) => {
+            const c = r.indicators?.quote?.[0]?.close?.[i];
+            if (c != null) out[new Date(t * 1000).toLocaleDateString('en-CA', { timeZone: 'America/New_York' })] = Number(c);
+        });
+        return out;
+    } catch { return {}; }
+}
+
+async function buildSim(key: string, live: Array<{ date: string; value: number }>, lastValue: number | null): Promise<PublicAccountRecord['sim']> {
     const sk = key === 'QQQ_LEAPS' ? 'QQQ_LEAPS' : 'QQQ_DEFENSIVE';
     const sim = (simRecord as any).strategies.find((x: any) => x.key === sk);
     if (!sim) return null;
@@ -114,6 +135,24 @@ function buildSim(key: string, live: Array<{ date: string; value: number }>, las
     let peak = 0, worst = 0;
     for (const p of combinedSeries) { if (p.value > peak) peak = p.value; if (peak > 0) worst = Math.min(worst, (p.value - peak) / peak); }
     const principal = Number(sim.principal);
+    // QQQ buy and hold: the simulation's own benchmark, then QQQ closes scaled from the simulation's final benchmark value.
+    const simBench = new Map<string, number>(sim.daily.map((d: any) => [d.date, Number(d.benchmark)]));
+    const benchEnd = Number(sim.benchmarkFinal);
+    const closes = live.length > 0 ? await qqqCloses(sim.end, live[live.length - 1].date) : {};
+    const baseClose = closes[sim.end];
+    let benchmarkSeries: number[] = [];
+    let carry = principal;
+    let okBench = true;
+    for (const p of combinedSeries) {
+        if (!p.live) { carry = simBench.get(p.date) ?? carry; benchmarkSeries.push(carry); }
+        else if (baseClose && closes[p.date]) { carry = benchEnd * (closes[p.date] / baseClose); benchmarkSeries.push(carry); }
+        else if (baseClose) benchmarkSeries.push(carry);
+        else okBench = false;
+    }
+    if (!okBench) benchmarkSeries = [];
+    let bpeak = 0, bworst = 0;
+    for (const v of benchmarkSeries) { if (v > bpeak) bpeak = v; if (bpeak > 0) bworst = Math.min(bworst, (v - bpeak) / bpeak); }
+    const benchLast = benchmarkSeries.length ? benchmarkSeries[benchmarkSeries.length - 1] : null;
     return {
         startDate: sim.start,
         endDate: sim.end,
@@ -124,6 +163,10 @@ function buildSim(key: string, live: Array<{ date: string; value: number }>, las
         combinedReturnPct: lastValue != null ? ((lastValue - principal) / principal) * 100 : null,
         combinedWorstDropPct: live.length > 0 ? worst * 100 : null,
         combinedSeries,
+        benchmarkSeries,
+        benchmarkSimReturnPct: Number(sim.benchmarkPct),
+        benchmarkReturnPct: benchLast != null ? ((benchLast - principal) / principal) * 100 : null,
+        benchmarkWorstDropPct: benchLast != null ? bworst * 100 : null,
     };
 }
 
@@ -253,7 +296,7 @@ export async function getPublicRecord(): Promise<PublicRecord> {
                 returnPct: last && base > 0 ? ((last.value - base) / base) * 100 : null,
                 worstDropPct: series.length > 1 ? worst * 100 : null,
                 series: series.slice(-400),
-                sim: buildSim(s.key, series, last ? last.value : null),
+                sim: await buildSim(s.key, series, last ? last.value : null),
                 lots,
                 legs,
                 trades,

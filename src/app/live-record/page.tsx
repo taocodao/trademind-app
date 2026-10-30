@@ -25,21 +25,21 @@ function pct(n: number) {
     return `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
 }
 
-function Spark({ series }: { series: Array<{ date: string; value: number }> }) {
+function Spark({ series, bench }: { series: Array<{ date: string; value: number }>; bench?: number[] }) {
     const w = 640;
     const h = 120;
     if (series.length < 2) return null;
-    const vals = series.map((p) => p.value);
+    const hasBench = !!bench && bench.length === series.length;
+    const vals = series.map((p) => p.value).concat(hasBench ? bench! : []);
     const min = Math.min(...vals);
     const max = Math.max(...vals);
     const range = max - min || 1;
-    const pts = series.map((p, i) => {
-        const x = (i / (series.length - 1)) * w;
-        const y = h - 6 - ((p.value - min) / range) * (h - 12);
-        return `${x.toFixed(1)},${y.toFixed(1)}`;
-    });
+    const line = (get: (i: number) => number) => series.map((_, i) => `${((i / (series.length - 1)) * w).toFixed(1)},${(h - 6 - ((get(i) - min) / range) * (h - 12)).toFixed(1)}`);
+    const pts = line((i) => series[i].value);
+    const bpts = hasBench ? line((i) => bench![i]) : [];
     return (
         <svg className="lr-spark" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" role="img" aria-label="Account value over time">
+            {hasBench && <polyline points={bpts.join(' ')} fill="none" stroke="#94A3B8" strokeWidth="1.5" strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />}
             <polyline points={pts.join(' ')} fill="none" stroke="#8B5CF6" strokeWidth="2" vectorEffect="non-scaling-stroke" />
         </svg>
     );
@@ -79,7 +79,15 @@ function AccountBlock({ a, delay }: { a: PublicAccountRecord; delay: number }) {
                             <div className="lr-metric"><span className="lr-k">Largest drop since original start</span><span className="lr-v">{a.sim.combinedWorstDropPct != null ? `${a.sim.combinedWorstDropPct.toFixed(2)}%` : 'Not enough days yet'}</span></div>
                         </div>
                     )}
-                    <Spark series={a.sim ? a.sim.combinedSeries : a.series} />
+                    {a.sim && a.sim.benchmarkReturnPct != null && (
+                        <div className="lr-metrics">
+                            <div className="lr-metric"><span className="lr-k">QQQ buy and hold, first two years</span><span className={`lr-v ${a.sim.benchmarkSimReturnPct >= 0 ? 'lr-pos' : 'lr-neg'}`}>{pct(a.sim.benchmarkSimReturnPct)}</span></div>
+                            <div className="lr-metric"><span className="lr-k">QQQ buy and hold since original start</span><span className={`lr-v ${a.sim.benchmarkReturnPct >= 0 ? 'lr-pos' : 'lr-neg'}`}>{pct(a.sim.benchmarkReturnPct)}</span></div>
+                            <div className="lr-metric"><span className="lr-k">QQQ largest drop since original start</span><span className="lr-v">{a.sim.benchmarkWorstDropPct!.toFixed(2)}%</span></div>
+                        </div>
+                    )}
+                    <Spark series={a.sim ? a.sim.combinedSeries : a.series} bench={a.sim ? a.sim.benchmarkSeries : undefined} />
+                    {a.sim && a.sim.benchmarkSeries.length > 0 && <p className="lr-p">Purple is {a.name}. The grey dashed line is QQQ buy and hold from the same starting amount, with no fees or taxes.</p>}
                     {a.sim && <p className="lr-p">The chart shows the simulation from {a.sim.startDate} to {a.sim.endDate}, then the virtual account. The return since the original start joins both, so only the part after {a.startDate} comes from the virtual account. Simulated results are hypothetical, used model-priced options, and are not a real account.</p>}
                 </>
             )}

@@ -643,3 +643,64 @@ export async function settleExpiredLots(spotByUnderlying: Record<string, number>
     }
     return { settled, skipped };
 }
+
+/** Closing price of an underlying on a given date (YYYY-MM-DD), from the daily chart. Null when unavailable. */
+export async function closeOnDate(underlying: string, date: string): Promise<number | null> {
+    try {
+        const t = Math.floor(new Date(`${date}T00:00:00Z`).getTime() / 1000);
+        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(underlying)}?interval=1d&period1=${t - 86400 * 3}&period2=${t + 86400 * 2}`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' }, cache: 'no-store' });
+        if (!res.ok) return null;
+        const j = await res.json();
+        const r = j.chart?.result?.[0];
+        const ts: number[] = r?.timestamp ?? [];
+        const cl: Array<number | null> = r?.indicators?.quote?.[0]?.close ?? [];
+        for (let i = 0; i < ts.length; i++) {
+            const d = new Date(ts[i] * 1000).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+            if (d === date && cl[i] != null) return Number(cl[i]);
+        }
+    } catch { /* leave unsettled */ }
+    return null;
+}
+
+/**
+ * Settles expired option positions that are not managed as lots (written calls, put spreads, other underlyings)
+ * at intrinsic value of the underlying's close on the expiry date. Longs are sold, shorts are bought back.
+ */
+export async function settleExpiredPositions(): Promise<{ settled: number; skipped: number }> {
+    await initializeAccountTables();
+    const res = await query(
+        `SELECT p.account_id, p.symbol, p.quantity FROM account_positions p
+         WHERE p.instrument_type = 'option' AND p.quantity <> 0
+           AND NOT EXISTS (SELECT 1 FROM account_option_lots l WHERE l.account_id = p.account_id AND l.symbol = p.symbol AND l.status = 'open')`
+    );
+    const today = todayET();
+    let settled = 0, skipped = 0;
+    for (const row of res.rows) {
+        const p = parseOptionSymbol(row.symbol);
+        if (!p || p.expiry >= today) continue;
+        const close = await closeOnDate(p.underlying, p.expiry);
+        if (!close || close <= 0) { skipped++; continue; }
+        const intrinsic = +Math.max(0, p.right === 'C' ? close - p.strike : p.strike - close).toFixed(2);
+        const qty = Number(row.quantity);
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query(`SELECT id FROM accounts WHERE id = $1 FOR UPDATE`, [row.account_id]);
+            await applyActivity(client, row.account_id, {
+                type: qty > 0 ? 'sell' : 'buy', symbol: row.symbol, quantity: Math.abs(qty), price: intrinsic,
+                source: 'signal', signal_id: null, instrument_type: 'option',
+                note: `Expired ${p.expiry}: settled at intrinsic value ${intrinsic.toFixed(2)} (${p.underlying} closed ${close.toFixed(2)} vs strike ${p.strike})`,
+            });
+            await client.query('COMMIT');
+            settled++;
+        } catch (err) {
+            await client.query('ROLLBACK');
+            console.error('[Lots] expired position settlement failed:', err);
+            skipped++;
+        } finally {
+            client.release();
+        }
+    }
+    return { settled, skipped };
+}

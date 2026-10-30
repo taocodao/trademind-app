@@ -103,10 +103,25 @@ function AccountBlock({ a, delay }: { a: PublicAccountRecord; delay: number }) {
                             </table>
                         </div>
                     )}
+                    {a.legs.length > 0 && (
+                        <>
+                            <h3 className="lr-h3">Written calls and spreads</h3>
+                            <div className="lr-scroll">
+                                <table className="lr-table">
+                                    <thead><tr><th>Contract</th><th>Position</th><th>Opened</th><th>Opening price</th></tr></thead>
+                                    <tbody>
+                                        {a.legs.map((g, i) => (
+                                            <tr key={i}><td>{g.contract}</td><td>{g.quantity < 0 ? `Short ${Math.abs(g.quantity)}` : `Long ${g.quantity}`}</td><td>{g.openedOn}</td><td>{money(g.openingPrice, 2)}</td></tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
+                    )}
                 </>
             )}
 
-            {a.strategy !== 'QQQ_LEAPS' && (
+            {(
                 <>
                     <h3 className="lr-h3">Trades</h3>
                     {a.trades.length === 0 ? (
@@ -117,13 +132,17 @@ function AccountBlock({ a, delay }: { a: PublicAccountRecord; delay: number }) {
                                 <thead><tr><th>Date</th><th>Action</th><th>Instrument</th><th>Qty</th><th>Price</th></tr></thead>
                                 <tbody>
                                     {a.trades.map((t, i) => (
-                                        <tr key={i}><td>{t.date}</td><td>{t.side}</td><td>{t.instrument}</td><td>{t.quantity}</td><td>{money(t.price, 2)}</td></tr>
+                                        <tr key={i}><td>{t.date}</td><td>{t.side}{t.seed ? ' (simulation seed)' : ''}</td><td>{t.instrument}</td><td>{t.quantity}</td><td>{money(t.price, 2)}</td></tr>
                                     ))}
                                 </tbody>
                             </table>
                         </div>
                     )}
                 </>
+            )}
+
+            {a.trades.some((t) => t.seed) && (
+                <p className="lr-note">Rows marked simulation seed opened the account from the simulation. They were not live orders.</p>
             )}
 
             {a.heldBackEvents > 0 && (

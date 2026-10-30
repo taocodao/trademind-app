@@ -19,7 +19,7 @@ import {
     saveAccountPnlSnapshot,
 } from '@/lib/accounts';
 import { fetchOptionQuote } from '@/lib/account-executor';
-import { getOptionMarks, saveOptionMark, settleExpiredLots, todayET } from '@/lib/option-lots';
+import { getOptionMarks, saveOptionMark, settleExpiredLots, settleExpiredPositions, todayET } from '@/lib/option-lots';
 import { parseOptionSymbol } from '@/lib/option-symbols';
 
 export const dynamic = 'force-dynamic';
@@ -52,7 +52,9 @@ async function run(req: Request) {
         // 1. Expiry settlement (needs the underlying's last price).
         const spots = await fetchMarketPrices(['QQQ']);
         const settle = await settleExpiredLots(spots);
-        result.lotsSettled = settle.settled;
+        const settlePos = await settleExpiredPositions();
+        result.lotsSettled = settle.settled + settlePos.settled;
+        if (settlePos.skipped > 0) result.errors.push(`${settlePos.skipped} expired option position(s) not settled (no close price or error)`);
         if (settle.skipped > 0) result.errors.push(`${settle.skipped} expired lot(s) not settled (no underlying price or error)`);
 
         // 2. Refresh option marks for every contract still held.

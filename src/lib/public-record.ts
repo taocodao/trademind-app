@@ -37,12 +37,21 @@ export interface PublicLot {
     open: boolean;
 }
 
+export interface PublicLeg {
+    contract: string;
+    /** Positive for long, negative for short. */
+    quantity: number;
+    openedOn: string;
+    openingPrice: number;
+}
+
 export interface PublicTrade {
     date: string;
     side: 'Buy' | 'Sell';
     instrument: string;
     quantity: number;
     price: number;
+    seed: boolean;
 }
 
 export interface PublicAccountRecord {
@@ -57,6 +66,7 @@ export interface PublicAccountRecord {
     worstDropPct: number | null;
     series: Array<{ date: string; value: number }>;
     lots: PublicLot[];
+    legs: PublicLeg[];
     trades: PublicTrade[];
     heldBackEvents: number;
 }
@@ -72,6 +82,11 @@ function addDays(dateStr: string, n: number): string {
     const d = new Date(`${dateStr}T00:00:00Z`);
     d.setUTCDate(d.getUTCDate() + n);
     return d.toISOString().slice(0, 10);
+}
+
+function contractLabel(symbol: string): string {
+    const p = parseOptionSymbol(symbol);
+    return p ? `${p.underlying} $${p.strike} ${p.right === 'C' ? 'call' : 'put'}, expires ${p.expiry}` : symbol;
 }
 
 const ET_DATE = `(created_at AT TIME ZONE 'America/New_York')::date`;
@@ -136,7 +151,7 @@ export async function getPublicRecord(): Promise<PublicRecord> {
                     const p = parseOptionSymbol(r.symbol);
                     const exitedInView = r.exit_date && r.exit_date <= cutoff;
                     return {
-                        contract: p ? `QQQ $${p.strike} call, expires ${p.expiry}` : String(r.symbol),
+                        contract: contractLabel(String(r.symbol)),
                         contracts: Number(r.contracts),
                         entryDate: r.entry_date,
                         entryPrice: Number(r.entry_price),
@@ -148,21 +163,38 @@ export async function getPublicRecord(): Promise<PublicRecord> {
                 });
             }
 
+            // Other open option legs (written calls, spreads) that are not managed as lots.
+            let legs: PublicLeg[] = [];
+            if (s.key === 'QQQ_LEAPS') {
+                const lg = await query(
+                    `SELECT p.symbol, p.quantity, p.avg_price,
+                            (SELECT to_char(MIN(${ET_DATE}), 'YYYY-MM-DD') FROM account_activities a WHERE a.account_id = p.account_id AND a.symbol = p.symbol) AS opened
+                     FROM account_positions p
+                     WHERE p.account_id = $1 AND p.instrument_type = 'option' AND p.quantity <> 0
+                       AND p.symbol NOT IN (SELECT symbol FROM account_option_lots WHERE account_id = $1 AND status = 'open')
+                     ORDER BY p.symbol`,
+                    [id]
+                );
+                legs = lg.rows
+                    .filter((r: any) => r.opened && r.opened <= cutoff)
+                    .map((r: any) => ({ contract: contractLabel(r.symbol), quantity: Number(r.quantity), openedOn: r.opened, openingPrice: Number(r.avg_price) }));
+            }
+
             const tr = await query(
-                `SELECT to_char(${ET_DATE}, 'YYYY-MM-DD') AS d, type, symbol, quantity, price
+                `SELECT to_char(${ET_DATE}, 'YYYY-MM-DD') AS d, type, symbol, quantity, price, (COALESCE(note, '') ILIKE '%seeded%') AS seed
                  FROM account_activities
                  WHERE account_id = $1 AND type IN ('buy', 'sell') AND symbol IS NOT NULL AND ${ET_DATE} <= $2::date
                  ORDER BY created_at DESC, id DESC LIMIT 100`,
                 [id, cutoff]
             );
             const trades: PublicTrade[] = tr.rows.map((r: any) => {
-                const p = parseOptionSymbol(r.symbol);
                 return {
                     date: r.d,
                     side: r.type === 'buy' ? 'Buy' : 'Sell',
-                    instrument: p ? `QQQ $${p.strike} call, expires ${p.expiry}` : String(r.symbol),
+                    instrument: contractLabel(String(r.symbol)),
                     quantity: Number(r.quantity),
                     price: Number(r.price),
+                    seed: !!r.seed,
                 };
             });
 
@@ -184,6 +216,7 @@ export async function getPublicRecord(): Promise<PublicRecord> {
                 worstDropPct: series.length > 1 ? worst * 100 : null,
                 series: series.slice(-400),
                 lots,
+                legs,
                 trades,
                 heldBackEvents: Number(held.rows[0].n),
             });

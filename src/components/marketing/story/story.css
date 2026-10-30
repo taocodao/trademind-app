@@ -1119,10 +1119,11 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
 
 /* Simulation links: amber on purpose so a simulation is never mistaken for the live record. */
 .tm-sim-wrap { margin-top: 16px; display: flex; justify-content: center; }
-.tm-sim-a { color: inherit; text-decoration: none; }
-.tm-sim-a:hover { text-decoration: underline; }
-.tm-sim-live { margin-left: 6px; }
-.tm-live-tag { color: #C4B5FD; background: rgba(139,92,246,.16); border-color: rgba(167,139,250,.6); }
+.tm-sim-a { color: inherit; text-decoration: none; border-radius: 10px; padding: 3px 8px; transition: background .15s ease; }
+.tm-sim-a:hover, .tm-sim-a:focus-visible { background: rgba(245,158,11,.22); }
+.tm-sim-live { margin-left: 4px; color: #99F6E4; }
+.tm-sim-live:hover, .tm-sim-live:focus-visible { background: rgba(45,212,191,.2); }
+.tm-sim-tag.tm-live-tag { color: #5EEAD4; background: rgba(45,212,191,.14); border-color: rgba(45,212,191,.6); }
 .tm-sim-link {
     display: inline-flex; flex-direction: column; align-items: center; gap: 6px; justify-content: center; text-align: center;
     border: 1px solid rgba(245,158,11,.55); background: rgba(245,158,11,.08); color: #FDE68A;

@@ -19,6 +19,8 @@ import { etParts, zonedInstant, allocateBudget, activeDomains, isBusinessDay } f
 
 const ET = 'America/New_York';
 const SEED_TO = 'testtrademind@gmail.com';
+// Owner-controlled addresses: real subscribers or applicants who may still receive a production-path placement check.
+const OWNER_TEST = new Set(['web3aistore1@gmail.com', 'web3aistore2@gmail.com', 'web3aistore3@gmail.com', 'web3aistore4@gmail.com', 'web3aistore@gmail.com']);
 export const SEQ7_FIRST = 21;
 const DAYS = [0, 7, 14, 21, 28, 35, 42];
 const SEED_BASE = 100000;
@@ -227,13 +229,14 @@ export async function sendSeq7(row: { id: number; token: string; step: number; d
     const ria = isSeed ? rd.has(row.domain.toLowerCase()) : c.wave === 'ria';
     const n = isSeed ? (row.step % 10 >= 1 && row.step % 10 <= (ria ? 5 : 7) ? row.step % 10 : 1) : row.step - 20;
     if (!isSeed && ria && n > 5) return skip('adviser sequence ends at email 5');
+    const ownerTest = OWNER_TEST.has(String(c.email).toLowerCase());
     if (!isSeed) {
         if (['unsubscribed', 'bounced', 'complained', 'subscribed', 'confirmed', 'monthly', 'checked_in', 'snoozed'].includes(c.status)) return skip(`status ${c.status}`);
         if ((await query(`SELECT 1 FROM newsletter_suppression WHERE email = $1`, [c.email])).rowCount) return skip('suppressed');
         const sub = await query(`SELECT 1 FROM newsletter_subscribers WHERE status IN ('confirmed','pending') AND email = ANY($1::text[]) LIMIT 1`, [[String(c.email).toLowerCase(), String(c.subscriber_email ?? '').toLowerCase()].filter(Boolean)]);
-        if (sub.rowCount) return skip('already subscribed');
+        if (sub.rowCount && !ownerTest) return skip('already subscribed');
         const applied = await query(`SELECT 1 FROM program_application WHERE email_norm = $1 UNION ALL SELECT 1 FROM program_participant WHERE email_norm = $1 LIMIT 1`, [String(c.email).toLowerCase()]).catch(() => ({ rowCount: 0 }));
-        if (applied.rowCount) return skip('applied to program');
+        if (applied.rowCount && !ownerTest) return skip('applied to program');
         if (ria && c.wave !== 'ria') return skip('audience mismatch');
     }
     const facts = await liveFacts(new Date());

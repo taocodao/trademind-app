@@ -60,7 +60,7 @@ export const STUDY_FULL = {
     value: 'At standard prices, each earned month is worth about $30 on QQQ Defensive or $40 on QQQ LEAPS.',
 };
 export const COOP = {
-    title: '30 minutes, your questions first',
+    title: '20 minutes, your questions first',
     intro: 'I will walk through the rules behind both strategies and the assumptions in the two year simulation, then you tell me what breaks. Critical feedback is the point of the call.',
     more: 'If it is useful, there are two ways to keep going: a research edition written for advisers, with the model\u2019s reading, its rules and its limits, or a standing review of the model where you run your own tests. There is also a longer conversation to be had about how published signals could be followed on a custodian account, with orders placed by your firm. That is a possibility to discuss. TradeMind does not connect to any brokerage today and places no trades.',
 };
@@ -351,7 +351,7 @@ export function renderSeq7(o: Seq7Opts): { subject: string; text: string; html: 
     const ria = o.audience === 'ria';
     const studyLead = STUDY_LEAD.has(n);
     // One primary action per email. Everything else is a quiet text link.
-    const primary: [string, string] = ria ? ['mt', 'Book 30 minutes'] : studyLead ? ['f', 'Apply to the study program'] : ['sw', 'Subscribe free'];
+    const primary: [string, string] = ria ? ['mt', 'Book 20 minutes'] : studyLead ? ['f', 'Apply to the study program'] : ['sw', 'Subscribe free'];
     const riaStudyFull = ria && studyLead;
     const seconds = (SECOND[n] ?? []).filter(([k]) => k !== primary[0] && !['pl', 'f', 'va', 'h'].includes(k));
     if (ria && !seconds.some(([k]) => k === 'sw')) seconds.push(['sw', 'Subscribe free']);

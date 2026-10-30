@@ -192,7 +192,7 @@ export default async function LiveRecordPage({ searchParams }: { searchParams?: 
                         <Link href="/plans?utm_source=daily&utm_medium=email&utm_campaign=daily_brief&utm_content=demo_banner" className="lr-demo-btn">Subscribe to a strategy</Link>
                     </div>
                 )}
-                <div className="lr-back-row"><Link href="/verify" className="lr-back">Back to verify the record</Link></div>
+                <div className="lr-back-row"><Link href="/" className="lr-back">Back to the home page</Link></div>
                 <header>
                     <div className="lr-eyebrow">Live record</div>
                     <h1 className="lr-h1">A real account, following the same signals you get.</h1>

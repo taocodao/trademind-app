@@ -50,8 +50,9 @@ function studyCard(): string {
     return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${items.map(li).join('')}</table>`;
 }
 
-function linkGrid(): string {
-    const cell = (u: string, t: string) => `<td width="50%" style="padding:5px;">${btn(u, t, 'outline', true)}</td>`;
+function linkGrid(skipUrl = ''): string {
+    // A tile that repeats the main button of the email is left out; its link is already in that button.
+    const cell = (u: string, t: string) => u === skipUrl ? '' : `<td width="50%" style="padding:5px;">${btn(u, t, 'outline', true)}</td>`;
     return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>${cell(FIXED_LINKS.plans, 'Plans and pricing')}${cell(FIXED_LINKS.study, 'Study program')}</tr><tr>${cell(FIXED_LINKS.simulation, 'Two year simulation')}${cell(FIXED_LINKS.home, 'trademind.bot')}</tr></table>`;
 }
 
@@ -81,16 +82,15 @@ export function renderEdition(plan: EditionPlan, d: DraftSections, ctx: RenderCo
         P.push(section('03', 'Model readout', esc(d.cards.copilot_readout)));
         P.push(section('04', 'Flight plan', esc(d.cards.flight_plan)));
         P.push(section('05', 'Turbulence test', esc(d.cards.turbulence_test)));
-        P.push(wrap(`<div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${BLUE};padding:6px 0 10px 0;">The two year record</div>${simTiles()}`) + sp(10) + wrap(btn(FIXED_LINKS.simulation, 'See the full simulation', 'outline')) + sp(20));
+        P.push(wrap(`<div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${BLUE};padding:6px 0 10px 0;">The two year record</div>${simTiles()}`) + sp(20));
     } else {
         P.push(section('02', 'Why this matters', esc(d.cards.copilot_readout)));
         P.push(section('03', 'Turbulence test', esc(d.cards.turbulence_test)));
     }
     if (plan.edition_type !== 'outreach_weekly') P.push(wrap(btn(goalUrl, plan.goal.label, 'primary')) + sp(20));
-    else P.push(wrap(btn(goalUrl, plan.goal.label, 'primary')) + sp(20));
-    P.push(section('', 'The study program', studyCard() + `<div style="padding-top:12px;">${btn(FIXED_LINKS.study, 'Apply to the study program', 'outline')}</div>`));
+    P.push(section('', 'The study program', studyCard()));
     P.push(wrap(`<div style="font-size:14px;color:${FG};line-height:1.7;">P.S. ${esc(d.ps)}</div>`) + sp(16));
-    P.push(wrap(linkGrid()) + sp(14));
+    P.push(wrap(linkGrid(goalUrl)) + sp(14));
     if (!daily) P.push(recordCard(ctx.record_lines));
     P.push(wrap(`<div style="border-top:1px solid ${LINE};padding-top:14px;font-size:11px;color:${MUTED};line-height:1.6;">${esc(DISCLAIMER)}<br><br>${esc(ADDRESS)}<br><a href="${ctx.unsubscribe_url}" style="color:${MUTED};">Unsubscribe</a> &middot; <a href="${ctx.preferences_url}" style="color:${MUTED};">Preferences</a></div>`));
     const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>TradeMind</title></head><body style="margin:0;padding:0;background:${BG};"><div style="display:none;max-height:0;overflow:hidden;color:${BG};">${esc(d.preheader)}</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BG};"><tr><td align="center" style="padding:24px 14px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">${P.join('')}</table></td></tr></table></body></html>`;

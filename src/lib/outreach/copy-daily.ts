@@ -95,7 +95,7 @@ export function renderDaily(o: DailyOpts): { subject: string; text: string; html
 
     const readout = a
         ? P(`Your account follows ${a.strategy}. Today\u2019s published status for it: ${myStatus} Open your account to see the full instruction.`, 14)
-        : `${P('The model publishes a status for each strategy every day. It is research, not an instruction for your account.', 14)}${locked('Today\u2019s QQQ Defensive and QQQ LEAPS statuses go to readers with a plan for that strategy. Each plan covers one brokerage account.', plansUrl, 'Subscribe to a strategy')}`;
+        : `${P('The model publishes a status for each strategy every day. It is research, not an instruction for your account.', 14)}${locked('Today\u2019s QQQ Defensive and QQQ LEAPS statuses go to readers with a plan for that strategy. Each plan covers one brokerage account.', plansUrl, '')}`;
 
     const weatherRows = `${statusLine('Defensive model regime', f.regime)}${trend ? statusLine('Trend reading', trend) : ''}`;
     const parts = failed

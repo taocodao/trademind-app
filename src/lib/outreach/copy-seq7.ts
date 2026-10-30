@@ -290,7 +290,7 @@ export function statusLine(name: string, text: string, dot = C.green): string {
     return `<tr><td style="padding:10px 0;border-top:1px solid ${C.line};${F}font-size:14px;line-height:1.5;color:${C.fg};"><span style="display:inline-block;width:8px;height:8px;border-radius:4px;background:${dot};margin-right:8px;"></span><strong>${esc(name)}</strong><br><span style="color:${C.muted};padding-left:16px;display:inline-block;">${esc(text)}</span></td></tr>`;
 }
 export function locked(label: string, url: string, cta: string): string {
-    return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:10px 0 4px;background:${C.lock};border:1px dashed #3a4a70;border-radius:10px;"><tr><td style="padding:14px 16px;${F}"><div style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:${C.amber};padding-bottom:6px;">Plan members only</div><div style="font-size:14px;line-height:1.6;color:${C.body};padding-bottom:12px;">${esc(label)}</div>${btn(url, cta, 'outline')}</td></tr></table>`;
+    return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:10px 0 4px;background:${C.lock};border:1px dashed #3a4a70;border-radius:10px;"><tr><td style="padding:14px 16px;${F}"><div style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:${C.amber};padding-bottom:6px;">Plan members only</div><div style="font-size:14px;line-height:1.6;color:${C.body};padding-bottom:12px;">${esc(label)}</div>${cta ? `<div style="font-size:14px;"><a href="${esc(url)}" style="color:${C.blue};text-decoration:underline;font-weight:600;">${esc(cta)} &rsaquo;</a></div>` : ''}</td></tr></table>`;
 }
 
 function weeklyIssue(o: Seq7Opts, url: (k: string, x?: string) => string, full: boolean): string {
@@ -327,8 +327,8 @@ const STUDY_LEAD = new Set([3, 5, 7]);
 function studyCompact(url: UrlFn): string {
     return row(`<div style="${F}font-size:14px;line-height:1.55;color:${C.body};padding:2px 4px 14px;">${esc(STUDY_COMPACT)} ${tl(url('f'), 'Learn more')}</div>`);
 }
-function studyFull(url: UrlFn): string {
-    return card(`<div style="${F}font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.blue};padding-bottom:6px;">\u{1F393}&nbsp;Study program</div><div style="${F}font-size:20px;font-weight:800;color:${C.fg};padding-bottom:8px;">${esc(STUDY_FULL.title)}</div>${STUDY_FULL.body.map((x) => P(x, 14)).join('')}${btn(url('f'), 'Apply to the study program')}<div style="height:10px;"></div>${P(STUDY_FULL.value, 12, C.muted)}`, C.blue);
+function studyFull(url: UrlFn, withButton = true): string {
+    return card(`<div style="${F}font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.blue};padding-bottom:6px;">\u{1F393}&nbsp;Study program</div><div style="${F}font-size:20px;font-weight:800;color:${C.fg};padding-bottom:8px;">${esc(STUDY_FULL.title)}</div>${STUDY_FULL.body.map((x) => P(x, 14)).join('')}${withButton ? btn(url('f'), 'Apply to the study program') : ''}<div style="height:10px;"></div>${P(STUDY_FULL.value, 12, C.muted)}`, C.blue);
 }
 function coopCard(url: UrlFn): string {
     return card(`<div style="${F}font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.green};padding-bottom:6px;">\u{1F91D}&nbsp;For advisers</div><div style="${F}font-size:20px;font-weight:800;color:${C.fg};padding-bottom:8px;">${esc(COOP.title)}</div>${P(COOP.intro, 14)}${P(COOP.more, 14)}`, C.green);
@@ -353,7 +353,7 @@ export function renderSeq7(o: Seq7Opts): { subject: string; text: string; html: 
     // One primary action per email. Everything else is a quiet text link.
     const primary: [string, string] = ria ? ['mt', 'Book 30 minutes'] : studyLead ? ['f', 'Apply to the study program'] : ['sw', 'Subscribe free'];
     const riaStudyFull = ria && studyLead;
-    const seconds = (SECOND[n] ?? []).filter(([k]) => k !== primary[0]);
+    const seconds = (SECOND[n] ?? []).filter(([k]) => k !== primary[0] && !['pl', 'f', 'va', 'h'].includes(k));
     if (ria && !seconds.some(([k]) => k === 'sw')) seconds.push(['sw', 'Subscribe free']);
     const secondaryRow = (links: [string, string][]) => links.length ? row(`<div style="${F}font-size:14px;line-height:1.9;padding:4px 4px 14px;">${links.map(([k, l]) => tl(url(k), l)).join('&nbsp;&nbsp;&nbsp;')}</div>`) : '';
     const pollRow = n === 5 ? row(`<div style="${F}font-size:15px;font-weight:800;color:${C.fg};padding:2px 4px 6px;">Would you have kept following it?</div><div style="${F}font-size:14px;line-height:1.9;padding:0 4px 4px;">${[['qa', 'A. Yes, I would have waited'], ['qb', 'B. I would want a clearer explanation first'], ['qc', 'C. I would have walked away']].map(([k, l]) => tl(url(k), l)).join('<br>')}</div><div style="${F}font-size:12px;line-height:1.5;color:${C.muted};padding:4px 4px 14px;">There is no right answer. If you picked C, you are exactly who should test this for free.</div>`) : '';
@@ -363,10 +363,18 @@ export function renderSeq7(o: Seq7Opts): { subject: string; text: string; html: 
     H.push(row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="${F}font-size:18px;font-weight:800;color:${C.fg};"><a href="${esc(url('h'))}" style="color:${C.fg};text-decoration:none;">TradeMind<span style="color:${C.blue};">.bot</span></a></td><td align="right">${pill('Free research', C.blue, '#121a2e')}</td></tr></table>`) + sp(18));
     H.push(row(`<div style="${F}font-size:26px;font-weight:800;line-height:1.25;color:${C.fg};">${esc(THEME.split('.')[0])}. <span style="color:${C.blue};">${esc(THEME.split('.').slice(1).join('.').trim())}</span></div><div style="${F}font-size:13px;color:${C.muted};padding-top:6px;">${esc(THEME_SUB)}</div>`) + sp(20));
     H.push(row(P(hi, 16, C.fg)));
-    H.push(row(`<div style="${F}font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.muted};padding:4px 4px 8px;">Explore</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td width="50%" style="padding:4px;">${btn(url('pl'), 'Plans and pricing', 'outline', true)}</td><td width="50%" style="padding:4px;">${btn(url('f'), 'Study program', 'outline', true)}</td></tr><tr><td width="50%" style="padding:4px;">${btn(url('va'), 'Virtual accounts', 'outline', true)}</td><td width="50%" style="padding:4px;">${btn(url('h'), 'trademind.bot', 'outline', true)}</td></tr></table>`) + sp(14));
-    if (ria) H.push(riaStudyFull ? studyFull(url) : studyCompact(url));
+    const exploreSkip = new Set<string>([primary[0]]);
+    if (ria && studyLead) exploreSkip.add('f'); // the study card carries its own apply button
+    const tiles = ([['pl', 'Plans and pricing'], ['f', 'Study program'], ['va', 'Virtual accounts'], ['h', 'trademind.bot']] as [string, string][]).filter(([k]) => !exploreSkip.has(k));
+    const tileRows: string[] = [];
+    for (let i = 0; i < tiles.length; i += 2) {
+        const pair = tiles.slice(i, i + 2);
+        tileRows.push(`<tr>${pair.map(([k, l]) => `<td ${pair.length === 1 ? 'colspan="2"' : 'width="50%"'} style="padding:4px;">${btn(url(k), l, 'outline', true)}</td>`).join('')}</tr>`);
+    }
+    H.push(row(`<div style="${F}font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.muted};padding:4px 4px 8px;">Explore</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${tileRows.join('')}</table>`) + sp(14));
+    if (ria) H.push(riaStudyFull ? studyFull(url, primary[0] !== 'f') : studyCompact(url));
     if (ria) H.push(focusCard + coopCard(url));
-    else if (studyLead) H.push(focusCard + studyFull(url));
+    else if (studyLead) H.push(focusCard + studyFull(url, primary[0] !== 'f'));
     else H.push(focusCard);
     H.push(primaryRow);
     H.push(pollRow + secondaryRow(seconds));

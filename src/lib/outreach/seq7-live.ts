@@ -14,6 +14,7 @@ import { MAILING_ADDRESS } from '@/lib/newsletter/email';
 import { BASE_URL, CAMPAIGN, getSettings } from './db';
 import { sendMail, transportKeyPresent, type Transport } from './transport';
 import { renderSeq7, SAMPLE_FACTS, stageForAge, isStageControl, STAGES, STAGE_HOURS, type IssueFacts, type Stage } from './copy-seq7';
+import { renderRia, RIA_DAYS } from './copy-ria';
 import { etParts, zonedInstant, allocateBudget, activeDomains, isBusinessDay } from './sender';
 
 const ET = 'America/New_York';
@@ -95,9 +96,9 @@ async function planAudience(aud: 'retail' | 'ria', now: Date, s: Record<string, 
         for (const r of fu.rows) {
             if (picks.length >= fuCap) break;
             const sent = new Set<number>(r.sent_steps), queued = new Set<number>(r.queued);
-            const next = [22, 23, 24, 25, 26, 27].find((st) => !sent.has(st));
+            const next = (ria ? [22, 23, 24, 25] : [22, 23, 24, 25, 26, 27]).find((st) => !sent.has(st));
             if (next === undefined || queued.has(next)) continue;
-            if (dayDiff(et.date, dstr(r.first_day)) < DAYS[next - 21]) continue;
+            if (dayDiff(et.date, dstr(r.first_day)) < (ria ? RIA_DAYS : DAYS)[next - 21]) continue;
             if (r.last_day && dayDiff(et.date, dstr(r.last_day)) < 4) continue;
             const d = cap.has(String(r.domain)) && room(String(r.domain)) > 0 ? String(r.domain) : best();
             if (room(d) <= 0) continue;
@@ -224,7 +225,8 @@ export async function sendSeq7(row: { id: number; token: string; step: number; d
     const isSeed = c.wave === 'seed';
     const rd = riaDomains(s);
     const ria = isSeed ? rd.has(row.domain.toLowerCase()) : c.wave === 'ria';
-    const n = isSeed ? (row.step % 10 >= 1 && row.step % 10 <= 7 ? row.step % 10 : 1) : row.step - 20;
+    const n = isSeed ? (row.step % 10 >= 1 && row.step % 10 <= (ria ? 5 : 7) ? row.step % 10 : 1) : row.step - 20;
+    if (!isSeed && ria && n > 5) return skip('adviser sequence ends at email 5');
     if (!isSeed) {
         if (['unsubscribed', 'bounced', 'complained', 'subscribed', 'confirmed', 'monthly', 'checked_in', 'snoozed'].includes(c.status)) return skip(`status ${c.status}`);
         if ((await query(`SELECT 1 FROM newsletter_suppression WHERE email = $1`, [c.email])).rowCount) return skip('suppressed');
@@ -241,7 +243,7 @@ export async function sendSeq7(row: { id: number; token: string; step: number; d
         if (isSeed) stage = STAGES[Math.floor(row.step / 10) % STAGES.length];
         else if (!isStageControl(c.token)) stage = stageForAge(c.age);
     }
-    const msg = renderSeq7({ token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, step: n, n, facts, audience: ria ? 'ria' : 'retail', stage });
+    const msg = ria ? renderRia({ token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, n, step: row.step < SEED_BASE ? row.step : 20 + n }) : renderSeq7({ token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, step: n, n, facts, audience: ria ? 'ria' : 'retail', stage });
     if (!transportKeyPresent(transport)) return 'failed';
     const from = `${s.from_display || 'Eric Huang'} <${fromLocal}@${row.domain}>`;
     let res;

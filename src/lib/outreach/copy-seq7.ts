@@ -193,7 +193,7 @@ export const STAGE_HOURS: Record<Stage, [string, string]> = {
     accelerator: ['11:00', '20:00'], finisher: ['11:00', '20:00'], grower: ['09:00', '14:00'],
 };
 
-const STAGE_EMAIL1: Record<Stage, { subject: string; pre: string; open: string }> = {
+export const STAGE_EMAIL1: Record<Stage, { subject: string; pre: string; open: string }> = {
     starter: { subject: 'Start early, retire rich: a weekly QQQ brief', pre: 'The years you have are the biggest edge you will ever get.',
         open: 'You have something older investors would pay for: decades of compounding ahead. This is one brief a week on QQQ, with the rules and the risks written out, so those years work to a plan.' },
     builder: { subject: 'Are you on track to retire rich?', pre: 'One brief a week on QQQ, with the rules written out.',

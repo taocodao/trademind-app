@@ -14,6 +14,7 @@
  */
 
 import { query } from '@/lib/db';
+import simRecord from '@/data/simulated-record.json';
 import { initializeAccountTables } from '@/lib/accounts';
 import { todayET } from '@/lib/option-lots';
 import { parseOptionSymbol } from '@/lib/option-symbols';
@@ -65,6 +66,18 @@ export interface PublicAccountRecord {
     returnPct: number | null;
     worstDropPct: number | null;
     series: Array<{ date: string; value: number }>;
+    /** The two year simulation that came before the virtual account, and the combined view since its start. */
+    sim: {
+        startDate: string;
+        endDate: string;
+        startingValue: number;
+        endValue: number;
+        returnPct: number;
+        worstDropPct: number;
+        combinedReturnPct: number | null;
+        combinedWorstDropPct: number | null;
+        combinedSeries: Array<{ date: string; value: number; live: boolean }>;
+    } | null;
     lots: PublicLot[];
     legs: PublicLeg[];
     trades: PublicTrade[];
@@ -87,6 +100,31 @@ function addDays(dateStr: string, n: number): string {
 function contractLabel(symbol: string): string {
     const p = parseOptionSymbol(symbol);
     return p ? `${p.underlying} $${p.strike} ${p.right === 'C' ? 'call' : 'put'}, expires ${p.expiry}` : symbol;
+}
+
+function buildSim(key: string, live: Array<{ date: string; value: number }>, lastValue: number | null): PublicAccountRecord['sim'] {
+    const sk = key === 'QQQ_LEAPS' ? 'QQQ_LEAPS' : 'QQQ_DEFENSIVE';
+    const sim = (simRecord as any).strategies.find((x: any) => x.key === sk);
+    if (!sim) return null;
+    const daily: Array<{ date: string; value: number }> = sim.daily.map((d: any) => ({ date: d.date, value: Number(d.value) }));
+    // The virtual account opens at the simulation's final value, so the first live day replaces the last simulated day.
+    const liveFrom = live.length > 0 ? live[0].date : null;
+    const simPart = daily.filter((d) => !liveFrom || d.date < liveFrom).map((d) => ({ ...d, live: false }));
+    const combinedSeries = [...simPart, ...live.map((d) => ({ ...d, live: true }))];
+    let peak = 0, worst = 0;
+    for (const p of combinedSeries) { if (p.value > peak) peak = p.value; if (peak > 0) worst = Math.min(worst, (p.value - peak) / peak); }
+    const principal = Number(sim.principal);
+    return {
+        startDate: sim.start,
+        endDate: sim.end,
+        startingValue: principal,
+        endValue: Number(sim.finalValue),
+        returnPct: Number(sim.pnlPct),
+        worstDropPct: Number(sim.maxDrawdownPct),
+        combinedReturnPct: lastValue != null ? ((lastValue - principal) / principal) * 100 : null,
+        combinedWorstDropPct: live.length > 0 ? worst * 100 : null,
+        combinedSeries,
+    };
 }
 
 const ET_DATE = `(created_at AT TIME ZONE 'America/New_York')::date`;
@@ -215,6 +253,7 @@ export async function getPublicRecord(): Promise<PublicRecord> {
                 returnPct: last && base > 0 ? ((last.value - base) / base) * 100 : null,
                 worstDropPct: series.length > 1 ? worst * 100 : null,
                 series: series.slice(-400),
+                sim: buildSim(s.key, series, last ? last.value : null),
                 lots,
                 legs,
                 trades,

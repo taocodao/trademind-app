@@ -51,7 +51,7 @@ function AccountBlock({ a, delay }: { a: PublicAccountRecord; delay: number }) {
         <section className="lr-section">
             <h2 className="lr-h2">{a.name}</h2>
             <p className="lr-p">
-                Virtual account started {a.startDate} with {money(a.startingValue)}.
+                {a.sim ? `The first two years, ${a.sim.startDate} to ${a.sim.endDate}, are a simulation that started with ${money(a.sim.startingValue)} and ended at ${money(a.sim.endValue)}. ` : ''}Virtual account started {a.startDate} with {money(a.startingValue)}.
                 {hasData
                     ? ` Figures run through ${a.dataThrough}.`
                     : a.firstVisibleOn
@@ -64,7 +64,7 @@ function AccountBlock({ a, delay }: { a: PublicAccountRecord; delay: number }) {
                     <div className="lr-metrics">
                         <div className="lr-metric"><span className="lr-k">Account value</span><span className="lr-v">{money(a.value!, 0)}</span></div>
                         <div className="lr-metric">
-                            <span className="lr-k">Change since start</span>
+                            <span className="lr-k">Change since virtual start</span>
                             <span className={`lr-v ${a.returnPct! >= 0 ? 'lr-pos' : 'lr-neg'}`}>{pct(a.returnPct!)}</span>
                         </div>
                         <div className="lr-metric">
@@ -72,7 +72,15 @@ function AccountBlock({ a, delay }: { a: PublicAccountRecord; delay: number }) {
                             <span className="lr-v">{a.worstDropPct != null ? `${a.worstDropPct.toFixed(2)}%` : 'Not enough days yet'}</span>
                         </div>
                     </div>
-                    <Spark series={a.series} />
+                    {a.sim && a.sim.combinedReturnPct != null && (
+                        <div className="lr-metrics">
+                            <div className="lr-metric"><span className="lr-k">Simulation, first two years</span><span className={`lr-v ${a.sim.returnPct >= 0 ? 'lr-pos' : 'lr-neg'}`}>{pct(a.sim.returnPct)}</span></div>
+                            <div className="lr-metric"><span className="lr-k">Return since original start ({a.sim.startDate})</span><span className={`lr-v ${a.sim.combinedReturnPct >= 0 ? 'lr-pos' : 'lr-neg'}`}>{pct(a.sim.combinedReturnPct)}</span></div>
+                            <div className="lr-metric"><span className="lr-k">Largest drop since original start</span><span className="lr-v">{a.sim.combinedWorstDropPct != null ? `${a.sim.combinedWorstDropPct.toFixed(2)}%` : 'Not enough days yet'}</span></div>
+                        </div>
+                    )}
+                    <Spark series={a.sim ? a.sim.combinedSeries : a.series} />
+                    {a.sim && <p className="lr-p">The chart shows the simulation from {a.sim.startDate} to {a.sim.endDate}, then the virtual account. The return since the original start joins both, so only the part after {a.startDate} comes from the virtual account. Simulated results are hypothetical, used model-priced options, and are not a real account.</p>}
                 </>
             )}
 

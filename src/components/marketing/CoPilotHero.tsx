@@ -147,6 +147,9 @@ export function CoPilotHero() {
                             <span>{c.simLink.split('|')[1] ?? ''}</span>
                         </span>
                     </Link>
+                    <p className="tm-live-line">
+                        {c.liveLine} <Link href="/live-record" className="tm-live-link">{c.liveLink}</Link>
+                    </p>
                 </div>
 
                 <div className="tm-herocards" ref={cardsRef}>

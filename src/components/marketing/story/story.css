@@ -1118,7 +1118,10 @@ details.tm-advanced summary:hover { color: var(--s-ink); }
 .tm-band-retire .tm-retire-mech.tm-retire-defensive { margin-top: 14px; }
 
 /* Simulation links: amber on purpose so a simulation is never mistaken for the live record. */
-.tm-sim-wrap { margin-top: 16px; display: flex; justify-content: center; }
+.tm-sim-wrap { margin-top: 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.tm-live-line { margin: 0; max-width: 760px; text-align: center; font-size: 13.5px; line-height: 1.5; color: #CBD5E1; }
+.tm-live-link { color: #C4B5FD; font-weight: 700; text-decoration: underline; white-space: nowrap; }
+.tm-live-link:hover { color: #DDD6FE; }
 .tm-sim-link {
     display: inline-flex; flex-direction: column; align-items: center; gap: 6px; justify-content: center; text-align: center;
     border: 1px solid rgba(245,158,11,.55); background: rgba(245,158,11,.08); color: #FDE68A;

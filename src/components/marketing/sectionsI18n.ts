@@ -17,7 +17,7 @@ export interface SectionsCopy {
         h1a: string; h1b: string;
         sub: string;
         plans: string;
-        ctaPrimary: string; ctaSecondary: string; ctaLedger: string; ledgerLink: string; simTag: string; simLink: string;
+        ctaPrimary: string; ctaSecondary: string; ctaLedger: string; ledgerLink: string; simTag: string; simLink: string; liveLine: string; liveLink: string;
         cards: { numeral: string; numSegs: ({ v: number; dec?: number } | { t: string })[]; label: string; body: string; link?: string }[];
         stats: { big: string; label: string; clarifier: string }[];
         play: string; calcCta: string; micro: string;
@@ -99,6 +99,8 @@ const EN_SECTIONS: SectionsCopy = {
         ledgerLink: 'Open the ledger \u2192',
         simTag: 'Simulation',
         simLink: 'QQQ LEAPS, simulated over the past 2 years: +229.48% vs +49.46% for QQQ buy and hold.|Largest drop -14.6% vs -22.9%. Not live trading. \u2192',
+        liveLine: 'Since mid October 2026 the same strategies also run in a virtual account that receives each signal when members do, losses included.',
+        liveLink: 'See the virtual account \\u2192',
         cards: [
             {
                 numeral: '55.1%',
@@ -269,6 +271,8 @@ const ES_SECTIONS: SectionsCopy = {
         ledgerLink: 'Abre el libro mayor \u2192',
         simTag: 'Simulación',
         simLink: 'QQQ LEAPS, simulado en los últimos 2 años: +229,48% vs +49,46% de QQQ comprar y mantener.|Mayor caída -14,6% vs -22,9%. No es trading en vivo. \u2192',
+        liveLine: 'Desde mediados de octubre de 2026 las mismas estrategias también corren en una cuenta virtual que recibe cada señal cuando la reciben los miembros, pérdidas incluidas.',
+        liveLink: 'Ver la cuenta virtual \\u2192',
         cards: [
             {
                 numeral: '55.1%',
@@ -439,6 +443,8 @@ const ZH_SECTIONS: SectionsCopy = {
         ledgerLink: '打开账本 \u2192',
         simTag: '模拟',
         simLink: 'QQQ LEAPS 过去两年模拟：收益 +229.48%，QQQ 买入持有 +49.46%。|最大回撤 -14.6%，QQQ 为 -22.9%。非实盘交易。 \u2192',
+        liveLine: '自 2026 年 10 月中旬起，同样的策略也在一个虚拟账户中运行，与会员同时收到每个信号，亏损也包含在内。',
+        liveLink: '查看虚拟账户 \\u2192',
         cards: [
             {
                 numeral: '55.1%',

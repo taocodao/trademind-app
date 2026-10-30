@@ -37,12 +37,16 @@ const dayDiff = (a: string, b: string) => Math.round((Date.parse(a) - Date.parse
 const dstr = (v: unknown) => (v instanceof Date ? v.toISOString().slice(0, 10) : String(v).slice(0, 10));
 
 /** Whether a queued row may send now. Seeds: 9:00 AM to 11:00 PM ET any day. Retail: same. Advisers: 9:00 AM to 6:00 PM ET on business days. */
-export async function seq7WindowOpen(row: { step: number; domain: string }, now: Date): Promise<boolean> {
+export async function seq7WindowOpen(row: { step: number; domain: string; token?: string }, now: Date): Promise<boolean> {
     const s = await getSettings();
     const et = etParts(now);
     const mins = et.hour * 60 + et.minute;
     const isSeed = row.step >= SEED_BASE;
-    const ria = riaDomains(s).has(row.domain.toLowerCase()) && !isSeed;
+    let ria = riaDomains(s).has(row.domain.toLowerCase()) && !isSeed;
+    if (!isSeed && row.token) {
+        const w = await query(`SELECT wave FROM outreach_contacts WHERE token = $1`, [row.token]);
+        if (w.rows[0]) ria = w.rows[0].wave === 'ria';
+    }
     if (ria) return isBusinessDay(et.date, et.dow) && mins >= 9 * 60 && mins < 18 * 60;
     return mins >= 9 * 60 && mins < 23 * 60;
 }
@@ -62,6 +66,19 @@ async function ensureTables(): Promise<void> {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (plan_date, audience))`);
 }
 
+/** Combined daily total across both audiences: first day 150, then the previous day plus 50 plus a random 0 to 10. Stored once per day. */
+async function combinedTotal(date: string, s: Record<string, string>): Promise<number> {
+    const cur = await query(`SELECT budget FROM outreach_plan_seq7 WHERE plan_date = $1 AND audience = 'total'`, [date]);
+    if (cur.rows[0]) return Number(cur.rows[0].budget);
+    const prev = await query(`SELECT budget, day_index FROM outreach_plan_seq7 WHERE audience = 'total' AND plan_date < $1 ORDER BY plan_date DESC LIMIT 1`, [date]);
+    const start = Number(s.ramp2_start || 150), step = Number(s.ramp2_step || 50), jitter = Number(s.ramp2_jitter || 10), cap = Number(s.ramp2_cap || 2000);
+    const total = prev.rows[0] ? Math.min(Number(prev.rows[0].budget) + step + randomInt(0, jitter + 1), cap) : start;
+    const idx = prev.rows[0] ? Number(prev.rows[0].day_index) + 1 : 1;
+    await query(`INSERT INTO outreach_plan_seq7 (plan_date, audience, day_index, budget) VALUES ($1,'total',$2,$3) ON CONFLICT DO NOTHING`, [date, idx, total]);
+    const again = await query(`SELECT budget FROM outreach_plan_seq7 WHERE plan_date = $1 AND audience = 'total'`, [date]);
+    return Number(again.rows[0].budget);
+}
+
 async function planAudience(aud: 'retail' | 'ria', now: Date, s: Record<string, string>): Promise<Record<string, unknown> | null> {
     const et = etParts(now);
     const ria = aud === 'ria';
@@ -71,12 +88,22 @@ async function planAudience(aud: 'retail' | 'ria', now: Date, s: Record<string, 
     if (startAt >= endAt - 10 * 60_000) return null; // window nearly over; start tomorrow
     const claimIdx = Number((await query(`SELECT COUNT(*)::int AS n FROM outreach_plan_seq7 WHERE audience = $1`, [aud])).rows[0].n) + 1;
     const pre = ria ? 'ria_' : '';
-    const budget = Math.min(Number(s[`${pre}ramp_start`] || (ria ? 100 : 200)) + Number(s[`${pre}ramp_step`] || (ria ? 25 : 50)) * (claimIdx - 1), Number(s[`${pre}ramp_cap`] || (ria ? 1000 : 2000)));
+    const combined = s.ramp_mode === 'combined';
+    let budget: number;
+    if (combined) {
+        const total = await combinedTotal(et.date, s);
+        const riaDay = isBusinessDay(et.date, et.dow) && et.hour * 60 + et.minute < 17 * 60 + 50;
+        const riaPart = riaDay ? Math.round(total * Number(s.ria_share || 0.2)) : 0;
+        budget = ria ? riaPart : total - riaPart;
+        if (budget <= 0) return null;
+    } else {
+    budget = Math.min(Number(s[`${pre}ramp_start`] || (ria ? 100 : 200)) + Number(s[`${pre}ramp_step`] || (ria ? 25 : 50)) * (claimIdx - 1), Number(s[`${pre}ramp_cap`] || (ria ? 1000 : 2000)));
+    }
     const claim = await query(`INSERT INTO outreach_plan_seq7 (plan_date, audience, day_index, budget) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING RETURNING plan_date`, [et.date, aud, claimIdx, budget]);
     if (!claim.rowCount) return null;
     try {
         const rd = riaDomains(s);
-        const doms = (await activeDomains(et.date)).filter((d) => rd.has(d.domain.toLowerCase()) === ria);
+        const doms = (await activeDomains(et.date)).filter((d) => rd.size === 0 || rd.has(d.domain.toLowerCase()) === ria);
         if (!doms.length) return { audience: aud, planned: 0, budget, reason: 'no active domains' };
         const cap = allocateBudget(doms, budget);
         const used = new Map<string, number>();

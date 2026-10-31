@@ -16,7 +16,7 @@ export const maxDuration = 60;
  * trademindmailbox.com is used by both lanes, so it sends both. Runs once a day (Vercel cron), never touches
  * real contacts, and records each result in outreach_domain_tests (one row per domain and kind per day).
  */
-const TEST_TO = 'testtrademind@gmail.com';
+const TEST_TO = 'testtrademindnewsletter@gmail.com';
 const ADVISER_DOMAINS = ['trademindria.com', 'trademindmailbox.com'];
 
 const ADVISER_BODY = (token: string) => [

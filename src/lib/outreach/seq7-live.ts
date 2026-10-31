@@ -20,7 +20,8 @@ import { etParts, zonedInstant, allocateBudget, activeDomains, isBusinessDay } f
 const ET = 'America/New_York';
 const SEED_TO = 'testtrademind@gmail.com';
 // Owner-controlled addresses: real subscribers or applicants who may still receive a production-path placement check.
-const OWNER_TEST = new Set(['web3aistore1@gmail.com', 'web3aistore2@gmail.com', 'web3aistore3@gmail.com', 'web3aistore4@gmail.com', 'web3aistore@gmail.com']);
+const OWNER_TEST = new Set(['web3aistore1@gmail.com', 'web3aistore2@gmail.com', 'web3aistore3@gmail.com', 'web3aistore4@gmail.com', 'web3aistore@gmail.com', 'testtrademind@gmail.com', 'testtrademindnewsletter@gmail.com']);
+const isOwnerTest = (email: string): boolean => OWNER_TEST.has(String(email).toLowerCase().replace(/\+[^@]*@/, '@'));
 export const SEQ7_FIRST = 21;
 const DAYS = [0, 7, 14, 21, 28, 35, 42];
 const SEED_BASE = 100000;
@@ -44,7 +45,8 @@ export async function seq7WindowOpen(row: { step: number; domain: string; token?
     const isSeed = row.step >= SEED_BASE;
     let ria = riaDomains(s).has(row.domain.toLowerCase()) && !isSeed;
     if (!isSeed && row.token) {
-        const w = await query(`SELECT wave FROM outreach_contacts WHERE token = $1`, [row.token]);
+        const w = await query(`SELECT wave, email FROM outreach_contacts WHERE token = $1`, [row.token]);
+        if (w.rows[0] && isOwnerTest(w.rows[0].email)) return true;
         if (w.rows[0]) ria = w.rows[0].wave === 'ria';
     }
     if (ria) return isBusinessDay(et.date, et.dow) && mins >= 9 * 60 && mins < 18 * 60;
@@ -53,7 +55,7 @@ export async function seq7WindowOpen(row: { step: number; domain: string; token?
 
 const BLOCKED = `'unsubscribed','bounced','complained','subscribed','confirmed','monthly','checked_in','snoozed'`;
 const ELIGIBLE = `
-    c.wave <> 'seed' AND ((c.wave = 'ria') = $1::boolean)
+    c.wave <> 'seed' AND c.token NOT LIKE 'dt%' AND c.token NOT LIKE 'prod%' AND ((c.wave = 'ria') = $1::boolean)
     AND c.status NOT IN (${BLOCKED})
     AND NOT EXISTS (SELECT 1 FROM newsletter_suppression ns WHERE ns.email = c.email)
     AND NOT EXISTS (SELECT 1 FROM newsletter_subscribers sub WHERE sub.status IN ('confirmed','pending') AND sub.email IN (c.email, COALESCE(c.subscriber_email, c.email)))
@@ -256,7 +258,7 @@ export async function sendSeq7(row: { id: number; token: string; step: number; d
     const ria = isSeed ? rd.has(row.domain.toLowerCase()) : c.wave === 'ria';
     const n = isSeed ? (row.step % 10 >= 1 && row.step % 10 <= (ria ? 5 : 7) ? row.step % 10 : 1) : row.step - 20;
     if (!isSeed && ria && n > 5) return skip('adviser sequence ends at email 5');
-    const ownerTest = OWNER_TEST.has(String(c.email).toLowerCase());
+    const ownerTest = isOwnerTest(c.email);
     if (!isSeed) {
         if (['unsubscribed', 'bounced', 'complained', 'subscribed', 'confirmed', 'monthly', 'checked_in', 'snoozed'].includes(c.status)) return skip(`status ${c.status}`);
         if ((await query(`SELECT 1 FROM newsletter_suppression WHERE email = $1`, [c.email])).rowCount) return skip('suppressed');

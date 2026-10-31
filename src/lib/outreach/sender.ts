@@ -765,7 +765,7 @@ export async function processDue(limit = 40, now = new Date()): Promise<Record<s
     }
     // A domain whose provider key is not configured sends nothing; its rows stay pending.
     const keyed = (d: string) => transportKeyPresent((String(doms.get(d)?.transport ?? 'resend')) as Transport);
-    const runnable = rows.filter((r) => active.includes(r.domain) && keyed(r.domain));
+    const runnable = rows.filter((r) => (active.includes(r.domain) || r.token.startsWith('dt')) && keyed(r.domain)); // dt tokens are the daily placement-test copies, which send from paused domains too
     if (rows.length && !runnable.length && active.length) return { error: 'provider key missing for active domains' };
     for (let i = 0; i < runnable.length; i += 5) {
         const batch = runnable.slice(i, i + 5);

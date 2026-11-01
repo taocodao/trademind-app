@@ -737,19 +737,22 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
 export async function processDue(limit = 40, now = new Date()): Promise<Record<string, number | string>> {
     await ensureOutreachTables();
     const s = await getSettings();
-    if (s.paused !== 'false') return { paused: 'true' };
-    await evaluateGates();
-    if ((await getSettings()).paused !== 'false') return { paused: 'true' };
+    // While paused, only the placement-test copies (tokens starting with "dt") are sent; every real contact row stays untouched.
+    const testOnly = s.paused !== 'false';
+    if (!testOnly) {
+        await evaluateGates();
+        if ((await getSettings()).paused !== 'false') return { paused: 'true' };
+    }
 
     // Rows that missed their window by more than 3 hours go back to the pool.
-    await query(`UPDATE outreach_queue SET state = 'expired' WHERE state = 'pending' AND scheduled_at < $1`, [new Date(now.getTime() - 3 * 3600_000)]);
+    if (!testOnly) await query(`UPDATE outreach_queue SET state = 'expired' WHERE state = 'pending' AND scheduled_at < $1`, [new Date(now.getTime() - 3 * 3600_000)]);
 
     const doms = new Map((await query(`SELECT domain, from_local, status, transport FROM outreach_domains`)).rows.map((r) => [String(r.domain), r]));
     const active = [...doms.values()].filter((d) => d.status === 'active').map((d) => String(d.domain));
 
     const due = await query(
-        `SELECT id, token, step, domain FROM outreach_queue WHERE state = 'pending' AND scheduled_at <= $1 ORDER BY scheduled_at ASC LIMIT $2`,
-        [now, limit]
+        `SELECT id, token, step, domain FROM outreach_queue WHERE state = 'pending' AND scheduled_at <= $1 AND ($3::boolean = false OR token LIKE 'dt%') ORDER BY scheduled_at ASC LIMIT $2`,
+        [now, limit, testOnly]
     );
     const counts = { sent: 0, skipped: 0, failed: 0, rerouted: 0 };
     const rows = due.rows as { id: number; token: string; step: number; domain: string }[];

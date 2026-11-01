@@ -15,6 +15,7 @@ import { BASE_URL, CAMPAIGN, getSettings } from './db';
 import { sendMail, transportKeyPresent, type Transport } from './transport';
 import { renderSeq7, SAMPLE_FACTS, stageForAge, isStageControl, STAGES, STAGE_HOURS, type IssueFacts, type Stage } from './copy-seq7';
 import { renderRia, RIA_DAYS } from './copy-ria';
+import { leanify } from './lean';
 import { etParts, zonedInstant, allocateBudget, activeDomains, isBusinessDay } from './sender';
 
 const ET = 'America/New_York';
@@ -275,7 +276,8 @@ export async function sendSeq7(row: { id: number; token: string; step: number; d
         if (isSeed) stage = STAGES[Math.floor(row.step / 10) % STAGES.length];
         else if (!isStageControl(c.token)) stage = stageForAge(c.age);
     }
-    const msg = ria ? renderRia({ token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, n, step: row.step < SEED_BASE ? row.step : 20 + n }) : renderSeq7({ token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, step: n, n, facts, audience: ria ? 'ria' : 'retail', stage });
+    const rendered = ria ? renderRia({ token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, n, step: row.step < SEED_BASE ? row.step : 20 + n }) : renderSeq7({ token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, step: n, n, facts, audience: ria ? 'ria' : 'retail', stage });
+    const msg = s.lean_content === 'false' ? rendered : leanify(rendered);
     if (!transportKeyPresent(transport)) return 'failed';
     const from = `${s.from_display || 'Eric Huang'} <${fromLocal}@${row.domain}>`;
     let res;

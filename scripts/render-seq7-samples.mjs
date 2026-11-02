@@ -12,7 +12,7 @@ const { renderRia, renderRetailIra } = createRequire(path.join(tmp, 'x.js'))('./
 const token = process.argv[2] || 'cddf0962bc';
 fs.mkdirSync(path.join(root, 'out'), { recursive: true });
 let bad = 0;
-const all = [...SEQ7_STEPS.map((step) => ({ step })), { step: 1, member: true }, ...[1, 2, 3, 4, 5].map((step) => ({ step, ria: true })), { step: 0, ira: true }, ...STAGES.flatMap((stage) => SEQ7_STEPS.map((step) => ({ step, stage })))];
+const all = [...SEQ7_STEPS.map((step) => ({ step })), { step: 1, member: true }, ...[1, 2, 3, 4, 5, 6].map((step) => ({ step, ria: true })), { step: 0, ira: true }, ...STAGES.flatMap((stage) => SEQ7_STEPS.map((step) => ({ step, stage })))];
 for (const c of all) {
     const addr = 'TradeMind, 151-58 24th Rd, Whitestone, NY 11357, United States';
     const r = c.ira ? renderRetailIra({ token, firstName: 'Eric', baseUrl: 'https://trademind.bot', mailingAddress: addr }) : c.ria ? renderRia({ token, firstName: 'Eric', baseUrl: 'https://trademind.bot', mailingAddress: addr, n: c.step }) : renderSeq7({ token, firstName: 'Eric', baseUrl: 'https://trademind.bot', mailingAddress: addr, step: c.step, strategyMember: !!c.member, audience: 'retail', stage: c.stage });

@@ -1,12 +1,12 @@
 /**
- * Adviser outreach, five emails: show the product, show the evidence, choose the use, IRA account questions, a defined next step.
+ * Adviser outreach, six emails sent weekly: show the product, show the evidence, choose the use, account questions, a defined next step, retirement account questions.
  * Every email carries Subscribe and Book 20 minutes. Emails 1 and 2 lead with Subscribe, emails 3 to 5 lead with Book 20 minutes.
  * No brokerage connection and no automated execution is offered. Simulation numbers and the limits text are kept exactly as approved.
  */
 import { esc, F, C, row, sp, P, btnPair, card, pill, SIM, LIMITS, NOBROKER, SAMPLE_FACTS, STAGE_EMAIL1 } from './copy-seq7';
 
-export const RIA_STEPS = [21, 22, 23, 24, 25] as const;
-export const RIA_DAYS = [0, 5, 12, 21, 32];
+export const RIA_STEPS = [21, 22, 23, 24, 25, 26] as const;
+export const RIA_DAYS = [0, 7, 14, 21, 28, 35];
 
 export interface RiaOpts { token: string; firstName: string | null; baseUrl: string; mailingAddress: string; n: number; step?: number }
 
@@ -82,10 +82,25 @@ export const RIA_EMAILS: Record<number, Email> = {
             p('You can also simply subscribe and evaluate the research over time.'),
         ],
     },
+    6: {
+        subject: 'Before a client follows a strategy in a retirement account',
+        pre: 'The model boundaries, and the custodian questions to settle first.',
+        title: 'Retirement accounts and strategy rules',
+        blocks: [
+            p('If clients hold part of their investing in IRAs, the account\u2019s features matter as much as the strategy description.'),
+            h('Two different strategies'),
+            p('QQQ Defensive allocates among QQQ, QLD, TQQQ and SGOV. It includes leveraged ETFs and does not require options permission.'),
+            p('QQQ LEAPS uses a long-dated QQQ call and shorter-dated written calls. The exact structure requires the relevant custodian permissions. Do not assume that permission to buy calls also permits every short-call structure.'),
+            h('Questions to check with the custodian'),
+            p('What positions does it permit in this account type? How are the option legs treated? What happens at expiration or assignment? What costs and account restrictions apply?'),
+            link('Read a complete sample brief', 'sample'),
+            { kind: 'record' },
+        ],
+    },
 };
 
 export function renderRia(o: RiaOpts): { subject: string; text: string; html: string; unsubUrl: string; n: number } {
-    const n = Math.min(Math.max(o.n, 1), 5);
+    const n = Math.min(Math.max(o.n, 1), 6);
     const e = RIA_EMAILS[n];
     const step = o.step ?? 20 + n;
     const url = (kind: string, extra = '') => `${o.baseUrl}/r/${o.token}/${kind}?s=${step}${extra}`;

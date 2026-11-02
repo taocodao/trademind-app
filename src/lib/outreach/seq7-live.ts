@@ -86,10 +86,15 @@ async function planPerDomain(now: Date, s: Record<string, string>): Promise<Reco
     const startAt = Math.max(zonedInstant(et.date, '09:00', ET).getTime(), now.getTime() + 2 * 60_000);
     if (startAt >= endAt - 10 * 60_000) return null; // window nearly over; start tomorrow
     const doms = await activeDomains(et.date);
-    const activeNames = doms.map((d) => d.domain);
+    const rd = riaDomains(s); // adviser domains: business days only, 9:00 AM to 6:00 PM ET, adviser list and six-email weekly sequence
     const start = Number(s.pd_start || 60), step = Number(s.pd_step || 20), jitter = Number(s.pd_jitter || 5), cap = Number(s.pd_cap || 700);
     const out: Record<string, unknown>[] = [];
     for (const d of doms) {
+        const ria = rd.has(d.domain.toLowerCase());
+        if (ria && !isBusinessDay(et.date, et.dow)) continue; // adviser domains do not send on weekends or holidays, and the ramp does not advance
+        const dEnd = ria ? zonedInstant(et.date, '18:00', ET).getTime() : endAt;
+        if (startAt >= dEnd - 10 * 60_000) continue;
+        const activeNames = doms.filter((x) => rd.has(x.domain.toLowerCase()) === ria).map((x) => x.domain);
         const aud = `dom:${d.domain}`;
         const prev = await query(`SELECT budget, day_index FROM outreach_plan_seq7 WHERE audience = $1 AND plan_date < $2 ORDER BY plan_date DESC LIMIT 1`, [aud, et.date]);
         const budget = prev.rows[0] ? Math.min(Number(prev.rows[0].budget) + step + randomInt(0, jitter + 1), cap) : start;
@@ -109,14 +114,14 @@ async function planPerDomain(now: Date, s: Record<string, string>): Promise<Reco
                 FROM outreach_contacts c
                 JOIN outreach_sends s1 ON s1.token = c.token AND s1.step = 21 AND s1.status IN ('sent','delivered')
                 WHERE ${ELIGIBLE} AND (s1.domain = $2 OR s1.domain <> ALL($3::text[]))
-                ORDER BY s1.sent_at ASC LIMIT 8000`, [false, d.domain, activeNames]);
+                ORDER BY s1.sent_at ASC LIMIT 8000`, [ria, d.domain, activeNames]);
             const fuCap = Math.floor(budget * 0.85);
             for (const r of fu.rows) {
                 if (picks.length >= fuCap) break;
                 const sent = new Set<number>(r.sent_steps), queued = new Set<number>(r.queued);
-                const next = [22, 23, 24, 25, 26, 27].find((st) => !sent.has(st));
+                const next = (ria ? [22, 23, 24, 25, 26] : [22, 23, 24, 25, 26, 27]).find((st) => !sent.has(st));
                 if (next === undefined || queued.has(next)) continue;
-                if (dayDiff(et.date, dstr(r.first_day)) < DAYS[next - 21]) continue;
+                if (dayDiff(et.date, dstr(r.first_day)) < (ria ? RIA_DAYS : DAYS)[next - 21]) continue;
                 if (r.last_day && dayDiff(et.date, dstr(r.last_day)) < 4) continue;
                 picks.push({ token: r.token, tz: r.tz, step: next });
             }
@@ -130,16 +135,16 @@ async function planPerDomain(now: Date, s: Record<string, string>): Promise<Reco
                       AND NOT EXISTS (SELECT 1 FROM outreach_sends x WHERE x.token = c.token AND x.step = 21)
                       AND NOT EXISTS (SELECT 1 FROM outreach_queue q WHERE q.token = c.token AND q.step = 21)
                       AND NOT EXISTS (SELECT 1 FROM outreach_sends x WHERE x.token = c.token AND x.step < 100 AND x.sent_at > NOW() - INTERVAL '4 days')
-                    ORDER BY (NOT EXISTS (SELECT 1 FROM outreach_sends o WHERE o.token = c.token AND o.step < 100)) DESC, md5(c.token) LIMIT $2`, [false, want]);
+                    ORDER BY (NOT EXISTS (SELECT 1 FROM outreach_sends o WHERE o.token = c.token AND o.step < 100)) DESC, md5(c.token) LIMIT $2`, [ria, want]);
                 for (const r of inv.rows) picks.push({ token: r.token, tz: r.tz, step: 21 });
             }
             for (const p of picks) {
-                const localStart = zonedInstant(et.date, '09:00', p.tz || ET).getTime(); // never before 9:00 AM local for the reader
+                const localStart = ria ? 0 : zonedInstant(et.date, '09:00', p.tz || ET).getTime(); // retail: never before 9:00 AM local for the reader
                 const winStart = Math.max(startAt, localStart);
-                const span = Math.max(Math.floor((endAt - winStart) / 1000), 60);
+                const span = Math.max(Math.floor((dEnd - winStart) / 1000), 60);
                 const at = winStart + randomInt(0, span) * 1000;
                 await query(`INSERT INTO outreach_queue (plan_date, token, step, domain, scheduled_at) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (token, step) DO NOTHING`,
-                    [et.date, p.token, p.step, d.domain, new Date(Math.min(at, endAt))]);
+                    [et.date, p.token, p.step, d.domain, new Date(Math.min(at, dEnd))]);
             }
             await query(`UPDATE outreach_plan_seq7 SET planned = $3 WHERE plan_date = $1 AND audience = $2`, [et.date, aud, picks.length]);
             out.push({ domain: d.domain, day: idx, budget, planned: picks.length });
@@ -232,7 +237,7 @@ async function planAudience(aud: 'retail' | 'ria', now: Date, s: Record<string, 
         for (const r of fu.rows) {
             if (picks.length >= fuCap) break;
             const sent = new Set<number>(r.sent_steps), queued = new Set<number>(r.queued);
-            const next = (ria ? [22, 23, 24, 25] : [22, 23, 24, 25, 26, 27]).find((st) => !sent.has(st));
+            const next = (ria ? [22, 23, 24, 25, 26] : [22, 23, 24, 25, 26, 27]).find((st) => !sent.has(st));
             if (next === undefined || queued.has(next)) continue;
             if (dayDiff(et.date, dstr(r.first_day)) < (ria ? RIA_DAYS : DAYS)[next - 21]) continue;
             if (r.last_day && dayDiff(et.date, dstr(r.last_day)) < 4) continue;
@@ -369,8 +374,8 @@ export async function sendSeq7(row: { id: number; token: string; step: number; d
     const isSeed = c.wave === 'seed';
     const rd = riaDomains(s);
     const ria = isSeed ? rd.has(row.domain.toLowerCase()) : c.wave === 'ria';
-    const n = isSeed ? (row.step % 10 >= 1 && row.step % 10 <= (ria ? 5 : 7) ? row.step % 10 : 1) : row.step - 20;
-    if (!isSeed && ria && n > 5) return skip('adviser sequence ends at email 5');
+    const n = isSeed ? (row.step % 10 >= 1 && row.step % 10 <= (ria ? 6 : 7) ? row.step % 10 : 1) : row.step - 20;
+    if (!isSeed && ria && n > 6) return skip('adviser sequence ends at email 6');
     const ownerTest = isOwnerTest(c.email);
     if (!isSeed) {
         if (['unsubscribed', 'bounced', 'complained', 'subscribed', 'confirmed', 'monthly', 'checked_in', 'snoozed'].includes(c.status)) return skip(`status ${c.status}`);
@@ -410,7 +415,7 @@ export async function sendSeq7(row: { id: number; token: string; step: number; d
     await query(`INSERT INTO outreach_sends (token, step, template, domain, from_addr, message_id) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (token, step) DO NOTHING`,
         [row.token, row.step, `S7${ria ? 'R' : ''}_${n}`, row.domain, from, res.id ?? null]);
     await query(`UPDATE outreach_queue SET state = 'sent' WHERE id = $1`, [row.id]);
-    if (s.ramp_mode === 'perdomain' && !isSeed && !ria && !ownerTest && !row.token.startsWith('dt')) {
+    if (s.ramp_mode === 'perdomain' && !isSeed && !ownerTest && !row.token.startsWith('dt')) {
         await sendTestCopy({ transport, from, replyTo: s.reply_to || undefined, msg, domain: row.domain, step: row.step, sourceToken: row.token, headers: s.list_unsub_header !== 'false' }).catch(() => undefined);
     }
     if (!isSeed) await query(`UPDATE outreach_contacts SET status = 'sent', updated_at = NOW() WHERE token = $1 AND status = 'pending'`, [row.token]);

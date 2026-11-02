@@ -760,9 +760,16 @@ export async function processDue(limit = 40, now = new Date()): Promise<Record<s
     // Seven-email sequence rows send only inside their window: retail 9:00 AM to 11:00 PM ET daily, advisers 9:00 AM to 6:00 PM ET weekdays.
     for (let i = rows.length - 1; i >= 0; i--) { if (isSeq7Row(rows[i].step) && !(await seq7WindowOpen(rows[i], now))) rows.splice(i, 1); }
     // Paused domain: move to the active domain with the fewest pending rows.
+    const riaSet = new Set(String(s.ria_domains || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean));
     for (const r of rows) {
-        if (!active.includes(r.domain) && active.length && (!isSeq7Row(r.step) || (r.step >= 21 && r.step <= 27))) { // retail sequence rows follow the active domains too, so a domain can be taken off at any time
-            const pick = active[randomInt(0, active.length)];
+        if (!active.includes(r.domain) && active.length && (!isSeq7Row(r.step) || (r.step >= 21 && r.step <= 27))) { // sequence rows follow the active domains of their own audience too, so a domain can be taken off at any time
+            let pool = active;
+            if (riaSet.size && isSeq7Row(r.step)) {
+                const w = (await query(`SELECT wave FROM outreach_contacts WHERE token = $1`, [r.token])).rows[0]?.wave;
+                pool = active.filter((d) => riaSet.has(d.toLowerCase()) === (w === 'ria'));
+                if (!pool.length) continue; // no active domain for this audience: the row waits
+            }
+            const pick = pool[randomInt(0, pool.length)];
             await query(`UPDATE outreach_queue SET domain = $2 WHERE id = $1`, [r.id, pick]);
             r.domain = pick; counts.rerouted++;
         }

@@ -47,6 +47,22 @@
     {
       "path": "/api/cron/program-lifecycle",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/newsletter-edition-draft?kind=weekly",
+      "schedule": "0 23 * * 0"
+    },
+    {
+      "path": "/api/cron/newsletter-edition-draft?kind=daily",
+      "schedule": "*/10 19-21 * * 1-5"
+    },
+    {
+      "path": "/api/cron/newsletter-edition-send?kind=weekly",
+      "schedule": "*/5 12-15 * * 1"
+    },
+    {
+      "path": "/api/cron/newsletter-edition-send?kind=daily",
+      "schedule": "*/5 19-23 * * 1-5"
     }
   ]
 }

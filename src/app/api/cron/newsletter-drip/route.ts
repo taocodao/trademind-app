@@ -74,6 +74,9 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Once the shared Monday edition is on, the one-per-subscriber 7 day drip stops so nobody gets both.
+    if (process.env.NEWSLETTER_WEEKLY_EDITION === '1') return NextResponse.json({ skipped: 'weekly drip is replaced by the Monday edition' });
+
     const dryRun = req.nextUrl.searchParams.get('dryRun') === '1';
     const force = req.nextUrl.searchParams.get('force') === '1';
     const dryCursor = req.nextUrl.searchParams.get('cursor');

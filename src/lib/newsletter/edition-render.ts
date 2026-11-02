@@ -32,6 +32,8 @@ export interface EditionInput {
     idea: { title: string; body: string; why: string };
     risk: string;
     lesson?: NewsletterIssue;
+    /** Optional short note under the greeting, for example the first Monday edition. */
+    note?: string;
     /** Present for daily_signals. One email covers one account. */
     account?: AccountBlock;
     firstName: string | null;
@@ -87,7 +89,7 @@ function contextCard(items: ContextItem[], heading: string): { html: string; tex
 export function renderNewsletter(o: EditionInput): { subject: string; html: string; text: string } {
     const b = o.baseUrl;
     const link = (k: string, x = '') => `${b}/d/${o.linkToken}/${k}?e=${o.editionDate}${x}`;
-    const plansUrl = link('pl'), dailyUrl = link('sw', '&cadence=daily'), weeklyUrl = link('wk'), vaUrl = link('va'), simUrl = link('sim'), homeUrl = link('h');
+    const plansUrl = link('pl'), dailyUrl = link('wk'), weeklyUrl = link('wk'), vaUrl = link('va'), simUrl = link('sim'), homeUrl = link('h');
     const hi = (o.firstName ?? '').trim() ? `Hi ${(o.firstName ?? '').trim()},` : 'Hi,';
     const a = o.account;
     const badge = o.kind === 'weekly' ? 'Weekly' : o.kind === 'daily_free' ? 'Daily' : 'Daily with signals';
@@ -151,11 +153,11 @@ export function renderNewsletter(o: EditionInput): { subject: string; html: stri
     const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><title>${esc(subject)}</title></head><body style="margin:0;padding:0;background:${C.bg};"><div style="display:none;max-height:0;overflow:hidden;color:${C.bg};">${esc(o.preheader)}</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.bg};"><tr><td align="center" style="padding:24px 14px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">`
         + row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="${F}font-size:18px;font-weight:800;color:${C.fg};"><a href="${esc(homeUrl)}" style="color:${C.fg};text-decoration:none;">TradeMind<span style="color:${C.blue};">.bot</span></a></td><td align="right"><span style="display:inline-block;${F}font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:${C.blue};border:1px solid #3a4a70;border-radius:20px;padding:5px 11px;">${badge}</span></td></tr></table>`) + sp(20)
         + row(`<div style="${F}font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:${C.blue};">${esc(o.dateLabel)}${o.sample ? ' (sample)' : ''}</div><div style="${F}font-size:${o.kind === 'weekly' ? 28 : 25}px;font-weight:800;line-height:1.25;color:${C.fg};padding:8px 0 16px;">${esc(o.hook)}</div>`)
-        + row(P(hi, 16, C.fg)) + blocks.join('')
+        + row(P(hi, 16, C.fg)) + (o.note ? row(P(o.note, 14, C.muted)) : '') + blocks.join('')
         + row(`<p style="margin:0 0 12px;${F}font-size:13px;line-height:1.65;color:${C.muted};">${o.kind === 'weekly' ? '' : `Prefer one email a week? <a href="${esc(weeklyUrl)}" style="color:${C.blue};">Switch to the weekly brief</a>. `}Reply to this email or write to me at eric@trademind.bot.</p>`)
         + row(`<p style="margin:0 0 2px;${F}font-size:15px;color:${C.fg};font-weight:700;">Eric Huang</p><p style="margin:0 0 20px;${F}font-size:13px;color:${C.muted};">Founder, TradeMind &middot; Queens, New York</p>`)
         + row(`<div style="border-top:1px solid ${C.line};padding-top:14px;${F}font-size:11px;line-height:1.6;color:${C.muted};">You are getting this because you subscribed to the free TradeMind ${o.kind === 'weekly' ? 'weekly' : 'daily'} brief. <a href="${esc(o.unsubscribeUrl)}" style="color:${C.muted};">Unsubscribe</a> &middot; <a href="${esc(o.preferencesUrl)}" style="color:${C.muted};">Preferences</a><br>${esc(o.mailingAddress)}<br>Educational research, not personalized investment advice. Investing involves risk, including loss. Simulated results are not live trading.</div>`)
         + '</table></td></tr></table></body></html>';
-    const text = [hi, '', `${badge.toUpperCase()}: ${o.dateLabel}${o.sample ? ' (SAMPLE)' : ''}`, o.hook, '', ...T, 'Eric Huang', 'Founder, TradeMind', '', `Unsubscribe: ${o.unsubscribeUrl}`, `Preferences: ${o.preferencesUrl}`, o.mailingAddress, 'Educational research, not personalized investment advice. Investing involves risk, including loss.'].join('\n');
+    const text = [hi, ...(o.note ? ['', o.note] : []), '', `${badge.toUpperCase()}: ${o.dateLabel}${o.sample ? ' (SAMPLE)' : ''}`, o.hook, '', ...T, 'Eric Huang', 'Founder, TradeMind', '', `Unsubscribe: ${o.unsubscribeUrl}`, `Preferences: ${o.preferencesUrl}`, o.mailingAddress, 'Educational research, not personalized investment advice. Investing involves risk, including loss.'].join('\n');
     return { subject, html, text };
 }

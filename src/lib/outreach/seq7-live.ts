@@ -288,6 +288,7 @@ async function planAudience(aud: 'retail' | 'ria', now: Date, s: Record<string, 
 async function planSeeds(now: Date, s: Record<string, string>): Promise<Record<string, unknown> | null> {
     const et = etParts(now);
     if (et.hour < 5) return null;
+    if (s.seeds_enabled === 'false') return null; // the daily test-inbox seed sends are switched off
     const claim = await query(`INSERT INTO outreach_plan_seq7 (plan_date, audience, day_index, budget) VALUES ($1,'seed',1,0) ON CONFLICT DO NOTHING RETURNING plan_date`, [et.date]);
     if (!claim.rowCount) return null;
     try {

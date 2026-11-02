@@ -37,10 +37,6 @@
       "schedule": "*/5 * * * *"
     },
     {
-      "path": "/api/cron/domain-tests",
-      "schedule": "30 12 * * *"
-    },
-    {
       "path": "/api/cron/daily-briefing",
       "schedule": "10 19 * * 1-5"
     },

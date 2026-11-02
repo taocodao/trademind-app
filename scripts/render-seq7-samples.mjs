@@ -15,7 +15,7 @@ let bad = 0;
 const all = [...SEQ7_STEPS.map((step) => ({ step })), { step: 1, member: true }, ...[1, 2, 3, 4, 5, 6].map((step) => ({ step, ria: true })), { step: 0, ira: true }, ...STAGES.flatMap((stage) => SEQ7_STEPS.map((step) => ({ step, stage })))];
 for (const c of all) {
     const addr = 'TradeMind, 151-58 24th Rd, Whitestone, NY 11357, United States';
-    const r = c.ira ? renderRetailIra({ token, firstName: 'Eric', baseUrl: 'https://trademind.bot', mailingAddress: addr }) : c.ria ? renderRia({ token, firstName: 'Eric', baseUrl: 'https://trademind.bot', mailingAddress: addr, n: c.step }) : renderSeq7({ token, firstName: 'Eric', baseUrl: 'https://trademind.bot', mailingAddress: addr, step: c.step, strategyMember: !!c.member, audience: 'retail', stage: c.stage });
+    const r = c.ira ? renderRetailIra({ token, firstName: 'Eric', baseUrl: 'https://trademind.bot', mailingAddress: addr }) : c.ria ? renderRia({ token, firstName: 'Eric', baseUrl: 'https://trademind.bot', mailingAddress: addr, n: c.step }) : renderSeq7({ noChart: !!process.env.NOCHART, token, firstName: 'Eric', baseUrl: 'https://trademind.bot', mailingAddress: addr, step: c.step, strategyMember: !!c.member, audience: 'retail', stage: c.stage });
     const name = c.ira ? 'retail-ira-sample' : `seq7-${r.n}${c.member ? '-member' : ''}${c.ria ? '-ria' : ''}${c.stage ? '-' + c.stage : ''}`;
     if (c.ria && (r.html.match(/>(Subscribe|Book 20 minutes)</g) || []).length !== 2) { bad++; console.log('FAIL', name, 'button count'); }
     const vis = (r.html + r.text).replace(/<[^>]+>/g, ' ');

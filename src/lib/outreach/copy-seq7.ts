@@ -160,6 +160,7 @@ export const FOCUS: Record<number, Focus> = {
 const FOCUS_ICON: Record<number, string> = { 1: '\u{1F4EC}', 2: '\u{1F4C9}', 3: '\u{1F9ED}', 4: '\u{1F916}', 5: '\u23F3', 6: '\u{1F50E}', 7: '\u{1FA91}' };
 
 export interface Seq7Opts {
+    noChart?: boolean; // Email 5 without the chart image (placement test)
     token: string; firstName: string | null; baseUrl: string; mailingAddress: string;
     step: number; n?: number; facts?: IssueFacts;
     /** True when the reader already has a plan for the strategy; shows the allocation instead of the placeholder. */
@@ -345,7 +346,7 @@ export function renderSeq7(o: Seq7Opts): { subject: string; text: string; html: 
     // Focus card
     let extra = '';
     if (n === 2) extra = recoveryTable();
-    if (n === 5) extra = `<p style="margin:0 0 6px;"><img src="${esc(WS_IMG)}" alt="${esc(WS_ALT)}" width="520" style="display:block;width:100%;max-width:520px;height:auto;border-radius:8px;border:0;"></p><p style="margin:0 0 12px;${F}font-size:12px;color:${C.muted};">${esc(WS_CAP)}</p>`;
+    if (n === 5 && !o.noChart) extra = `<p style="margin:0 0 6px;"><img src="${esc(WS_IMG)}" alt="${esc(WS_ALT)}" width="520" style="display:block;width:100%;max-width:520px;height:auto;border-radius:8px;border:0;"></p><p style="margin:0 0 12px;${F}font-size:12px;color:${C.muted};">${esc(WS_CAP)}</p>`;
     const focusCard = card(`${pill((FOCUS_ICON[n] ?? '') + ' ' + f.pill)}<div style="height:10px;"></div><div style="${F}font-size:20px;font-weight:800;color:${C.fg};line-height:1.3;padding-bottom:10px;">${esc(f.title)}</div>${f.body.map((b) => P(b)).join('')}${extra}${why(f.why)}${f.example ? example(f.example) : ''}`, C.green);
 
     const ria = o.audience === 'ria';

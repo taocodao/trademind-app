@@ -97,7 +97,14 @@ async function planPerDomain(now: Date, s: Record<string, string>): Promise<Reco
         const activeNames = doms.filter((x) => rd.has(x.domain.toLowerCase()) === ria).map((x) => x.domain);
         const aud = `dom:${d.domain}`;
         const prev = await query(`SELECT budget, day_index FROM outreach_plan_seq7 WHERE audience = $1 AND plan_date < $2 ORDER BY plan_date DESC LIMIT 1`, [aud, et.date]);
-        const budget = prev.rows[0] ? Math.min(Number(prev.rows[0].budget) + step + randomInt(0, jitter + 1), cap) : start;
+        let budget = prev.rows[0] ? Math.min(Number(prev.rows[0].budget) + step + randomInt(0, jitter + 1), cap) : start;
+        if (prev.rows[0]) {
+            // Results gate: hold the volume flat (no increase) when the last 14 days show 1% or more bounces, or any complaint.
+            const h = await query(`SELECT COUNT(*) AS sent, COUNT(*) FILTER (WHERE status = 'bounced') AS bounced, COUNT(*) FILTER (WHERE complaint) AS complaints
+                FROM outreach_sends WHERE domain = $1 AND sent_at > NOW() - INTERVAL '14 days' AND step < 100 AND token NOT LIKE 'dt%' AND token NOT LIKE 'prod%' AND token <> 'testcopy'`, [d.domain]);
+            const hs = Number(h.rows[0].sent), hb = Number(h.rows[0].bounced), hc = Number(h.rows[0].complaints);
+            if (hc > 0 || (hs >= 30 && hb / hs >= 0.01)) budget = Math.min(Number(prev.rows[0].budget), cap);
+        }
         const idx = prev.rows[0] ? Number(prev.rows[0].day_index) + 1 : 1;
         const claim = await query(`INSERT INTO outreach_plan_seq7 (plan_date, audience, day_index, budget) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING RETURNING plan_date`, [et.date, aud, idx, budget]);
         if (!claim.rowCount) continue;
@@ -393,7 +400,8 @@ export async function sendSeq7(row: { id: number; token: string; step: number; d
         if (isSeed) stage = STAGES[Math.floor(row.step / 10) % STAGES.length];
         else if (!isStageControl(c.token)) stage = stageForAge(c.age);
     }
-    const rendered = ria ? renderRia({ token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, n, step: row.step < SEED_BASE ? row.step : 20 + n }) : renderSeq7({ token: c.token, firstName: c.first_name, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS, step: n, n, facts, audience: ria ? 'ria' : 'retail', stage });
+    const linkBase = s[`link_host_${row.domain.toLowerCase()}`] ? `https://${s[`link_host_${row.domain.toLowerCase()}`]}` : BASE_URL; // branded link host per sending domain, when enabled
+    const rendered = ria ? renderRia({ token: c.token, firstName: c.first_name, baseUrl: linkBase, mailingAddress: MAILING_ADDRESS, n, step: row.step < SEED_BASE ? row.step : 20 + n }) : renderSeq7({ noChart: s.email5_chart === 'false', token: c.token, firstName: c.first_name, baseUrl: linkBase, mailingAddress: MAILING_ADDRESS, step: n, n, facts, audience: ria ? 'ria' : 'retail', stage });
     const msg = s.lean_content === 'false' ? rendered : leanify(rendered);
     if (!transportKeyPresent(transport)) return 'failed';
     const from = `${s.from_display || 'Eric Huang'} <${fromLocal}@${row.domain}>`;

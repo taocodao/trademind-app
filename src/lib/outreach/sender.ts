@@ -521,7 +521,7 @@ export async function evaluateGates(): Promise<{ paused: string[]; globalPause: 
         const sent = Number(row.sent), bounced = Number(row.bounced), complaints = Number(row.complaints);
         totalSent += sent; totalComplaints += complaints;
         let reason: string | null = null;
-        if (sent >= 20 && bounced / sent > 0.05) reason = `hard bounce rate ${(bounced / sent * 100).toFixed(1)}% over ${sent} sends`;
+        if (sent >= 25 && bounced >= 2 && bounced / sent >= 0.04) reason = `hard bounce rate ${(bounced / sent * 100).toFixed(1)}% over ${sent} sends`;
         if (!reason && sent >= 50 && bounced / sent > 0.02) reason = `hard bounce rate ${(bounced / sent * 100).toFixed(1)}% over ${sent} sends`;
         if (!reason && complaints >= 2 && complaints / sent > 0.001) reason = `complaint rate ${(complaints / sent * 100).toFixed(2)}% (${complaints} of ${sent})`;
         if (reason) {

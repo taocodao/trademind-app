@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { etDate, etMinutes, isMarketDay, schedule } from '@/lib/briefing/calendar';
 import { ensureBriefingTables } from '@/lib/briefing/db';
+import { sendApproval } from '@/lib/briefing/approval';
 import { buildDailyFacts, dailyRecipients, sendOne, renderForRecipient } from '@/lib/newsletter/daily-brief';
 
 export const dynamic = 'force-dynamic';
@@ -45,6 +46,8 @@ export async function GET(req: NextRequest) {
     if (etMinutes() < schedule(date).send) return NextResponse.json({ skipped: 'too early', date });
 
     const { facts, hash } = await buildDailyFacts(date, true);
+    const ap = await sendApproval(date, hash);
+    if (!ap.ok) return NextResponse.json({ skipped: 'not approved', reason: ap.reason, date });
     const rcps = await dailyRecipients({ limit: BATCH, date });
     let sent = 0, failed = 0;
     for (const rcp of rcps) { const r = await sendOne(rcp, facts, date, hash); if (r.ok) sent++; else failed++; await new Promise((res) => setTimeout(res, 400)); }

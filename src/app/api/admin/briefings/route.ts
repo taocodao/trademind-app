@@ -4,6 +4,7 @@ import { resolveAdmin } from '@/lib/admin-gate';
 import { ensureBriefingTables } from '@/lib/briefing/db';
 import { runChecks, allPass } from '@/lib/briefing/filter';
 import { textToHtml } from '@/lib/briefing/templates';
+import { contentHash } from '@/lib/briefing/approval';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ issues: rows });
 }
 
-/** POST { id, action: 'approve' | 'hold' | 'edit', text? }. Approval never sends anything in phase 1. */
+/** POST { id, action: 'approve' | 'hold' | 'edit', text? }. Approval records a hash of the exact text; the send route checks it. Any edit clears it. */
 export async function POST(req: NextRequest) {
     const gate = await resolveAdmin(req);
     if (!gate.isAdmin) return NextResponse.json({ error: gate.error || 'Forbidden' }, { status: gate.status });
@@ -51,8 +52,8 @@ export async function POST(req: NextRequest) {
     }
     const status = action === 'approve' ? 'approved' : action === 'hold' ? 'held' : pass ? 'draft' : 'held';
     await pool.query(
-        `UPDATE briefing_issue SET status = $2, text_body = $3, html_body = $4, checks = $5, reviewed_by = $6, reviewed_at = NOW() WHERE id = $1`,
-        [id, status, text, textToHtml(text, issue.subject), JSON.stringify(checks), gate.did || 'admin']
+        `UPDATE briefing_issue SET status = $2, text_body = $3, html_body = $4, checks = $5, reviewed_by = $6, reviewed_at = NOW(), approved_hash = $7 WHERE id = $1`,
+        [id, status, text, textToHtml(text, issue.subject), JSON.stringify(checks), gate.did || 'admin', status === 'approved' ? contentHash(issue.subject, text) : null]
     );
     await pool.query(`INSERT INTO briefing_edit (issue_id, who, action) VALUES ($1, $2, $3)`, [id, gate.did || 'admin', action === 'edit' ? 'edit saved' : action]);
     return NextResponse.json({ ok: true, status, checks });

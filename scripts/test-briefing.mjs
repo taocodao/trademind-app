@@ -112,6 +112,12 @@ const a = assemble(chg, 'alert', null);
 t('alert passes and is short', a.pass && a.text.split(/\s+/).length < 120, JSON.stringify(a.checks.filter((x) => !x.pass)));
 t('alert subject names the strategy', /QQQ Defensive: Strategy change/.test(a.subject));
 
+// Agent API response parsing
+const { agentText } = require('./briefing/assemble.js');
+t('agent text from output array', agentText({ output: [{ type: 'reasoning' }, { type: 'message', content: [{ type: 'output_text', text: 'One.' }, { type: 'output_text', text: 'Two.' }] }] }) === 'One.\nTwo.');
+t('agent text from output_text', agentText({ output_text: 'Flat.' }) === 'Flat.');
+t('agent text empty when no message', agentText({ output: [] }) === '' && agentText(null) === '');
+
 // Style: generated files contain no dashes
 for (const x of [d.text, a.text, a.subject]) if (/[\u2013\u2014]|--/.test(x)) { t('no dashes in output', false); }
 

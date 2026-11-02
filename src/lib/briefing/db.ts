@@ -50,5 +50,6 @@ export async function ensureBriefingTables(): Promise<void> {
             note TEXT,
             PRIMARY KEY (strategy, run_date)
         )`);
+    await pool.query(`ALTER TABLE briefing_issue ADD COLUMN IF NOT EXISTS approved_hash TEXT`);
     ensured = true;
 }

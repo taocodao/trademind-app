@@ -18,6 +18,7 @@ const payload = {
     reply_to: { email: a['reply-to'] || 'erichuang2005@gmail.com' },
     subject: m.subject,
     content: [{ type: 'text/plain', value: m.text }, ...(m.html ? [{ type: 'text/html', value: m.html }] : [])],
+    ...(a['send-at'] ? { send_at: Number(a['send-at']) } : {}),
     mail_settings: { footer: { enable: false } },
     tracking_settings: { click_tracking: { enable: false, enable_text: false }, open_tracking: { enable: false }, subscription_tracking: { enable: false } },
 };

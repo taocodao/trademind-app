@@ -514,14 +514,15 @@ export async function evaluateGates(): Promise<{ paused: string[]; globalPause: 
                COUNT(*) FILTER (WHERE status = 'bounced') AS bounced,
                COUNT(*) FILTER (WHERE complaint) AS complaints
         FROM outreach_sends
-        WHERE sent_at > NOW() - INTERVAL '14 days' AND step < 100
+        WHERE sent_at > NOW() - INTERVAL '14 days' AND step < 100 AND token NOT LIKE 'dt%' AND token NOT LIKE 'prod%'
         GROUP BY domain`);
     let totalSent = 0, totalComplaints = 0;
     for (const row of r.rows) {
         const sent = Number(row.sent), bounced = Number(row.bounced), complaints = Number(row.complaints);
         totalSent += sent; totalComplaints += complaints;
         let reason: string | null = null;
-        if (sent >= 50 && bounced / sent > 0.02) reason = `hard bounce rate ${(bounced / sent * 100).toFixed(1)}% over ${sent} sends`;
+        if (sent >= 20 && bounced / sent > 0.05) reason = `hard bounce rate ${(bounced / sent * 100).toFixed(1)}% over ${sent} sends`;
+        if (!reason && sent >= 50 && bounced / sent > 0.02) reason = `hard bounce rate ${(bounced / sent * 100).toFixed(1)}% over ${sent} sends`;
         if (!reason && complaints >= 2 && complaints / sent > 0.001) reason = `complaint rate ${(complaints / sent * 100).toFixed(2)}% (${complaints} of ${sent})`;
         if (reason) {
             const u = await query(
@@ -760,7 +761,7 @@ export async function processDue(limit = 40, now = new Date()): Promise<Record<s
     for (let i = rows.length - 1; i >= 0; i--) { if (isSeq7Row(rows[i].step) && !(await seq7WindowOpen(rows[i], now))) rows.splice(i, 1); }
     // Paused domain: move to the active domain with the fewest pending rows.
     for (const r of rows) {
-        if (!active.includes(r.domain) && active.length && !isSeq7Row(r.step)) {
+        if (!active.includes(r.domain) && active.length && (!isSeq7Row(r.step) || (r.step >= 21 && r.step <= 27))) { // retail sequence rows follow the active domains too, so a domain can be taken off at any time
             const pick = active[randomInt(0, active.length)];
             await query(`UPDATE outreach_queue SET domain = $2 WHERE id = $1`, [r.id, pick]);
             r.domain = pick; counts.rerouted++;

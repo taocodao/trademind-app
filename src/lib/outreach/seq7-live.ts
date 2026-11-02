@@ -67,6 +67,110 @@ async function ensureTables(): Promise<void> {
     await query(`CREATE TABLE IF NOT EXISTS outreach_plan_seq7 (
         plan_date DATE NOT NULL, audience TEXT NOT NULL, day_index INTEGER NOT NULL, budget INTEGER NOT NULL, planned INTEGER NOT NULL DEFAULT 0,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (plan_date, audience))`);
+    await query(`CREATE TABLE IF NOT EXISTS outreach_domain_counter (domain TEXT PRIMARY KEY, sent_total INTEGER NOT NULL DEFAULT 0, tests INTEGER NOT NULL DEFAULT 0, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+    await query(`CREATE TABLE IF NOT EXISTS outreach_test_copies (id SERIAL PRIMARY KEY, domain TEXT NOT NULL, sent_total INTEGER NOT NULL, source_token TEXT, step INTEGER, subject TEXT, ok BOOLEAN NOT NULL, note TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+}
+
+// ---------- per-domain ramp (ramp_mode = 'perdomain') ----------
+// Each active domain has its own daily target: day 1 = pd_start (60), then the previous target plus pd_step (20) plus a random 0 to pd_jitter (5),
+// capped at pd_cap (700). A plan row 'dom:<domain>' is stored for every day the domain is active, so a paused domain resumes where it stopped and a
+// new domain starts at day 1. A domain added or resumed mid-day is planned on the next five-minute tick, with no restart of the other domains.
+const TEST_COPY_TO = 'ericyaohuang@gmail.com';
+const TEST_COPY_EVERY = 50;
+const TEST_COPY_UNSUB_TOKEN = 'dt20261101sp4'; // placement-test contact for ericyaohuang@gmail.com: its one-click unsubscribe affects no real contact
+
+async function planPerDomain(now: Date, s: Record<string, string>): Promise<Record<string, unknown> | null> {
+    const et = etParts(now);
+    if (s.perdomain_start && et.date < s.perdomain_start) return { waiting: s.perdomain_start };
+    const endAt = zonedInstant(et.date, '23:00', ET).getTime();
+    const startAt = Math.max(zonedInstant(et.date, '09:00', ET).getTime(), now.getTime() + 2 * 60_000);
+    if (startAt >= endAt - 10 * 60_000) return null; // window nearly over; start tomorrow
+    const doms = await activeDomains(et.date);
+    const activeNames = doms.map((d) => d.domain);
+    const start = Number(s.pd_start || 60), step = Number(s.pd_step || 20), jitter = Number(s.pd_jitter || 5), cap = Number(s.pd_cap || 700);
+    const out: Record<string, unknown>[] = [];
+    for (const d of doms) {
+        const aud = `dom:${d.domain}`;
+        const prev = await query(`SELECT budget, day_index FROM outreach_plan_seq7 WHERE audience = $1 AND plan_date < $2 ORDER BY plan_date DESC LIMIT 1`, [aud, et.date]);
+        const budget = prev.rows[0] ? Math.min(Number(prev.rows[0].budget) + step + randomInt(0, jitter + 1), cap) : start;
+        const idx = prev.rows[0] ? Number(prev.rows[0].day_index) + 1 : 1;
+        const claim = await query(`INSERT INTO outreach_plan_seq7 (plan_date, audience, day_index, budget) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING RETURNING plan_date`, [et.date, aud, idx, budget]);
+        if (!claim.rowCount) continue;
+        try {
+            const picks: { token: string; tz: string; step: number }[] = [];
+            // Follow-ups first (emails 2 to 7, at least 7 days after the first email on the schedule, at least 4 days after the last email).
+            // This domain's own contacts, plus contacts whose first domain is no longer active. Keep 15% of the day for new contacts.
+            const fu = await query(`
+                SELECT c.token, c.tz, s1.domain,
+                       (s1.sent_at AT TIME ZONE 'America/New_York')::date AS first_day,
+                       COALESCE((SELECT array_agg(x.step) FROM outreach_sends x WHERE x.token = c.token AND x.step BETWEEN 21 AND 27), '{}') AS sent_steps,
+                       COALESCE((SELECT array_agg(q.step) FROM outreach_queue q WHERE q.token = c.token AND q.state = 'pending' AND q.step BETWEEN 21 AND 27), '{}') AS queued,
+                       (SELECT MAX(x.sent_at AT TIME ZONE 'America/New_York')::date FROM outreach_sends x WHERE x.token = c.token AND x.step < 100) AS last_day
+                FROM outreach_contacts c
+                JOIN outreach_sends s1 ON s1.token = c.token AND s1.step = 21 AND s1.status IN ('sent','delivered')
+                WHERE ${ELIGIBLE} AND (s1.domain = $2 OR s1.domain <> ALL($3::text[]))
+                ORDER BY s1.sent_at ASC LIMIT 8000`, [false, d.domain, activeNames]);
+            const fuCap = Math.floor(budget * 0.85);
+            for (const r of fu.rows) {
+                if (picks.length >= fuCap) break;
+                const sent = new Set<number>(r.sent_steps), queued = new Set<number>(r.queued);
+                const next = [22, 23, 24, 25, 26, 27].find((st) => !sent.has(st));
+                if (next === undefined || queued.has(next)) continue;
+                if (dayDiff(et.date, dstr(r.first_day)) < DAYS[next - 21]) continue;
+                if (r.last_day && dayDiff(et.date, dstr(r.last_day)) < 4) continue;
+                picks.push({ token: r.token, tz: r.tz, step: next });
+            }
+            // New first emails: contacts never emailed come first, in a fixed order, so the list simply continues after the last one sent.
+            // Contacts who already received the earlier invitation emails come after all of them.
+            const want = budget - picks.length;
+            if (want > 0) {
+                const inv = await query(`
+                    SELECT c.token, c.tz FROM outreach_contacts c
+                    WHERE ${ELIGIBLE} AND c.status IN ('pending','sent','clicked')
+                      AND NOT EXISTS (SELECT 1 FROM outreach_sends x WHERE x.token = c.token AND x.step = 21)
+                      AND NOT EXISTS (SELECT 1 FROM outreach_queue q WHERE q.token = c.token AND q.step = 21)
+                      AND NOT EXISTS (SELECT 1 FROM outreach_sends x WHERE x.token = c.token AND x.step < 100 AND x.sent_at > NOW() - INTERVAL '4 days')
+                    ORDER BY (NOT EXISTS (SELECT 1 FROM outreach_sends o WHERE o.token = c.token AND o.step < 100)) DESC, md5(c.token) LIMIT $2`, [false, want]);
+                for (const r of inv.rows) picks.push({ token: r.token, tz: r.tz, step: 21 });
+            }
+            for (const p of picks) {
+                const localStart = zonedInstant(et.date, '09:00', p.tz || ET).getTime(); // never before 9:00 AM local for the reader
+                const winStart = Math.max(startAt, localStart);
+                const span = Math.max(Math.floor((endAt - winStart) / 1000), 60);
+                const at = winStart + randomInt(0, span) * 1000;
+                await query(`INSERT INTO outreach_queue (plan_date, token, step, domain, scheduled_at) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (token, step) DO NOTHING`,
+                    [et.date, p.token, p.step, d.domain, new Date(Math.min(at, endAt))]);
+            }
+            await query(`UPDATE outreach_plan_seq7 SET planned = $3 WHERE plan_date = $1 AND audience = $2`, [et.date, aud, picks.length]);
+            out.push({ domain: d.domain, day: idx, budget, planned: picks.length });
+        } catch (err) {
+            await query(`DELETE FROM outreach_queue WHERE plan_date = $1 AND state = 'pending' AND step BETWEEN 21 AND 27 AND domain = $2`, [et.date, d.domain]);
+            await query(`DELETE FROM outreach_plan_seq7 WHERE plan_date = $1 AND audience = $2`, [et.date, aud]);
+            throw err;
+        }
+    }
+    return { domains: out };
+}
+
+/** Every 50th real email on a domain: the same message goes to the owner inbox with a test marker (time and domain) in the subject. */
+async function sendTestCopy(args: { transport: Transport; from: string; replyTo?: string; msg: { subject: string; text: string; html: string }; domain: string; step: number; sourceToken: string; headers: boolean }): Promise<void> {
+    await ensureTables();
+    const c = await query(`INSERT INTO outreach_domain_counter (domain, sent_total) VALUES ($1, 1) ON CONFLICT (domain) DO UPDATE SET sent_total = outreach_domain_counter.sent_total + 1, updated_at = NOW() RETURNING sent_total`, [args.domain]);
+    const n = Number(c.rows[0].sent_total);
+    if (n % TEST_COPY_EVERY !== 0) return;
+    const stamp = new Date().toLocaleString('sv-SE', { timeZone: ET }).slice(0, 16);
+    const subject = `[TEST ${stamp} ET ${args.domain} #${n}] ${args.msg.subject}`;
+    let ok = false, note = '';
+    try {
+        const r = await sendMail({
+            transport: args.transport, from: args.from, to: TEST_COPY_TO, replyTo: args.replyTo, subject, text: args.msg.text, html: args.msg.html,
+            headers: args.headers ? { 'List-Unsubscribe': `<${BASE_URL}/u/${TEST_COPY_UNSUB_TOKEN}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } : undefined,
+            token: 'testcopy', step: args.step, campaign: CAMPAIGN, idempotencyKey: `outreach-testcopy-${args.domain}-${n}`,
+        });
+        ok = r.ok; note = r.ok ? '' : `${r.status}: ${r.body}`.slice(0, 200);
+    } catch (e) { note = (e as Error).message.slice(0, 200); }
+    await query(`UPDATE outreach_domain_counter SET tests = tests + 1 WHERE domain = $1`, [args.domain]);
+    await query(`INSERT INTO outreach_test_copies (domain, sent_total, source_token, step, subject, ok, note) VALUES ($1,$2,$3,$4,$5,$6,$7)`, [args.domain, n, args.sourceToken, args.step, subject, ok, note]);
 }
 
 /** Combined daily total across both audiences: first day 150, then the previous day plus 50 plus a random 0 to 10. Stored once per day. */
@@ -217,6 +321,13 @@ async function planSeeds(now: Date, s: Record<string, string>): Promise<Record<s
 export async function planSeq7(now: Date, s: Record<string, string>): Promise<Record<string, unknown> | null> {
     await ensureTables();
     const out: Record<string, unknown> = {};
+    if (s.ramp_mode === 'perdomain') {
+        const pd = await planPerDomain(now, s);
+        out.retail = pd;
+        out.seeds = await planSeeds(now, s);
+        const planned = ((pd as any)?.domains ?? []).reduce((a: number, x: any) => a + Number(x.planned || 0), 0);
+        return { planned, budget: ((pd as any)?.domains ?? []).reduce((a: number, x: any) => a + Number(x.budget || 0), 0), dayIndex: Number((pd as any)?.domains?.[0]?.day ?? 0), detail: out } as unknown as Record<string, unknown>;
+    }
     out.retail = await planAudience('retail', now, s);
     out.ria = await planAudience('ria', now, s);
     out.seeds = await planSeeds(now, s);
@@ -298,6 +409,9 @@ export async function sendSeq7(row: { id: number; token: string; step: number; d
     await query(`INSERT INTO outreach_sends (token, step, template, domain, from_addr, message_id) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (token, step) DO NOTHING`,
         [row.token, row.step, `S7${ria ? 'R' : ''}_${n}`, row.domain, from, res.id ?? null]);
     await query(`UPDATE outreach_queue SET state = 'sent' WHERE id = $1`, [row.id]);
+    if (s.ramp_mode === 'perdomain' && !isSeed && !ria && !ownerTest && !row.token.startsWith('dt')) {
+        await sendTestCopy({ transport, from, replyTo: s.reply_to || undefined, msg, domain: row.domain, step: row.step, sourceToken: row.token, headers: s.list_unsub_header !== 'false' }).catch(() => undefined);
+    }
     if (!isSeed) await query(`UPDATE outreach_contacts SET status = 'sent', updated_at = NOW() WHERE token = $1 AND status = 'pending'`, [row.token]);
     return 'sent';
 }

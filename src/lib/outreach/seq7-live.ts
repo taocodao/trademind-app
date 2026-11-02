@@ -324,7 +324,7 @@ export async function planSeq7(now: Date, s: Record<string, string>): Promise<Re
     if (s.ramp_mode === 'perdomain') {
         const pd = await planPerDomain(now, s);
         out.retail = pd;
-        out.seeds = await planSeeds(now, s);
+        out.seeds = (s.perdomain_start && etParts(now).date < s.perdomain_start) ? null : await planSeeds(now, s);
         const planned = ((pd as any)?.domains ?? []).reduce((a: number, x: any) => a + Number(x.planned || 0), 0);
         return { planned, budget: ((pd as any)?.domains ?? []).reduce((a: number, x: any) => a + Number(x.budget || 0), 0), dayIndex: Number((pd as any)?.domains?.[0]?.day ?? 0), detail: out } as unknown as Record<string, unknown>;
     }

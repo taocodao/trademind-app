@@ -31,7 +31,7 @@ Most investors who "found a better strategy" just found more leverage. Leverage 
 
 ## Applying it to TradeMind
 
-TradeMind's research backtest covered 2019 to 2026. Under the tested assumptions, it produced a reported 55.1% CAGR (compound annual growth rate) with a -14.5% maximum drawdown. That figure is hypothetical and unaudited. Here is how to read it:
+TradeMind's two year simulation ran from October 14, 2024 to October 13, 2026. Under the tested assumptions, QQQ LEAPS showed +229.48% with a largest decline of 14.59%, against QQQ buy and hold at +49.46% with a largest decline of 22.88%. That result is hypothetical, model-priced and not live trading. Here is how to read it:
 
 - How much came from QQQ simply rising?
 - How much came from LEAPS leverage?

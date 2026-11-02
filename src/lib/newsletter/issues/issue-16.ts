@@ -30,9 +30,7 @@ For an advanced investor, higher CAGR alone is not enough. A strategy is better 
 
 ## TradeMind's research result, in context
 
-TradeMind's 2019 to 2026 research backtest reported a 55.1% CAGR with a -14.5% maximum drawdown under the tested assumptions. That result is hypothetical, unaudited, and sensitive to option pricing, slippage, assignment, costs and model choices. Its credibility depends on how it does against the benchmarks above, and against forward paper or live results over time. TradeMind publishes those comparisons on its validation page so you can judge for yourself.
-
-TODO(eric): fill in the benchmark comparison table from TradeMind's validation runs before this issue goes out.
+TradeMind's two year simulation, October 14, 2024 to October 13, 2026, showed QQQ LEAPS at +229.48% with a largest decline of 14.59%, against QQQ buy and hold at +49.46% with a largest decline of 22.88%. That result is hypothetical, model-priced, and sensitive to option pricing, slippage, assignment, costs and model choices. Its credibility depends on how it does against the benchmarks above, and against forward paper or live results over time. TradeMind publishes those comparisons on its validation page so you can judge for yourself.
 
 ## The checklist from this series
 

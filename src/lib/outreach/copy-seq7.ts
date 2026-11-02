@@ -48,7 +48,7 @@ export const STUDY_RULES = [
     'No card, and nothing turns into a paid plan on its own',
 ];
 
-export const MEETING_URL = 'https://calendar.app.google/dKsXK6G3cV3ppbAo7';
+export const MEETING_URL = 'https://calendar.app.google/tUQ5Dn1Jk27vP4f19';
 export const STUDY_COMPACT = '20 seats to help test TradeMind. Four months free with a virtual account, in exchange for three notes a month. Each month of notes earns three more free months.';
 export const STUDY_FULL = {
     title: 'Help test the model, free',

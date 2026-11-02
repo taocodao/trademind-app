@@ -6,6 +6,6 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
     const { t } = await searchParams;
     const ok = typeof t === 'string' && /^[A-Za-z0-9_-]{10,11}$/.test(t);
     const subscribeUrl = ok ? `/r/${t}/sw?s=21` : '/newsletter/join';
-    const bookUrl = ok ? `/r/${t}/mt?s=21` : 'https://calendar.app.google/dKsXK6G3cV3ppbAo7';
+    const bookUrl = ok ? `/r/${t}/mt?s=21` : 'https://calendar.app.google/tUQ5Dn1Jk27vP4f19';
     return <Sample subscribeUrl={subscribeUrl} bookUrl={bookUrl} />;
 }

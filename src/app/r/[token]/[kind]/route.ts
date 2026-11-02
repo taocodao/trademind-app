@@ -41,7 +41,7 @@ async function handle(req: NextRequest, params: Promise<{ token: string; kind: s
     else if (kind === 'sw') dest = `/newsletter/join?t=${token}&cadence=weekly&${utm}`;
     else if (kind === 'sd') dest = `/newsletter/join?t=${token}&cadence=daily&${utm}`;
     else if (kind === 'va') dest = `/live-record?demo=1&t=${token}&${utm}`;
-    else if (kind === 'mt') dest = 'https://calendar.app.google/dKsXK6G3cV3ppbAo7';
+    else if (kind === 'mt') dest = 'https://calendar.app.google/tUQ5Dn1Jk27vP4f19';
     else if (kind === 'as') {
         const a = req.nextUrl.searchParams.get('a') ?? '';
         dest = `/advisers/sample?t=${token}&${utm}${['sample', 'record', 'client', 'ira', 'overview'].includes(a) ? `#${a}` : ''}`;

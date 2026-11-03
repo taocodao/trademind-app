@@ -818,6 +818,18 @@ export async function reportIfDue(now = new Date()): Promise<boolean> {
     const fb = await query(`SELECT choice, COUNT(*)::int AS n FROM outreach_feedback WHERE ts > NOW() - INTERVAL '1 day' GROUP BY choice ORDER BY choice`);
     const snz = await query(`SELECT COUNT(*) FILTER (WHERE status = 'snoozed')::int AS snoozed, COUNT(*) FILTER (WHERE status = 'monthly')::int AS monthly FROM outreach_contacts`);
     const t = tot.rows[0];
+    // Seed mailbox placement (written by the seed reader on the server). Empty until seed_mailboxes is set and the reader has run.
+    const seedRows = await query(`
+        SELECT k.domain, r.mailbox, r.placement FROM outreach_seed_checks k JOIN outreach_seed_results r USING (token)
+        WHERE k.sent_at > NOW() - INTERVAL '24 hours' AND r.stage = (SELECT MAX(x.stage) FROM outreach_seed_results x WHERE x.token = k.token AND x.mailbox = r.mailbox)
+        ORDER BY k.sent_at DESC`).then((r) => r.rows).catch(() => [] as { domain: string; mailbox: string; placement: string }[]);
+    const seedLines = seedRows.length
+        ? ['', 'Seed mailbox placement, last 24 hours (latest reading per mailbox):', ...[...new Set(seedRows.map((r) => r.domain))].map((d) => {
+            const rs = seedRows.filter((r) => r.domain === d), c: Record<string, number> = {};
+            rs.forEach((r) => { c[r.placement] = (c[r.placement] || 0) + 1; });
+            return `- ${d}: ${Object.entries(c).map(([k, v]) => `${k} ${v}`).join(', ')}`;
+        })]
+        : ['', 'Seed mailbox placement: no readings yet.'];
     const lines = [
         `Invitation report for ${et.date}. Send day ${plan.rows[0].day_index}, budget ${plan.rows[0].budget}, planned ${plan.rows[0].planned}.`,
         '', 'Today by domain (sent / delivered / bounced / complaints):',
@@ -826,6 +838,7 @@ export async function reportIfDue(now = new Date()): Promise<boolean> {
         '', 'Pilot gate by segment (delivered, confirmed, rate; needs 300 delivered and 1.5%):',
         ...seg.rows.map((r) => `- ${r.segment}: ${r.delivered}, ${r.confirmed}, ${Number(r.delivered) ? (Number(r.confirmed) / Number(r.delivered) * 100).toFixed(2) : '0.00'}%`),
         '', `Unsubscribe page choices in the last 24 hours: ${fb.rows.length ? fb.rows.map((r) => `${r.choice} ${r.n}`).join(', ') : 'none'}. Paused for a check-in: ${snz.rows[0].snoozed}. Asked for a monthly recap (nothing sent yet): ${snz.rows[0].monthly}.`,
+        ...seedLines,
         '', 'Domains:', ...dom.rows.map((r) => `- ${r.domain}: ${r.status}${r.paused_reason ? ` (${r.paused_reason})` : ''}`),
     ];
     await sendAlert(`Invitation report ${et.date}`, lines.join('\n'));

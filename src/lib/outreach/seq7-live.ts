@@ -182,7 +182,29 @@ async function sendTestCopy(args: { transport: Transport; from: string; replyTo?
         ok = r.ok; note = r.ok ? '' : `${r.status}: ${r.body}`.slice(0, 200);
     } catch (e) { note = (e as Error).message.slice(0, 200); }
     await query(`UPDATE outreach_domain_counter SET tests = tests + 1 WHERE domain = $1`, [args.domain]);
+    await sendSeedCopies(args).catch(() => undefined);
     await query(`INSERT INTO outreach_test_copies (domain, sent_total, source_token, step, subject, ok, note) VALUES ($1,$2,$3,$4,$5,$6,$7)`, [args.domain, n, args.sourceToken, args.step, subject, ok, note]);
+}
+
+/**
+ * Seed mailbox check. When outreach_settings.seed_mailboxes holds a comma separated list of owned Gmail and Yahoo addresses, the same 50th message is also sent,
+ * untouched (no test marker, same sender, links and template), to each seed with one hidden X-Placement-ID header. A reader on the server then looks up the
+ * folder (Inbox, Promotions, Spam) and pauses the domain on repeated spam placement. Nothing is sent when the setting is empty.
+ */
+async function sendSeedCopies(args: { transport: Transport; from: string; replyTo?: string; msg: { subject: string; text: string; html: string }; domain: string; step: number; headers: boolean }): Promise<void> {
+    const cfg = await query(`SELECT value FROM outreach_settings WHERE key = 'seed_mailboxes'`);
+    const seeds = String(cfg.rows[0]?.value || '').split(',').map((x) => x.trim().toLowerCase()).filter((x) => /^[^@\s]+@[^@\s]+$/.test(x));
+    if (!seeds.length) return;
+    await query(`CREATE TABLE IF NOT EXISTS outreach_seed_checks (token TEXT PRIMARY KEY, domain TEXT NOT NULL, sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), mailboxes TEXT NOT NULL)`);
+    const token = randomBytes(8).toString('hex');
+    await query(`INSERT INTO outreach_seed_checks (token, domain, mailboxes) VALUES ($1,$2,$3)`, [token, args.domain, seeds.join(',')]);
+    for (const to of seeds) {
+        await sendMail({
+            transport: args.transport, from: args.from, to, replyTo: args.replyTo, subject: args.msg.subject, text: args.msg.text, html: args.msg.html,
+            headers: { 'X-Placement-ID': token, ...(args.headers ? { 'List-Unsubscribe': `<${BASE_URL}/u/${TEST_COPY_UNSUB_TOKEN}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } : {}) },
+            token: 'testcopy', step: args.step, campaign: CAMPAIGN, idempotencyKey: `outreach-seed-${token}-${to}`,
+        }).catch(() => undefined);
+    }
 }
 
 /** Combined daily total across both audiences: first day 150, then the previous day plus 50 plus a random 0 to 10. Stored once per day. */

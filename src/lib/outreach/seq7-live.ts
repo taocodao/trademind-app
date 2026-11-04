@@ -98,9 +98,9 @@ async function planPerDomain(now: Date, s: Record<string, string>): Promise<Reco
         const aud = `dom:${d.domain}`;
         const dl = d.domain.toLowerCase();
         const gmailOnly = new Set(String(s.gmail_only_domains || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean)).has(dl); // new domain: Gmail addresses only until Yahoo placement is proven
-        const dStart = Number(s[`pd_start_${dl}`] ?? start), dStep = Number(s[`pd_step_${dl}`] ?? step), dCap = Number(s[`pd_cap_${dl}`] ?? cap);
+        const dStart = Number(s[`pd_start_${dl}`] ?? start), dStep = Number(s[`pd_step_${dl}`] ?? step), dCap = Number(s[`pd_cap_${dl}`] ?? cap), dJit = Number(s[`pd_jitter_${dl}`] ?? jitter);
         const prev = await query(`SELECT budget, day_index FROM outreach_plan_seq7 WHERE audience = $1 AND plan_date < $2 ORDER BY plan_date DESC LIMIT 1`, [aud, et.date]);
-        let budget = prev.rows[0] ? Math.min(Number(prev.rows[0].budget) + dStep + randomInt(0, jitter + 1), dCap) : dStart;
+        let budget = prev.rows[0] ? Math.min(Number(prev.rows[0].budget) + dStep + randomInt(0, dJit + 1), dCap) : dStart;
         if (prev.rows[0]) {
             // Results gate: hold the volume flat (no increase) when the last 14 days show 1% or more bounces, or any complaint.
             const h = await query(`SELECT COUNT(*) AS sent, COUNT(*) FILTER (WHERE status = 'bounced') AS bounced, COUNT(*) FILTER (WHERE complaint) AS complaints

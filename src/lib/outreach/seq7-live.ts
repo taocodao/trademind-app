@@ -76,7 +76,7 @@ async function ensureTables(): Promise<void> {
 // capped at pd_cap (700). A plan row 'dom:<domain>' is stored for every day the domain is active, so a paused domain resumes where it stopped and a
 // new domain starts at day 1. A domain added or resumed mid-day is planned on the next five-minute tick, with no restart of the other domains.
 const TEST_COPY_TO = 'ericyaohuang@gmail.com';
-const TEST_COPY_EVERY = 50;
+const TEST_COPY_EVERY = 25;
 const TEST_COPY_UNSUB_TOKEN = 'dt20261101sp4'; // placement-test contact for ericyaohuang@gmail.com: its one-click unsubscribe affects no real contact
 
 async function planPerDomain(now: Date, s: Record<string, string>): Promise<Record<string, unknown> | null> {
@@ -164,7 +164,7 @@ async function planPerDomain(now: Date, s: Record<string, string>): Promise<Reco
     return { domains: out };
 }
 
-/** Every 50th real email on a domain: the same message goes to the owner inbox with a test marker (time and domain) in the subject. */
+/** Every 25th real email on a domain: the same message goes to the owner inbox with a test marker (time and domain) in the subject. */
 async function sendTestCopy(args: { transport: Transport; from: string; replyTo?: string; msg: { subject: string; text: string; html: string }; domain: string; step: number; sourceToken: string; headers: boolean }): Promise<void> {
     await ensureTables();
     const c = await query(`INSERT INTO outreach_domain_counter (domain, sent_total) VALUES ($1, 1) ON CONFLICT (domain) DO UPDATE SET sent_total = outreach_domain_counter.sent_total + 1, updated_at = NOW() RETURNING sent_total`, [args.domain]);
@@ -187,7 +187,7 @@ async function sendTestCopy(args: { transport: Transport; from: string; replyTo?
 }
 
 /**
- * Seed mailbox check. When outreach_settings.seed_mailboxes holds a comma separated list of owned Gmail and Yahoo addresses, the same 50th message is also sent,
+ * Seed mailbox check. When outreach_settings.seed_mailboxes holds a comma separated list of owned Gmail and Yahoo addresses, the same 25th message is also sent,
  * untouched (no test marker, same sender, links and template), to each seed with one hidden X-Placement-ID header. A reader on the server then looks up the
  * folder (Inbox, Promotions, Spam) and pauses the domain on repeated spam placement. Nothing is sent when the setting is empty.
  */
@@ -196,19 +196,11 @@ async function sendSeedCopies(args: { transport: Transport; from: string; replyT
     const seeds = String(cfg.rows[0]?.value || '').split(',').map((x) => x.trim().toLowerCase()).filter((x) => /^[^@\s]+@[^@\s]+$/.test(x));
     if (!seeds.length) return;
     await query(`CREATE TABLE IF NOT EXISTS outreach_seed_checks (token TEXT PRIMARY KEY, domain TEXT NOT NULL, sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), mailboxes TEXT NOT NULL)`);
-    // Retail domains: each check goes to two seeds only, one Gmail and one Yahoo, rotating through the list. Adviser domains keep the full list.
-    const riaCfg = await query(`SELECT value FROM outreach_settings WHERE key = 'ria_domains'`);
-    const riaSet = new Set(String(riaCfg.rows[0]?.value || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean));
-    if (!riaSet.has(args.domain.toLowerCase())) {
-        const isYahoo = (a: string) => /@(yahoo|ymail|rocketmail)\./.test(a);
-        const gm = seeds.filter((a) => !isYahoo(a)), ya = seeds.filter(isYahoo);
-        const done = await query(`SELECT COUNT(*)::int AS n FROM outreach_seed_checks WHERE lower(domain) <> ALL($1::text[])`, [[...riaSet, '']]);
-        const k = Number(done.rows[0]?.n || 0);
-        seeds.length = 0;
-        if (gm.length) seeds.push(gm[k % gm.length]);
-        if (ya.length) seeds.push(ya[k % ya.length]);
-        if (!seeds.length) return;
-    }
+    // Each check goes to ONE seed mailbox, rotating through the whole list separately for each sending domain (retail and adviser alike).
+    const done = await query(`SELECT COUNT(*)::int AS n FROM outreach_seed_checks WHERE lower(domain) = lower($1)`, [args.domain]);
+    const pick = seeds[Number(done.rows[0]?.n || 0) % seeds.length];
+    seeds.length = 0;
+    seeds.push(pick);
     const token = randomBytes(8).toString('hex');
     await query(`INSERT INTO outreach_seed_checks (token, domain, mailboxes) VALUES ($1,$2,$3)`, [token, args.domain, seeds.join(',')]);
     for (const to of seeds) {

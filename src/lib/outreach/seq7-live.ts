@@ -96,14 +96,17 @@ async function planPerDomain(now: Date, s: Record<string, string>): Promise<Reco
         if (startAt >= dEnd - 10 * 60_000) continue;
         const activeNames = doms.filter((x) => rd.has(x.domain.toLowerCase()) === ria).map((x) => x.domain);
         const aud = `dom:${d.domain}`;
+        const dl = d.domain.toLowerCase();
+        const gmailOnly = new Set(String(s.gmail_only_domains || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean)).has(dl); // new domain: Gmail addresses only until Yahoo placement is proven
+        const dStart = Number(s[`pd_start_${dl}`] ?? start), dStep = Number(s[`pd_step_${dl}`] ?? step), dCap = Number(s[`pd_cap_${dl}`] ?? cap);
         const prev = await query(`SELECT budget, day_index FROM outreach_plan_seq7 WHERE audience = $1 AND plan_date < $2 ORDER BY plan_date DESC LIMIT 1`, [aud, et.date]);
-        let budget = prev.rows[0] ? Math.min(Number(prev.rows[0].budget) + step + randomInt(0, jitter + 1), cap) : start;
+        let budget = prev.rows[0] ? Math.min(Number(prev.rows[0].budget) + dStep + randomInt(0, jitter + 1), dCap) : dStart;
         if (prev.rows[0]) {
             // Results gate: hold the volume flat (no increase) when the last 14 days show 1% or more bounces, or any complaint.
             const h = await query(`SELECT COUNT(*) AS sent, COUNT(*) FILTER (WHERE status = 'bounced') AS bounced, COUNT(*) FILTER (WHERE complaint) AS complaints
                 FROM outreach_sends WHERE domain = $1 AND sent_at > NOW() - INTERVAL '14 days' AND step < 100 AND token NOT LIKE 'dt%' AND token NOT LIKE 'prod%' AND token <> 'testcopy'`, [d.domain]);
             const hs = Number(h.rows[0].sent), hb = Number(h.rows[0].bounced), hc = Number(h.rows[0].complaints);
-            if (hc > 0 || (hs >= 30 && hb / hs >= 0.01)) budget = Math.min(Number(prev.rows[0].budget), cap);
+            if (hc > 0 || (hs >= 30 && hb / hs >= 0.01)) budget = Math.min(Number(prev.rows[0].budget), dCap);
         }
         const idx = prev.rows[0] ? Number(prev.rows[0].day_index) + 1 : 1;
         const claim = await query(`INSERT INTO outreach_plan_seq7 (plan_date, audience, day_index, budget) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING RETURNING plan_date`, [et.date, aud, idx, budget]);
@@ -139,10 +142,11 @@ async function planPerDomain(now: Date, s: Record<string, string>): Promise<Reco
                 const inv = await query(`
                     SELECT c.token, c.tz FROM outreach_contacts c
                     WHERE ${ELIGIBLE} AND c.status IN ('pending','sent','clicked')
+                      AND ($3::boolean = false OR lower(split_part(c.email, '@', 2)) IN ('gmail.com','googlemail.com'))
                       AND NOT EXISTS (SELECT 1 FROM outreach_sends x WHERE x.token = c.token AND x.step = 21)
                       AND NOT EXISTS (SELECT 1 FROM outreach_queue q WHERE q.token = c.token AND q.step = 21)
                       AND NOT EXISTS (SELECT 1 FROM outreach_sends x WHERE x.token = c.token AND x.step < 100 AND x.sent_at > NOW() - INTERVAL '4 days')
-                    ORDER BY (NOT EXISTS (SELECT 1 FROM outreach_sends o WHERE o.token = c.token AND o.step < 100)) DESC, md5(c.token) LIMIT $2`, [ria, want]);
+                    ORDER BY (NOT EXISTS (SELECT 1 FROM outreach_sends o WHERE o.token = c.token AND o.step < 100)) DESC, md5(c.token) LIMIT $2`, [ria, want, gmailOnly]);
                 for (const r of inv.rows) picks.push({ token: r.token, tz: r.tz, step: 21 });
             }
             for (const p of picks) {

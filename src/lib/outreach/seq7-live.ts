@@ -196,6 +196,19 @@ async function sendSeedCopies(args: { transport: Transport; from: string; replyT
     const seeds = String(cfg.rows[0]?.value || '').split(',').map((x) => x.trim().toLowerCase()).filter((x) => /^[^@\s]+@[^@\s]+$/.test(x));
     if (!seeds.length) return;
     await query(`CREATE TABLE IF NOT EXISTS outreach_seed_checks (token TEXT PRIMARY KEY, domain TEXT NOT NULL, sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), mailboxes TEXT NOT NULL)`);
+    // Retail domains: each check goes to two seeds only, one Gmail and one Yahoo, rotating through the list. Adviser domains keep the full list.
+    const riaCfg = await query(`SELECT value FROM outreach_settings WHERE key = 'ria_domains'`);
+    const riaSet = new Set(String(riaCfg.rows[0]?.value || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean));
+    if (!riaSet.has(args.domain.toLowerCase())) {
+        const isYahoo = (a: string) => /@(yahoo|ymail|rocketmail)\./.test(a);
+        const gm = seeds.filter((a) => !isYahoo(a)), ya = seeds.filter(isYahoo);
+        const done = await query(`SELECT COUNT(*)::int AS n FROM outreach_seed_checks WHERE lower(domain) <> ALL($1::text[])`, [[...riaSet, '']]);
+        const k = Number(done.rows[0]?.n || 0);
+        seeds.length = 0;
+        if (gm.length) seeds.push(gm[k % gm.length]);
+        if (ya.length) seeds.push(ya[k % ya.length]);
+        if (!seeds.length) return;
+    }
     const token = randomBytes(8).toString('hex');
     await query(`INSERT INTO outreach_seed_checks (token, domain, mailboxes) VALUES ($1,$2,$3)`, [token, args.domain, seeds.join(',')]);
     for (const to of seeds) {
@@ -430,7 +443,7 @@ export async function sendSeq7(row: { id: number; token: string; step: number; d
     let res;
     try {
         res = await sendMail({
-            transport, from, to: isSeed ? SEED_TO : c.email, replyTo: s.reply_to || undefined, subject: msg.subject, text: msg.text, html: msg.html,
+            transport, from, to: isSeed ? (String(c.email || '') || SEED_TO) : c.email, replyTo: s.reply_to || undefined, subject: msg.subject, text: msg.text, html: msg.html,
             headers: s.list_unsub_header === 'false' ? undefined : { 'List-Unsubscribe': `<${msg.unsubUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
             token: row.token, step: row.step, campaign: CAMPAIGN, idempotencyKey: `outreach-${row.token}-${row.step}`,
         });

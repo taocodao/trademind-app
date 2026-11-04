@@ -752,7 +752,7 @@ export async function processDue(limit = 40, now = new Date()): Promise<Record<s
     const active = [...doms.values()].filter((d) => d.status === 'active').map((d) => String(d.domain));
 
     const due = await query(
-        `SELECT id, token, step, domain FROM outreach_queue WHERE state = 'pending' AND scheduled_at <= $1 AND ($3::boolean = false OR token LIKE 'dt%') ORDER BY scheduled_at ASC LIMIT $2`,
+        `SELECT id, token, step, domain FROM outreach_queue WHERE state = 'pending' AND scheduled_at <= $1 AND ($3::boolean = false OR token LIKE 'dt%' OR token IN (SELECT token FROM outreach_contacts WHERE wave = 'seed')) ORDER BY scheduled_at ASC LIMIT $2`,
         [now, limit, testOnly]
     );
     const counts = { sent: 0, skipped: 0, failed: 0, rerouted: 0 };
@@ -776,7 +776,8 @@ export async function processDue(limit = 40, now = new Date()): Promise<Record<s
     }
     // A domain whose provider key is not configured sends nothing; its rows stay pending.
     const keyed = (d: string) => transportKeyPresent((String(doms.get(d)?.transport ?? 'resend')) as Transport);
-    const runnable = rows.filter((r) => (active.includes(r.domain) || r.token.startsWith('dt')) && keyed(r.domain)); // dt tokens are the daily placement-test copies, which send from paused domains too
+    const seedTok = new Set(rows.length ? (await query(`SELECT token FROM outreach_contacts WHERE wave = 'seed' AND token = ANY($1::text[])`, [rows.map((r) => r.token)])).rows.map((r) => String(r.token)) : []);
+    const runnable = rows.filter((r) => (active.includes(r.domain) || r.token.startsWith('dt') || seedTok.has(r.token)) && keyed(r.domain)); // dt tokens are the daily placement-test copies, which send from paused domains too
     if (rows.length && !runnable.length && active.length) return { error: 'provider key missing for active domains' };
     for (let i = 0; i < runnable.length; i += 5) {
         const batch = runnable.slice(i, i + 5);

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { recordClick, validToken, BASE_URL, CAMPAIGN } from '@/lib/outreach/db';
+import { oneClickSubscribe } from '@/lib/outreach/one-click';
 import { getContact } from '@/lib/outreach/db';
 import { VARIANT_PATH } from '@/lib/outreach/followup';
 
@@ -37,9 +38,15 @@ async function handle(req: NextRequest, params: Promise<{ token: string; kind: s
         const v = req.nextUrl.searchParams.get('v') ?? '';
         dest = VARIANT_PATH[v] ? `${VARIANT_PATH[v]}?t=${token}&${utm}` : `/newsletter/start-here?t=${token}&${utm}`;
     }
-    else if (kind === 's') dest = `/newsletter/join?t=${token}&${utm}`;
-    else if (kind === 'sw') dest = `/newsletter/join?t=${token}&cadence=weekly&${utm}`;
-    else if (kind === 'sd') dest = `/newsletter/join?t=${token}&cadence=daily&${utm}`;
+    else if (kind === 's' || kind === 'sw' || kind === 'sd') {
+        // One click subscribes a real person at once and shows a thank-you page. Scanners and anything
+        // suspicious fall back to the subscribe form.
+        const cadence = kind === 'sd' ? 'daily' : 'weekly';
+        const r = isBot ? 'form' : await oneClickSubscribe({ token, ip, ua, cadence });
+        dest = r === 'form'
+            ? `/newsletter/join?t=${token}${kind === 'sw' ? '&cadence=weekly' : kind === 'sd' ? '&cadence=daily' : ''}&${utm}`
+            : `/newsletter/thanks?t=${token}&c=${cadence}${r === 'already' ? '&already=1' : ''}`;
+    }
     else if (kind === 'va') dest = `/live-record?demo=1&t=${token}&${utm}`;
     else if (kind === 'mt') dest = 'https://calendar.app.google/tUQ5Dn1Jk27vP4f19';
     else if (kind === 'as') {

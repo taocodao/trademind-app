@@ -20,7 +20,7 @@ const MIN_GAP_BDAYS = 2;
 const FIRM_GAP_DAYS = 7;
 const BLOCKED = `'unsubscribed','bounced','complained','subscribed','confirmed','monthly','checked_in','snoozed','replied','stopped'`;
 const FIRM_STOP = `'unsubscribed','complained','replied','stopped'`;
-export const CX_TEST_ALLOW = new Set(['web3aistore@gmail.com', 'web3aistore1@gmail.com', 'web3aistore2@gmail.com', 'web3aistore3@gmail.com', 'web3aistore4@gmail.com', 'testtrademind@gmail.com', 'testtrademindnewsletter@gmail.com', 'testtrademindspam1@gmail.com', 'ericyaohuang@gmail.com', 'erichuang2005@gmail.com', 'erichuang2005@yahoo.com', 'erichuang2005@aol.com', 'eric@vochat.ai', 'eric@vochat.com', 'eric@arenza.tv', 'eric@trademind.bot', 'eric@taocodao.com', 'testtrademind@outlook.com', 'cyberstoremgr@gmail.com', 'ehuang1234@gmail.com', 'omniagenthub@gmail.com', 'zhenyingsun2024@gmail.com', 'testtrademind@yahoo.com', 'cyberstoremgr@yahoo.com']);
+export const CX_TEST_ALLOW = new Set(['web3aistore@gmail.com', 'web3aistore1@gmail.com', 'web3aistore2@gmail.com', 'web3aistore3@gmail.com', 'web3aistore4@gmail.com', 'testtrademind@gmail.com', 'testtrademindnewsletter@gmail.com', 'testtrademindspam1@gmail.com', 'ericyaohuang@gmail.com', 'erichuang2005@gmail.com', 'erichuang2005@yahoo.com', 'erichuang2005@aol.com', 'eric@vochat.ai', 'eric@vochat.com', 'eric@arenza.tv', 'eric@trademind.bot', 'eric@taocodao.com', 'testtrademind@outlook.com', 'eric@trademindbot.onmicrosoft.com', 'cyberstoremgr@gmail.com', 'ehuang1234@gmail.com', 'omniagenthub@gmail.com', 'zhenyingsun2024@gmail.com', 'testtrademind@yahoo.com', 'cyberstoremgr@yahoo.com']);
 
 export const CX_DEFAULTS: [string, string][] = [
     ['cx_enabled', 'false'], ['cx_domains', 'aivocbot.com,vochat.ai,tradecoin.bot'],
@@ -307,10 +307,36 @@ async function run(s: Record<string, string>, et: { date: string; hour: number; 
         if (Number(out.sent) + Number(out.failed) > 0) await new Promise((x) => setTimeout(x, 8000 + Math.floor(Math.random() * 37000)));
         const r = await sendCxOne(c, dom, s);
         out[r] = Number(out[r]) + 1;
-        if (r === 'sent') { room.set(dom, (room.get(dom) ?? 1) - 1); want--; sentAll++; }
+        if (r === 'sent') {
+            room.set(dom, (room.get(dom) ?? 1) - 1); want--; sentAll++;
+            try { await monitorCopy(c, dom, s); } catch { /* monitor copies never block the run */ }
+        }
     }
     void now;
     return out;
+}
+
+const MONITOR_TO = ['testtrademind@outlook.com', 'eric@trademindbot.onmicrosoft.com'];
+const MONITOR_EVERY = 50;
+
+/** After every 50th send from a domain, send the same production email (rendered as sent, with a seed token) to both Outlook seed mailboxes. */
+async function monitorCopy(c: Cand, domain: string, s: Record<string, string>): Promise<void> {
+    const n = Number((await query(`SELECT COUNT(*)::int AS n FROM outreach_sends WHERE domain = $1 AND step BETWEEN 41 AND 44 AND status <> 'failed'`, [domain])).rows[0].n);
+    if (n < MONITOR_EVERY || n % MONITOR_EVERY !== 0) return;
+    const dr = (await query(`SELECT subject, body FROM cx_draft WHERE token = $1 AND step = $2`, [c.token, c.step - CX_STEP0])).rows[0];
+    if (!dr) return;
+    const base = await linkBaseFor(domain, s);
+    for (const to of MONITOR_TO) {
+        let seed = (await query(`SELECT token FROM outreach_contacts WHERE LOWER(email) = $1`, [to])).rows[0]?.token as string | undefined;
+        if (!seed) {
+            seed = randomBytes(8).toString('base64url').slice(0, 10);
+            await query(`INSERT INTO outreach_contacts (token, email, first_name, segment, template, wave, status) VALUES ($1,$2,'Eric','seed','CXT','seed','pending')`, [seed, to]);
+        }
+        const m = renderCx({ step: c.step - CX_STEP0, subject: dr.subject, body: dr.body }, { token: seed, linkBase: base, unsubUrl: `${base}/u/${seed}`, mailingAddress: MAILING_ADDRESS });
+        await sendMail({ transport: 'resend', from: `${s.cx_from_display || 'Eric Huang'} <eric@${domain}>`, to, replyTo: s[`reply_to_${domain.toLowerCase()}`] || s.cx_reply_to || s.reply_to || undefined, subject: m.subject, text: m.text,
+            headers: { 'List-Unsubscribe': `<${base}/u/${seed}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' }, token: seed, step: 9, campaign: 'cx_monitor', idempotencyKey: `cxm-${domain}-${n}-${to}` });
+        await new Promise((x) => setTimeout(x, 1200));
+    }
 }
 
 async function linkBaseFor(domain: string, s: Record<string, string>): Promise<string> {

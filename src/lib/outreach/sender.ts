@@ -710,7 +710,7 @@ async function sendOne(row: { id: number; token: string; step: number; domain: s
     let res;
     try {
         res = await sendMail({
-            transport, from, to: c.email, replyTo: s.reply_to || undefined, subject: msg.subject, text: msg.text, html: msg.html,
+            transport, from, to: c.email, replyTo: s[`reply_to_${String(row.domain).toLowerCase()}`] || s.reply_to || undefined, subject: msg.subject, text: msg.text, html: msg.html,
             headers: s.list_unsub_header === 'false' ? undefined : { 'List-Unsubscribe': `<${msg.unsubUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
             token: row.token, step: row.step, campaign: CAMPAIGN, idempotencyKey: `outreach-${row.token}-${row.step}`,
         });

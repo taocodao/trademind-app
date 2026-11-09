@@ -23,8 +23,8 @@ const FIRM_STOP = `'unsubscribed','complained','replied','stopped'`;
 export const CX_TEST_ALLOW = new Set(['web3aistore@gmail.com', 'web3aistore1@gmail.com', 'web3aistore2@gmail.com', 'web3aistore3@gmail.com', 'web3aistore4@gmail.com', 'testtrademind@gmail.com', 'testtrademindnewsletter@gmail.com', 'testtrademindspam1@gmail.com', 'ericyaohuang@gmail.com', 'erichuang2005@gmail.com', 'erichuang2005@yahoo.com', 'erichuang2005@aol.com', 'eric@vochat.ai', 'eric@vochat.com', 'eric@arenza.tv', 'eric@trademind.bot', 'eric@taocodao.com', 'testtrademind@outlook.com', 'cyberstoremgr@gmail.com', 'ehuang1234@gmail.com', 'omniagenthub@gmail.com', 'zhenyingsun2024@gmail.com', 'testtrademind@yahoo.com', 'cyberstoremgr@yahoo.com']);
 
 export const CX_DEFAULTS: [string, string][] = [
-    ['cx_enabled', 'false'], ['cx_domains', 'arenza.tv,update.trademind.bot,taocodao.com'],
-    ['cx_start', '20'], ['cx_step', '10'], ['cx_cap', '120'], ['cx_total_cap', '400'],
+    ['cx_enabled', 'false'], ['cx_domains', 'aivocbot.com,vochat.ai,tradecoin.bot'],
+    ['cx_start', '50'], ['cx_step', '20'], ['cx_cap', '500'], ['cx_total_cap', '1500'],
     ['cx_from_display', 'Eric Huang'], ['cx_reply_to', ''],
 ];
 
@@ -322,7 +322,7 @@ export async function sendCxOne(c: Cand, domain: string, s: Record<string, strin
     let res;
     try {
         res = await sendMail({
-            transport: 'resend', from, to: c.email, replyTo: s.cx_reply_to || s.reply_to || undefined, subject: msg.subject, text: msg.text,
+            transport: 'resend', from, to: c.email, replyTo: s[`reply_to_${domain.toLowerCase()}`] || s.cx_reply_to || s.reply_to || undefined, subject: msg.subject, text: msg.text,
             headers: { 'List-Unsubscribe': `<${base}/u/${c.token}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
             token: c.token, step: c.step, campaign: 'cx_adviser', idempotencyKey: `cx-${c.token}-${c.step}`,
         });
@@ -365,7 +365,7 @@ export async function sendCxTest(o: { domain: string; to: string; email?: string
     const base = await linkBaseFor(dom, s); const detail: string[] = []; let sent = 0;
     for (const d of drafts.filter((x) => !o.steps || o.steps.includes(x.step))) {
         const m = renderCx(d, { token: seed, linkBase: base, unsubUrl: `${base}/u/${seed}`, mailingAddress: MAILING_ADDRESS });
-        const r = await sendMail({ transport: 'resend', from: `${s.cx_from_display || 'Eric Huang'} <eric@${dom}>`, to, replyTo: s.cx_reply_to || s.reply_to || undefined, subject: m.subject, text: m.text,
+        const r = await sendMail({ transport: 'resend', from: `${s.cx_from_display || 'Eric Huang'} <eric@${dom}>`, to, replyTo: s[`reply_to_${dom}`] || s.cx_reply_to || s.reply_to || undefined, subject: m.subject, text: m.text,
             headers: { 'List-Unsubscribe': `<${base}/u/${seed}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' }, token: seed, step: 9, campaign: 'cx_test', idempotencyKey: `cxt-${seed}-${dom}-${d.step}-${Date.now()}` });
         detail.push(`E${d.step}: ${r.ok ? 'accepted' : `failed ${r.status}`}`); if (r.ok) sent++;
         await new Promise((x) => setTimeout(x, 1200));

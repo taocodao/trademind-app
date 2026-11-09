@@ -107,7 +107,7 @@ export async function processRecaps(limit = 15, now = new Date()): Promise<Recor
     const { month_key: monthKey, content } = r.rows[0] as { month_key: string; content: RecapContent };
     const due = await query(
         `SELECT c.token, c.email, c.first_name FROM outreach_contacts c
-         WHERE c.status = 'monthly'
+         WHERE c.status = 'monthly' AND c.wave <> 'cx'
            AND NOT EXISTS (SELECT 1 FROM outreach_recap_sends x WHERE x.token = c.token AND x.month_key = $1)
            AND NOT EXISTS (SELECT 1 FROM newsletter_suppression ns WHERE ns.email = c.email)
          ORDER BY c.updated_at LIMIT $2`, [monthKey, limit]);

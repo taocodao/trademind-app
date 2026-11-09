@@ -14,7 +14,7 @@ export const runtime = 'nodejs';
  * script after 3 visible seconds (POST /api/engage). No click ever subscribes anyone: the
  * subscribe link only opens a form the person submits themselves.
  */
-const KINDS = ['p', 's', 'i', 'h', 'n', 'v', 'c', 'f', 'x', 'br', 'st', 'ru', 'ch', 'vf', 'pn', 'qa', 'qb', 'qc', 'sw', 'sd', 'va', 'pl', 'mt', 'as'];
+const KINDS = ['p', 's', 'i', 'h', 'n', 'v', 'c', 'f', 'x', 'br', 'st', 'ru', 'ch', 'vf', 'pn', 'qa', 'qb', 'qc', 'sw', 'sd', 'va', 'pl', 'mt', 'as', 'cal'];
 /** Start here sections: link kind to section key and page. */
 const SECTION_BY_KIND: Record<string, string> = { br: 'brief', st: 'strategies', ru: 'rules', ch: 'challenge', vf: 'verify', pn: 'panel' };
 
@@ -27,7 +27,7 @@ async function handle(req: NextRequest, params: Promise<{ token: string; kind: s
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
     const ua = req.headers.get('user-agent');
     const { known, isBot } = await recordClick({
-        token, linkType: SECTION_BY_KIND[kind] ? `sec_${SECTION_BY_KIND[kind]}` : kind.startsWith('q') ? `poll_${kind.slice(1)}` : kind === 'p' ? 'preview' : kind === 's' ? 'subscribe' : kind === 'sw' ? 'subscribe_weekly' : kind === 'sd' ? 'subscribe_daily' : kind === 'va' ? 'virtual_accounts' : kind === 'pl' ? 'plans' : kind === 'as' ? 'adviser_sample' : kind === 'i' ? 'inside' : kind === 'h' ? 'home' : kind === 'v' ? 'record' : kind === 'c' ? 'check' : kind === 'f' ? 'apply' : kind === 'x' ? 'sample' : 'issue', step, method, ip, ua,
+        token, linkType: SECTION_BY_KIND[kind] ? `sec_${SECTION_BY_KIND[kind]}` : kind.startsWith('q') ? `poll_${kind.slice(1)}` : kind === 'p' ? 'preview' : kind === 's' ? 'subscribe' : kind === 'sw' ? 'subscribe_weekly' : kind === 'sd' ? 'subscribe_daily' : kind === 'va' ? 'virtual_accounts' : kind === 'pl' ? 'plans' : kind === 'as' ? 'adviser_sample' : kind === 'cal' ? 'meeting' : kind === 'i' ? 'inside' : kind === 'h' ? 'home' : kind === 'v' ? 'record' : kind === 'c' ? 'check' : kind === 'f' ? 'apply' : kind === 'x' ? 'sample' : 'issue', step, method, ip, ua,
     });
     if (!known) return fallback;
     if (method === 'HEAD') return new NextResponse(null, { status: 200 });
@@ -48,6 +48,7 @@ async function handle(req: NextRequest, params: Promise<{ token: string; kind: s
             : `/newsletter/thanks?t=${token}&c=${cadence}${r === 'already' ? '&already=1' : ''}`;
     }
     else if (kind === 'va') dest = `/live-record?demo=1&t=${token}&${utm}`;
+    else if (kind === 'cal') dest = 'https://calendar.app.google/kyHxchRY3kzRQaGu9';
     else if (kind === 'mt') dest = 'https://calendar.app.google/tUQ5Dn1Jk27vP4f19';
     else if (kind === 'as') {
         const a = req.nextUrl.searchParams.get('a') ?? '';

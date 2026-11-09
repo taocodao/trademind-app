@@ -56,7 +56,7 @@ export async function seq7WindowOpen(row: { step: number; domain: string; token?
 
 const BLOCKED = `'unsubscribed','bounced','complained','subscribed','confirmed','monthly','checked_in','snoozed'`;
 const ELIGIBLE = `
-    c.wave <> 'seed' AND c.token NOT LIKE 'dt%' AND c.token NOT LIKE 'prod%' AND ((c.wave = 'ria') = $1::boolean)
+    c.wave NOT IN ('seed','cx') AND c.token NOT LIKE 'dt%' AND c.token NOT LIKE 'prod%' AND ((c.wave = 'ria') = $1::boolean)
     AND c.status NOT IN (${BLOCKED})
     AND NOT EXISTS (SELECT 1 FROM newsletter_suppression ns WHERE ns.email = c.email)
     AND NOT EXISTS (SELECT 1 FROM newsletter_subscribers sub WHERE sub.status IN ('confirmed','pending') AND sub.email IN (c.email, COALESCE(c.subscriber_email, c.email)))

@@ -258,7 +258,7 @@ export async function planToday(now = new Date()): Promise<PlanResult | null> {
                        (c.status = 'clicked' OR EXISTS (SELECT 1 FROM outreach_click_events e WHERE e.token = c.token AND (NOT e.is_bot OR e.human_confirmed))) AS has_click
                 FROM outreach_contacts c
                 JOIN outreach_sends s1 ON s1.token = c.token AND s1.step = 1 AND s1.status IN ('sent','delivered')
-                WHERE c.status IN ('sent','clicked') AND c.wave <> 'seed'
+                WHERE c.status IN ('sent','clicked') AND c.wave NOT IN ('seed','cx')
                   AND (s1.sent_at AT TIME ZONE 'America/New_York')::date <= ($1::date - 4)
                   AND NOT EXISTS (SELECT 1 FROM outreach_sends x WHERE x.token = c.token AND x.step = 7)
                   AND NOT EXISTS (SELECT 1 FROM newsletter_suppression ns WHERE ns.email = c.email)
@@ -271,7 +271,7 @@ export async function planToday(now = new Date()): Promise<PlanResult | null> {
             JOIN outreach_sends s1 ON s1.token = c.token AND s1.step = 1
             LEFT JOIN outreach_sends s2 ON s2.token = c.token AND s2.step = 2
             LEFT JOIN outreach_queue q2 ON q2.token = c.token AND q2.step = 2
-            WHERE c.status = 'sent' AND c.wave <> 'seed' AND s2.id IS NULL AND q2.id IS NULL
+            WHERE c.status = 'sent' AND c.wave NOT IN ('seed','cx') AND s2.id IS NULL AND q2.id IS NULL
               AND s1.status IN ('sent','delivered')
               AND (s1.sent_at AT TIME ZONE 'America/New_York')::date <= ($1::date - $2::int)
               AND NOT EXISTS (SELECT 1 FROM newsletter_suppression ns WHERE ns.email = c.email)
@@ -298,7 +298,7 @@ export async function planToday(now = new Date()): Promise<PlanResult | null> {
                        COALESCE((SELECT array_agg(q.step) FROM outreach_queue q WHERE q.token = c.token AND q.state = 'pending'), '{}') AS queued_steps
                 FROM outreach_contacts c
                 JOIN outreach_sends s1 ON s1.token = c.token AND s1.step = 1 AND s1.status IN ('sent','delivered')
-                WHERE c.status IN ('sent','clicked') AND c.wave <> 'seed'
+                WHERE c.status IN ('sent','clicked') AND c.wave NOT IN ('seed','cx')
                   AND (s1.template = '${SEQ6_TEMPLATE}'
                        OR ($1::timestamptz IS NOT NULL AND s1.sent_at < $1::timestamptz
                            AND NOT EXISTS (SELECT 1 FROM outreach_sends x7 WHERE x7.token = c.token AND x7.step = 7 AND x7.template NOT LIKE 'S%')))
@@ -345,7 +345,7 @@ export async function planToday(now = new Date()): Promise<PlanResult | null> {
                 FROM outreach_contacts c
                 JOIN outreach_sends s1 ON s1.token = c.token AND s1.step = 1 AND s1.status IN ('sent','delivered')
                 JOIN outreach_click_events e ON e.token = c.token AND e.link_type = 'preview' AND NOT e.is_bot AND e.human_confirmed AND e.interacted
-                WHERE c.status IN ('sent','clicked') AND c.wave <> 'seed'
+                WHERE c.status IN ('sent','clicked') AND c.wave NOT IN ('seed','cx')
                   AND NOT EXISTS (SELECT 1 FROM newsletter_suppression ns WHERE ns.email = c.email)
                   AND NOT EXISTS (SELECT 1 FROM newsletter_subscribers sub WHERE sub.status IN ('confirmed','pending') AND sub.email IN (c.email, COALESCE(c.subscriber_email, c.email)))
                 GROUP BY c.token, c.tz, s1.domain
@@ -403,7 +403,7 @@ export async function planToday(now = new Date()): Promise<PlanResult | null> {
         // Check-ins: people who asked to be contacted again after 3 or 6 months (one email, then done).
         const ci = await query(`
             SELECT c.token, c.tz FROM outreach_contacts c
-            WHERE c.status = 'snoozed' AND c.snooze_until IS NOT NULL AND c.snooze_until <= NOW()
+            WHERE c.status = 'snoozed' AND c.wave <> 'cx' AND c.snooze_until IS NOT NULL AND c.snooze_until <= NOW()
               AND NOT EXISTS (SELECT 1 FROM outreach_sends s WHERE s.token = c.token AND s.step = 3)
               AND NOT EXISTS (SELECT 1 FROM outreach_queue q WHERE q.token = c.token AND q.step = 3)
               AND NOT EXISTS (SELECT 1 FROM newsletter_suppression ns WHERE ns.email = c.email)
@@ -440,7 +440,7 @@ export async function planToday(now = new Date()): Promise<PlanResult | null> {
                     SELECT c.token, c.tz, c.segment, (c.wave = 'W1_pilot') AS is_pilot,
                            ROW_NUMBER() OVER (PARTITION BY c.segment, (c.wave = 'W1_pilot') ORDER BY md5(c.token)) AS rn
                     FROM outreach_contacts c
-                    WHERE c.status = 'pending' AND c.wave <> 'seed'
+                    WHERE c.status = 'pending' AND c.wave NOT IN ('seed','cx')
                       AND (c.wave = 'W1_pilot' OR c.segment = ANY($1::text[]))
                       AND NOT EXISTS (SELECT 1 FROM outreach_queue q WHERE q.token = c.token AND q.step = 1)
                       AND NOT EXISTS (SELECT 1 FROM newsletter_suppression ns WHERE ns.email = c.email)
@@ -853,5 +853,7 @@ export async function tick(): Promise<Record<string, unknown>> {
     let recaps: Record<string, number | string> = {};
     try { recaps = await processRecaps(15); } catch (e) { recaps = { error: (e as Error).message.slice(0, 120) }; }
     const reported = await reportIfDue();
-    return { planned, sent, recaps, reported };
+    let cx: Record<string, number | string> = {};
+    try { cx = await (await import('./cx')).processCx(); } catch (e) { cx = { error: (e as Error).message.slice(0, 120) }; }
+    return { planned, sent, recaps, reported, cx };
 }

@@ -261,7 +261,11 @@ async function run(s: Record<string, string>, et: { date: string; hour: number; 
     let sentAll = states.reduce((a, d) => a + d.sentToday, 0);
     const room = new Map<string, number>();
     for (const d of usable) room.set(d.domain, Math.max(0, Math.min(d.budget, Math.ceil(d.budget * frac)) - d.sentToday));
-    let want = Math.min(maxPerTick, totalCap - sentAll, [...room.values()].reduce((a, b) => a + b, 0));
+    // Spread the day: a smaller batch per five-minute tick, an occasional skipped tick, and a random gap between sends.
+    const budgetAll = usable.reduce((a, d) => a + d.budget, 0);
+    const tickCap = Math.max(2, Math.min(maxPerTick, Math.ceil(budgetAll / 80)));
+    if (Math.random() < 0.25) { out.cx = 'jitter skip'; return out; }
+    let want = Math.min(tickCap, totalCap - sentAll, [...room.values()].reduce((a, b) => a + b, 0));
     if (want <= 0) return out;
 
     // Follow-ups due (same domain as the first email when it is usable).
@@ -300,6 +304,7 @@ async function run(s: Record<string, string>, et: { date: string; hour: number; 
         let dom = c.domain && room.get(c.domain.toLowerCase()) ? c.domain.toLowerCase() : null;
         if (!dom) { const best = [...room.entries()].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1])[0]; dom = best ? best[0] : null; }
         if (!dom || !(room.get(dom) ?? 0)) continue;
+        if (Number(out.sent) + Number(out.failed) > 0) await new Promise((x) => setTimeout(x, 8000 + Math.floor(Math.random() * 37000)));
         const r = await sendCxOne(c, dom, s);
         out[r] = Number(out[r]) + 1;
         if (r === 'sent') { room.set(dom, (room.get(dom) ?? 1) - 1); want--; sentAll++; }

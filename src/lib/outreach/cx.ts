@@ -256,15 +256,23 @@ async function run(s: Record<string, string>, et: { date: string; hour: number; 
     const usable = states.filter((d) => d.verified && !d.paused && !!process.env.RESEND_API_KEY);
     const out: Record<string, number | string> = { sent: 0, skipped: 0, failed: 0, domains: usable.length };
     if (!usable.length) { out.cx = 'no usable domain'; return out; }
-    const frac = Math.min(1, (et.hour * 60 + et.minute - 540) / 540 + 0.05);
+    // Even spacing: each domain sends one email every (minutes left in the send window / emails left in its budget), so 50 over 9 hours is one about every 11 minutes.
     const totalCap = Number(s.cx_total_cap) || 400;
     let sentAll = states.reduce((a, d) => a + d.sentToday, 0);
+    const minsLeft = Math.max(1, 18 * 60 - (et.hour * 60 + et.minute));
     const room = new Map<string, number>();
-    for (const d of usable) room.set(d.domain, Math.max(0, Math.min(d.budget, Math.ceil(d.budget * frac)) - d.sentToday));
-    // Spread the day: a smaller batch per five-minute tick, an occasional skipped tick, and a random gap between sends.
-    const budgetAll = usable.reduce((a, d) => a + d.budget, 0);
-    const tickCap = Math.max(2, Math.min(maxPerTick, Math.ceil(budgetAll / 80)));
-    if (Math.random() < 0.25) { out.cx = 'jitter skip'; return out; }
+    let minInterval = 540;
+    for (const d of usable) {
+        const remaining = d.budget - d.sentToday;
+        if (remaining <= 0) { room.set(d.domain, 0); continue; }
+        const interval = minsLeft / remaining;
+        minInterval = Math.min(minInterval, interval);
+        const last = (await query(`SELECT MAX(sent_at) AS t FROM outreach_sends WHERE domain = $1 AND step BETWEEN 41 AND 44`, [d.domain])).rows[0].t;
+        const sinceLast = last && etDate(last) === et.date ? (now.getTime() - new Date(String(last)).getTime()) / 60000 : 1e9;
+        const jitter = 0.85 + Math.random() * 0.3;
+        room.set(d.domain, Math.min(remaining, Math.floor(sinceLast / (interval * jitter))));
+    }
+    const tickCap = Math.max(1, Math.min(maxPerTick, Math.ceil(5 / minInterval) * usable.length));
     let want = Math.min(tickCap, totalCap - sentAll, [...room.values()].reduce((a, b) => a + b, 0));
     if (want <= 0) return out;
 
@@ -304,7 +312,7 @@ async function run(s: Record<string, string>, et: { date: string; hour: number; 
         let dom = c.domain && room.get(c.domain.toLowerCase()) ? c.domain.toLowerCase() : null;
         if (!dom) { const best = [...room.entries()].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1])[0]; dom = best ? best[0] : null; }
         if (!dom || !(room.get(dom) ?? 0)) continue;
-        if (Number(out.sent) + Number(out.failed) > 0) await new Promise((x) => setTimeout(x, 8000 + Math.floor(Math.random() * 37000)));
+        if (Number(out.sent) + Number(out.failed) > 0) await new Promise((x) => setTimeout(x, 5000 + Math.floor(Math.random() * 25000)));
         const r = await sendCxOne(c, dom, s);
         out[r] = Number(out[r]) + 1;
         if (r === 'sent') {

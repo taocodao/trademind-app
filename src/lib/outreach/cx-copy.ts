@@ -137,7 +137,12 @@ export const CX_DISCLAIMER = 'TradeMind publishes educational research. It is no
 
 const KIND: Record<string, string> = { HOME: 'h', SIM: 'v', VA: 'va', SUB: 'sw', CAL: 'cal', STUDY: 'f' };
 
-export function renderCx(d: { step: number; subject: string; body: string }, o: { token: string; linkBase: string; unsubUrl: string; mailingAddress: string; linkFree?: boolean }): { subject: string; text: string } {
+const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const HTML_WRAP = 'font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#222';
+const SMALL = 'font-size:13px;color:#555';
+const FOOT = 'font-size:12px;color:#777';
+
+export function renderCx(d: { step: number; subject: string; body: string }, o: { token: string; linkBase: string; unsubUrl: string; mailingAddress: string; linkFree?: boolean; html?: boolean }): { subject: string; text: string; html?: string } {
     if (o.linkFree) {
         const hi = (d.body.match(/^Hi [^,\n]{1,40},/) || ['Hi,'])[0];
         const plain = d.step === 1
@@ -146,6 +151,24 @@ export function renderCx(d: { step: number; subject: string; body: string }, o: 
         return { subject: d.subject, text: `${plain}\n\nEric Huang\nFounder, TradeMind\n\n${CX_FOOTER_LINE} Reply stop and I will not write again.\n${CX_DISCLAIMER}\n\n${o.mailingAddress}` };
     }
     const link = (k: string) => `${o.linkBase}/r/${o.token}/${KIND[k]}?s=${d.step}`;
+    if (o.html) {
+        // Long custom email, plain text plus HTML. Links sit on the sending domain only. Footer is the short stop line.
+        const body = d.body.replace(/ \(\{\{HOME\}\}\)/g, '');
+        const paras = body.split('\n\n');
+        const tokText = (t: string) => t.replace(/\{\{([A-Z]+)\}\}/g, (_m, k) => (KIND[k] ? link(k) : ''));
+        const homeLink = d.body.includes('{{HOME}}') ? link('HOME') : '';
+        const stop = `${CX_FOOTER_LINE} Reply stop and I will not write again.`;
+        const text = `${paras.map(tokText).join('\n\n')}${homeLink ? `\n\nSample page: ${homeLink}` : ''}\n\nEric Huang\nFounder, TradeMind\n\n${stop}\n${CX_DISCLAIMER}\n\n${o.mailingAddress}`;
+        const ph = paras.map((t) => {
+            if (t === LIMITS_LINE) return `<p style="${SMALL}">${esc(t)}</p>`;
+            let h = esc(t);
+            if (homeLink && /five minute research sample/.test(h)) h = h.replace('five minute research sample', `<a href="${esc(homeLink)}">five minute research sample</a>`);
+            h = h.replace(/\{\{([A-Z]+)\}\}/g, (_m, k) => (KIND[k] ? `<a href="${esc(link(k))}">${esc(link(k))}</a>` : ''));
+            return `<p>${h.replace(/\n/g, '<br>')}</p>`;
+        }).join('');
+        const html = `<div style="${HTML_WRAP}">${ph}<p>Eric Huang<br>Founder, TradeMind</p><p style="${FOOT}">${esc(stop)}<br>${esc(CX_DISCLAIMER)}<br><br>${esc(o.mailingAddress)}</p></div>`;
+        return { subject: d.subject, text, html };
+    }
     let body = d.body.replace(/\{\{([A-Z]+)\}\}/g, (_m, k) => (KIND[k] ? link(k) : ''));
     const subLine = d.body.includes('{{SUB}}') ? '' : `Subscribe to the free weekly brief: ${link('SUB')}\n`;
     body += `\n\nEric Huang\nFounder, TradeMind\n\n${subLine}${CX_FOOTER_LINE} Unsubscribe or snooze: ${o.unsubUrl}\n${CX_DISCLAIMER}\n\n${o.mailingAddress}`;

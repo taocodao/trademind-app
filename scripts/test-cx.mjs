@@ -40,4 +40,7 @@ t('mismatched email gets generic hook', buildProfile(rows[3]).hookId === 'generi
 t('blank first name greets Hello', buildDrafts(buildProfile(rows[2]), 'x1234567890')[0].body.startsWith('Hello,'));
 t('checker catches banned word', checkDraft({ step: 2, subject: 'what can go wrong', body: 'Hi A,\n\nThis is the last note about confidence in the model and what could go wrong in the simulation page today {{SIM}} please tell me whether it looks wrong to you?', words: 30, errors: [] }).length >= 2);
 t('checker catches third link', checkDraft({ step: 3, subject: 'two virtual accounts', body: 'Hi A,\n\n{{VA}} {{SUB}} {{HOME}} a b c d e f g h i j k l m n o p q r s t', words: 25, errors: [] }).some((e) => e.includes('links')));
+const h = renderCx(d0[0], { token: 'tok1234567', linkBase: 'https://go.vochat.ai', unsubUrl: 'https://go.vochat.ai/u/tok1234567', mailingAddress: 'ADDR', html: true });
+t('html email has anchored sample link on the sending domain only', h.html.includes('<a href="https://go.vochat.ai/r/tok1234567/h?s=1">five minute research sample</a>') && !/trademind\.bot/.test(h.html + h.text));
+t('html email has no leftover tokens or dashes and keeps the limits line and stop line', !/\{\{|undefined|[\u2013\u2014]|--/.test(h.html + h.text) && h.html.includes('Hypothetical results from a simulation') && h.text.includes('Reply stop and I will not write again.') && h.text.includes('Sample page: https://go.vochat.ai/r/tok1234567/h?s=1'));
 console.log(fail ? `${fail} FAILED` : 'ALL PASSED'); process.exit(fail ? 1 : 0);

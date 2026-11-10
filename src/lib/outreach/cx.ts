@@ -20,10 +20,10 @@ const MIN_GAP_BDAYS = 2;
 const FIRM_GAP_DAYS = 7;
 const BLOCKED = `'unsubscribed','bounced','complained','subscribed','confirmed','monthly','checked_in','snoozed','replied','stopped'`;
 const FIRM_STOP = `'unsubscribed','complained','replied','stopped'`;
-export const CX_TEST_ALLOW = new Set(['web3aistore@gmail.com', 'web3aistore1@gmail.com', 'web3aistore2@gmail.com', 'web3aistore3@gmail.com', 'web3aistore4@gmail.com', 'testtrademind@gmail.com', 'testtrademindnewsletter@gmail.com', 'testtrademindspam1@gmail.com', 'ericyaohuang@gmail.com', 'erichuang2005@gmail.com', 'erichuang2005@yahoo.com', 'erichuang2005@aol.com', 'eric@vochat.ai', 'eric@vochat.com', 'eric@arenza.tv', 'eric@trademind.bot', 'eric@taocodao.com', 'testtrademind@outlook.com', 'eric@trademindbot.onmicrosoft.com', 'cyberstoremgr@gmail.com', 'ehuang1234@gmail.com', 'omniagenthub@gmail.com', 'zhenyingsun2024@gmail.com', 'testtrademind@yahoo.com', 'cyberstoremgr@yahoo.com']);
+export const CX_TEST_ALLOW = new Set(['web3aistore@gmail.com', 'web3aistore1@gmail.com', 'web3aistore2@gmail.com', 'web3aistore3@gmail.com', 'web3aistore4@gmail.com', 'testtrademind@gmail.com', 'testtrademindnewsletter@gmail.com', 'testtrademindspam1@gmail.com', 'ericyaohuang@gmail.com', 'erichuang2005@gmail.com', 'erichuang2005@yahoo.com', 'erichuang2005@aol.com', 'eric@vochat.ai', 'eric@vochat.com', 'eric@arenza.tv', 'eric@trademind.bot', 'eric@taocodao.com', 'testtrademind@outlook.com', 'eric@trademindbot.onmicrosoft.com', 'eric@aicopliot.onmicrosoft.com', 'cyberstoremgr@gmail.com', 'ehuang1234@gmail.com', 'omniagenthub@gmail.com', 'zhenyingsun2024@gmail.com', 'testtrademind@yahoo.com', 'cyberstoremgr@yahoo.com']);
 
 export const CX_DEFAULTS: [string, string][] = [
-    ['cx_enabled', 'false'], ['cx_domains', 'aivocbot.com,vochat.ai,tradecoin.bot'],
+    ['cx_enabled', 'false'], ['cx_domains', 'vochat.ai,echoads.tv'],
     ['cx_start', '50'], ['cx_step', '20'], ['cx_cap', '500'], ['cx_total_cap', '1500'],
     ['cx_from_display', 'Eric Huang'], ['cx_reply_to', ''],
 ];
@@ -253,7 +253,8 @@ export async function processCx(now = new Date(), maxPerTick = 20): Promise<Reco
 
 async function run(s: Record<string, string>, et: { date: string; hour: number; minute: number; dow: number }, now: Date, maxPerTick: number): Promise<Record<string, number | string>> {
     const states = await domainStates(s, et.date);
-    const usable = states.filter((d) => d.verified && !d.paused && !!process.env.RESEND_API_KEY);
+    const linksOn = s.cx_linkfree === 'false';
+    const usable = states.filter((d) => d.verified && !d.paused && !!process.env.RESEND_API_KEY && (!linksOn || !!s[`link_host_${d.domain}`]));
     const out: Record<string, number | string> = { sent: 0, skipped: 0, failed: 0, domains: usable.length };
     if (!usable.length) { out.cx = 'no usable domain'; return out; }
     // Even spacing: each domain sends one email every (minutes left in the send window / emails left in its budget), so 50 over 9 hours is one about every 11 minutes.
@@ -285,7 +286,7 @@ async function run(s: Record<string, string>, et: { date: string; hour: number; 
          GROUP BY c.token, c.email, c.first_name, p.firm_key HAVING MAX(x.step) < 44
          ORDER BY MIN(x.sent_at) LIMIT 400`)).rows;
     const cands: Cand[] = [];
-    for (const r of (s.cx_linkfree !== 'false' ? [] : fu)) {
+    for (const r of (s.cx_linkfree !== 'false' || s.cx_followups !== 'true' ? [] : fu)) {
         const n = Number(r.last_step) - CX_STEP0;       // emails already sent
         const sinceFirst = bdaysBetween(etDate(r.first_at), et.date), sinceLast = bdaysBetween(etDate(r.last_at), et.date);
         if (sinceFirst >= CX_BDAYS[n] && sinceLast >= MIN_GAP_BDAYS) cands.push({ token: r.token, email: r.email, first_name: r.first_name, step: CX_STEP0 + n + 1, domain: r.domain });
@@ -309,10 +310,10 @@ async function run(s: Record<string, string>, et: { date: string; hour: number; 
     for (const c of cands) {
         if (want <= 0) break;
         // Choose the domain: the first email's domain for a follow-up, else the usable domain with the most room.
-        const primary = (s.cx_primary_domain || 'vochat.ai').toLowerCase();
+        const primaries = String(s.cx_primary_domain || 'vochat.ai').toLowerCase().split(',').map((x) => x.trim()).filter(Boolean);
         const restricted = await mxRestricted(c.email);
         let dom = c.domain && room.get(c.domain.toLowerCase()) ? c.domain.toLowerCase() : null;
-        if (restricted) dom = (room.get(primary) ?? 0) > 0 ? primary : null;
+        if (restricted) { const best = primaries.map((p) => [p, room.get(p) ?? 0] as [string, number]).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1])[0]; dom = best ? best[0] : null; }
         else if (!dom) { const best = [...room.entries()].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1])[0]; dom = best ? best[0] : null; }
         if (!dom || !(room.get(dom) ?? 0)) continue;
         if (Number(out.sent) + Number(out.failed) > 0) await new Promise((x) => setTimeout(x, 5000 + Math.floor(Math.random() * 25000)));
@@ -327,12 +328,13 @@ async function run(s: Record<string, string>, et: { date: string; hour: number; 
     return out;
 }
 
-const MONITOR_TO = ['testtrademind@outlook.com', 'eric@trademindbot.onmicrosoft.com'];
+const MONITOR_TO = ['testtrademind@outlook.com', 'eric@trademindbot.onmicrosoft.com', 'eric@aicopliot.onmicrosoft.com'];
 const MONITOR_EVERY = 50;
 
 /** After every 50th send from a domain, send the same production email (rendered as sent, with a seed token) to both Outlook seed mailboxes. */
 async function monitorCopy(c: Cand, domain: string, s: Record<string, string>): Promise<void> {
-    const n = Number((await query(`SELECT COUNT(*)::int AS n FROM outreach_sends WHERE domain = $1 AND step BETWEEN 41 AND 44 AND status <> 'failed'`, [domain])).rows[0].n);
+    const since = s.cx_epoch ? new Date(s.cx_epoch) : new Date(0);   // counting starts from zero at cx_epoch
+    const n = Number((await query(`SELECT COUNT(*)::int AS n FROM outreach_sends WHERE domain = $1 AND step BETWEEN 41 AND 44 AND status <> 'failed' AND sent_at >= $2`, [domain, since])).rows[0].n);
     if (n < MONITOR_EVERY || n % MONITOR_EVERY !== 0) return;
     const dr = (await query(`SELECT subject, body FROM cx_draft WHERE token = $1 AND step = $2`, [c.token, c.step - CX_STEP0])).rows[0];
     if (!dr) return;
@@ -343,8 +345,8 @@ async function monitorCopy(c: Cand, domain: string, s: Record<string, string>): 
             seed = randomBytes(8).toString('base64url').slice(0, 10);
             await query(`INSERT INTO outreach_contacts (token, email, first_name, segment, template, wave, status) VALUES ($1,$2,'Eric','seed','CXT','seed','pending')`, [seed, to]);
         }
-        const m = renderCx({ step: c.step - CX_STEP0, subject: dr.subject, body: dr.body }, { token: seed, linkBase: base, unsubUrl: `${base}/u/${seed}`, mailingAddress: MAILING_ADDRESS, linkFree: true });
-        await sendMail({ transport: 'resend', from: `${s.cx_from_display || 'Eric Huang'} <eric@${domain}>`, to, replyTo: s[`reply_to_${domain.toLowerCase()}`] || s.cx_reply_to || s.reply_to || undefined, subject: m.subject, text: m.text,
+        const m = renderCx({ step: c.step - CX_STEP0, subject: dr.subject, body: dr.body }, { token: seed, linkBase: base, unsubUrl: `${base}/u/${seed}`, mailingAddress: MAILING_ADDRESS, ...cxFormat(s) });
+        await sendMail({ transport: 'resend', from: `${s.cx_from_display || 'Eric Huang'} <eric@${domain}>`, to, replyTo: s[`reply_to_${domain.toLowerCase()}`] || s.cx_reply_to || s.reply_to || undefined, subject: m.subject, text: m.text, html: m.html,
             headers: {}, token: seed, step: 9, campaign: 'cx_monitor', idempotencyKey: `cxm-${domain}-${n}-${to}` });
         await new Promise((x) => setTimeout(x, 1200));
     }
@@ -367,6 +369,12 @@ async function mxRestricted(email: string): Promise<boolean> {
     return r;
 }
 
+/** Production format: link-free text, or (cx_linkfree = false) the long custom email in text plus HTML with links on the sending domain. */
+export function cxFormat(s: Record<string, string>): { linkFree: boolean; html: boolean } {
+    const linkFree = s.cx_linkfree !== 'false';
+    return { linkFree, html: !linkFree && s.cx_html !== 'false' };
+}
+
 async function linkBaseFor(domain: string, s: Record<string, string>): Promise<string> {
     const h = s[`link_host_${domain.toLowerCase()}`];
     return h ? `https://${h}` : BASE_URL;
@@ -376,13 +384,13 @@ export async function sendCxOne(c: Cand, domain: string, s: Record<string, strin
     const dr = (await query(`SELECT subject, body, errors FROM cx_draft WHERE token = $1 AND step = $2`, [c.token, c.step - CX_STEP0])).rows[0];
     if (!dr || dr.errors) { if (c.step === 41) await query(`UPDATE cx_profile SET hold = TRUE, hold_reason = COALESCE(hold_reason, 'draft missing') WHERE token = $1`, [c.token]); return 'skipped'; }
     const base = await linkBaseFor(domain, s);
-    const msg = renderCx({ step: c.step - CX_STEP0, subject: dr.subject, body: dr.body }, { token: c.token, linkBase: base, unsubUrl: `${base}/u/${c.token}`, mailingAddress: MAILING_ADDRESS, linkFree: s.cx_linkfree !== 'false' });
+    const msg = renderCx({ step: c.step - CX_STEP0, subject: dr.subject, body: dr.body }, { token: c.token, linkBase: base, unsubUrl: `${base}/u/${c.token}`, mailingAddress: MAILING_ADDRESS, ...cxFormat(s) });
     const from = `${s.cx_from_display || 'Eric Huang'} <eric@${domain}>`;
     let res;
     try {
         res = await sendMail({
-            transport: 'resend', from, to: c.email, replyTo: s[`reply_to_${domain.toLowerCase()}`] || s.cx_reply_to || s.reply_to || undefined, subject: msg.subject, text: msg.text,
-            headers: s.cx_linkfree !== 'false' ? {} : { 'List-Unsubscribe': `<${base}/u/${c.token}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
+            transport: 'resend', from, to: c.email, replyTo: s[`reply_to_${domain.toLowerCase()}`] || s.cx_reply_to || s.reply_to || undefined, subject: msg.subject, text: msg.text, html: msg.html,
+            headers: s.cx_linkfree !== 'false' || s.cx_html !== 'false' ? {} : { 'List-Unsubscribe': `<${base}/u/${c.token}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
             token: c.token, step: c.step, campaign: 'cx_adviser', idempotencyKey: `cx-${c.token}-${c.step}`,
         });
     } catch { return 'failed'; }
@@ -423,8 +431,8 @@ export async function sendCxTest(o: { domain: string; to: string; email?: string
     }
     const base = await linkBaseFor(dom, s); const detail: string[] = []; let sent = 0;
     for (const d of drafts.filter((x) => !o.steps || o.steps.includes(x.step))) {
-        const m = renderCx(d, { token: seed, linkBase: base, unsubUrl: `${base}/u/${seed}`, mailingAddress: MAILING_ADDRESS, linkFree: true });
-        const r = await sendMail({ transport: 'resend', from: `${s.cx_from_display || 'Eric Huang'} <eric@${dom}>`, to, replyTo: s[`reply_to_${dom}`] || s.cx_reply_to || s.reply_to || undefined, subject: m.subject, text: m.text,
+        const m = renderCx(d, { token: seed, linkBase: base, unsubUrl: `${base}/u/${seed}`, mailingAddress: MAILING_ADDRESS, ...cxFormat(s) });
+        const r = await sendMail({ transport: 'resend', from: `${s.cx_from_display || 'Eric Huang'} <eric@${dom}>`, to, replyTo: s[`reply_to_${dom}`] || s.cx_reply_to || s.reply_to || undefined, subject: m.subject, text: m.text, html: m.html,
             headers: {}, token: seed, step: 9, campaign: 'cx_test', idempotencyKey: `cxt-${seed}-${dom}-${d.step}-${Date.now()}` });
         detail.push(`E${d.step}: ${r.ok ? 'accepted' : `failed ${r.status}`}`); if (r.ok) sent++;
         await new Promise((x) => setTimeout(x, 1200));

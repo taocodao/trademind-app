@@ -285,7 +285,7 @@ async function run(s: Record<string, string>, et: { date: string; hour: number; 
          GROUP BY c.token, c.email, c.first_name, p.firm_key HAVING MAX(x.step) < 44
          ORDER BY MIN(x.sent_at) LIMIT 400`)).rows;
     const cands: Cand[] = [];
-    for (const r of fu) {
+    for (const r of (s.cx_linkfree !== 'false' ? [] : fu)) {
         const n = Number(r.last_step) - CX_STEP0;       // emails already sent
         const sinceFirst = bdaysBetween(etDate(r.first_at), et.date), sinceLast = bdaysBetween(etDate(r.last_at), et.date);
         if (sinceFirst >= CX_BDAYS[n] && sinceLast >= MIN_GAP_BDAYS) cands.push({ token: r.token, email: r.email, first_name: r.first_name, step: CX_STEP0 + n + 1, domain: r.domain });
@@ -340,9 +340,9 @@ async function monitorCopy(c: Cand, domain: string, s: Record<string, string>): 
             seed = randomBytes(8).toString('base64url').slice(0, 10);
             await query(`INSERT INTO outreach_contacts (token, email, first_name, segment, template, wave, status) VALUES ($1,$2,'Eric','seed','CXT','seed','pending')`, [seed, to]);
         }
-        const m = renderCx({ step: c.step - CX_STEP0, subject: dr.subject, body: dr.body }, { token: seed, linkBase: base, unsubUrl: `${base}/u/${seed}`, mailingAddress: MAILING_ADDRESS });
+        const m = renderCx({ step: c.step - CX_STEP0, subject: dr.subject, body: dr.body }, { token: seed, linkBase: base, unsubUrl: `${base}/u/${seed}`, mailingAddress: MAILING_ADDRESS, linkFree: true });
         await sendMail({ transport: 'resend', from: `${s.cx_from_display || 'Eric Huang'} <eric@${domain}>`, to, replyTo: s[`reply_to_${domain.toLowerCase()}`] || s.cx_reply_to || s.reply_to || undefined, subject: m.subject, text: m.text,
-            headers: { 'List-Unsubscribe': `<${base}/u/${seed}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' }, token: seed, step: 9, campaign: 'cx_monitor', idempotencyKey: `cxm-${domain}-${n}-${to}` });
+            headers: {}, token: seed, step: 9, campaign: 'cx_monitor', idempotencyKey: `cxm-${domain}-${n}-${to}` });
         await new Promise((x) => setTimeout(x, 1200));
     }
 }
@@ -356,13 +356,13 @@ export async function sendCxOne(c: Cand, domain: string, s: Record<string, strin
     const dr = (await query(`SELECT subject, body, errors FROM cx_draft WHERE token = $1 AND step = $2`, [c.token, c.step - CX_STEP0])).rows[0];
     if (!dr || dr.errors) { if (c.step === 41) await query(`UPDATE cx_profile SET hold = TRUE, hold_reason = COALESCE(hold_reason, 'draft missing') WHERE token = $1`, [c.token]); return 'skipped'; }
     const base = await linkBaseFor(domain, s);
-    const msg = renderCx({ step: c.step - CX_STEP0, subject: dr.subject, body: dr.body }, { token: c.token, linkBase: base, unsubUrl: `${base}/u/${c.token}`, mailingAddress: MAILING_ADDRESS });
+    const msg = renderCx({ step: c.step - CX_STEP0, subject: dr.subject, body: dr.body }, { token: c.token, linkBase: base, unsubUrl: `${base}/u/${c.token}`, mailingAddress: MAILING_ADDRESS, linkFree: s.cx_linkfree !== 'false' });
     const from = `${s.cx_from_display || 'Eric Huang'} <eric@${domain}>`;
     let res;
     try {
         res = await sendMail({
             transport: 'resend', from, to: c.email, replyTo: s[`reply_to_${domain.toLowerCase()}`] || s.cx_reply_to || s.reply_to || undefined, subject: msg.subject, text: msg.text,
-            headers: { 'List-Unsubscribe': `<${base}/u/${c.token}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
+            headers: s.cx_linkfree !== 'false' ? {} : { 'List-Unsubscribe': `<${base}/u/${c.token}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
             token: c.token, step: c.step, campaign: 'cx_adviser', idempotencyKey: `cx-${c.token}-${c.step}`,
         });
     } catch { return 'failed'; }
@@ -403,9 +403,9 @@ export async function sendCxTest(o: { domain: string; to: string; email?: string
     }
     const base = await linkBaseFor(dom, s); const detail: string[] = []; let sent = 0;
     for (const d of drafts.filter((x) => !o.steps || o.steps.includes(x.step))) {
-        const m = renderCx(d, { token: seed, linkBase: base, unsubUrl: `${base}/u/${seed}`, mailingAddress: MAILING_ADDRESS });
+        const m = renderCx(d, { token: seed, linkBase: base, unsubUrl: `${base}/u/${seed}`, mailingAddress: MAILING_ADDRESS, linkFree: true });
         const r = await sendMail({ transport: 'resend', from: `${s.cx_from_display || 'Eric Huang'} <eric@${dom}>`, to, replyTo: s[`reply_to_${dom}`] || s.cx_reply_to || s.reply_to || undefined, subject: m.subject, text: m.text,
-            headers: { 'List-Unsubscribe': `<${base}/u/${seed}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' }, token: seed, step: 9, campaign: 'cx_test', idempotencyKey: `cxt-${seed}-${dom}-${d.step}-${Date.now()}` });
+            headers: {}, token: seed, step: 9, campaign: 'cx_test', idempotencyKey: `cxt-${seed}-${dom}-${d.step}-${Date.now()}` });
         detail.push(`E${d.step}: ${r.ok ? 'accepted' : `failed ${r.status}`}`); if (r.ok) sent++;
         await new Promise((x) => setTimeout(x, 1200));
     }

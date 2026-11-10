@@ -137,7 +137,11 @@ export const CX_DISCLAIMER = 'TradeMind publishes educational research. It is no
 
 const KIND: Record<string, string> = { HOME: 'h', SIM: 'v', VA: 'va', SUB: 'sw', CAL: 'cal', STUDY: 'f' };
 
-export function renderCx(d: { step: number; subject: string; body: string }, o: { token: string; linkBase: string; unsubUrl: string; mailingAddress: string }): { subject: string; text: string } {
+export function renderCx(d: { step: number; subject: string; body: string }, o: { token: string; linkBase: string; unsubUrl: string; mailingAddress: string; linkFree?: boolean }): { subject: string; text: string } {
+    if (o.linkFree) {
+        const plain = d.body.replace(/ \(\{\{HOME\}\}\)/g, '').replace(/\{\{[A-Z]+\}\}/g, '');
+        return { subject: d.subject, text: `${plain}\n\nEric Huang\nFounder, TradeMind\n\n${CX_FOOTER_LINE} Reply stop and I will not write again.\n${CX_DISCLAIMER}\n\n${o.mailingAddress}` };
+    }
     const link = (k: string) => `${o.linkBase}/r/${o.token}/${KIND[k]}?s=${d.step}`;
     let body = d.body.replace(/\{\{([A-Z]+)\}\}/g, (_m, k) => (KIND[k] ? link(k) : ''));
     const subLine = d.body.includes('{{SUB}}') ? '' : `Subscribe to the free weekly brief: ${link('SUB')}\n`;

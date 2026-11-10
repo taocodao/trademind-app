@@ -309,8 +309,11 @@ async function run(s: Record<string, string>, et: { date: string; hour: number; 
     for (const c of cands) {
         if (want <= 0) break;
         // Choose the domain: the first email's domain for a follow-up, else the usable domain with the most room.
+        const primary = (s.cx_primary_domain || 'vochat.ai').toLowerCase();
+        const restricted = await mxRestricted(c.email);
         let dom = c.domain && room.get(c.domain.toLowerCase()) ? c.domain.toLowerCase() : null;
-        if (!dom) { const best = [...room.entries()].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1])[0]; dom = best ? best[0] : null; }
+        if (restricted) dom = (room.get(primary) ?? 0) > 0 ? primary : null;
+        else if (!dom) { const best = [...room.entries()].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1])[0]; dom = best ? best[0] : null; }
         if (!dom || !(room.get(dom) ?? 0)) continue;
         if (Number(out.sent) + Number(out.failed) > 0) await new Promise((x) => setTimeout(x, 5000 + Math.floor(Math.random() * 25000)));
         const r = await sendCxOne(c, dom, s);
@@ -345,6 +348,23 @@ async function monitorCopy(c: Cand, domain: string, s: Record<string, string>): 
             headers: {}, token: seed, step: 9, campaign: 'cx_monitor', idempotencyKey: `cxm-${domain}-${n}-${to}` });
         await new Promise((x) => setTimeout(x, 1200));
     }
+}
+
+const MX_CACHE = new Map<string, boolean>();
+const MX_GATEWAY = /(protection\.outlook\.com|mail\.protection|pphosted\.com|ppe-hosted\.com|mimecast|iphmx\.com|barracuda)/i;
+/** True when the recipient domain is behind Microsoft 365 or a security gateway. Those contacts send only from the best tested domain. */
+async function mxRestricted(email: string): Promise<boolean> {
+    const dom = email.split('@')[1]?.toLowerCase() || '';
+    if (!dom) return true;
+    if (MX_CACHE.has(dom)) return MX_CACHE.get(dom)!;
+    let r = true;   // unknown or lookup failure: treat as restricted (safer)
+    try {
+        const { resolveMx } = await import('dns/promises');
+        const mx = await resolveMx(dom);
+        r = mx.length === 0 ? true : mx.some((m) => MX_GATEWAY.test(m.exchange));
+    } catch { r = true; }
+    MX_CACHE.set(dom, r);
+    return r;
 }
 
 async function linkBaseFor(domain: string, s: Record<string, string>): Promise<string> {

@@ -139,7 +139,10 @@ const KIND: Record<string, string> = { HOME: 'h', SIM: 'v', VA: 'va', SUB: 'sw',
 
 export function renderCx(d: { step: number; subject: string; body: string }, o: { token: string; linkBase: string; unsubUrl: string; mailingAddress: string; linkFree?: boolean }): { subject: string; text: string } {
     if (o.linkFree) {
-        const plain = d.body.replace(/ \(\{\{HOME\}\}\)/g, '').replace(/\{\{[A-Z]+\}\}/g, '');
+        const hi = (d.body.match(/^Hi [^,\n]{1,40},/) || ['Hi,'])[0];
+        const plain = d.step === 1
+            ? `${hi}\n\nI have a narrow question about QQQ. May I send you a five minute research sample?`
+            : d.body.replace(/ \(\{\{HOME\}\}\)/g, '').replace(/\{\{[A-Z]+\}\}/g, '');
         return { subject: d.subject, text: `${plain}\n\nEric Huang\nFounder, TradeMind\n\n${CX_FOOTER_LINE} Reply stop and I will not write again.\n${CX_DISCLAIMER}\n\n${o.mailingAddress}` };
     }
     const link = (k: string) => `${o.linkBase}/r/${o.token}/${KIND[k]}?s=${d.step}`;

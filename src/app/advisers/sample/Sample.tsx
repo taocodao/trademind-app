@@ -21,6 +21,7 @@ export default function Sample({ subscribeUrl, bookUrl }: { subscribeUrl: string
     const h2 = 'mt-12 text-2xl font-semibold scroll-mt-20';
     return (
         <main className="mx-auto max-w-3xl px-5 py-12 text-gray-200">
+            <a href="https://trademind.bot" className="mb-6 inline-block text-sm font-semibold text-blue-300 underline">TradeMind.bot, back to home</a>
             <p className="text-xs font-bold uppercase tracking-widest text-blue-300">Research for advisers</p>
             <h1 className="mt-2 text-3xl font-semibold text-white">A QQQ research sample you can read before any call</h1>
             <p className="mt-4">Nothing on this page is gated. Read an actual issue, see how the same facts can be explained for different client contexts, and inspect the record and its limits.</p>

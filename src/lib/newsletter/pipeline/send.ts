@@ -8,6 +8,7 @@ import { MAILING_ADDRESS } from '../email';
 import { makeDailyLinkToken } from '../daily-link';
 import { renderNewsletter, FAILED_RUN, type AccountBlock, type EditionInput } from '../edition-render';
 import type { FactsRun, StrategyFacts } from '@/lib/briefing/types';
+import { renderLinkEmail } from '../link-email';
 import { ensureEditionTables } from './db';
 import { toInput, type PublicPayload } from './build';
 
@@ -68,20 +69,21 @@ export function accountBlock(facts: FactsRun, a: NonNullable<Recipient['account'
     return { strategy: name, label, riskLevel: w.level, status: 'NO_CHANGE', lines: [`Keep your current model position: ${fmt(w.items)}.`] };
 }
 
-export async function renderFor(rcp: Recipient, kind: 'weekly' | 'daily', p: PublicPayload, date: string, facts: FactsRun | null) {
+export async function renderFor(rcp: Recipient, kind: 'weekly' | 'daily', p: PublicPayload, date: string, _facts: FactsRun | null) {
     const unsub = `${BASE_URL}/newsletter/unsubscribe?token=${await makeLongUnsubscribeToken(rcp.subscriberId)}`;
     const tok = makeDailyLinkToken(rcp.subscriberId);
-    const extra: Partial<EditionInput> = { linkToken: tok, unsubscribeUrl: unsub, preferencesUrl: `${BASE_URL}/newsletter/preferences?k=${encodeURIComponent(tok)}`, mailingAddress: `TradeMind, ${MAILING_ADDRESS}` };
-    const input = toInput(p, date, extra);
-    if (kind === 'daily' && rcp.account && facts) {
-        const block = accountBlock(facts, rcp.account);
-        if (block) {
-            input.kind = 'daily_signals'; input.account = block;
-            input.hook = block.status === 'FAILED' ? 'No new instruction today.' : block.status === 'CHANGE' ? `A change was published for your ${block.strategy} account.` : `No change to your ${block.strategy} account today.`;
-            input.preheader = block.status === 'FAILED' ? FAILED_RUN.slice(0, 80) : `Your ${block.strategy} status for today.`;
-        }
-    }
-    return { ...renderNewsletter(input), unsub };
+    // Subscriber emails carry only a link to the edition on the website. The edition itself is rendered on the site.
+    const subject = renderNewsletter(toInput(p, date, {})).subject;
+    const daily = kind === 'daily';
+    const m = renderLinkEmail({
+        subject, preheader: daily ? 'Your link to today\u2019s TradeMind daily brief.' : 'Your link to this week\u2019s TradeMind brief.',
+        heading: daily ? 'Today\u2019s brief is ready' : 'This week\u2019s brief is ready',
+        line: daily ? 'The daily brief is on the site. Open it with the button below.' : 'This week\u2019s brief is on the site. Open it with the button below.',
+        buttonLabel: daily ? 'Read the daily brief' : 'Read this week\u2019s brief',
+        url: `${BASE_URL}${daily ? '/newsletter/daily' : '/newsletter/current'}`,
+        unsubscribeUrl: unsub, preferencesUrl: `${BASE_URL}/newsletter/preferences?k=${encodeURIComponent(tok)}`, address: `TradeMind, ${MAILING_ADDRESS}`,
+    });
+    return { ...m, unsub };
 }
 
 export async function sendRendered(editionId: number, rcp: Recipient, m: { subject: string; html: string; text: string; unsub: string }, toOverride?: string): Promise<{ ok: boolean; error?: string }> {

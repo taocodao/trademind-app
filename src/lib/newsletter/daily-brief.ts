@@ -4,6 +4,7 @@
  * DAILY_BRIEF_SEND_ENABLED=1, and each subscriber gets at most one brief per day (ledger table).
  */
 import { query } from '@/lib/db';
+import { renderLinkEmail } from './link-email';
 import { ensureNewsletterTables, makeLongUnsubscribeToken } from './db';
 import { MAILING_ADDRESS } from './email';
 import { makeDailyLinkToken } from './daily-link';
@@ -92,7 +93,15 @@ export async function renderForRecipient(rcp: DailyRecipient, facts: DailyFacts,
         linkToken: makeDailyLinkToken(rcp.id), firstName: rcp.firstName, baseUrl: BASE_URL, mailingAddress: MAILING_ADDRESS,
         unsubscribeUrl: unsub, accountId: rcp.account?.id ?? null, editionDate: date, facts, account: rcp.account,
     });
-    return { ...r, unsub };
+    // Subscriber emails carry only a link to the daily brief on the website.
+    const tok = makeDailyLinkToken(rcp.id);
+    const m = renderLinkEmail({
+        subject: r.subject, preheader: 'Your link to today\u2019s TradeMind daily brief.', heading: 'Today\u2019s brief is ready',
+        line: 'The daily brief is on the site. Open it with the button below.', buttonLabel: 'Read the daily brief',
+        url: `${BASE_URL}/newsletter/daily`, firstName: rcp.firstName, unsubscribeUrl: unsub,
+        preferencesUrl: rcp.id ? `${BASE_URL}/newsletter/preferences?k=${encodeURIComponent(tok)}` : null, address: `TradeMind, ${MAILING_ADDRESS}`,
+    });
+    return { ...r, subject: m.subject, html: m.html, text: m.text, unsub };
 }
 
 export async function sendOne(rcp: DailyRecipient, facts: DailyFacts, date: string, hash: string, toOverride?: string): Promise<{ ok: boolean; error?: string }> {

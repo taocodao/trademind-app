@@ -57,7 +57,8 @@ async function handle(req: NextRequest, params: Promise<{ token: string; kind: s
     else if (kind === 'pl') dest = `/plans?t=${token}&${utm}`;
     else if (kind === 'i') {
         const a = req.nextUrl.searchParams.get('a') ?? '';
-        dest = `/newsletter/inside?t=${token}&${utm}${['weather', 'readout', 'flight', 'turbulence'].includes(a) ? `#${a}` : ''}`;
+        // The plain link opens the current issue; a section link opens the page that explains that section.
+        dest = a ? `/newsletter/inside?t=${token}&${utm}${['weather', 'readout', 'flight', 'turbulence'].includes(a) ? `#${a}` : ''}` : `/newsletter/current?t=${token}&${utm}`;
     } else if (kind === 'h') dest = `/?t=${token}&${utm}`;
     else if (kind === 'v') dest = `/simulated-record?t=${token}&${utm}`;
     else if (kind === 'c') dest = `/newsletter/verify?t=${token}&${utm}`;

@@ -37,7 +37,6 @@ export default async function JoinPage({
             if (c === 'daily' || c === 'weekly' || c === 'both') cadence = c;
         } catch { /* keep the default */ }
     }
-    const known = !!contact || (!!typedEmail && !!next);
     return (
         <main className="tm-nl">
             <div className="tm-nl-wrap-narrow">
@@ -45,9 +44,8 @@ export default async function JoinPage({
                 <h1 className="tm-nl-h1">Subscribe free</h1>
                 <p className="tm-nl-sub">
                     A free weekly brief on systematic investing: the market regime, what our ML research detects, one strategy concept, and what could go wrong.
-                    {known
-                        ? `Press Subscribe and your first issue arrives right away.${next ? ' Subscribing unlocks the 30% subscriber price, and you go straight back to the plans.' : ''} You can unsubscribe at any time.`
-                        : 'You will get a confirmation email first. Nothing is sent until you confirm.'}
+                    {' '}Press Subscribe weekly or Subscribe daily and you go straight to the current issue.
+                    {next ? ' Subscribing unlocks the 30% subscriber price, and you go straight back to the plans.' : ''} You can unsubscribe at any time.
                 </p>
                 <SignupForm source={contact ? 'coldlist' : 'plans-gate'} initialEmail={contact?.email ?? typedEmail} outreachToken={contact ? token : ''} nextPath={next} cadence={cadence} implicitConsent />
                 <p className="tm-nl-offerline">

@@ -9,6 +9,7 @@ export const metadata: Metadata = { title: 'Thank you - AI Investor Copilot by T
 
 export default async function ThanksPage({ searchParams }: { searchParams: Promise<{ t?: string; c?: string; already?: string }> }) {
     const { t, c, already } = await searchParams;
+    const daily = c === 'daily';
     const token = t && /^[A-Za-z0-9_-]{10,11}$/.test(t) ? t : '';
     return (
         <main className="tm-nl">
@@ -17,8 +18,13 @@ export default async function ThanksPage({ searchParams }: { searchParams: Promi
                 <h1 className="tm-nl-h1">Thank you, you are subscribed</h1>
                 <p className="tm-nl-sub">
                     {already
-                        ? 'You were already on the list, so there is nothing more to do. The next issue lands in your inbox.'
-                        : 'Your first issue is on its way. Check your inbox, and the Promotions or Spam folder the first time. If it lands there, move it to your inbox so the next one arrives where you expect it.'}
+                        ? 'You were already on the list, so there is nothing more to do. The current issue is one click away.'
+                        : 'You are in. The current issue is one click away, and we also emailed you the link so you can open it any time.'}
+                </p>
+                <p style={{ margin: '18px 0' }}>
+                    <Link href={daily ? '/newsletter/daily' : '/newsletter/current'} className="tm-nl-btn tm-nl-btn-primary">
+                        {daily ? 'Read the daily brief' : 'Read this week\u2019s issue'}
+                    </Link>
                 </p>
                 {token && <ThanksCadence token={token} initial={c === 'daily' ? 'daily' : 'weekly'} />}
                 <p className="tm-nl-offerline">
@@ -26,7 +32,7 @@ export default async function ThanksPage({ searchParams }: { searchParams: Promi
                     {' '}<Link href="/newsletter/offer" className="tm-nl-link">Offer terms</Link>
                 </p>
                 <p className="tm-nl-muted" style={{ fontSize: 13.5 }}>You can unsubscribe at any time from the link at the bottom of every email.</p>
-                <p><Link href="/newsletter" className="tm-nl-link">Read recent issues</Link></p>
+                <p>{daily ? <Link href="/newsletter/current" className="tm-nl-link">Read this week\u2019s issue</Link> : <Link href="/newsletter" className="tm-nl-link">Read recent issues</Link>}</p>
                 <NewsletterFooter />
             </div>
         </main>

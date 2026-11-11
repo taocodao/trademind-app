@@ -1,13 +1,13 @@
 'use client';
 
 /**
- * Newsletter signup: email + optional experience level + consent checkbox.
+ * Newsletter signup: email + optional experience level.
  * Captures UTM and referral parameters for attribution, carries a honeypot
  * field for bots, and offers resend plus a wrong-email path after submit.
- * On submit the server stores a pending subscriber and emails a
- * confirmation link (double opt-in).
+ * Two buttons, Subscribe weekly and Subscribe daily. Pressing one subscribes at once (no confirmation
+ * step) and goes to the thank-you page, which points to the current issue.
  */
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { trackNewsletter } from './track';
 import NewsletterShare from './NewsletterShare';
 
@@ -30,23 +30,18 @@ function attribution() {
     };
 }
 
-export default function SignupForm({ source, initialEmail, implicitConsent = false, outreachToken = '', nextPath = '', cadence: cadenceProp = 'weekly' }: { source: string; initialEmail?: string; implicitConsent?: boolean; outreachToken?: string; nextPath?: string; cadence?: 'weekly' | 'daily' | 'both' }) {
+export default function SignupForm({ source, initialEmail, implicitConsent = false, outreachToken = '', nextPath = '', cadence: _cadenceHint = 'weekly' }: { source: string; initialEmail?: string; implicitConsent?: boolean; outreachToken?: string; nextPath?: string; cadence?: 'weekly' | 'daily' | 'both' }) {
     const [email, setEmail] = useState(initialEmail ?? '');
-    const [wantWeekly, setWantWeekly] = useState(cadenceProp !== 'daily');
-    const [wantDaily, setWantDaily] = useState(cadenceProp !== 'weekly');
-    const cadence: 'weekly' | 'daily' | 'both' = wantWeekly && wantDaily ? 'both' : wantDaily ? 'daily' : 'weekly';
     const [experience, setExperience] = useState('');
     // The consent sentence sits under the button, so there is no checkbox.
     const consent = true;
     const [honeypot, setHoneypot] = useState('');
     const [busy, setBusy] = useState(false);
-    const [done, setDone] = useState<'pending' | 'already' | 'subscribed' | null>(null);
-    const [changeUrl, setChangeUrl] = useState<string | null>(null);
+    const [done, setDone] = useState<'already' | 'subscribed' | null>(null);
     const [showShare, setShowShare] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    async function submit(e: React.FormEvent) {
-        e.preventDefault();
+    async function submit(cadence: 'weekly' | 'daily') {
         if (busy) return;
         setBusy(true);
         setError(null);
@@ -69,13 +64,14 @@ export default function SignupForm({ source, initialEmail, implicitConsent = fal
             if (!res.ok) {
                 setError(data?.error ?? 'Something went wrong. Try again.');
             } else {
-                setDone(data.status === 'already-confirmed' ? 'already' : data.status === 'subscribed' ? 'subscribed' : 'pending');
+                const instantDone = data.status === 'subscribed' || data.status === 'already-confirmed';
+                if (instantDone && !nextPath && data.redirect) { window.location.href = data.redirect; return; }
+                setDone(data.status === 'already-confirmed' ? 'already' : 'subscribed');
                 if (nextPath && (data.status === 'subscribed' || data.status === 'already-confirmed')) {
                     setTimeout(() => {
                         window.location.href = `${nextPath}${nextPath.includes('?') ? '&' : '?'}email=${encodeURIComponent(email)}&sub=1`;
                     }, 1600);
                 }
-                setChangeUrl(data.changeUrl ?? null);
                 trackNewsletter('signup_submitted', { source, experience: experience || null });
             }
         } catch {
@@ -85,33 +81,17 @@ export default function SignupForm({ source, initialEmail, implicitConsent = fal
         }
     }
 
-    async function resend() {
-        await submit(new Event('submit') as unknown as React.FormEvent);
-    }
+    // The browser's own email check runs when a button is pressed.
+    const formRef = useRef<HTMLFormElement | null>(null);
+    function formOk() { return formRef.current ? formRef.current.reportValidity() : true; }
 
     if (done) {
         return (
             <div className="tm-nlsignup-done">
                 {done === 'subscribed' ? (
-                    <p className="tm-nlsignup-done-msg">You are subscribed. Your first issue is on its way, so check your inbox (and the Promotions or Spam folder the first time).</p>
-                ) : done === 'pending' ? (
-                    <>
-                        <p className="tm-nlsignup-done-msg">Check your inbox to confirm and unlock 30% off.</p>
-                        <p className="tm-nl-muted" style={{ fontSize: 13.5, margin: '0 0 12px' }}>
-                            Nothing arrived?{' '}
-                            <button type="button" onClick={resend} className="tm-nl-link" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit' }}>
-                                Resend the confirmation email
-                            </button>
-                            {changeUrl && (
-                                <>
-                                    {' · '}
-                                    <a href={changeUrl} className="tm-nl-link">Wrong email?</a>
-                                </>
-                            )}
-                        </p>
-                    </>
+                    <p className="tm-nlsignup-done-msg">You are subscribed. A link to the current issue is on its way to your inbox.</p>
                 ) : (
-                    <p className="tm-nlsignup-done-msg">You are already subscribed. The next issue lands in your inbox.</p>
+                    <p className="tm-nlsignup-done-msg">You are already subscribed.</p>
                 )}
                 {!showShare ? (
                     <button type="button" className="tm-nl-btn tm-nl-btn-ghost" onClick={() => setShowShare(true)}>
@@ -135,7 +115,7 @@ export default function SignupForm({ source, initialEmail, implicitConsent = fal
     }
 
     return (
-        <form className="tm-nlsignup" onSubmit={submit}>
+        <form ref={formRef} className="tm-nlsignup" onSubmit={(e) => e.preventDefault()}>
             <input
                 type="email"
                 required
@@ -166,20 +146,15 @@ export default function SignupForm({ source, initialEmail, implicitConsent = fal
                     <option key={l.value} value={l.value}>{l.label}</option>
                 ))}
             </select>
-            <fieldset className="tm-nl-cadence" style={{ border: 'none', padding: 0, margin: '2px 0 4px' }}>
-                <legend className="tm-nl-muted" style={{ fontSize: 13.5, padding: 0, marginBottom: 6 }}>What would you like to receive?</legend>
-                {([['Weekly', 'one issue a week', wantWeekly, setWantWeekly, wantDaily], ['Daily', 'a short brief every market day', wantDaily, setWantDaily, wantWeekly]] as const).map(([label, hint, on, set, other]) => (
-                    <label key={label} style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '4px 0', fontSize: 14.5, cursor: 'pointer' }}>
-                        <input type="checkbox" checked={on} onChange={(e) => set(e.target.checked || !other)} />
-                        <span><strong>{label}</strong> <span className="tm-nl-muted">{hint}</span></span>
-                    </label>
-                ))}
-                <span className="tm-nl-muted" style={{ fontSize: 12.5 }}>Check both to get both. At least one stays selected.</span>
-            </fieldset>
             {error && <p className="tm-nl-error" role="alert">{error}</p>}
-            <button type="submit" disabled={busy} className="tm-nl-btn tm-nl-btn-primary">
-                {busy ? 'Subscribing...' : 'Subscribe'}
-            </button>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <button type="button" disabled={busy} onClick={() => { if (formOk()) void submit('weekly'); }} className="tm-nl-btn tm-nl-btn-primary">
+                    {busy ? 'Subscribing...' : 'Subscribe weekly'}
+                </button>
+                <button type="button" disabled={busy} onClick={() => { if (formOk()) void submit('daily'); }} className="tm-nl-btn tm-nl-btn-ghost">
+                    Subscribe daily
+                </button>
+            </div>
             <p className="tm-nl-consent" style={{ margin: '4px 0 0' }}>
                 By subscribing you agree to receive The AI Systematic Investor and TradeMind offers. Unsubscribe any time.
             </p>

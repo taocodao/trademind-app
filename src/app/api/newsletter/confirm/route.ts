@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
     confirmByToken, previewConfirm, resendConfirmation, recordNewsletterEvent,
 } from '@/lib/newsletter/db';
-import { sendConfirmationEmail, sendWelcomeEmail } from '@/lib/newsletter/email';
+import { sendConfirmationEmail } from '@/lib/newsletter/email';
+import { sendSubscriberLink } from '@/lib/newsletter/link-send';
 import { markContactByEmail } from '@/lib/outreach/db';
 
 export const dynamic = 'force-dynamic';
@@ -27,15 +28,8 @@ export async function POST(req: NextRequest) {
 
         if (result.outcome === 'confirmed') {
             void markContactByEmail(result.email, 'confirmed');
-            void sendWelcomeEmail({
-                to: result.email,
-                code: result.code,
-                offerExpires: result.offerExpires,
-            });
-            // Issue 1 right away (double opt-in path); history decides what follows.
-            void import('@/lib/newsletter/send-engine')
-                .then(({ sendNextIssue }) => sendNextIssue(result.email, { bypassWindow: true }))
-                .catch((err) => console.error('[confirm] first issue send failed', err));
+            // The only email: a link to the current issue on the website.
+            await sendSubscriberLink({ email: result.email, subscriberId: result.subscriberId, cadence: 'weekly' });
             // SparkLoop conversions are reported only after confirmation.
             if (result.source === 'sparkloop' && result.partnerId) {
                 void reportSparkLoopConversion(result.subscriberId, result.partnerId);

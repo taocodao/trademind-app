@@ -13,6 +13,8 @@ import { makeUnsubscribeToken, recordNewsletterEvent } from './db';
 import { MAILING_ADDRESS } from './email';
 import { maskEmail } from './normalize';
 import { senderNameForIssue } from './sender-name';
+import { renderLinkEmail } from './link-email';
+import { makeDailyLinkToken } from './daily-link';
 import { isInviteVariant, renderInvite, type InviteVariant } from './invite-email';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
@@ -149,82 +151,25 @@ export async function renderIssueEmail(
         });
         return { subject: r.subject, html: r.html, text: r.text, unsubscribeUrl, listUnsubscribe: unsubscribeUrl };
     }
-    const lean = variant === 'lean' || variant === 'text';
-    const personal = variant === 'personal';
+    // Every subscriber email is a link to the issue on the website. Layout variants no longer change the content.
     const canonical = `${BASE_URL}${issueUrl(issue)}`;
     const unsubscribeUrl = `${BASE_URL}/newsletter/unsubscribe?token=${await makeUnsubscribeToken(sub.id)}`;
-    const firstName = greetingName(sub.first_name);
-    const viewUrl = lean ? canonical : `${canonical}?e=${encodeURIComponent(sub.email)}${sub.referral_id ? `&ref=${encodeURIComponent(sub.referral_id)}` : ''}`;
-    const claimUrl = `${BASE_URL}/plans?email=${encodeURIComponent(sub.email)}`;
-
-    const daysLeft = sub.window_end
-        ? Math.ceil((new Date(sub.window_end).getTime() - Date.now()) / 864e5)
-        : null;
-
-    // Email body: intro + the first three content sections, then read-on-web CTA.
-    const sections = issue.body.trim().split(/(?=^## )/m).filter((s) => s.trim());
-    const intro = sections[0] ?? '';
-    const firstThree = sections.slice(1, 4);
-    const bodyHtml = [intro, ...firstThree].map((s) => mdToHtml(s)).join('\n');
-
-    const deep = issue.deepLinks
-        .map((d) => `<a href="${BASE_URL}${d.href}" style="color:#8B5CF6">${esc(d.label)}</a>`)
-        .join(' &middot; ');
-
-    const refParam = sub.referral_id ? `?ref=${encodeURIComponent(sub.referral_id)}` : '';
-    const subscribeForForward = `${BASE_URL}/newsletter${refParam}`;
-    const shareUrl = `${canonical}?ref=${encodeURIComponent(sub.referral_id ?? '')}&utm_source=email&utm_medium=share&utm_campaign=${issue.slug}`;
-
-    const html = `<div style="font-family:Arial,sans-serif;color:#111827;max-width:580px;margin:0 auto">
-        <p style="font-size:12.5px;color:#9ca3af;margin:0 0 16px">
-            Trouble reading? <a href="${viewUrl}" style="color:#8B5CF6">View in browser</a>
-        </p>
-        <p style="font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:#8B5CF6;font-weight:bold;margin:0 0 6px">The AI Systematic Investor &middot; Issue ${issue.number}</p>
-        <h1 style="font-size:24px;line-height:1.25;margin:0 0 10px">${esc(issue.title)}</h1>
-        <p style="color:#6b7280;font-size:13px;margin:0 0 20px">Issue ${issue.number} &middot; ${esc(issue.readTime)} &middot; <a href="https://trademind.bot" style="color:#8B5CF6;text-decoration:underline">By TradeMindBot</a></p>
-        ${firstName ? `<p style="margin:0 0 18px;font-size:15px;color:#111827">Hello ${esc(firstName)},</p>` : ''}
-        ${bodyHtml}
-        <p style="margin:20px 0"><a href="${viewUrl}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:bold">Read the full issue</a></p>
-        <p style="font-size:13.5px;color:#6b7280">Go deeper: ${deep}</p>
-        ${lean ? '' : offerBlock(sub, daysLeft)}
-        ${lean ? '' : `<p style="font-size:13.5px;color:#6b7280">
-            Was this forwarded to you? <a href="${subscribeForForward}" style="color:#8B5CF6">Subscribe with your own email</a><br/>
-            Enjoying it? <a href="${shareUrl}" style="color:#8B5CF6">Share this issue</a>
-        </p>`}
-        <p style="font-size:12.5px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:14px;margin-top:28px">
-            ${esc(RISK_DISCLAIMER)}
-        </p>
-        <p style="font-size:12px;color:#9ca3af">
-            Sent to ${esc(maskEmail(sub.email))} &middot;
-            <a href="${BASE_URL}/newsletter/offer" style="color:#9ca3af">Offer terms</a> &middot;
-            <a href="${BASE_URL}/newsletter/disclosures" style="color:#9ca3af">Disclosures</a>${personal ? '' : ` &middot;
-            <a href="${unsubscribeUrl}" style="color:#9ca3af">Unsubscribe</a>`}
-        </p>
-        ${personal ? '<p style="font-size:14px;color:#111827;margin:18px 0 0">Eric<br/>CEO, TrademindBot Corp</p>' : ''}
-    </div>`;
-
-    const text = [
-        `The AI Systematic Investor - Issue ${issue.number}: ${issue.title}`,
-        `Issue ${issue.number} - ${issue.readTime} - By TradeMindBot (https://trademind.bot)`,
-        '',
-        ...(firstName ? [`Hello ${firstName},`, ''] : []),
-        issue.excerpt,
-        '',
-        `Read the full issue: ${canonical}`,
-        '',
-        ...(lean ? [] : [sub.discount_state === 'eligible' && sub.window_end
-            ? `Your 30% annual offer is active until ${fmtDate(sub.window_end)}. Log in at trademind.bot with this email address and it applies automatically: ${claimUrl}`
-            : `This address already carries 30% off a first-year plan. Log in with it to claim: ${claimUrl}`,
-        '']),
-        RISK_DISCLAIMER,
-        `TradeMind, ${MAILING_ADDRESS}`,
-        ...(personal ? ['', 'Eric', 'CEO, TrademindBot Corp'] : [`Unsubscribe: ${unsubscribeUrl}`]),
-    ].join('\n');
-
+    const m = renderLinkEmail({
+        subject: issue.emailSubject,
+        preheader: issue.excerpt,
+        heading: issue.title,
+        line: `Issue ${issue.number}, ${issue.readTime}. It is on the site: open it with the button below.`,
+        buttonLabel: 'Read the issue',
+        url: canonical,
+        firstName: greetingName(sub.first_name),
+        unsubscribeUrl,
+        preferencesUrl: `${BASE_URL}/newsletter/preferences?k=${encodeURIComponent(makeDailyLinkToken(sub.id))}`,
+        address: `TradeMind, ${MAILING_ADDRESS}`,
+    });
     return {
-        subject: personal && firstName ? `${firstName}, ${issue.emailSubject.replace(/ before another prediction$/i, '')}` : issue.emailSubject,
-        html: variant === 'text' ? '' : html,
-        text,
+        subject: m.subject,
+        html: variant === 'text' ? '' : m.html,
+        text: m.text,
         unsubscribeUrl,
         listUnsubscribe: unsubscribeUrl,
     };

@@ -294,7 +294,7 @@ export function locked(label: string, url: string, cta: string): string {
     return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:10px 0 4px;background:${C.lock};border:1px dashed #3a4a70;border-radius:10px;"><tr><td style="padding:14px 16px;${F}"><div style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:${C.amber};padding-bottom:6px;">Plan members only</div><div style="font-size:14px;line-height:1.6;color:${C.body};padding-bottom:12px;">${esc(label)}</div>${cta ? `<div style="font-size:14px;"><a href="${esc(url)}" style="color:${C.blue};text-decoration:underline;font-weight:600;">${esc(cta)} &rsaquo;</a></div>` : ''}</td></tr></table>`;
 }
 
-function weeklyIssue(o: Seq7Opts, url: (k: string, x?: string) => string, full: boolean): string {
+export function weeklyIssue(o: Seq7Opts, url: (k: string, x?: string) => string, full: boolean): string {
     const f = o.facts ?? SAMPLE_FACTS;
     const chips = [['\u2601\uFE0F','Market weather'], ['\u{1F9ED}','Copilot readout'], ['\u2708\uFE0F','Flight plan'], ['\u26A0\uFE0F','Turbulence test']].map(([i, c]) => `<td style="padding:0 6px 6px 0;"><span style="display:inline-block;${F}font-size:12px;font-weight:700;color:${C.fg};border:1px solid ${C.line};border-radius:8px;padding:7px 10px;background:${C.card};">${i}&nbsp;${c}</span></td>`).join('');
     const trend = f.trend ? `QQQ is ${f.trend} its 200 day average${f.trendChanged ? ', changed since the last reading.' : ', unchanged since the last reading.'}` : 'Not included this week.';
@@ -358,7 +358,9 @@ export function renderSeq7(o: Seq7Opts): { subject: string; text: string; html: 
     if (ria && !seconds.some(([k]) => k === 'sw')) seconds.push(['sw', 'Subscribe free']);
     const secondaryRow = (links: [string, string][]) => links.length ? row(`<div style="${F}font-size:14px;line-height:1.9;padding:4px 4px 14px;">${links.map(([k, l]) => tl(url(k), l)).join('&nbsp;&nbsp;&nbsp;')}</div>`) : '';
     const pollRow = n === 5 ? row(`<div style="${F}font-size:15px;font-weight:800;color:${C.fg};padding:2px 4px 6px;">Would you have kept following it?</div><div style="${F}font-size:14px;line-height:1.9;padding:0 4px 4px;">${[['qa', 'A. Yes, I would have waited'], ['qb', 'B. I would want a clearer explanation first'], ['qc', 'C. I would have walked away']].map(([k, l]) => tl(url(k), l)).join('<br>')}</div><div style="${F}font-size:12px;line-height:1.5;color:${C.muted};padding:4px 4px 14px;">There is no right answer. If you picked C, you are exactly who should test this for free.</div>`) : '';
-    const primaryRow = row(btn(url(primary[0]), primary[1])) + (primary[0] === 'sw' ? row(P('Weekly by default. Switch to daily any time.', 13, C.muted)) : '');
+    const primaryRow = primary[0] === 'sw'
+        ? row(btnPair(url('sw'), 'Subscribe weekly', url('sd'), 'Subscribe daily')) + row(P('Free. Choose weekly or daily.', 13, C.muted))
+        : row(btn(url(primary[0]), primary[1]));
 
     const H: string[] = [];
     H.push(row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="${F}font-size:18px;font-weight:800;color:${C.fg};"><a href="${esc(url('h'))}" style="color:${C.fg};text-decoration:none;">TradeMind<span style="color:${C.blue};">.bot</span></a></td><td align="right">${pill('Free research', C.blue, '#121a2e')}</td></tr></table>`) + sp(18));
@@ -384,7 +386,7 @@ export function renderSeq7(o: Seq7Opts): { subject: string; text: string; html: 
     H.push(row(P(DISCOUNT + ' ' + NOBROKER, 13, C.muted)));
     H.push(row(P('Reply to this email or write to me at eric@trademind.bot.', 14, C.body)));
     H.push(row(`<p style="margin:0 0 2px;${F}font-size:15px;color:${C.fg};font-weight:700;">Eric Huang</p><p style="margin:0 0 20px;${F}font-size:13px;color:${C.muted};">Founder, TradeMind &middot; Queens, New York</p>`));
-    H.push(row(`<div style="border-top:1px solid ${C.line};padding-top:14px;${F}font-size:11px;line-height:1.6;color:${C.muted};"><a href="${esc(url('sw'))}" style="color:${C.fg};font-weight:700;text-decoration:underline;">Subscribe to the free weekly brief</a><br>${o.audience === 'ria' ? 'You are getting this note at your business address because your firm is listed as an investment professional.' : 'You are getting this invitation because you subscribed to an investing publication.'} <a href="${esc(unsubUrl)}" style="color:${C.muted};text-decoration:underline;">Unsubscribe or snooze</a>.<br>TradeMind publishes educational research for self-directed investors. It is not personalized investment advice. All performance shown is hypothetical simulation unless labeled as a virtual account. Options and leveraged ETFs involve substantial risk, including loss of the amount invested.<br><br>${esc(o.mailingAddress)}</div>`));
+    H.push(row(`<div style="border-top:1px solid ${C.line};padding-top:14px;${F}font-size:11px;line-height:1.6;color:${C.muted};"><a href="${esc(url('sw'))}" style="color:${C.fg};font-weight:700;text-decoration:underline;">${o.audience === 'ria' ? 'Subscribe to the free weekly brief</a><br>' : `Subscribe weekly</a>&nbsp;&middot;&nbsp;<a href="${esc(url('sd'))}" style="color:${C.fg};font-weight:700;text-decoration:underline;">Subscribe daily</a><br>`}${o.audience === 'ria' ? 'You are getting this note at your business address because your firm is listed as an investment professional.' : 'You are getting this invitation because you subscribed to an investing publication.'} <a href="${esc(unsubUrl)}" style="color:${C.muted};text-decoration:underline;">Unsubscribe or snooze</a>.<br>TradeMind publishes educational research for self-directed investors. It is not personalized investment advice. All performance shown is hypothetical simulation unless labeled as a virtual account. Options and leveraged ETFs involve substantial risk, including loss of the amount invested.<br><br>${esc(o.mailingAddress)}</div>`));
 
     const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><title>${esc(f.subject)}</title></head><body style="margin:0;padding:0;background:${C.bg};"><div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(f.pre)}&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${C.bg}" style="background:${C.bg};"><tr><td align="center" style="padding:26px 14px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">${H.join('')}</table></td></tr></table></body></html>`;
 
@@ -397,8 +399,8 @@ export function renderSeq7(o: Seq7Opts): { subject: string; text: string; html: 
     T.push(`Why it matters: ${f.why}`, '');
     if (ria) T.push(COOP.title.toUpperCase(), COOP.intro, COOP.more, '');
     if (studyLead) T.push(STUDY_FULL.title.toUpperCase(), ...STUDY_FULL.body, STUDY_FULL.value, '');
-    T.push(`${primary[1]}: ${url(primary[0])}`);
-    if (primary[0] === 'sw') T.push('Weekly by default. Switch to daily any time.');
+    if (primary[0] === 'sw') T.push(`Subscribe weekly: ${url('sw')}`, `Subscribe daily: ${url('sd')}`, 'Free. Choose weekly or daily.');
+    else T.push(`${primary[1]}: ${url(primary[0])}`);
     T.push('');
     if (n === 5) T.push('Would you have kept following it?', `A. Yes, I would have waited: ${url('qa')}`, `B. I would want a clearer explanation first: ${url('qb')}`, `C. I would have walked away: ${url('qc')}`, '');
     for (const [k, l] of seconds) T.push(`${l}: ${url(k)}`);
@@ -413,7 +415,7 @@ export function renderSeq7(o: Seq7Opts): { subject: string; text: string; html: 
         `Virtual accounts: ${url('va')}`, `Simulation details: ${url('v')}`, '',
         `Plans and pricing: ${url('pl')}`, `Study program: ${url('f')}`, `trademind.bot: ${url('h')}`, '',
         DISCOUNT, NOBROKER, '', 'Reply to this email or write to me at eric@trademind.bot.', '', 'Eric Huang', 'Founder, TradeMind', '',
-        `Subscribe to the free weekly brief: ${url('sw')}`,
+        ...(o.audience === 'ria' ? [`Subscribe to the free weekly brief: ${url('sw')}`] : [`Subscribe weekly: ${url('sw')}`, `Subscribe daily: ${url('sd')}`]),
         `${o.audience === 'ria' ? 'You are getting this note at your business address because your firm is listed as an investment professional.' : 'You are getting this invitation because you subscribed to an investing publication.'} Unsubscribe or snooze: ${unsubUrl}`,
         o.mailingAddress, 'Educational research, not personalized investment advice. Investing involves risk, including loss.');
     return { subject: f.subject, text: T.join('\n'), html, unsubUrl, n };

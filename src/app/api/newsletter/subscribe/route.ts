@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-    signup, signupRateLimited, confirmInstantly, logNewsletterSend, setCadence,
+    signup, signupRateLimited, confirmInstantly, setCadence,
 } from '@/lib/newsletter/db';
-import { sendConfirmationEmail, sendWelcomeEmail } from '@/lib/newsletter/email';
-import { markContactByToken, getContact } from '@/lib/outreach/db';
-import { getPrivyUserId } from '@/lib/auth-helpers';
-import { query } from '@/lib/db';
+import { sendSubscriberLink } from '@/lib/newsletter/link-send';
+import { markContactByToken, validToken } from '@/lib/outreach/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,27 +17,6 @@ export async function POST(req: NextRequest) {
         const ua = req.headers.get('user-agent') ?? null;
         if (await signupRateLimited(ip)) {
             return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 });
-        }
-
-        // Someone using their personal invitation link, with the address we invited, subscribes on the spot:
-        // no confirmation email. Any other address (or no link) still gets the confirmation step.
-        let instant = body.instant === true;
-        if (body.outreachToken) {
-            const invited = await getContact(String(body.outreachToken));
-            const norm = (v: unknown) => String(v ?? '').trim().toLowerCase();
-            if (invited && norm(invited.email) === norm(body.email)) instant = true;
-        }
-
-        // A signed-in person subscribing with their own login email also subscribes on the spot.
-        if (!instant) {
-            try {
-                const did = await getPrivyUserId(req);
-                if (did) {
-                    const r = await query('SELECT login_email FROM user_settings WHERE user_id = $1', [did]);
-                    const norm = (v: unknown) => String(v ?? '').trim().toLowerCase();
-                    if (r.rows[0]?.login_email && norm(r.rows[0].login_email) === norm(body.email)) instant = true;
-                }
-            } catch { /* fall back to the confirmation email */ }
         }
 
         const result = await signup({
@@ -64,65 +41,30 @@ export async function POST(req: NextRequest) {
         if ('subscriberId' in result && result.subscriberId && (body.cadence === 'daily' || body.cadence === 'weekly' || body.cadence === 'both')) {
             await setCadence(result.subscriberId, body.cadence);
         }
+        const cadence: 'weekly' | 'daily' | 'both' = body.cadence === 'daily' ? 'daily' : body.cadence === 'both' ? 'both' : 'weekly';
+        const tok = body.outreachToken && validToken(String(body.outreachToken)) ? `&t=${String(body.outreachToken)}` : '';
+        const thanks = (extra = '') => `/newsletter/thanks?c=${cadence === 'daily' ? 'daily' : 'weekly'}${tok}${extra}`;
         if (result.kind === 'already-confirmed') {
-            return NextResponse.json({ ok: true, status: 'already-confirmed', message: "You're already subscribed" });
+            return NextResponse.json({ ok: true, status: 'already-confirmed', message: "You're already subscribed", redirect: thanks('&already=1') });
+        }
+        if (result.kind === 'moved-confirmed') {
+            return NextResponse.json({ ok: true, status: 'already-confirmed', moved: true, message: 'This subscription is already active at your current address.', redirect: thanks('&already=1') });
         }
 
-        // Instant mode (pricing popup): no confirmation step. The address is
-        // confirmed immediately and the first issue goes out right away, then
-        // issues 2-8 every two days and weekly after that (newsletter-drip cron).
-        if (instant && 'subscriberId' in result) {
+        // Every signup is instant: no confirmation email. The address is confirmed at once and the
+        // only email sent is a link to the current issue on the website.
+        if ('subscriberId' in result && result.subscriberId) {
             const conf = await confirmInstantly(result.subscriberId);
-            if (conf) {
-                // Web page "subscribe with your own email" sends only the first issue
-                // (skipWelcome), nothing else.
-                if (body.skipWelcome !== true) {
-                    void sendWelcomeEmail({ to: conf.email, code: conf.code ?? '', offerExpires: conf.windowEnd ?? '' })
-                        .then((ok) => logNewsletterSend({ email: conf.email, subscriberId: result.subscriberId, kind: 'welcome', ok }));
-                }
-                // Issue 1 goes out right away through the shared send engine; the
-                // send history (not a pointer) decides what each address gets next.
-                const { sendNextIssue } = await import('@/lib/newsletter/send-engine');
-                try {
-                    await sendNextIssue(conf.email, {
-                        bypassWindow: true,
-                        subscriber: {
-                            id: result.subscriberId,
-                            discount_state: 'eligible',
-                            window_end: conf.windowEnd,
-                        },
-                    });
-                } catch (err) {
-                    // The hourly drip picks this address up from its (empty) history.
-                    console.error('[subscribe] first issue send failed', err);
-                }
-            }
+            if (!conf) return NextResponse.json({ error: 'Subscription failed' }, { status: 500 });
+            await sendSubscriberLink({ email: conf.email, subscriberId: result.subscriberId, cadence });
             const returning = 'returning' in result && result.returning === true;
             return NextResponse.json({
                 ok: true, status: 'subscribed', returning,
-                message: returning
-                    ? 'Welcome back. Issue 1 is on its way.'
-                    : 'Subscribed. Check your inbox: the first issue is on its way.',
+                message: returning ? 'Welcome back. You are subscribed.' : 'You are subscribed.',
+                redirect: thanks(),
             });
         }
-        if (result.kind === 'moved-confirmed') {
-            return NextResponse.json({ ok: true, status: 'already-confirmed', moved: true, message: 'This subscription is already active at your current address.' });
-        }
-
-        const emailed = await sendConfirmationEmail({
-            to: result.email,
-            confirmToken: result.confirmToken,
-            changeToken: result.changeToken,
-        });
-        await logNewsletterSend({ email: result.email, subscriberId: result.subscriberId, kind: 'confirm', ok: emailed });
-
-        return NextResponse.json({
-            ok: true,
-            status: 'pending',
-            emailed,
-            message: 'Check your inbox to confirm and unlock 30% off.',
-            changeUrl: `/newsletter/change-email?token=${result.changeToken}`,
-        });
+        return NextResponse.json({ error: 'Subscription failed' }, { status: 500 });
     } catch (err) {
         console.error('[newsletter/subscribe]', err);
         return NextResponse.json({ error: 'Subscription failed' }, { status: 500 });

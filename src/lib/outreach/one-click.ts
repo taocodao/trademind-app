@@ -1,7 +1,7 @@
 import { query } from '@/lib/db';
 import { getContact, hashIp, markContactByToken, CAMPAIGN } from '@/lib/outreach/db';
-import { signup, confirmInstantly, logNewsletterSend, setCadence } from '@/lib/newsletter/db';
-import { sendWelcomeEmail } from '@/lib/newsletter/email';
+import { signup, confirmInstantly, setCadence } from '@/lib/newsletter/db';
+import { sendSubscriberLink } from '@/lib/newsletter/link-send';
 
 export type OneClickResult = 'subscribed' | 'already' | 'form';
 
@@ -55,17 +55,8 @@ export async function oneClickSubscribe(o: {
         const conf = await confirmInstantly(result.subscriberId);
         if (!conf) return 'form';
         void markContactByToken(o.token, c.email, 'subscribed');
-        void sendWelcomeEmail({ to: conf.email, code: conf.code ?? '', offerExpires: conf.windowEnd ?? '' })
-            .then((ok) => logNewsletterSend({ email: conf.email, subscriberId: result.subscriberId, kind: 'welcome', ok }));
-        try {
-            const { sendNextIssue } = await import('@/lib/newsletter/send-engine');
-            await sendNextIssue(conf.email, {
-                bypassWindow: true,
-                subscriber: { id: result.subscriberId, discount_state: 'eligible', window_end: conf.windowEnd },
-            });
-        } catch (err) {
-            console.error('[one-click] first issue send failed', err);
-        }
+        // The only email: a link to the current issue on the website.
+        await sendSubscriberLink({ email: conf.email, subscriberId: result.subscriberId, cadence: o.cadence });
         return 'subscribed';
     } catch (err) {
         console.error('[one-click]', err);

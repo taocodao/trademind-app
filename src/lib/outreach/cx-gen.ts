@@ -3,7 +3,7 @@
  * Pure functions, no database and no network. The model call is passed in by the runner.
  *
  * Design: four emails. Email 1 is a short offer of the sample (no figures). Email 2 carries the simulation sentence and the limits sentence.
- * Email 3 shows the virtual accounts and the weekly brief. Email 4 is a polite stop note. Arm A has no link in any email, arm B has one.
+ * Email 3 shows the virtual accounts and the weekly brief. Email 4 is a short close note. Arm A has no link in any email, arm B has one.
  * The model never types the fixed sentences: it writes [[SIM_SENTENCE]], [[LIMITS_SENTENCE]], [[ML_SENTENCE]] and [[LINK]], the script swaps them in.
  */
 import { createHash } from 'crypto';
@@ -121,7 +121,7 @@ export function userPrompt(emailId: EmailId, i: GenInput, previous: string[], en
         return `EMAIL 3 (new subject, business day 6)\nfirst_name=${i.firstName} arm=${i.arm} subject_ending=${ending}\n${prev}\nclick_data=none\n\nsubject = "${i.firstName}, ${ending}"\nP1: one sentence offering a new angle: they do not have to take the simulation on trust. At most 14 words.\nP2: two virtual accounts have followed the signals since mid October 2026, shown with a five day delay. Say they are not real money. At most 25 words.\nP3: exactly "[[ML_SENTENCE]]"\nP4: exactly "${p4}"\nNo simulation figures. Body total under 80 words.`;
     }
     const p3 = i.arm === 'A' ? 'Should I send them, or close your file?' : 'Here they are if useful: [[LINK]] Should I close your file?';
-    return `EMAIL 4 (business day 10)\nfirst_name=${i.firstName} arm=${i.arm}\n${prev}\n\nP1: exactly "I will stop writing about this for now."\nP2: one sentence saying the sample and the weekly brief stay open to advisers if a second read on QQQ helps later.\nP3: exactly "${p3}"\nBody total under 45 words. Never use the words final or last.`;
+    return `EMAIL 4 (business day 10)\nfirst_name=${i.firstName} arm=${i.arm}\n${prev}\n\nP1: one sentence saying the sample and the weekly brief stay open to advisers if a second read on QQQ helps later. At most 22 words. Do not say you will stop writing.\nP2: exactly "${p3}"\nBody total under 45 words. Never use the words final or last.`;
 }
 
 // ---------- fixed fallback ----------
@@ -133,7 +133,7 @@ export function fallbackEmail(emailId: EmailId, i: GenInput, ending: string): Ge
     if (emailId === 1) paras = [`${FALLBACK_HOOK} This note is about ${seg}.`, E1_P2, E1_P3 + (i.segment === 'large_firm' ? " This is not meant to replace your firm's research." : ''), i.arm === 'A' ? ctaA(i.token) : 'Would you be open to reviewing the sample research? [[LINK]]'];
     if (emailId === 2) { paras = ['The reason I asked: the drop and the limits matter more than the gain.', '[[SIM_SENTENCE]] [[LIMITS_SENTENCE]]', i.arm === 'A' ? 'Worth a look at the methodology?' : 'Worth a look at the methodology? [[LINK]]']; subject = ''; }
     if (emailId === 3) paras = ['You do not have to take the simulation on trust.', 'Two virtual accounts have followed the signals since mid October 2026, shown with a five day delay. They are not real money.', '[[ML_SENTENCE]]', i.arm === 'A' ? 'Open to getting the weekly brief?' : 'Open to getting the weekly brief? [[LINK]]'];
-    if (emailId === 4) { paras = ['I will stop writing about this for now.', 'The sample and the weekly brief stay open to advisers if a second read on QQQ helps later.', i.arm === 'A' ? 'Should I send them, or close your file?' : 'Here they are if useful: [[LINK]] Should I close your file?']; subject = ''; }
+    if (emailId === 4) { paras = ['The sample and the weekly brief stay open to advisers if a second read on QQQ helps later.', i.arm === 'A' ? 'Should I send them, or close your file?' : 'Here they are if useful: [[LINK]] Should I close your file?']; subject = ''; }
     const e: GenEmail = { emailId, subject, greeting: hi, paragraphs: paras, facts: [], level: 'none', words: 0, source: 'fallback', problems: [] };
     e.words = bodyWords(e.paragraphs);
     return e;
@@ -191,6 +191,7 @@ export function checkEmail(e: { emailId: EmailId; subject: string; greeting: str
     const scan = `${e.subject} ${own}`.toLowerCase();
     for (const b of BANNED) if (new RegExp(`(^|[^a-z])${b.replace(/ /g, '\\s+')}([^a-z]|$)`).test(scan)) errs.push(`banned word ${b}`);
     for (const b of ['I saw', 'I noticed', 'I hope', 'My name is']) if (norm(own).includes(b.toLowerCase())) errs.push(`banned phrase ${b}`);
+    if (/stop writing|will stop/i.test(full)) errs.push('do not say you will stop writing');
     // question
     const qs = (full.match(/\?/g) || []).length;
     if (qs !== 1) errs.push(`needs exactly one question mark, found ${qs}`);
@@ -222,7 +223,7 @@ export function checkEmail(e: { emailId: EmailId; subject: string; greeting: str
     }
     // repeats
     const prevSentences = new Set(previous.flatMap((p) => expand(p).split(/(?<=[.?!])\s+/).map(norm)).filter((s) => s.length > 25));
-    for (const s of full.split(/(?<=[.?!])\s+/).map(norm)) if (s.length > 25 && prevSentences.has(s) && !FIXED_TEXT.some((f) => norm(f).includes(s)) && !(e.emailId === 4 && s.includes('i will stop'))) errs.push(`repeated sentence: ${s.slice(0, 40)}`);
+    for (const s of full.split(/(?<=[.?!])\s+/).map(norm)) if (s.length > 25 && prevSentences.has(s) && !FIXED_TEXT.some((f) => norm(f).includes(s))) errs.push(`repeated sentence: ${s.slice(0, 40)}`);
     // sentence length
     for (const s of own.split(/(?<=[.?!])\s+/)) if (s.split(/\s+/).filter(Boolean).length > 28) errs.push('sentence too long');
     return errs;

@@ -50,8 +50,10 @@ r = G.finishEmail(3, model({ p: ['You do not have to take this on trust.', 'Two 
 t('sim tokens outside email 2 rejected', !r.email);
 r = G.finishEmail(3, model({ p: ['You do not have to take this on trust.', 'Two virtual accounts have followed the signals since mid October 2026, shown with a five day delay. They are not real money.', '[[ML_SENTENCE]]', 'Open to getting the weekly brief? [[LINK]]'] }), base, G.SUBJECT_ENDING_3, []);
 t('good email 3 passes', !!r.email, r.problems.join('; '));
-r = G.finishEmail(4, model({ p: ['I will stop writing about this for now.', 'The sample and the weekly brief stay open to advisers if a second read on QQQ helps later.', 'Here they are if useful: [[LINK]] Should I close your file?'] }), base, '', []);
+r = G.finishEmail(4, model({ p: ['The sample and the weekly brief stay open to advisers if a second read on QQQ helps later.', 'Here they are if useful: [[LINK]] Should I close your file?'] }), base, '', []);
 t('good email 4 passes', !!r.email, r.problems.join('; '));
+r = G.finishEmail(4, model({ p: ['I will stop writing about this for now.', 'The sample and the weekly brief stay open to advisers if a second read on QQQ helps later.', 'Should I send them, or close your file?'] }), A, '', []);
+t('email 4 may not say stop writing', !r.email);
 // fallback emails pass the same checks for both arms and every email
 for (const arm of ['A', 'B']) for (const id of [1, 2, 3, 4]) {
   const inp = { ...base, arm }; const end = id === 3 ? G.SUBJECT_ENDING_3 : end1; const fb = G.fallbackEmail(id, inp, end);

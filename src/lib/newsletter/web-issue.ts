@@ -5,7 +5,7 @@
  * that are passed in.
  */
 import {
-    C, F, row, sp, card, btn, btnPair, pill, P, esc, why, example, FOCUS, THEME, THEME_SUB, DISCOUNT, NOBROKER, weeklyIssue,
+    C, F, row, sp, card, btn, btnPair, pill, P, esc, why, FOCUS, THEME, THEME_SUB, DISCOUNT, NOBROKER, weeklyIssue,
     type Seq7Opts, type IssueFacts,
 } from '@/lib/outreach/copy-seq7';
 
@@ -81,7 +81,7 @@ export function currentIssueHtml(facts: IssueFacts, token: string, strategyMembe
     for (let i = 0; i < tiles.length; i += 2) {
         tileRows.push(`<tr>${tiles.slice(i, i + 2).map(([k, l]) => `<td width="50%" style="padding:4px;">${btn(url(k), l, 'outline', true)}</td>`).join('')}</tr>`);
     }
-    const focusCard = card(`${pill('\u{1F4EC} ' + f.pill)}<div style="height:10px;"></div><div style="${F}font-size:20px;font-weight:800;color:${C.fg};line-height:1.3;padding-bottom:10px;">${esc(f.title)}</div>${f.body.map((b) => P(b)).join('')}${why(f.why)}${f.example ? example(f.example) : ''}`, C.green);
+    const focusCard = card(`${pill('\u{1F4EC} ' + f.pill)}<div style="height:10px;"></div><div style="${F}font-size:20px;font-weight:800;color:${C.fg};line-height:1.3;padding-bottom:10px;">${esc(f.title)}</div>${f.body.map((b) => P(b)).join('')}${why(f.why)}`, C.green);
     const inner = [
         header(),
         row(`<div style="${F}font-size:26px;font-weight:800;line-height:1.25;color:${C.fg};">${esc(THEME.split('.')[0])}. <span style="color:${C.blue};">${esc(THEME.split('.').slice(1).join('.').trim())}</span></div><div style="${F}font-size:13px;color:${C.muted};padding-top:6px;">${esc(THEME_SUB)}</div>`) + sp(20),

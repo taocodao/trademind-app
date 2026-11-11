@@ -15,24 +15,23 @@ const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://trademind.bot';
 
 export type Cadence = 'weekly' | 'daily' | 'both';
 
-/** Where the current issue lives on the site. Daily readers get the daily page, everyone else the weekly issue. */
-export function currentIssuePath(cadence: Cadence | string | null | undefined): string {
-    return cadence === 'daily' ? '/newsletter/daily' : '/newsletter/current';
+/** Where the current issue lives on the site. Everyone starts at the current weekly issue; the daily page is linked from daily edition emails. */
+export function currentIssuePath(_cadence?: Cadence | string | null): string {
+    return '/newsletter/current';
 }
 
 export async function sendSubscriberLink(o: { email: string; subscriberId: number; cadence: Cadence | string | null }): Promise<boolean> {
     if (!RESEND_API_KEY) { console.warn('[link email] RESEND_API_KEY not configured'); return false; }
     try {
-        const daily = o.cadence === 'daily';
-        const facts = daily ? null : await liveFacts(new Date());
+        const facts = await liveFacts(new Date());
         const tok = makeDailyLinkToken(o.subscriberId);
         const unsubscribeUrl = `${BASE_URL}/newsletter/unsubscribe?token=${await makeLongUnsubscribeToken(o.subscriberId)}`;
         const m = renderLinkEmail({
-            subject: daily ? 'You are subscribed. Read the daily brief' : `You are subscribed. Read the brief for the ${facts!.weekLabel.toLowerCase()}`,
-            preheader: daily ? 'Your link to the TradeMind daily brief.' : 'Your link to the current TradeMind weekly brief.',
+            subject: `You are subscribed. Read the brief for the ${facts.weekLabel.toLowerCase()}`,
+            preheader: 'Your link to the current TradeMind brief.',
             heading: 'You are subscribed',
-            line: daily ? 'The daily brief is on the site. Open it with the button below.' : 'This week\u2019s brief is on the site. Open it with the button below.',
-            buttonLabel: daily ? 'Read the daily brief' : 'Read this week\u2019s brief',
+            line: 'The current brief is on the site. Open it with the button below.',
+            buttonLabel: 'Read the current brief',
             url: `${BASE_URL}${currentIssuePath(o.cadence)}`,
             unsubscribeUrl,
             preferencesUrl: `${BASE_URL}/newsletter/preferences?k=${encodeURIComponent(tok)}`,

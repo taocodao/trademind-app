@@ -76,10 +76,7 @@ export async function renderFor(rcp: Recipient, kind: 'weekly' | 'daily', p: Pub
     const subject = renderNewsletter(toInput(p, date, {})).subject;
     const daily = kind === 'daily';
     const m = renderLinkEmail({
-        subject, preheader: daily ? 'Your link to today\u2019s TradeMind daily brief.' : 'Your link to this week\u2019s TradeMind brief.',
-        heading: daily ? 'Today\u2019s brief is ready' : 'This week\u2019s brief is ready',
-        line: daily ? 'The daily brief is on the site. Open it with the button below.' : 'This week\u2019s brief is on the site. Open it with the button below.',
-        buttonLabel: daily ? 'Read the daily brief' : 'Read this week\u2019s brief',
+        subject, description: daily ? 'The daily TradeMind brief is on the site: one short idea and one risk for the market day.' : 'This week\u2019s TradeMind brief is on the site: market weather, a flight plan idea and a turbulence test, risk first. About five minutes.',
         url: `${BASE_URL}${daily ? '/newsletter/daily' : '/newsletter/current'}`,
         unsubscribeUrl: unsub, preferencesUrl: `${BASE_URL}/newsletter/preferences?k=${encodeURIComponent(tok)}`, address: `TradeMind, ${MAILING_ADDRESS}`,
     });
@@ -97,7 +94,7 @@ export async function sendRendered(editionId: number, rcp: Recipient, m: { subje
     try {
         const res = await fetch('https://api.resend.com/emails', {
             method: 'POST', headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ from: FROM, reply_to: REPLY_TO, to: toOverride ?? rcp.email, subject: (toOverride ? '[Sample] ' : '') + m.subject, html: m.html, text: m.text,
+            body: JSON.stringify({ from: FROM, reply_to: REPLY_TO, to: toOverride ?? rcp.email, subject: (toOverride ? '[Sample] ' : '') + m.subject, text: m.text,
                 headers: { 'List-Unsubscribe': `<${m.unsub.replace('/newsletter/unsubscribe?', '/api/newsletter/unsubscribe?')}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } }),
         });
         const body = await res.json().catch(() => ({}));

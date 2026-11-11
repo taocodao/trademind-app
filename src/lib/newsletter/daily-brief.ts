@@ -96,12 +96,11 @@ export async function renderForRecipient(rcp: DailyRecipient, facts: DailyFacts,
     // Subscriber emails carry only a link to the daily brief on the website.
     const tok = makeDailyLinkToken(rcp.id);
     const m = renderLinkEmail({
-        subject: r.subject, preheader: 'Your link to today\u2019s TradeMind daily brief.', heading: 'Today\u2019s brief is ready',
-        line: 'The daily brief is on the site. Open it with the button below.', buttonLabel: 'Read the daily brief',
+        subject: r.subject, description: 'The daily TradeMind brief is on the site: one short idea and one risk for the market day.',
         url: `${BASE_URL}/newsletter/daily`, firstName: rcp.firstName, unsubscribeUrl: unsub,
         preferencesUrl: rcp.id ? `${BASE_URL}/newsletter/preferences?k=${encodeURIComponent(tok)}` : null, address: `TradeMind, ${MAILING_ADDRESS}`,
     });
-    return { ...r, subject: m.subject, html: m.html, text: m.text, unsub };
+    return { ...r, subject: m.subject, html: '', text: m.text, unsub };
 }
 
 export async function sendOne(rcp: DailyRecipient, facts: DailyFacts, date: string, hash: string, toOverride?: string): Promise<{ ok: boolean; error?: string }> {
@@ -117,7 +116,7 @@ export async function sendOne(rcp: DailyRecipient, facts: DailyFacts, date: stri
         const res = await fetch('https://api.resend.com/emails', {
             method: 'POST', headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                from: FROM, reply_to: REPLY_TO, to: toOverride ?? rcp.email, subject: (toOverride ? '[Sample] ' : '') + m.subject, html: m.html, text: m.text,
+                from: FROM, reply_to: REPLY_TO, to: toOverride ?? rcp.email, subject: (toOverride ? '[Sample] ' : '') + m.subject, text: m.text,
                 headers: { 'List-Unsubscribe': `<${m.unsub.replace('/newsletter/unsubscribe?', '/api/newsletter/unsubscribe?')}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
             }),
         });

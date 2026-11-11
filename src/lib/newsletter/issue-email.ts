@@ -156,10 +156,7 @@ export async function renderIssueEmail(
     const unsubscribeUrl = `${BASE_URL}/newsletter/unsubscribe?token=${await makeUnsubscribeToken(sub.id)}`;
     const m = renderLinkEmail({
         subject: issue.emailSubject,
-        preheader: issue.excerpt,
-        heading: issue.title,
-        line: `Issue ${issue.number}, ${issue.readTime}. It is on the site: open it with the button below.`,
-        buttonLabel: 'Read the issue',
+        description: `Issue ${issue.number}: ${issue.title}. ${issue.excerpt}`,
         url: canonical,
         firstName: greetingName(sub.first_name),
         unsubscribeUrl,
@@ -168,7 +165,7 @@ export async function renderIssueEmail(
     });
     return {
         subject: m.subject,
-        html: variant === 'text' ? '' : m.html,
+        html: '',
         text: m.text,
         unsubscribeUrl,
         listUnsubscribe: unsubscribeUrl,

@@ -12,7 +12,9 @@ export async function GET(req: NextRequest) {
     // A personal link turns the subscribe buttons into one-click links for that invited contact.
     let token = '';
     if (raw && validToken(raw)) { try { if (await getContact(raw)) token = raw; } catch { /* no token */ } }
-    const html = currentIssueHtml(await liveFacts(new Date()), token);
+    const embed = req.nextUrl.searchParams.get('embed') === '1';
+    let html = currentIssueHtml(await liveFacts(new Date()), embed ? '' : token, false, embed);
+    if (embed) html = html.replace('<head>', '<head><base target="_top">');
     return new Response(html, {
         status: 200,
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': token ? 'private, no-store' : 'public, s-maxage=300, stale-while-revalidate=600' },

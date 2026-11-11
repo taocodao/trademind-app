@@ -72,7 +72,7 @@ function footer(): string {
 }
 
 /** The weekly issue page: the same layout as the first invitation email, with the two subscribe buttons. */
-export function currentIssueHtml(facts: IssueFacts, token: string, strategyMember = false): string {
+export function currentIssueHtml(facts: IssueFacts, token: string, strategyMember = false, embed = false): string {
     const o = { facts, strategyMember, token, firstName: null, baseUrl: BASE_URL, mailingAddress: ADDRESS, step: 1, n: 1 } as unknown as Seq7Opts;
     const url = (k: string) => link(k);
     const f = FOCUS[1];
@@ -83,17 +83,16 @@ export function currentIssueHtml(facts: IssueFacts, token: string, strategyMembe
     }
     const focusCard = card(`${pill('\u{1F4EC} ' + f.pill)}<div style="height:10px;"></div><div style="${F}font-size:20px;font-weight:800;color:${C.fg};line-height:1.3;padding-bottom:10px;">${esc(f.title)}</div>${f.body.map((b) => P(b)).join('')}${why(f.why)}`, C.green);
     const inner = [
-        header(),
+        ...(embed ? [] : [header()]),
         row(`<div style="${F}font-size:26px;font-weight:800;line-height:1.25;color:${C.fg};">${esc(THEME.split('.')[0])}. <span style="color:${C.blue};">${esc(THEME.split('.').slice(1).join('.').trim())}</span></div><div style="${F}font-size:13px;color:${C.muted};padding-top:6px;">${esc(THEME_SUB)}</div>`) + sp(20),
         row(`<div style="${F}font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.muted};padding:4px 4px 8px;">Explore</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${tileRows.join('')}</table>`) + sp(14),
         focusCard,
-        subscribeBlock(token),
+        ...(embed ? [] : [subscribeBlock(token)]),
         weeklyIssue(o, (k) => url(k), true),
-        subscribeBlock(token, 'Get the next one in your inbox'),
+        ...(embed ? [] : [subscribeBlock(token, 'Get the next one in your inbox')]),
         row(P(DISCOUNT + ' ' + NOBROKER, 13, C.muted)),
-        row(P('Write to me at eric@trademind.bot.', 14, C.body)),
-        row(`<p style="margin:0 0 2px;${F}font-size:15px;color:${C.fg};font-weight:700;">Eric Huang</p><p style="margin:0 0 20px;${F}font-size:13px;color:${C.muted};">Founder, TradeMind &middot; Queens, New York</p>`),
-        footer(),
+        ...(embed ? [] : [row(P('Write to me at eric@trademind.bot.', 14, C.body))]),
+        ...(embed ? [] : [row(`<p style="margin:0 0 2px;${F}font-size:15px;color:${C.fg};font-weight:700;">Eric Huang</p><p style="margin:0 0 20px;${F}font-size:13px;color:${C.muted};">Founder, TradeMind &middot; Queens, New York</p>`), footer()]),
     ].join('');
     return shell(`Flight Plan: ${facts.weekLabel.toLowerCase()} | TradeMind`, 'A free weekly QQQ brief, risk first: market weather, copilot readout, flight plan and turbulence test.', inner);
 }

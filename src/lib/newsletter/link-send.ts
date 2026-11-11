@@ -28,10 +28,7 @@ export async function sendSubscriberLink(o: { email: string; subscriberId: numbe
         const unsubscribeUrl = `${BASE_URL}/newsletter/unsubscribe?token=${await makeLongUnsubscribeToken(o.subscriberId)}`;
         const m = renderLinkEmail({
             subject: `You are subscribed. Read the brief for the ${facts.weekLabel.toLowerCase()}`,
-            preheader: 'Your link to the current TradeMind brief.',
-            heading: 'You are subscribed',
-            line: 'The current brief is on the site. Open it with the button below.',
-            buttonLabel: 'Read the current brief',
+            description: 'Welcome. The current TradeMind brief is on the site: market weather, the copilot readout, a flight plan idea and a turbulence test, risk first. About five minutes.',
             url: `${BASE_URL}${currentIssuePath(o.cadence)}`,
             unsubscribeUrl,
             preferencesUrl: `${BASE_URL}/newsletter/preferences?k=${encodeURIComponent(tok)}`,
@@ -41,7 +38,7 @@ export async function sendSubscriberLink(o: { email: string; subscriberId: numbe
             method: 'POST',
             headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                from: FROM, reply_to: REPLY_TO, to: o.email, subject: m.subject, html: m.html, text: m.text,
+                from: FROM, reply_to: REPLY_TO, to: o.email, subject: m.subject, text: m.text,
                 headers: {
                     'List-Unsubscribe': `<${unsubscribeUrl.replace('/newsletter/unsubscribe?', '/api/newsletter/unsubscribe?')}>`,
                     'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',

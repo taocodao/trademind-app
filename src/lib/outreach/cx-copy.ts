@@ -128,14 +128,14 @@ export function checkDraft(d: CxDraft): string[] {
     if (d.step === 1 && !d.body.includes(LIMITS_LINE)) e.push('limits line missing');
     if (d.step === 1 && !d.body.includes('{{HOME}}')) e.push('home link missing');
     if (d.step === 1 && !/\?\s*$/.test(d.body)) e.push('E1 must end with one question');
-    if (/\{\{/.test(d.body.replace(/\{\{(HOME|SIM|VA|SUB|CAL|STUDY)\}\}/g, ''))) e.push('unknown merge token');
+    if (/\{\{/.test(d.body.replace(/\{\{(ADV|HOME|SIM|VA|SUB|CAL|STUDY)\}\}/g, ''))) e.push('unknown merge token');
     return e;
 }
 
 export const CX_FOOTER_LINE = 'You are getting this note at your business address because your firm is listed as an investment professional.';
 export const CX_DISCLAIMER = 'TradeMind publishes educational research. It is not personalized investment advice. All performance shown is hypothetical simulation unless labeled as a virtual account. Options and leveraged ETFs involve substantial risk, including loss of the amount invested.';
 
-const KIND: Record<string, string> = { HOME: 'h', SIM: 'v', VA: 'va', SUB: 'sw', CAL: 'cal', STUDY: 'f' };
+const KIND: Record<string, string> = { ADV: 'as', HOME: 'h', SIM: 'v', VA: 'va', SUB: 'sw', CAL: 'cal', STUDY: 'f' };
 
 const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const HTML_WRAP = 'font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#222';
@@ -156,7 +156,9 @@ export function renderCx(d: { step: number; subject: string; body: string }, o: 
         const body = d.body.replace(/ \(\{\{HOME\}\}\)/g, '');
         const paras = body.split('\n\n');
         const tokText = (t: string) => t.replace(/\{\{([A-Z]+)\}\}/g, (_m, k) => (KIND[k] ? link(k) : ''));
-        const homeLink = d.body.includes('{{HOME}}') ? link('HOME') : '';
+        // Legacy long email ("I built TradeMind ({{HOME}})") gets a sample line and an anchor; v2 emails carry their own link token in the text.
+        const legacy = d.body.includes(' ({{HOME}})');
+        const homeLink = legacy ? link('HOME') : '';
         const stop = `${CX_FOOTER_LINE} Reply stop and I will not write again.`;
         const text = `${paras.map(tokText).join('\n\n')}${homeLink ? `\n\nSample page: ${homeLink}` : ''}\n\nEric Huang\nFounder, TradeMind\n\n${stop}\n${CX_DISCLAIMER}\n\n${o.mailingAddress}`;
         const ph = paras.map((t) => {

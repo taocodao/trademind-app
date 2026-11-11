@@ -15,7 +15,7 @@ import { MAILING_ADDRESS } from '@/lib/newsletter/email';
 import { buildDrafts, buildProfile, renderCx, type CxRaw } from './cx-copy';
 
 export const CX_STEP0 = 40;                       // steps 41 to 44
-export const CX_BDAYS = [0, 4, 9, 16];             // business days after the first email for emails 1 to 4
+export const CX_BDAYS = [0, 3, 6, 10];             // business days after the first email for emails 1 to 4 (large firms get emails 1 and 4, email 4 on day 6)
 const MIN_GAP_BDAYS = 2;
 const FIRM_GAP_DAYS = 7;
 const BLOCKED = `'unsubscribed','bounced','complained','subscribed','confirmed','monthly','checked_in','snoozed','replied','stopped'`;
@@ -39,6 +39,9 @@ export async function ensureCxTables(): Promise<void> {
         hold BOOLEAN NOT NULL DEFAULT FALSE, hold_reason TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
     await query(`CREATE INDEX IF NOT EXISTS cx_profile_firm_idx ON cx_profile (firm_key)`);
     await query(`CREATE TABLE IF NOT EXISTS cx_draft (token TEXT NOT NULL REFERENCES outreach_contacts(token), step INT NOT NULL, subject TEXT NOT NULL, body TEXT NOT NULL, words INT NOT NULL, errors TEXT, PRIMARY KEY (token, step))`);
+    await query(`ALTER TABLE cx_draft ADD COLUMN IF NOT EXISTS meta JSONB`);
+    await query(`ALTER TABLE cx_profile ADD COLUMN IF NOT EXISTS segment TEXT`);
+    await query(`ALTER TABLE cx_profile ADD COLUMN IF NOT EXISTS arm TEXT`);
     for (const [k, v] of CX_DEFAULTS) await query(`INSERT INTO outreach_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING`, [k, v]);
     ready = true;
 }
@@ -279,7 +282,7 @@ async function run(s: Record<string, string>, et: { date: string; hour: number; 
 
     // Follow-ups due (same domain as the first email when it is usable).
     const fu = (await query(
-        `SELECT c.token, c.email, c.first_name, MAX(x.step)::int AS last_step, MIN(x.sent_at) AS first_at, MAX(x.sent_at) AS last_at, (array_agg(x.domain ORDER BY x.step))[1] AS domain
+        `SELECT c.token, c.email, c.first_name, MAX(x.step)::int AS last_step, MIN(x.sent_at) AS first_at, MAX(x.sent_at) AS last_at, (array_agg(x.domain ORDER BY x.step))[1] AS domain, MAX(p.segment) AS segment
          FROM outreach_contacts c JOIN cx_profile p ON p.token = c.token
          JOIN outreach_sends x ON x.token = c.token AND x.step BETWEEN 41 AND 44 AND x.status <> 'failed'
          WHERE c.wave = 'cx' AND ${BLOCK_SQL}
@@ -288,8 +291,11 @@ async function run(s: Record<string, string>, et: { date: string; hour: number; 
     const cands: Cand[] = [];
     for (const r of (s.cx_linkfree !== 'false' || s.cx_followups !== 'true' ? [] : fu)) {
         const n = Number(r.last_step) - CX_STEP0;       // emails already sent
+        const large = r.segment === 'large_firm';        // large firms get email 1, then email 4 on day 6
+        const nextN = large ? 3 : n;                     // index of the next email in CX_BDAYS
+        if (large && n !== 1) continue;
         const sinceFirst = bdaysBetween(etDate(r.first_at), et.date), sinceLast = bdaysBetween(etDate(r.last_at), et.date);
-        if (sinceFirst >= CX_BDAYS[n] && sinceLast >= MIN_GAP_BDAYS) cands.push({ token: r.token, email: r.email, first_name: r.first_name, step: CX_STEP0 + n + 1, domain: r.domain });
+        if (sinceFirst >= (large ? CX_BDAYS[2] : CX_BDAYS[nextN]) && sinceLast >= MIN_GAP_BDAYS) cands.push({ token: r.token, email: r.email, first_name: r.first_name, step: CX_STEP0 + nextN + 1, domain: r.domain });
     }
     // New first emails: one contact per firm per tick, none if the firm had a first email in the last 7 days.
     if (cands.length < want) {
@@ -331,13 +337,25 @@ async function run(s: Record<string, string>, et: { date: string; hour: number; 
 const MONITOR_TO = ['testtrademind@outlook.com', 'eric@trademindbot.onmicrosoft.com', 'eric@aicopliot.onmicrosoft.com'];
 const MONITOR_EVERY = 50;
 
+/** Threaded follow-ups: email 2 answers email 1, email 4 answers email 3 (email 1 for large firms). Returns the earlier send to reply to. */
+async function threadParent(token: string, step: number): Promise<{ step: number; domain: string; subject: string } | null> {
+    const want = step === 42 ? 41 : step === 44 ? 43 : 0;
+    if (!want) return null;
+    let q = (await query(`SELECT step, domain FROM outreach_sends WHERE token = $1 AND step = $2 AND status <> 'failed'`, [token, want])).rows[0];
+    if (!q && step === 44) q = (await query(`SELECT step, domain FROM outreach_sends WHERE token = $1 AND step = 41 AND status <> 'failed'`, [token])).rows[0];
+    if (!q) return null;
+    const d = (await query(`SELECT subject FROM cx_draft WHERE token = $1 AND step = $2`, [token, q.step - CX_STEP0])).rows[0];
+    return d ? { step: Number(q.step), domain: String(q.domain), subject: String(d.subject) } : null;
+}
+const rfcId = (token: string, step: number, domain: string) => `<cx.${token}.${step}@${domain}>`;
+
 /** After every 50th send from a domain, send the same production email (rendered as sent, with a seed token) to both Outlook seed mailboxes. */
 async function monitorCopy(c: Cand, domain: string, s: Record<string, string>): Promise<void> {
     const since = s.cx_epoch ? new Date(s.cx_epoch) : new Date(0);   // counting starts from zero at cx_epoch
     const n = Number((await query(`SELECT COUNT(*)::int AS n FROM outreach_sends WHERE domain = $1 AND step BETWEEN 41 AND 44 AND status <> 'failed' AND sent_at >= $2`, [domain, since])).rows[0].n);
     if (n < MONITOR_EVERY || n % MONITOR_EVERY !== 0) return;
     const dr = (await query(`SELECT subject, body FROM cx_draft WHERE token = $1 AND step = $2`, [c.token, c.step - CX_STEP0])).rows[0];
-    if (!dr) return;
+    if (!dr || !dr.subject) return;    // threaded emails have no subject of their own
     const base = await linkBaseFor(domain, s);
     for (const to of MONITOR_TO) {
         let seed = (await query(`SELECT token FROM outreach_contacts WHERE LOWER(email) = $1`, [to])).rows[0]?.token as string | undefined;
@@ -384,13 +402,18 @@ export async function sendCxOne(c: Cand, domain: string, s: Record<string, strin
     const dr = (await query(`SELECT subject, body, errors FROM cx_draft WHERE token = $1 AND step = $2`, [c.token, c.step - CX_STEP0])).rows[0];
     if (!dr || dr.errors) { if (c.step === 41) await query(`UPDATE cx_profile SET hold = TRUE, hold_reason = COALESCE(hold_reason, 'draft missing') WHERE token = $1`, [c.token]); return 'skipped'; }
     const base = await linkBaseFor(domain, s);
-    const msg = renderCx({ step: c.step - CX_STEP0, subject: dr.subject, body: dr.body }, { token: c.token, linkBase: base, unsubUrl: `${base}/u/${c.token}`, mailingAddress: MAILING_ADDRESS, ...cxFormat(s) });
+    const parent = await threadParent(c.token, c.step);
+    if ((c.step === 42 || c.step === 44) && !parent) return 'skipped';
+    const subject = parent ? `Re: ${parent.subject.replace(/^Re:\s*/i, '')}` : dr.subject;
+    const threadHeaders: Record<string, string> = { 'Message-ID': rfcId(c.token, c.step, domain) };
+    if (parent) { const pid = rfcId(c.token, parent.step, parent.domain); threadHeaders['In-Reply-To'] = pid; threadHeaders['References'] = pid; }
+    const msg = renderCx({ step: c.step - CX_STEP0, subject, body: dr.body }, { token: c.token, linkBase: base, unsubUrl: `${base}/u/${c.token}`, mailingAddress: MAILING_ADDRESS, ...cxFormat(s) });
     const from = `${s.cx_from_display || 'Eric Huang'} <eric@${domain}>`;
     let res;
     try {
         res = await sendMail({
             transport: 'resend', from, to: c.email, replyTo: s[`reply_to_${domain.toLowerCase()}`] || s.cx_reply_to || s.reply_to || undefined, subject: msg.subject, text: msg.text, html: msg.html,
-            headers: s.cx_linkfree !== 'false' || s.cx_html !== 'false' ? {} : { 'List-Unsubscribe': `<${base}/u/${c.token}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
+            headers: s.cx_linkfree !== 'false' || s.cx_html !== 'false' ? threadHeaders : { ...threadHeaders, 'List-Unsubscribe': `<${base}/u/${c.token}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
             token: c.token, step: c.step, campaign: 'cx_adviser', idempotencyKey: `cx-${c.token}-${c.step}`,
         });
     } catch { return 'failed'; }

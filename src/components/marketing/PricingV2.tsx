@@ -169,7 +169,10 @@ export default function PricingV2({ mode, linkEmail = '', initialProduct = null,
                 <li>Your card is charged at checkout. Cancel within your first month and the payment is refunded in full.</li>
                 <li>Yearly billing is ten monthly payments, so you get two months free.</li>
                 <li>Want another account? Buy again with the same email. One login can hold many accounts.</li>
-                <li>Join the free daily newsletter and pay {SUBSCRIBER_DISCOUNT_PCT}% less for as long as your plan stays active.</li>
+                <li>
+                    Join the free daily newsletter and pay {SUBSCRIBER_DISCOUNT_PCT}% less for as long as your plan stays active.{' '}
+                    <a href="/newsletter" style={{ color: '#a78bfa', textDecoration: 'underline' }}>Subscribe free</a>. Once subscribed, you can unsubscribe any time.
+                </li>
             </ul>
         </div>
     );

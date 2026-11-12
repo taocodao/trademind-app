@@ -216,7 +216,8 @@ export async function domainStates(s: Record<string, string>, today: string): Pr
         const s14 = Number(a.s14), b14 = Number(a.b14), c14 = Number(a.c14);
         let paused: string | null = s[`cx_pause_${d}`] || null;
         if (!paused && c14 >= 1) paused = 'complaint';
-        if (!paused && s14 >= 50 && b14 / s14 >= 0.01) paused = `bounce rate ${(100 * b14 / s14).toFixed(1)} percent`;
+        // One hard bounce in a small batch is normal. Pause only on a real pattern: at least 3 bounces and at least 3 percent.
+        if (!paused && s14 >= 50 && b14 >= 3 && b14 / s14 >= 0.03) paused = `bounce rate ${(100 * b14 / s14).toFixed(1)} percent`;
         if (paused && !s[`cx_pause_${d}`]) await setSetting(`cx_pause_${d}`, paused);
         out.push({ domain: d, verified: verified[d] === 'verified', paused, budget: Math.min(cap, start + step * Number(a.days)), sentToday: Number(a.today), sent14: s14, bounced14: b14, complaints14: c14 });
     }

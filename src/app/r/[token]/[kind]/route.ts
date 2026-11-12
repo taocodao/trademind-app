@@ -52,7 +52,10 @@ async function handle(req: NextRequest, params: Promise<{ token: string; kind: s
     else if (kind === 'mt') dest = 'https://calendar.app.google/tUQ5Dn1Jk27vP4f19';
     else if (kind === 'as') {
         const a = req.nextUrl.searchParams.get('a') ?? '';
-        dest = `/advisers/sample?t=${token}&${utm}${['sample', 'record', 'client', 'ira', 'overview'].includes(a) ? `#${a}` : ''}`;
+        // The plain sample link opens the latest issue in the new format. Section links from follow-ups keep the section page.
+        dest = ['sample', 'record', 'client', 'ira', 'overview'].includes(a)
+            ? `/advisers/sample?t=${token}&${utm}#${a}`
+            : `/advisers/issue?t=${token}&${utm}`;
     }
     else if (kind === 'pl') dest = `/plans?t=${token}&${utm}`;
     else if (kind === 'i') {

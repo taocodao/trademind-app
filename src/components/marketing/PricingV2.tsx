@@ -34,16 +34,17 @@ const secondary: React.CSSProperties = { color: '#94a3b8' };
  * Pricing v2 plan picker, shared by the landing page and /plans.
  * landing: choose a plan and go to /plans. plans: confirm the email and pay with Stripe.
  */
-export default function PricingV2({ mode, linkEmail = '', initialProduct = null, initialInterval = 'month' }: {
+export default function PricingV2({ mode, linkEmail = '', initialSubscriber = null, initialProduct = null, initialInterval = 'month' }: {
     mode: 'landing' | 'plans';
     linkEmail?: string;
+    initialSubscriber?: boolean | null;
     initialProduct?: ProductV2 | null;
     initialInterval?: IntervalV2;
 }) {
     const [interval, setIntervalV] = useState<IntervalV2>(initialInterval);
     const [selected, setSelected] = useState<ProductV2 | null>(initialProduct);
     const [email, setEmail] = useState(linkEmail);
-    const [subscriber, setSubscriber] = useState<boolean | null>(null);
+    const [subscriber, setSubscriber] = useState<boolean | null>(initialSubscriber);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
 

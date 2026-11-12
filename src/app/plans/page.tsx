@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { getContact } from '@/lib/outreach/db';
 import PlansClient from './PlansClient';
 import PlansV2 from './PlansV2';
+import { discountForEmail } from '@/lib/newsletter/db';
 import { isPricingV2Enabled } from '@/lib/pricing-v2';
 
 export const dynamic = 'force-dynamic';
@@ -27,7 +28,9 @@ export default async function PlansPage({ searchParams }: { searchParams: Promis
     }
     if (isPricingV2Enabled()) {
         const p = product === 'defensive' || product === 'leaps' || product === 'both' ? product : null;
-        return <PlansV2 linkEmail={linkEmail} product={p} interval={interval === 'year' ? 'year' : 'month'} />;
+        let initialSubscriber: boolean | null = null;
+        if (linkEmail) { try { initialSubscriber = (await discountForEmail(linkEmail)).state === 'eligible'; } catch { /* the page checks again */ } }
+        return <PlansV2 linkEmail={linkEmail} initialSubscriber={initialSubscriber} product={p} interval={interval === 'year' ? 'year' : 'month'} />;
     }
     return <PlansClient linkEmail={linkEmail} justSubscribed={sub === '1'} />;
 }

@@ -149,10 +149,7 @@ export default function SignupForm({ source, initialEmail, implicitConsent = fal
             {error && <p className="tm-nl-error" role="alert">{error}</p>}
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 <button type="button" disabled={busy} onClick={() => { if (formOk()) void submit('weekly'); }} className="tm-nl-btn tm-nl-btn-primary">
-                    {busy ? 'Subscribing...' : 'Subscribe weekly'}
-                </button>
-                <button type="button" disabled={busy} onClick={() => { if (formOk()) void submit('daily'); }} className="tm-nl-btn tm-nl-btn-ghost">
-                    Subscribe daily
+                    {busy ? 'Subscribing...' : 'Subscribe free'}
                 </button>
             </div>
             <p className="tm-nl-consent" style={{ margin: '4px 0 0' }}>

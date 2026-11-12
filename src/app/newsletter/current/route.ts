@@ -2,12 +2,16 @@ import { NextRequest } from 'next/server';
 import { liveFacts } from '@/lib/newsletter/live-facts';
 import { currentIssueHtml } from '@/lib/newsletter/web-issue';
 import { getContact, validToken } from '@/lib/outreach/db';
+import { ISSUES } from '@/lib/newsletter/issues';
+import { libraryPage } from '@/lib/newsletter/library-page';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 /** The current weekly issue, on the website. Same layout as the first invitation email. */
 export async function GET(req: NextRequest) {
+    // The web page is the latest library issue in the new format. The embed view (used by the old adviser sample page) keeps the compact layout.
+    if (req.nextUrl.searchParams.get('embed') !== '1') return libraryPage(req, ISSUES[ISSUES.length - 1]);
     const raw = req.nextUrl.searchParams.get('t') ?? req.cookies.get('tm_t')?.value ?? '';
     // A personal link turns the subscribe buttons into one-click links for that invited contact.
     let token = '';

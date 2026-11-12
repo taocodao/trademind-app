@@ -22,15 +22,15 @@ const btnStyle = (primary: boolean) =>
 
 /** The two subscribe buttons. With a personal link they are plain links; otherwise an email box and two buttons. */
 export function subscribeBlock(token: string, heading = 'Get it in your inbox'): string {
-    const head = `<div style="${F}font-size:18px;font-weight:800;color:${C.fg};padding-bottom:4px;">${esc(heading)}</div>${P('Free. Choose weekly or daily. You go straight to the current issue, and we email you the link.', 14, C.muted)}`;
+    const head = `<div style="${F}font-size:18px;font-weight:800;color:${C.fg};padding-bottom:4px;">${esc(heading)}</div>${P('Free. One short email a week with the link to the new issue.', 14, C.muted)}`;
     if (token) {
         const u = (k: string) => `${BASE_URL}/r/${token}/${k}?s=1`;
-        return card(`${head}${btnPair(u('sw'), 'Subscribe weekly', u('sd'), 'Subscribe daily')}`, C.btn);
+        return card(`${head}${btn(u('sw'), 'Subscribe free')}`, C.btn);
     }
     const form = `<form class="tm-sub" onsubmit="return false" style="margin:0;">
 <input class="tm-email" type="email" required placeholder="you@example.com" aria-label="Email address" autocomplete="email" style="display:block;width:100%;box-sizing:border-box;margin:0 0 10px;padding:13px 14px;border-radius:10px;border:1px solid ${C.line};background:#0b0f17;color:${C.fg};font:500 16px/1.2 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
 <input class="tm-hp" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;opacity:0;height:0;width:0;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td width="50%" style="padding-right:5px;" valign="top"><button type="button" data-c="weekly" style="${btnStyle(true)}">Subscribe weekly</button></td><td width="50%" style="padding-left:5px;" valign="top"><button type="button" data-c="daily" style="${btnStyle(false)}">Subscribe daily</button></td></tr></table>
+<button type="button" data-c="weekly" style="${btnStyle(true)}">Subscribe free</button>
 <p class="tm-msg" role="status" style="margin:10px 0 0;${F}font-size:13px;color:${C.amber};"></p>
 <p style="margin:10px 0 0;${F}font-size:12px;line-height:1.5;color:${C.muted};">By subscribing you agree to receive The AI Systematic Investor and TradeMind offers. Unsubscribe any time.</p>
 </form>`;
@@ -245,6 +245,17 @@ function weeklySubscribe(token: string): string {
 const SAMPLE_FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 const SAMPLE_CSS = `.intro{margin:0 0 22px}.intro .sbtn{display:inline-block;cursor:pointer;border:1px solid ${C.btn};background:${C.btn};color:#fff;border-radius:10px;padding:13px 22px;font:800 16px/1.2 ${SAMPLE_FONT}}.intro h2{margin:22px 0 8px;font:800 26px/1.2 ${SAMPLE_FONT};color:${C.fg}}.intro p{margin:0;max-width:760px;font:400 16px/1.65 ${SAMPLE_FONT};color:${C.body}}.acards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px}.acards a{display:block;border:1px solid ${C.line};background:${C.card};border-radius:14px;padding:16px;text-decoration:none;font-family:${SAMPLE_FONT}}.acards b{display:block;color:${C.fg};font-size:16px;font-weight:600;margin-bottom:8px}.acards span{display:block;color:${C.muted};font-size:13px;line-height:1.5;margin-bottom:10px}.acards u{color:#a78bfa;font-size:13px;text-decoration:none}@media(max-width:760px){.acards{grid-template-columns:1fr 1fr}}.mdl{position:fixed;inset:0;z-index:50;display:none;align-items:flex-start;justify-content:center;background:rgba(5,8,14,.78);overflow:auto;padding:24px 12px}.mdl.on{display:flex}.mdl .box{position:relative;width:100%;max-width:620px;background:${C.card};border:1px solid ${C.line};border-radius:16px;padding:26px 24px;margin:auto;font-family:${SAMPLE_FONT};color:${C.body}}.mdl h3{margin:0 0 10px;font-size:22px;line-height:1.25;color:${C.fg}}.mdl h4{margin:18px 0 6px;font-size:16px;color:${C.fg}}.mdl p{margin:0 0 10px;font-size:15px;line-height:1.65}.mdl ul{margin:0 0 10px;padding-left:20px;font-size:15px;line-height:1.7}.mdl a{color:${C.blue}}.mdl .x{position:absolute;top:10px;right:12px;border:0;background:none;color:${C.muted};font-size:26px;line-height:1;cursor:pointer}`;
 
+const ENGAGE_SCRIPT = `<script>
+(function(){
+  var t0=Date.now(),vis=0,last=document.visibilityState==='visible'?Date.now():0,sent=false,tok=new URLSearchParams(location.search).get('t')||'';
+  if(/^[A-Za-z0-9_-]{10,11}$/.test(tok)){
+    document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')last=Date.now();else if(last){vis+=Date.now()-last;last=0;}});
+    var iv=setInterval(function(){var tot=vis+(last?Date.now()-last:0);if(!sent&&tot>=3000){sent=true;fetch('/api/engage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({t:tok,page:location.pathname}),keepalive:true});clearInterval(iv);}},500);
+    var done=false;['scroll','pointerdown','keydown','touchstart','wheel'].forEach(function(n){window.addEventListener(n,function(e){if(done||!e.isTrusted)return;done=true;setTimeout(function(){fetch('/api/engage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({t:tok,interacted:true}),keepalive:true});},Math.max(0,3800-(Date.now()-t0)));},{passive:true});});
+  }
+})();
+</script>`;
+
 const SAMPLE_SCRIPT = `<script>
 (function(){
   var m=document.getElementById('tm-mdl');if(!m)return;
@@ -259,12 +270,6 @@ const SAMPLE_SCRIPT = `<script>
   },true);
   m.addEventListener('click',function(e){if(e.target===m)close();});
   document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
-  var t0=Date.now(),vis=0,last=document.visibilityState==='visible'?Date.now():0,sent=false,tok=new URLSearchParams(location.search).get('t')||'';
-  if(/^[A-Za-z0-9_-]{10,11}$/.test(tok)){
-    document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')last=Date.now();else if(last){vis+=Date.now()-last;last=0;}});
-    var iv=setInterval(function(){var tot=vis+(last?Date.now()-last:0);if(!sent&&tot>=3000){sent=true;fetch('/api/engage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({t:tok,page:location.pathname}),keepalive:true});clearInterval(iv);}},500);
-    var done=false;['scroll','pointerdown','keydown','touchstart','wheel'].forEach(function(n){window.addEventListener(n,function(e){if(done||!e.isTrusted)return;done=true;setTimeout(function(){fetch('/api/engage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({t:tok,interacted:true}),keepalive:true});},Math.max(0,3800-(Date.now()-t0)));},{passive:true});});
-  }
 })();
 </script>`;
 
@@ -300,7 +305,7 @@ ${sub}</div></div>`;
  * text) comes first; market weather, copilot readout and turbulence test are this week's live reading. The same
  * page serves both audiences; the adviser copy adds a card to book 20 minutes.
  */
-export function libraryIssueHtml(issue: NewsletterIssue, facts: IssueFacts, o: { token: string; audience: 'retail' | 'adviser'; path: string; isCurrent: boolean; email?: string; last?: { title: string; path: string } | null; sample?: boolean }): string {
+export function libraryIssueHtml(issue: NewsletterIssue, facts: IssueFacts, o: { token: string; audience: 'retail' | 'adviser'; path: string; isCurrent: boolean; email?: string; last?: { title: string; path: string } | null; sample?: boolean; head?: string }): string {
     const so = { facts, strategyMember: false, token: o.token, firstName: null, baseUrl: BASE_URL, mailingAddress: ADDRESS, step: 1, n: 1 } as unknown as Seq7Opts;
     const d = new Date(`${issue.publishDate}T12:00:00Z`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
     const deep = issue.deepLinks.map((l) => `<a href="${esc(l.href)}" style="color:${C.blue};text-decoration:underline;font-weight:600;">${esc(l.label)} &rsaquo;</a>`).join('&nbsp;&nbsp;');
@@ -338,5 +343,5 @@ export function libraryIssueHtml(issue: NewsletterIssue, facts: IssueFacts, o: {
 ${o.sample ? sampleIntro() : ''}<nav class="tiles" aria-label="Explore">${tiles.map(([h, l]) => `<a href="${esc(h)}">${esc(l)}</a>`).join('')}</nav>
 <div class="grid">${shareRail(issue, o.path)}<div class="col">${content}${shareCard(issue, o.path)}</div></div>
 </div>${o.sample ? sampleModal(o.token) : ''}`;
-    return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>${esc(issue.title)} | TradeMind</title><meta name="description" content="${esc(issue.excerpt)}"><style>${SHARE_CSS}${o.sample ? SAMPLE_CSS : ''}</style></head><body>${body}${SCRIPT}${TITLE_SCRIPT}${o.sample ? SAMPLE_SCRIPT : ''}</body></html>`;
+    return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>${esc(issue.title)} | TradeMind</title><meta name="description" content="${esc(issue.excerpt)}">${o.head ?? ''}<style>${SHARE_CSS}${o.sample ? SAMPLE_CSS : ''}</style></head><body>${body}${SCRIPT}${TITLE_SCRIPT}${o.sample ? SAMPLE_SCRIPT : ''}${ENGAGE_SCRIPT}</body></html>`;
 }

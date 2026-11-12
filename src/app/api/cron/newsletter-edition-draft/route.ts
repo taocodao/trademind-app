@@ -17,7 +17,8 @@ export const maxDuration = 120;
 export async function GET(req: NextRequest) {
     const expected = process.env.CRON_SECRET;
     if (!expected || req.headers.get('authorization') !== `Bearer ${expected}`) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const kind = req.nextUrl.searchParams.get('kind') === 'daily' ? 'daily' : 'weekly';
+    if (req.nextUrl.searchParams.get('kind') === 'daily') return NextResponse.json({ skipped: 'the daily brief is retired' });
+    const kind = 'weekly' as 'daily' | 'weekly';
     if (kind === 'weekly') {
         const d = new Date(`${etDate()}T12:00:00Z`);
         const dow = d.getUTCDay(); // 0 Sunday, 1 Monday

@@ -41,10 +41,10 @@ async function handle(req: NextRequest, params: Promise<{ token: string; kind: s
     else if (kind === 's' || kind === 'sw' || kind === 'sd') {
         // One click subscribes a real person at once and shows a thank-you page. Scanners and anything
         // suspicious fall back to the subscribe form.
-        const cadence = kind === 'sd' ? 'daily' : 'weekly';
+        const cadence = 'weekly'; // the daily brief is retired; the old daily link subscribes weekly
         const r = isBot ? 'form' : await oneClickSubscribe({ token, ip, ua, cadence });
         dest = r === 'form'
-            ? `/newsletter/join?t=${token}${kind === 'sw' ? '&cadence=weekly' : kind === 'sd' ? '&cadence=daily' : ''}&${utm}`
+            ? `/newsletter/join?t=${token}&cadence=weekly&${utm}`
             : `/newsletter/thanks?t=${token}&c=${cadence}${r === 'already' ? '&already=1' : ''}`;
     }
     else if (kind === 'va') dest = `/live-record?demo=1&t=${token}&${utm}`;

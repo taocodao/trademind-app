@@ -1,7 +1,6 @@
 'use client';
 import { useState } from 'react';
 
-type Fmt = 'weekly' | 'daily';
 const CONTEXTS = [
     { key: 'default', label: 'Untailored', line: 'The issue as published, with no context added.' },
     { key: 'starter', label: 'Building an investing routine', line: 'Framed around a long time horizon and the habit of following written rules.' },
@@ -12,7 +11,6 @@ const CONTEXTS = [
 ];
 
 export default function Sample({ subscribeUrl, subscribeDailyUrl, bookUrl }: { subscribeUrl: string; subscribeDailyUrl: string; bookUrl: string }) {
-    const [fmt, setFmt] = useState<Fmt>('weekly');
     const [ctx, setCtx] = useState('default');
     const cur = CONTEXTS.find((c) => c.key === ctx)!;
     const tab = (on: boolean) => `rounded-full border px-4 py-1.5 text-sm font-semibold ${on ? 'border-[#2f6bff] bg-[#2f6bff] text-white' : 'border-[#3a4a70] bg-[#121826] text-[#7aa2ff]'}`;
@@ -23,9 +21,8 @@ export default function Sample({ subscribeUrl, subscribeDailyUrl, bookUrl }: { s
     const h2 = 'mt-3 text-[22px] font-extrabold leading-snug text-[#f3f5f9] scroll-mt-20';
     const link = 'text-[#7aa2ff] underline';
     const Buttons = () => (
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <a href={subscribeUrl} className={btnP}>Subscribe weekly</a>
-            <a href={subscribeDailyUrl} className={btnP}>Subscribe daily</a>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <a href={subscribeUrl} className={btnP}>Subscribe free</a>
             <a href={bookUrl} className={btnS}>Book 20 minutes</a>
         </div>
     );
@@ -44,8 +41,7 @@ export default function Sample({ subscribeUrl, subscribeDailyUrl, bookUrl }: { s
             <Buttons />
 
             <div className={card}><p className={pill}>Sample issue</p><h2 id="sample" className={h2}>The sample issue</h2>
-            <div className="mt-3 flex gap-2"><button className={tab(fmt === 'weekly')} onClick={() => setFmt('weekly')}>Weekly</button><button className={tab(fmt === 'daily')} onClick={() => setFmt('daily')}>Daily</button></div>
-            <iframe title="Sample issue" src={fmt === 'weekly' ? '/newsletter/current?embed=1' : '/advisers/sample-daily.html'} className="mt-4 h-[760px] w-full rounded-xl border border-[#232c3d] bg-[#0b0f17]" /></div>
+                        <iframe title="Sample issue" src="/newsletter/current?embed=1" className="mt-4 h-[760px] w-full rounded-xl border border-[#232c3d] bg-[#0b0f17]" /></div>
 
             <div className={card}><p className={pill}>Client-ready example</p><h2 id="client" className={h2}>One worked client-ready example</h2>
             <p className="mt-3">Choose how the same issue is explained. You choose the version for a conversation. It is never assigned from a client&apos;s age.</p>

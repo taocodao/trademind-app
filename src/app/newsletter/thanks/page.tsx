@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import '../newsletter.css';
 import { NewsletterFooter } from '@/components/newsletter/NewsletterShell';
-import ThanksCadence from '@/components/newsletter/ThanksCadence';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Thank you - AI Investor Copilot by TradeMind', robots: { index: false } };
@@ -25,7 +24,6 @@ export default async function ThanksPage({ searchParams }: { searchParams: Promi
                         Read the current issue
                     </Link>
                 </p>
-                {token && <ThanksCadence token={token} initial={c === 'daily' ? 'daily' : 'weekly'} />}
                 <p className="tm-nl-offerline">
                     Confirmed subscribers are entitled to 30% off the first year of a yearly TradeMind Strategy subscription, using the same email within 90 days of subscribing.
                     {' '}<Link href="/newsletter/offer" className="tm-nl-link">Offer terms</Link>

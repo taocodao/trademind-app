@@ -22,7 +22,7 @@ export async function libraryPage(req: NextRequest, issue: NewsletterIssue): Pro
     let token = '';
     let adviser = sp.get('aud') === 'adviser';
     if (raw && validToken(raw)) {
-        try { const c = await getContact(raw); if (c) { token = raw; if (ADVISER_SEGMENTS.has(c.segment)) adviser = true; } } catch { /* anonymous */ }
+        try { const c = await getContact(raw); if (c) { token = raw; if (ADVISER_SEGMENTS.has(c.segment) || String(c.template).startsWith('CX')) adviser = true; } } catch { /* anonymous */ }
     }
     let email = '';
     const k = sp.get('k') ?? '';

@@ -259,14 +259,32 @@ const ENGAGE_SCRIPT = `<script>
 const SAMPLE_SCRIPT = `<script>
 (function(){
   var m=document.getElementById('tm-mdl');if(!m)return;
+  var tok=m.getAttribute('data-t')||'',info=document.getElementById('tm-info'),th=document.getElementById('tm-thanks'),busy=false;
   function open(){m.classList.add('on');document.body.style.overflow='hidden';}
   function close(){m.classList.remove('on');document.body.style.overflow='';}
+  function show(v){if(info)info.hidden=v!=='info';if(th)th.hidden=v==='info';}
+  function say(h,p,done){document.getElementById('tm-th-h').textContent=h;document.getElementById('tm-th-p').textContent=p;document.getElementById('tm-th-x').hidden=!done;}
+  function press(){
+    if(busy)return;busy=true;show('thanks');say('Subscribing you now','One moment.',false);open();
+    fetch('/api/newsletter/press-subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:tok})})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(d.result==='subscribed'||d.result==='already'){
+          say('Thank you, you are subscribed',d.result==='already'?'You were already on the list, so there is nothing more to do. The next issue arrives in your inbox.':'You are in. The next issue arrives in your inbox, and we also emailed you the link to this issue.',true);busy=false;
+        }else{location.href='/newsletter/join?t='+encodeURIComponent(tok)+'&cadence=weekly';}
+      })
+      .catch(function(){location.href='/newsletter/join?t='+encodeURIComponent(tok)+'&cadence=weekly';});
+  }
   document.addEventListener('click',function(e){
-    var t=e.target.closest&&e.target.closest('a,button[data-share],button[data-more],[data-open]');
+    var el=e.target.closest?e.target:null;if(!el)return;
+    var s=el.closest('[data-sub]');
+    if(s){e.preventDefault();e.stopPropagation();press();return;}
+    if(el.closest('[data-close]')){e.preventDefault();close();return;}
+    var t=el.closest('a,button[data-share],button[data-more],[data-open]');
     if(!t)return;
-    if(t.closest('.mdl')){ if(t.hasAttribute('data-close'))close(); return; }
+    if(t.closest('.mdl'))return;
     if(t.hasAttribute('data-free'))return;
-    e.preventDefault();e.stopPropagation();open();
+    e.preventDefault();e.stopPropagation();show('info');open();
   },true);
   m.addEventListener('click',function(e){if(e.target===m)close();});
   document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
@@ -274,30 +292,31 @@ const SAMPLE_SCRIPT = `<script>
 </script>`;
 
 /** Top of the adviser sample page: subscribe button, then the problem and the approach. Every link on the page opens the subscribe popup. */
-function sampleIntro(): string {
+function sampleIntro(token: string): string {
     const cards: [string, string][] = [
         ['Market Regime', 'Which environment are we actually in, measured instead of guessed.'],
         ['ML Insight', 'A model that ranks setups and can veto a trade, but never starts one.'],
         ['Options Structure', 'LEAPS, covered calls, and put sleeves with the trade-offs stated up front.'],
         ['Risk Control', 'Drawdown limits and exposure caps that apply on the worst day, not just the good ones.'],
     ];
-    return `<section class="intro"><button type="button" class="sbtn" data-open>Subscribe free</button>
+    return `<section class="intro"><button type="button" class="sbtn" ${token ? 'data-sub' : 'data-open'}>Subscribe free</button>
 <h2>The problem</h2><p>Most retail investors sit in one of two traps. Either they hold passive exposure with no way to adjust risk when conditions change, or they make concentrated bets based on unreliable sources, with no written rules for when to enter, how much to risk, or when to exit. Both approaches fail at the same moment: the day the market stops cooperating.</p>
 <h2>The approach</h2><div class="acards">${cards.map(([t, d]) => `<a href="/newsletter/start-here"><b>${esc(t)}</b><span>${esc(d)}</span><u>Read the guide</u></a>`).join('')}</div></section>`;
 }
 
 /** The subscribe popup shown for every link on the sample page. */
 function sampleModal(token: string): string {
-    const sub = weeklySubscribe(token).replace('<a ', '<a data-free ').replace(' id="subscribe"', '');
-    return `<div class="mdl" id="tm-mdl" role="dialog" aria-modal="true" aria-label="Subscribe"><div class="box"><button type="button" class="x" data-close aria-label="Close">&times;</button>
-<h3>Why most investors need a process</h3>
+    const sub = weeklySubscribe(token).replace('<a ', '<a data-sub ').replace(' id="subscribe"', '');
+    return `<div class="mdl" id="tm-mdl" role="dialog" aria-modal="true" aria-label="Subscribe" data-t="${token}"><div class="box"><button type="button" class="x" data-close aria-label="Close">&times;</button>
+<div id="tm-info"><h3>Why most investors need a process</h3>
 <p>Many retail investors fall into one of two extremes. They either stay fully passive without a framework for adapting risk, or they make concentrated bets based on headlines, social commentary, and disconnected opinions. The problem is not lack of information. It is lack of structure.</p>
 <h4>The real gap</h4>
 <p>Most investors do not need more market noise. They need a repeatable process for deciding what matters, what does not, how much risk to take, and when to reduce exposure. A process does not guarantee returns, but it makes decisions more consistent and easier to evaluate.</p>
 <h4>What a systematic approach changes</h4>
 <ul><li>It replaces impulsive reactions with predefined rules.</li><li>It distinguishes evidence from narrative.</li><li>It forces risk to be considered before expected return.</li><li>It makes outcomes easier to audit and improve over time.</li></ul>
 <p>Go deeper: <a href="https://trademind.bot/newsletter/start-here">Systematic Investing Framework</a></p>
-${sub}</div></div>`;
+${sub}</div>
+<div id="tm-thanks" hidden><h3 id="tm-th-h">Thank you, you are subscribed</h3><p id="tm-th-p"></p><p style="color:${C.muted}">Confirmed subscribers are entitled to 30% off the first year of a yearly TradeMind Strategy subscription, using the same email within 90 days of subscribing. You can unsubscribe at any time from the link in each email.</p><p id="tm-th-x" hidden><button type="button" class="sbtn" data-close style="border:1px solid ${C.btn};background:${C.btn};color:#fff;border-radius:10px;padding:12px 22px;font:800 15px/1.2 ${SAMPLE_FONT};cursor:pointer">Close</button></p></div></div></div>`;
 }
 
 /**
@@ -330,7 +349,7 @@ export function libraryIssueHtml(issue: NewsletterIssue, facts: IssueFacts, o: {
         meet,
         em
             ? card(`<div style="${F}font-size:15px;font-weight:800;color:${C.fg};padding-bottom:4px;">You are on the free weekly list</div>${P(`The next issue arrives in your inbox. Unsubscribe any time from the link in each email.`, 14, C.muted)}`)
-            : (o.sample ? weeklySubscribe(o.token).replace('<a ', '<a data-free ') : weeklySubscribe(o.token)),
+            : (o.sample ? weeklySubscribe(o.token).replace('<a ', '<a data-sub ') : weeklySubscribe(o.token)),
         last,
         row(`<p style="margin:0 0 2px;${F}font-size:15px;color:${C.fg};font-weight:700;">Eric Huang</p><p style="margin:0 0 20px;${F}font-size:13px;color:${C.muted};">Founder, TradeMind &middot; Queens, New York &middot; <a href="mailto:eric@trademind.bot" style="color:${C.blue};">eric@trademind.bot</a></p>`),
         footer(),
@@ -340,7 +359,7 @@ export function libraryIssueHtml(issue: NewsletterIssue, facts: IssueFacts, o: {
 <div class="top"><div class="auth">${auth}</div><div class="brand"><a href="/">AI Investor Copilot</a></div></div>
 <nav class="crumbs"><span><a href="/">TradeMind home</a> &rsaquo; <a href="/newsletter">Newsletter</a> &rsaquo; <a href="/newsletter/issues">All issues</a> &rsaquo; Issue ${issue.number} &middot; <b>${o.isCurrent ? 'Current issue' : 'Past issue'}</b> &middot; ${esc(d)} &middot; ${esc(issue.readTime)}</span></nav>
 <h1 class="ttl" aria-label="${esc(issue.title)}"><span aria-hidden="true">${words(issue.title)}</span></h1>
-${o.sample ? sampleIntro() : ''}<nav class="tiles" aria-label="Explore">${tiles.map(([h, l]) => `<a href="${esc(h)}">${esc(l)}</a>`).join('')}</nav>
+${o.sample ? sampleIntro(o.token) : ''}<nav class="tiles" aria-label="Explore">${tiles.map(([h, l]) => `<a href="${esc(h)}">${esc(l)}</a>`).join('')}</nav>
 <div class="grid">${shareRail(issue, o.path)}<div class="col">${content}${shareCard(issue, o.path)}</div></div>
 </div>${o.sample ? sampleModal(o.token) : ''}`;
     return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>${esc(issue.title)} | TradeMind</title><meta name="description" content="${esc(issue.excerpt)}">${o.head ?? ''}<style>${SHARE_CSS}${o.sample ? SAMPLE_CSS : ''}</style></head><body>${body}${SCRIPT}${TITLE_SCRIPT}${o.sample ? SAMPLE_SCRIPT : ''}${ENGAGE_SCRIPT}</body></html>`;

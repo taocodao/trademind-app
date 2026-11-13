@@ -6,6 +6,7 @@ import { NewsletterFooter } from '@/components/newsletter/NewsletterShell';
 import { cookies } from 'next/headers';
 import { getContact } from '@/lib/outreach/db';
 import { query } from '@/lib/db';
+import JoinAuto from '@/components/newsletter/JoinAuto';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,10 +38,9 @@ export default async function JoinPage({
             if (c === 'daily' || c === 'weekly' || c === 'both') cadence = c;
         } catch { /* keep the default */ }
     }
-    return (
-        <main className="tm-nl">
-            <div className="tm-nl-wrap-narrow">
-                <p className="tm-nl-eyebrow">AI Investor Copilot</p>
+    const auto = !!t && !!contact && !next && !['unsubscribed', 'bounced', 'complained'].includes(contact.status);
+    const formView = (
+        <>
                 <h1 className="tm-nl-h1">Subscribe free</h1>
                 <p className="tm-nl-sub">
                     A free weekly brief on systematic investing: the market regime, what our ML research detects, one strategy concept, and what could go wrong.
@@ -52,6 +52,13 @@ export default async function JoinPage({
                     Confirmed subscribers are entitled to 30% off the first year of a yearly TradeMind Strategy subscription, using the same email within 90 days of confirming.
                     {' '}<Link href="/newsletter/offer" className="tm-nl-link">Offer terms</Link>
                 </p>
+        </>
+    );
+    return (
+        <main className="tm-nl">
+            <div className="tm-nl-wrap-narrow">
+                <p className="tm-nl-eyebrow">AI Investor Copilot</p>
+                {auto ? <JoinAuto token={token} fallback={formView} /> : formView}
                 <NewsletterFooter />
             </div>
         </main>

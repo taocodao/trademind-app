@@ -17,6 +17,8 @@ const MIN_MINUTES_AFTER_SEND = 5;
  */
 export async function oneClickSubscribe(o: {
     token: string; ip: string | null; ua: string | null; cadence: 'weekly' | 'daily';
+    /** True when a person pressed a button on a page (a script ran), so the scanner checks on the link are skipped. */
+    pressed?: boolean;
 }): Promise<OneClickResult> {
     try {
         const c = await getContact(o.token);
@@ -25,6 +27,7 @@ export async function oneClickSubscribe(o: {
         const ipHash = hashIp(o.ip);
         if (!o.ip || !ipHash) return 'form';
 
+        if (!o.pressed) {
         const s = await query(`SELECT MAX(sent_at) AS m FROM outreach_sends WHERE token = $1`, [o.token]);
         const last = s.rows[0]?.m ? new Date(s.rows[0].m).getTime() : 0;
         if (!last || Date.now() - last < MIN_MINUTES_AFTER_SEND * 60_000) return 'form';
@@ -39,6 +42,7 @@ export async function oneClickSubscribe(o: {
             [o.ip, c.email]
         );
         if (sharedSignup.rowCount) return 'form';
+        }
 
         const result = await signup({
             rawEmail: c.email, consent: true, source: 'coldlist', medium: 'email', campaign: CAMPAIGN,

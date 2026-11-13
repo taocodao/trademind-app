@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { validToken } from '@/lib/outreach/db';
-import { oneClickSubscribe } from '@/lib/outreach/one-click';
+import { validToken, getContact } from '@/lib/outreach/db';
+import { oneClickSubscribe, sendIssueNow, nextIssueText } from '@/lib/outreach/one-click';
 import { signupRateLimited } from '@/lib/newsletter/db';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-/** A person pressed "Subscribe free" on a page opened from their personal link. Subscribes weekly at once. */
+/**
+ * A person pressed a button on a page opened from their personal link.
+ * Default: subscribe weekly at once. action "send": email the current issue link now.
+ */
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json().catch(() => ({}));
@@ -15,8 +18,12 @@ export async function POST(req: NextRequest) {
         const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
         const ua = req.headers.get('user-agent');
         if (await signupRateLimited(ip)) return NextResponse.json({ result: 'form' });
+        const c = await getContact(token);
+        const email = c?.email ?? '';
+        const next = nextIssueText();
+        if (body?.action === 'send') return NextResponse.json({ result: await sendIssueNow(token), email, next });
         const result = await oneClickSubscribe({ token, ip, ua, cadence: 'weekly', pressed: true });
-        return NextResponse.json({ result });
+        return NextResponse.json({ result, email, next });
     } catch {
         return NextResponse.json({ result: 'form' });
     }

@@ -263,20 +263,28 @@ const SAMPLE_SCRIPT = `<script>
   function open(){m.classList.add('on');document.body.style.overflow='hidden';}
   function close(){m.classList.remove('on');document.body.style.overflow='';}
   function show(v){if(info)info.hidden=v!=='info';if(th)th.hidden=v==='info';}
-  function say(h,p,done){document.getElementById('tm-th-h').textContent=h;document.getElementById('tm-th-p').textContent=p;document.getElementById('tm-th-x').hidden=!done;}
+  function say(h,p,done,d){d=d||{};var g=function(i){return document.getElementById(i);};g('tm-th-h').textContent=h;g('tm-th-p').textContent=p;g('tm-th-e').textContent=d.email?'Subscribed address: '+d.email:'';g('tm-th-n').textContent=done?'The issue is emailed weekly. The next one arrives '+(d.next||'Monday at 9:00 AM ET')+'.':'';g('tm-th-x').hidden=!done;g('tm-th-g').hidden=!done;}
   function press(){
     if(busy)return;busy=true;show('thanks');say('Subscribing you now','One moment.',false);open();
     fetch('/api/newsletter/press-subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:tok})})
       .then(function(r){return r.json();})
       .then(function(d){
         if(d.result==='subscribed'||d.result==='already'){
-          say('Thank you, you are subscribed',d.result==='already'?'You were already on the list, so there is nothing more to do. The next issue arrives in your inbox.':'You are in. The next issue arrives in your inbox, and we also emailed you the link to this issue.',true);busy=false;
+          say('Thank you, you are subscribed',d.result==='already'?'You were already on the list, so there is nothing more to do.':'You are in. We also emailed you the link to this issue.',true,d);busy=false;
         }else{location.href='/newsletter/join?t='+encodeURIComponent(tok)+'&cadence=weekly';}
       })
       .catch(function(){location.href='/newsletter/join?t='+encodeURIComponent(tok)+'&cadence=weekly';});
   }
+  function getNow(b){
+    var st=document.getElementById('tm-th-s');b.disabled=true;st.textContent='Sending...';
+    fetch('/api/newsletter/press-subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:tok,action:'send'})})
+      .then(function(r){return r.json();})
+      .then(function(d){st.textContent=d.result==='sent'?'Sent. Check your inbox in a minute.':d.result==='wait'?'The link was sent a moment ago. Check your inbox, or try again in a few minutes.':'We could not send it just now. Please try again in a minute.';b.disabled=false;})
+      .catch(function(){st.textContent='We could not send it just now. Please try again in a minute.';b.disabled=false;});
+  }
   document.addEventListener('click',function(e){
     var el=e.target.closest?e.target:null;if(!el)return;
+    var gb=el.closest('[data-get]');if(gb){e.preventDefault();getNow(gb);return;}
     var s=el.closest('[data-sub]');
     if(s){e.preventDefault();e.stopPropagation();press();return;}
     if(el.closest('[data-close]')){e.preventDefault();close();return;}
@@ -316,7 +324,7 @@ function sampleModal(token: string): string {
 <ul><li>It replaces impulsive reactions with predefined rules.</li><li>It distinguishes evidence from narrative.</li><li>It forces risk to be considered before expected return.</li><li>It makes outcomes easier to audit and improve over time.</li></ul>
 <p>Go deeper: <a href="https://trademind.bot/newsletter/start-here">Systematic Investing Framework</a></p>
 ${sub}</div>
-<div id="tm-thanks" hidden><h3 id="tm-th-h">Thank you, you are subscribed</h3><p id="tm-th-p"></p><p style="color:${C.muted}">Confirmed subscribers are entitled to 30% off the first year of a yearly TradeMind Strategy subscription, using the same email within 90 days of subscribing. You can unsubscribe at any time from the link in each email.</p><p id="tm-th-x" hidden><button type="button" class="sbtn" data-close style="border:1px solid ${C.btn};background:${C.btn};color:#fff;border-radius:10px;padding:12px 22px;font:800 15px/1.2 ${SAMPLE_FONT};cursor:pointer">Close</button></p></div></div></div>`;
+<div id="tm-thanks" hidden><h3 id="tm-th-h">Thank you, you are subscribed</h3><p id="tm-th-p"></p><p id="tm-th-e" style="color:${C.fg};font-weight:700"></p><p id="tm-th-n"></p><p id="tm-th-g"><button type="button" data-get style="border:1px solid ${C.line};background:transparent;color:${C.fg};border-radius:10px;padding:11px 20px;font:800 15px/1.2 ${SAMPLE_FONT};cursor:pointer">Get issue</button> <span id="tm-th-s" style="color:${C.muted};font-size:14px;margin-left:8px"></span></p><p style="color:${C.muted}">Confirmed subscribers are entitled to 30% off the first year of a yearly TradeMind Strategy subscription, using the same email within 90 days of subscribing. You can unsubscribe at any time from the link in each email.</p><p id="tm-th-x" hidden><button type="button" class="sbtn" data-close style="border:1px solid ${C.btn};background:${C.btn};color:#fff;border-radius:10px;padding:12px 22px;font:800 15px/1.2 ${SAMPLE_FONT};cursor:pointer">Close</button></p></div></div></div>`;
 }
 
 /**

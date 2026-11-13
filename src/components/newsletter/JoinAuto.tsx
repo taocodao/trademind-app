@@ -9,6 +9,18 @@ import { useEffect, useState, type ReactNode } from 'react';
 
 export default function JoinAuto({ token, fallback }: { token: string; fallback: ReactNode }) {
     const [state, setState] = useState<'working' | 'subscribed' | 'already' | 'form'>('working');
+    const [info, setInfo] = useState<{ email: string; next: string }>({ email: '', next: 'Monday at 9:00 AM ET' });
+    const [note, setNote] = useState('');
+    const [busy, setBusy] = useState(false);
+
+    function getIssue() {
+        setBusy(true); setNote('Sending...');
+        fetch('/api/newsletter/press-subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, action: 'send' }) })
+            .then((r) => r.json())
+            .then((d) => setNote(d.result === 'sent' ? 'Sent. Check your inbox in a minute.' : d.result === 'wait' ? 'The link was sent a moment ago. Check your inbox, or try again in a few minutes.' : 'We could not send it just now. Please try again in a minute.'))
+            .catch(() => setNote('We could not send it just now. Please try again in a minute.'))
+            .finally(() => setBusy(false));
+    }
 
     useEffect(() => {
         let live = true;
@@ -16,7 +28,7 @@ export default function JoinAuto({ token, fallback }: { token: string; fallback:
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }),
         })
             .then((r) => r.json())
-            .then((d) => { if (live) setState(d.result === 'subscribed' || d.result === 'already' ? d.result : 'form'); })
+            .then((d) => { if (!live) return; setInfo({ email: d.email ?? '', next: d.next ?? 'Monday at 9:00 AM ET' }); setState(d.result === 'subscribed' || d.result === 'already' ? d.result : 'form'); })
             .catch(() => { if (live) setState('form'); });
         return () => { live = false; };
     }, [token]);
@@ -38,7 +50,13 @@ export default function JoinAuto({ token, fallback }: { token: string; fallback:
                     ? 'You were already on the list, so there is nothing more to do. The next issue arrives in your inbox.'
                     : 'You are in. The next issue arrives in your inbox, and we also emailed you the link to the current issue.'}
             </p>
+            {info.email && <p className="tm-nl-sub" style={{ fontWeight: 700 }}>Subscribed address: {info.email}</p>}
+            <p className="tm-nl-sub">The issue is emailed weekly. The next one arrives {info.next}.</p>
             <p style={{ margin: '18px 0' }}>
+                <button type="button" className="tm-nl-btn" onClick={getIssue} disabled={busy}>Get issue</button>
+                {note && <span className="tm-nl-muted" style={{ marginLeft: 12, fontSize: 14 }}>{note}</span>}
+            </p>
+            <p style={{ margin: '0 0 18px' }}>
                 <Link href="/newsletter/current" className="tm-nl-link">Read the current issue</Link>
             </p>
             <p className="tm-nl-offerline">

@@ -67,3 +67,28 @@ export async function oneClickSubscribe(o: {
         return 'form';
     }
 }
+
+/** Next weekly issue: the coming Monday at 9:00 AM Eastern, as a sentence. */
+export function nextIssueText(now = new Date()): string {
+    const et = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const dow = et.getDay();
+    let add = (1 - dow + 7) % 7;
+    if (add === 0 && (et.getHours() > 9 || (et.getHours() === 9 && et.getMinutes() >= 0))) add = 7;
+    const d = new Date(et.getFullYear(), et.getMonth(), et.getDate() + add);
+    return `${d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} at 9:00 AM ET`;
+}
+
+/** The "Get issue" button: sends the current issue link to the subscriber's inbox now. At most one send every 10 minutes. */
+export async function sendIssueNow(token: string): Promise<'sent' | 'wait' | 'form'> {
+    try {
+        const c = await getContact(token);
+        if (!c) return 'form';
+        const r = await query(`SELECT id, cadence FROM newsletter_subscribers WHERE lower(email) = $1 AND status = 'confirmed' ORDER BY id DESC LIMIT 1`, [c.email.toLowerCase()]);
+        const sub = r.rows?.[0] as { id: number; cadence: string } | undefined;
+        if (!sub) return 'form';
+        const recent = await query(`SELECT 1 FROM newsletter_send_log WHERE subscriber_id = $1 AND kind IN ('issue_now','welcome') AND created_at > NOW() - INTERVAL '10 minutes' LIMIT 1`, [sub.id]);
+        if (recent.rowCount) return 'wait';
+        const ok = await sendSubscriberLink({ email: c.email, subscriberId: sub.id, cadence: sub.cadence, again: true });
+        return ok ? 'sent' : 'form';
+    } catch { return 'form'; }
+}

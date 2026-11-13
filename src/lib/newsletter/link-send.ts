@@ -20,15 +20,15 @@ export function currentIssuePath(_cadence?: Cadence | string | null): string {
     return '/newsletter/current';
 }
 
-export async function sendSubscriberLink(o: { email: string; subscriberId: number; cadence: Cadence | string | null }): Promise<boolean> {
+export async function sendSubscriberLink(o: { email: string; subscriberId: number; cadence: Cadence | string | null; again?: boolean }): Promise<boolean> {
     if (!RESEND_API_KEY) { console.warn('[link email] RESEND_API_KEY not configured'); return false; }
     try {
         const facts = await liveFacts(new Date());
         const tok = makeDailyLinkToken(o.subscriberId);
         const unsubscribeUrl = `${BASE_URL}/newsletter/unsubscribe?token=${await makeLongUnsubscribeToken(o.subscriberId)}`;
         const m = renderLinkEmail({
-            subject: `You are subscribed. Read the brief for the ${facts.weekLabel.toLowerCase()}`,
-            description: 'Welcome. The current TradeMind brief is on the site: market weather, the copilot readout, a flight plan idea and a turbulence test, risk first. About five minutes.',
+            subject: o.again ? `Your issue link: the brief for the ${facts.weekLabel.toLowerCase()}` : `You are subscribed. Read the brief for the ${facts.weekLabel.toLowerCase()}`,
+            description: (o.again ? 'Here is the current issue, as you asked. ' : 'Welcome. ') + 'The current TradeMind brief is on the site: market weather, the copilot readout, a flight plan idea and a turbulence test, risk first. About five minutes.',
             url: `${BASE_URL}${currentIssuePath(o.cadence)}`,
             unsubscribeUrl,
             preferencesUrl: `${BASE_URL}/newsletter/preferences?k=${encodeURIComponent(tok)}`,
@@ -47,7 +47,7 @@ export async function sendSubscriberLink(o: { email: string; subscriberId: numbe
         });
         if (!res.ok) console.error('[link email] Resend failed:', res.status, await res.text());
         const ok = res.ok;
-        await logNewsletterSend({ email: o.email, subscriberId: o.subscriberId, kind: 'welcome', ok });
+        await logNewsletterSend({ email: o.email, subscriberId: o.subscriberId, kind: o.again ? 'issue_now' : 'welcome', ok });
         return ok;
     } catch (err) {
         console.error('[link email]', err);

@@ -333,7 +333,7 @@ function weeklySubscribePrefill(): string {
     return weeklySubscribe('xxxxxxxxxxx').replace(/href="[^"]*"/, 'href="#"').replace('<a ', '<a data-sub ');
 }
 
-function sampleModal(token: string, pre = ''): string {
+function sampleModal(token: string, pre = '', shown = ''): string {
     const sub = (pre && !token ? weeklySubscribePrefill() : weeklySubscribe(token).replace('<a ', '<a data-sub ')).replace(' id="subscribe"', '');
     return `<div class="mdl" id="tm-mdl" role="dialog" aria-modal="true" aria-label="Subscribe" data-t="${token}" data-e="${esc(pre)}"><div class="box"><button type="button" class="x" data-close aria-label="Close">&times;</button>
 <div id="tm-info"><h3>Why most investors need a process</h3>
@@ -343,7 +343,7 @@ function sampleModal(token: string, pre = ''): string {
 <h4>What a systematic approach changes</h4>
 <ul><li>It replaces impulsive reactions with predefined rules.</li><li>It distinguishes evidence from narrative.</li><li>It forces risk to be considered before expected return.</li><li>It makes outcomes easier to audit and improve over time.</li></ul>
 <p>Go deeper: <a href="https://trademind.bot/newsletter/start-here">Systematic Investing Framework</a></p>
-${pre && !token ? `<p style="color:${C.fg};font-weight:700">Subscribing: ${esc(pre)}</p>` : ''}${sub}</div>
+${shown ? `<p style="color:${C.fg};font-weight:700">Subscribing: ${esc(shown)}</p>` : ''}${sub}</div>
 <div id="tm-thanks" hidden><h3 id="tm-th-h">Thank you, you are subscribed</h3><p id="tm-th-p"></p><p id="tm-th-e" style="color:${C.fg};font-weight:700"></p><p id="tm-th-n"></p><p id="tm-th-g"><button type="button" data-get style="border:1px solid ${C.line};background:transparent;color:${C.fg};border-radius:10px;padding:11px 20px;font:800 15px/1.2 ${SAMPLE_FONT};cursor:pointer">Get issue</button> <span id="tm-th-s" style="color:${C.muted};font-size:14px;margin-left:8px"></span></p><p style="color:${C.muted}">Confirmed subscribers are entitled to 30% off the first year of a yearly TradeMind Strategy subscription, using the same email within 90 days of subscribing. You can unsubscribe at any time from the link in each email.</p><p id="tm-th-x" hidden><button type="button" class="sbtn" data-close style="border:1px solid ${C.btn};background:${C.btn};color:#fff;border-radius:10px;padding:12px 22px;font:800 15px/1.2 ${SAMPLE_FONT};cursor:pointer">Close</button></p></div></div></div>`;
 }
 
@@ -352,7 +352,7 @@ ${pre && !token ? `<p style="color:${C.fg};font-weight:700">Subscribing: ${esc(p
  * text) comes first; market weather, copilot readout and turbulence test are this week's live reading. The same
  * page serves both audiences; the adviser copy adds a card to book 20 minutes.
  */
-export function libraryIssueHtml(issue: NewsletterIssue, facts: IssueFacts, o: { token: string; audience: 'retail' | 'adviser'; path: string; isCurrent: boolean; email?: string; last?: { title: string; path: string } | null; sample?: boolean; head?: string; prefill?: string }): string {
+export function libraryIssueHtml(issue: NewsletterIssue, facts: IssueFacts, o: { token: string; audience: 'retail' | 'adviser'; path: string; isCurrent: boolean; email?: string; last?: { title: string; path: string } | null; sample?: boolean; head?: string; prefill?: string; contactEmail?: string }): string {
     const so = { facts, strategyMember: false, token: o.token, firstName: null, baseUrl: BASE_URL, mailingAddress: ADDRESS, step: 1, n: 1 } as unknown as Seq7Opts;
     const d = new Date(`${issue.publishDate}T12:00:00Z`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
     const deep = issue.deepLinks.map((l) => `<a href="${esc(l.href)}" style="color:${C.blue};text-decoration:underline;font-weight:600;">${esc(l.label)} &rsaquo;</a>`).join('&nbsp;&nbsp;');
@@ -390,6 +390,6 @@ export function libraryIssueHtml(issue: NewsletterIssue, facts: IssueFacts, o: {
 <h1 class="ttl" aria-label="${esc(issue.title)}"><span aria-hidden="true">${words(issue.title)}</span></h1>
 ${o.sample ? sampleNote(o.token, em, pre) + sampleIntro(o.token, em, pre) : ''}<nav class="tiles" aria-label="Explore">${tiles.map(([h, l]) => `<a href="${esc(h)}">${esc(l)}</a>`).join('')}</nav>
 <div class="grid">${shareRail(issue, o.path)}<div class="col">${content}${shareCard(issue, o.path)}</div></div>
-</div>${o.sample ? sampleModal(o.token, pre) : ''}`;
+</div>${o.sample ? sampleModal(o.token, pre, o.token ? (o.contactEmail ?? '') : pre) : ''}`;
     return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>${esc(issue.title)} | TradeMind</title><meta name="description" content="${esc(issue.excerpt)}">${o.head ?? ''}<style>${SHARE_CSS}${o.sample ? SAMPLE_CSS : ''}</style></head><body>${body}${SCRIPT}${TITLE_SCRIPT}${o.sample ? SAMPLE_SCRIPT : ''}${ENGAGE_SCRIPT}</body></html>`;
 }

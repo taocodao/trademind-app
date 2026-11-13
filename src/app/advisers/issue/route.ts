@@ -15,12 +15,13 @@ export const runtime = 'nodejs';
 export async function GET(req: NextRequest) {
     const raw = req.nextUrl.searchParams.get('t') ?? req.cookies.get('tm_t')?.value ?? '';
     let token = '';
-    if (raw && validToken(raw)) { try { if (await getContact(raw)) token = raw; } catch { /* no token */ } }
+    let contactEmail = '';
+    if (raw && validToken(raw)) { try { const c = await getContact(raw); if (c) { token = raw; contactEmail = c.email; } } catch { /* no token */ } }
     const issue = ISSUES[ISSUES.length - 1];
     const prev = adjacentIssues(issue).prev;
     const last = prev ? { title: prev.title, path: issueUrl(prev) } : null;
     const facts = await liveFacts(new Date()).catch(() => SAMPLE_FACTS);
-    const html = libraryIssueHtml(issue, facts, { token, audience: 'adviser', path: issueUrl(issue), isCurrent: true, last, sample: true, prefill: !token ? (req.nextUrl.searchParams.get('email') ?? '').trim() : '' })
+    const html = libraryIssueHtml(issue, facts, { token, audience: 'adviser', path: issueUrl(issue), isCurrent: true, last, sample: true, contactEmail, prefill: !token ? (req.nextUrl.searchParams.get('email') ?? '').trim() : '' })
         .replace('<head>', '<head><meta name="robots" content="noindex">');
     return new Response(html, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'private, no-store' } });
 }

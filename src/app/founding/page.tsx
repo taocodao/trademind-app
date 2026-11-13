@@ -1,12 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const input = 'mt-1 w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm';
 
 export default function FoundingApply() {
     const [state, setState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
     const [error, setError] = useState('');
+    const [pre, setPre] = useState('');
+    // An address in the link (from our emails) is prefilled.
+    useEffect(() => { const e = (new URLSearchParams(window.location.search).get('email') ?? '').trim(); if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) setPre(e); }, []);
 
     async function submit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -52,7 +55,7 @@ export default function FoundingApply() {
 
             <form onSubmit={submit} className="mt-8 space-y-4">
                 <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
-                <label className="block text-sm">Email address<input required type="email" name="email" className={input} /></label>
+                <label className="block text-sm">Email address<input key={pre} required type="email" name="email" defaultValue={pre} className={input} /></label>
                 <label className="block text-sm">Name (optional)<input name="name" className={input} /></label>
                 <label className="block text-sm">Your role
                     <select name="role" className={input} defaultValue="self_directed"><option value="self_directed">Self-directed investor</option><option value="educator">Educator or newsletter author</option><option value="other">Other</option></select>

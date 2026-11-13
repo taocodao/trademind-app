@@ -32,7 +32,7 @@ async function handle(req: NextRequest, params: Promise<{ token: string; kind: s
     if (!known) return fallback;
     if (method === 'HEAD') return new NextResponse(null, { status: 200 });
     const c = await getContact(token);
-    const utm = `utm_source=coldlist&utm_medium=email&utm_campaign=${CAMPAIGN}&utm_content=${encodeURIComponent(c?.template ?? 'T')}_s${step}`;
+    const utm = `utm_source=coldlist&utm_medium=email&utm_campaign=${CAMPAIGN}&utm_content=${encodeURIComponent(c?.template ?? 'T')}_s${step}${c?.email ? `&email=${encodeURIComponent(c.email)}` : ''}`;
     let dest: string;
     if (kind === 'p') {
         const v = req.nextUrl.searchParams.get('v') ?? '';
@@ -55,7 +55,7 @@ async function handle(req: NextRequest, params: Promise<{ token: string; kind: s
         // The plain sample link opens the latest issue in the new format. Section links from follow-ups keep the section page.
         dest = ['sample', 'record', 'client', 'ira', 'overview'].includes(a)
             ? `/advisers/sample?t=${token}&${utm}#${a}`
-            : `/advisers/issue?t=${token}&${utm}${c?.email ? `&email=${encodeURIComponent(c.email)}` : ''}`;
+            : `/advisers/issue?t=${token}&${utm}`;
     }
     else if (kind === 'pl') dest = `/plans?t=${token}&${utm}`;
     else if (kind === 'i') {

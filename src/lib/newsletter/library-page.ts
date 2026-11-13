@@ -16,7 +16,7 @@ const esc = (x: string) => x.replace(/&/g, '&amp;').replace(/"/g, '&quot;').repl
  * copy (adds the Book 20 minutes card) for adviser invitation links and ?aud=adviser. A signed subscriber link (?k=)
  * or an address in the link (?email=) is shown as a known reader.
  */
-export async function libraryPage(req: NextRequest, issue: NewsletterIssue): Promise<Response> {
+export async function libraryPage(req: NextRequest, issue: NewsletterIssue, opts: { sample?: boolean } = {}): Promise<Response> {
     const sp = req.nextUrl.searchParams;
     const raw = sp.get('t') ?? req.cookies.get('tm_t')?.value ?? '';
     let token = '';
@@ -35,7 +35,7 @@ export async function libraryPage(req: NextRequest, issue: NewsletterIssue): Pro
     const url = BASE + issueUrl(issue);
     const ld = { '@context': 'https://schema.org', '@type': 'Article', headline: issue.title, description: issue.excerpt, datePublished: issue.publishDate, author: { '@type': 'Organization', name: 'TradeMind', url: BASE }, publisher: { '@type': 'Organization', name: 'TradeMind', url: BASE }, mainEntityOfPage: url, isPartOf: { '@type': 'Blog', name: 'The AI Systematic Investor', url: `${BASE}/newsletter` } };
     const head = `<link rel="canonical" href="${esc(url)}"><meta property="og:type" content="article"><meta property="og:title" content="${esc(issue.title)}"><meta property="og:description" content="${esc(issue.excerpt)}"><meta property="og:url" content="${esc(url)}"><meta property="og:image" content="${BASE}/share-card.png"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(issue.title)}"><meta name="twitter:description" content="${esc(issue.excerpt)}"><meta name="twitter:image" content="${BASE}/share-card.png"><script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>`;
-    const html = libraryIssueHtml(issue, facts, { token, audience: adviser ? 'adviser' : 'retail', path: issueUrl(issue), isCurrent: issue === ISSUES[ISSUES.length - 1], email, last, head });
+    const html = libraryIssueHtml(issue, facts, { token, audience: adviser ? 'adviser' : 'retail', path: issueUrl(issue), isCurrent: issue === ISSUES[ISSUES.length - 1], email, last, head, sample: opts.sample });
     const personal = !!(token || email || k);
     return new Response(html, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': personal ? 'private, no-store' : 'public, s-maxage=300, stale-while-revalidate=600' } });
 }

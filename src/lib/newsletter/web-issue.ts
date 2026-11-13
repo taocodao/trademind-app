@@ -243,7 +243,7 @@ function weeklySubscribe(token: string): string {
 }
 
 const SAMPLE_FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
-const SAMPLE_CSS = `.intro{margin:0 0 22px}.intro .sbtn{display:inline-block;cursor:pointer;border:1px solid ${C.btn};background:${C.btn};color:#fff;border-radius:10px;padding:13px 22px;font:800 16px/1.2 ${SAMPLE_FONT}}.intro h2{margin:22px 0 8px;font:800 26px/1.2 ${SAMPLE_FONT};color:${C.fg}}.intro p{margin:0;max-width:760px;font:400 16px/1.65 ${SAMPLE_FONT};color:${C.body}}.acards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px}.acards a{display:block;border:1px solid ${C.line};background:${C.card};border-radius:14px;padding:16px;text-decoration:none;font-family:${SAMPLE_FONT}}.acards b{display:block;color:${C.fg};font-size:16px;font-weight:600;margin-bottom:8px}.acards span{display:block;color:${C.muted};font-size:13px;line-height:1.5;margin-bottom:10px}.acards u{color:#a78bfa;font-size:13px;text-decoration:none}@media(max-width:760px){.acards{grid-template-columns:1fr 1fr}}.mdl{position:fixed;inset:0;z-index:50;display:none;align-items:flex-start;justify-content:center;background:rgba(5,8,14,.78);overflow:auto;padding:24px 12px}.mdl.on{display:flex}.mdl .box{position:relative;width:100%;max-width:620px;background:${C.card};border:1px solid ${C.line};border-radius:16px;padding:26px 24px;margin:auto;font-family:${SAMPLE_FONT};color:${C.body}}.mdl h3{margin:0 0 10px;font-size:22px;line-height:1.25;color:${C.fg}}.mdl h4{margin:18px 0 6px;font-size:16px;color:${C.fg}}.mdl p{margin:0 0 10px;font-size:15px;line-height:1.65}.mdl ul{margin:0 0 10px;padding-left:20px;font-size:15px;line-height:1.7}.mdl a{color:${C.blue}}.mdl .x{position:absolute;top:10px;right:12px;border:0;background:none;color:${C.muted};font-size:26px;line-height:1;cursor:pointer}`;
+const SAMPLE_CSS = `.intro{margin:0 0 22px}.intro .sbtn{display:inline-block;cursor:pointer;border:1px solid ${C.btn};background:${C.btn};color:#fff;border-radius:10px;padding:13px 22px;font:800 16px/1.2 ${SAMPLE_FONT}}.intro h2{margin:22px 0 8px;font:800 26px/1.2 ${SAMPLE_FONT};color:${C.fg}}.intro p{margin:0;max-width:760px;font:400 16px/1.65 ${SAMPLE_FONT};color:${C.body}}.acards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px}.acards a{display:block;border:1px solid ${C.line};background:${C.card};border-radius:14px;padding:16px;text-decoration:none;font-family:${SAMPLE_FONT}}.acards b{display:block;color:${C.fg};font-size:16px;font-weight:600;margin-bottom:8px}.acards span{display:block;color:${C.muted};font-size:13px;line-height:1.5;margin-bottom:10px}.acards u{color:#a78bfa;font-size:13px;text-decoration:none}@media(max-width:760px){.acards{grid-template-columns:1fr 1fr}}.snote{margin:0 0 18px;padding:12px 16px;border:1px solid ${C.line};background:${C.card};border-radius:12px;font:400 15px/1.6 ${SAMPLE_FONT};color:${C.body}}.snote b{color:${C.fg}}.snote a{color:${C.blue};font-weight:700;text-decoration:underline;cursor:pointer}.mdl{position:fixed;inset:0;z-index:50;display:none;align-items:flex-start;justify-content:center;background:rgba(5,8,14,.78);overflow:auto;padding:24px 12px}.mdl.on{display:flex}.mdl .box{position:relative;width:100%;max-width:620px;background:${C.card};border:1px solid ${C.line};border-radius:16px;padding:26px 24px;margin:auto;font-family:${SAMPLE_FONT};color:${C.body}}.mdl h3{margin:0 0 10px;font-size:22px;line-height:1.25;color:${C.fg}}.mdl h4{margin:18px 0 6px;font-size:16px;color:${C.fg}}.mdl p{margin:0 0 10px;font-size:15px;line-height:1.65}.mdl ul{margin:0 0 10px;padding-left:20px;font-size:15px;line-height:1.7}.mdl a{color:${C.blue}}.mdl .x{position:absolute;top:10px;right:12px;border:0;background:none;color:${C.muted};font-size:26px;line-height:1;cursor:pointer}`;
 
 const ENGAGE_SCRIPT = `<script>
 (function(){
@@ -300,14 +300,19 @@ const SAMPLE_SCRIPT = `<script>
 </script>`;
 
 /** Top of the adviser sample page: subscribe button, then the problem and the approach. Every link on the page opens the subscribe popup. */
-function sampleIntro(token: string): string {
+function sampleNote(token: string, em: string): string {
+    const link = em ? '' : ` To get the newsletter every week, <a href="#subscribe" ${token ? 'data-sub' : 'data-open'}>subscribe free</a>.`;
+    return `<p class="snote"><b>You are reading the current issue as a sample.</b>${link}</p>\n`;
+}
+
+function sampleIntro(token: string, em = ''): string {
     const cards: [string, string][] = [
         ['Market Regime', 'Which environment are we actually in, measured instead of guessed.'],
         ['ML Insight', 'A model that ranks setups and can veto a trade, but never starts one.'],
         ['Options Structure', 'LEAPS, covered calls, and put sleeves with the trade-offs stated up front.'],
         ['Risk Control', 'Drawdown limits and exposure caps that apply on the worst day, not just the good ones.'],
     ];
-    return `<section class="intro"><button type="button" class="sbtn" ${token ? 'data-sub' : 'data-open'}>Subscribe free</button>
+    return `<section class="intro">${em ? '' : `<button type="button" class="sbtn" ${token ? 'data-sub' : 'data-open'}>Subscribe free</button>`}
 <h2>The problem</h2><p>Most retail investors sit in one of two traps. Either they hold passive exposure with no way to adjust risk when conditions change, or they make concentrated bets based on unreliable sources, with no written rules for when to enter, how much to risk, or when to exit. Both approaches fail at the same moment: the day the market stops cooperating.</p>
 <h2>The approach</h2><div class="acards">${cards.map(([t, d]) => `<a href="/newsletter/start-here"><b>${esc(t)}</b><span>${esc(d)}</span><u>Read the guide</u></a>`).join('')}</div></section>`;
 }
@@ -367,7 +372,7 @@ export function libraryIssueHtml(issue: NewsletterIssue, facts: IssueFacts, o: {
 <div class="top"><div class="auth">${auth}</div><div class="brand"><a href="/">AI Investor Copilot</a></div></div>
 <nav class="crumbs"><span><a href="/">TradeMind home</a> &rsaquo; <a href="/newsletter">Newsletter</a> &rsaquo; <a href="/newsletter/issues">All issues</a> &rsaquo; Issue ${issue.number} &middot; <b>${o.isCurrent ? 'Current issue' : 'Past issue'}</b> &middot; ${esc(d)} &middot; ${esc(issue.readTime)}</span></nav>
 <h1 class="ttl" aria-label="${esc(issue.title)}"><span aria-hidden="true">${words(issue.title)}</span></h1>
-${o.sample ? sampleIntro(o.token) : ''}<nav class="tiles" aria-label="Explore">${tiles.map(([h, l]) => `<a href="${esc(h)}">${esc(l)}</a>`).join('')}</nav>
+${o.sample ? sampleNote(o.token, em) + sampleIntro(o.token, em) : ''}<nav class="tiles" aria-label="Explore">${tiles.map(([h, l]) => `<a href="${esc(h)}">${esc(l)}</a>`).join('')}</nav>
 <div class="grid">${shareRail(issue, o.path)}<div class="col">${content}${shareCard(issue, o.path)}</div></div>
 </div>${o.sample ? sampleModal(o.token) : ''}`;
     return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>${esc(issue.title)} | TradeMind</title><meta name="description" content="${esc(issue.excerpt)}">${o.head ?? ''}<style>${SHARE_CSS}${o.sample ? SAMPLE_CSS : ''}</style></head><body>${body}${SCRIPT}${TITLE_SCRIPT}${o.sample ? SAMPLE_SCRIPT : ''}${ENGAGE_SCRIPT}</body></html>`;

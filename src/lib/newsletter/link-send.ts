@@ -7,11 +7,22 @@ import { makeLongUnsubscribeToken, logNewsletterSend } from './db';
 import { makeDailyLinkToken } from './daily-link';
 import { renderLinkEmail } from './link-email';
 import { liveFacts } from './live-facts';
+import { query } from '@/lib/db';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const FROM = process.env.TRANSACTIONAL_FROM ?? 'TradeMind <signals@trademind.bot>';
 const REPLY_TO = process.env.NEWSLETTER_REPLY_TO ?? 'support@trademind.bot';
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://trademind.bot';
+
+/** Sender for this email: outreach_settings keys subscriber_link_from and subscriber_link_reply_to override the defaults, so it can be switched without a deploy. */
+async function senderFor(): Promise<{ from: string; replyTo: string }> {
+    try {
+        const r = await query(`SELECT key, value FROM outreach_settings WHERE key IN ('subscriber_link_from','subscriber_link_reply_to')`);
+        const m: Record<string, string> = {};
+        for (const row of r.rows as { key: string; value: string }[]) m[row.key] = row.value;
+        return { from: m.subscriber_link_from?.trim() || FROM, replyTo: m.subscriber_link_reply_to?.trim() || REPLY_TO };
+    } catch { return { from: FROM, replyTo: REPLY_TO }; }
+}
 
 export type Cadence = 'weekly' | 'daily' | 'both';
 
@@ -34,11 +45,12 @@ export async function sendSubscriberLink(o: { email: string; subscriberId: numbe
             preferencesUrl: `${BASE_URL}/newsletter/preferences?k=${encodeURIComponent(tok)}`,
             address: `TradeMind, ${MAILING_ADDRESS}`,
         });
+        const snd = await senderFor();
         const res = await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                from: FROM, reply_to: REPLY_TO, to: o.email, subject: m.subject, text: m.text,
+                from: snd.from, reply_to: snd.replyTo, to: o.email, subject: m.subject, text: m.text,
                 headers: {
                     'List-Unsubscribe': `<${unsubscribeUrl.replace('/newsletter/unsubscribe?', '/api/newsletter/unsubscribe?')}>`,
                     'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',

@@ -28,14 +28,16 @@ export async function libraryPage(req: NextRequest, issue: NewsletterIssue, opts
     const k = sp.get('k') ?? '';
     const id = k ? readDailyLinkToken(k) : null;
     if (id) { try { email = (await query('SELECT email FROM newsletter_subscribers WHERE id = $1', [id])).rows[0]?.email ?? ''; } catch { /* anonymous */ } }
-    if (!email) { const e = (sp.get('email') ?? '').trim(); if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) email = e; }
+    // On the sample page an address in the link is a reader who has not subscribed yet: prefill it, do not claim they are on the list.
+    let prefill = '';
+    if (!email) { const e = (sp.get('email') ?? '').trim(); if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { if (opts.sample) prefill = e; else email = e; } }
     const prev = adjacentIssues(issue).prev;
     const last = prev ? { title: prev.title, path: issueUrl(prev) } : null;
     const facts = await liveFacts(new Date()).catch(() => SAMPLE_FACTS);
     const url = BASE + issueUrl(issue);
     const ld = { '@context': 'https://schema.org', '@type': 'Article', headline: issue.title, description: issue.excerpt, datePublished: issue.publishDate, author: { '@type': 'Organization', name: 'TradeMind', url: BASE }, publisher: { '@type': 'Organization', name: 'TradeMind', url: BASE }, mainEntityOfPage: url, isPartOf: { '@type': 'Blog', name: 'The AI Systematic Investor', url: `${BASE}/newsletter` } };
     const head = `<link rel="canonical" href="${esc(url)}"><meta property="og:type" content="article"><meta property="og:title" content="${esc(issue.title)}"><meta property="og:description" content="${esc(issue.excerpt)}"><meta property="og:url" content="${esc(url)}"><meta property="og:image" content="${BASE}/share-card.png"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(issue.title)}"><meta name="twitter:description" content="${esc(issue.excerpt)}"><meta name="twitter:image" content="${BASE}/share-card.png"><script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>`;
-    const html = libraryIssueHtml(issue, facts, { token, audience: adviser ? 'adviser' : 'retail', path: issueUrl(issue), isCurrent: issue === ISSUES[ISSUES.length - 1], email, last, head, sample: opts.sample });
-    const personal = !!(token || email || k);
+    const html = libraryIssueHtml(issue, facts, { token, audience: adviser ? 'adviser' : 'retail', path: issueUrl(issue), isCurrent: issue === ISSUES[ISSUES.length - 1], email, last, head, sample: opts.sample, prefill });
+    const personal = !!(token || email || prefill || k);
     return new Response(html, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': personal ? 'private, no-store' : 'public, s-maxage=300, stale-while-revalidate=600' } });
 }

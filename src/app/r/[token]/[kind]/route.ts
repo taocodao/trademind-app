@@ -55,7 +55,7 @@ async function handle(req: NextRequest, params: Promise<{ token: string; kind: s
         // The plain sample link opens the latest issue in the new format. Section links from follow-ups keep the section page.
         dest = ['sample', 'record', 'client', 'ira', 'overview'].includes(a)
             ? `/advisers/sample?t=${token}&${utm}#${a}`
-            : `/advisers/issue?t=${token}&${utm}`;
+            : `/advisers/issue?t=${token}&${utm}${c?.email ? `&email=${encodeURIComponent(c.email)}` : ''}`;
     }
     else if (kind === 'pl') dest = `/plans?t=${token}&${utm}`;
     else if (kind === 'i') {

@@ -264,8 +264,19 @@ const SAMPLE_SCRIPT = `<script>
   function close(){m.classList.remove('on');document.body.style.overflow='';}
   function show(v){if(info)info.hidden=v!=='info';if(th)th.hidden=v==='info';}
   function say(h,p,done,d){d=d||{};var g=function(i){return document.getElementById(i);};g('tm-th-h').textContent=h;g('tm-th-p').textContent=p;g('tm-th-e').textContent=d.email?'Subscribed address: '+d.email:'';g('tm-th-n').textContent=done?'The issue is emailed weekly. The next one arrives '+(d.next||'Monday at 9:00 AM ET')+'.':'';g('tm-th-x').hidden=!done;g('tm-th-g').hidden=!done;}
+  var eml=m.getAttribute('data-e')||'';
   function press(){
     if(busy)return;busy=true;show('thanks');say('Subscribing you now','One moment.',false);open();
+    if(!tok&&eml){
+      fetch('/api/newsletter/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:eml,consent:true,source:'web-link',cadence:'weekly'})})
+        .then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};});})
+        .then(function(x){
+          if(x.ok){say('Thank you, you are subscribed',x.d.status==='already-confirmed'?'You were already on the list, so there is nothing more to do.':'You are in. We also emailed you the link to this issue.',true,{email:eml});busy=false;}
+          else{say('We could not subscribe you just now',x.d.error||'Please try again in a minute.',false);busy=false;}
+        })
+        .catch(function(){say('We could not subscribe you just now','Please try again in a minute.',false);busy=false;});
+      return;
+    }
     fetch('/api/newsletter/press-subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:tok})})
       .then(function(r){return r.json();})
       .then(function(d){
@@ -277,7 +288,7 @@ const SAMPLE_SCRIPT = `<script>
   }
   function getNow(b){
     var st=document.getElementById('tm-th-s');b.disabled=true;st.textContent='Sending...';
-    fetch('/api/newsletter/press-subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:tok,action:'send'})})
+    fetch('/api/newsletter/press-subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(tok?{token:tok,action:'send'}:{email:eml,action:'send'})})
       .then(function(r){return r.json();})
       .then(function(d){st.textContent=d.result==='sent'?'Sent. Check your inbox in a minute.':d.result==='wait'?'The link was sent a moment ago. Check your inbox, or try again in a few minutes.':'We could not send it just now. Please try again in a minute.';b.disabled=false;})
       .catch(function(){st.textContent='We could not send it just now. Please try again in a minute.';b.disabled=false;});
@@ -300,27 +311,31 @@ const SAMPLE_SCRIPT = `<script>
 </script>`;
 
 /** Top of the adviser sample page: subscribe button, then the problem and the approach. Every link on the page opens the subscribe popup. */
-function sampleNote(token: string, em: string): string {
-    const link = em ? '' : ` To get the newsletter every week, <a href="#subscribe" ${token ? 'data-sub' : 'data-open'}>subscribe free</a>.`;
+function sampleNote(token: string, em: string, pre = ''): string {
+    const link = em ? '' : ` To get the newsletter every week, <a href="#subscribe" ${token || pre ? 'data-sub' : 'data-open'}>subscribe free</a>.`;
     return `<p class="snote"><b>You are reading the current issue as a sample.</b>${link}</p>\n`;
 }
 
-function sampleIntro(token: string, em = ''): string {
+function sampleIntro(token: string, em = '', pre = ''): string {
     const cards: [string, string][] = [
         ['Market Regime', 'Which environment are we actually in, measured instead of guessed.'],
         ['ML Insight', 'A model that ranks setups and can veto a trade, but never starts one.'],
         ['Options Structure', 'LEAPS, covered calls, and put sleeves with the trade-offs stated up front.'],
         ['Risk Control', 'Drawdown limits and exposure caps that apply on the worst day, not just the good ones.'],
     ];
-    return `<section class="intro">${em ? '' : `<button type="button" class="sbtn" ${token ? 'data-sub' : 'data-open'}>Subscribe free</button>`}
+    return `<section class="intro">${em ? '' : `<button type="button" class="sbtn" ${token || pre ? 'data-sub' : 'data-open'}>Subscribe free</button>`}
 <h2>The problem</h2><p>Most retail investors sit in one of two traps. Either they hold passive exposure with no way to adjust risk when conditions change, or they make concentrated bets based on unreliable sources, with no written rules for when to enter, how much to risk, or when to exit. Both approaches fail at the same moment: the day the market stops cooperating.</p>
 <h2>The approach</h2><div class="acards">${cards.map(([t, d]) => `<a href="/newsletter/start-here"><b>${esc(t)}</b><span>${esc(d)}</span><u>Read the guide</u></a>`).join('')}</div></section>`;
 }
 
 /** The subscribe popup shown for every link on the sample page. */
-function sampleModal(token: string): string {
-    const sub = weeklySubscribe(token).replace('<a ', '<a data-sub ').replace(' id="subscribe"', '');
-    return `<div class="mdl" id="tm-mdl" role="dialog" aria-modal="true" aria-label="Subscribe" data-t="${token}"><div class="box"><button type="button" class="x" data-close aria-label="Close">&times;</button>
+function weeklySubscribePrefill(): string {
+    return weeklySubscribe('xxxxxxxxxxx').replace(/href="[^"]*"/, 'href="#"').replace('<a ', '<a data-sub ');
+}
+
+function sampleModal(token: string, pre = ''): string {
+    const sub = (pre && !token ? weeklySubscribePrefill() : weeklySubscribe(token).replace('<a ', '<a data-sub ')).replace(' id="subscribe"', '');
+    return `<div class="mdl" id="tm-mdl" role="dialog" aria-modal="true" aria-label="Subscribe" data-t="${token}" data-e="${esc(pre)}"><div class="box"><button type="button" class="x" data-close aria-label="Close">&times;</button>
 <div id="tm-info"><h3>Why most investors need a process</h3>
 <p>Many retail investors fall into one of two extremes. They either stay fully passive without a framework for adapting risk, or they make concentrated bets based on headlines, social commentary, and disconnected opinions. The problem is not lack of information. It is lack of structure.</p>
 <h4>The real gap</h4>
@@ -328,7 +343,7 @@ function sampleModal(token: string): string {
 <h4>What a systematic approach changes</h4>
 <ul><li>It replaces impulsive reactions with predefined rules.</li><li>It distinguishes evidence from narrative.</li><li>It forces risk to be considered before expected return.</li><li>It makes outcomes easier to audit and improve over time.</li></ul>
 <p>Go deeper: <a href="https://trademind.bot/newsletter/start-here">Systematic Investing Framework</a></p>
-${sub}</div>
+${pre && !token ? `<p style="color:${C.fg};font-weight:700">Subscribing: ${esc(pre)}</p>` : ''}${sub}</div>
 <div id="tm-thanks" hidden><h3 id="tm-th-h">Thank you, you are subscribed</h3><p id="tm-th-p"></p><p id="tm-th-e" style="color:${C.fg};font-weight:700"></p><p id="tm-th-n"></p><p id="tm-th-g"><button type="button" data-get style="border:1px solid ${C.line};background:transparent;color:${C.fg};border-radius:10px;padding:11px 20px;font:800 15px/1.2 ${SAMPLE_FONT};cursor:pointer">Get issue</button> <span id="tm-th-s" style="color:${C.muted};font-size:14px;margin-left:8px"></span></p><p style="color:${C.muted}">Confirmed subscribers are entitled to 30% off the first year of a yearly TradeMind Strategy subscription, using the same email within 90 days of subscribing. You can unsubscribe at any time from the link in each email.</p><p id="tm-th-x" hidden><button type="button" class="sbtn" data-close style="border:1px solid ${C.btn};background:${C.btn};color:#fff;border-radius:10px;padding:12px 22px;font:800 15px/1.2 ${SAMPLE_FONT};cursor:pointer">Close</button></p></div></div></div>`;
 }
 
@@ -337,7 +352,7 @@ ${sub}</div>
  * text) comes first; market weather, copilot readout and turbulence test are this week's live reading. The same
  * page serves both audiences; the adviser copy adds a card to book 20 minutes.
  */
-export function libraryIssueHtml(issue: NewsletterIssue, facts: IssueFacts, o: { token: string; audience: 'retail' | 'adviser'; path: string; isCurrent: boolean; email?: string; last?: { title: string; path: string } | null; sample?: boolean; head?: string }): string {
+export function libraryIssueHtml(issue: NewsletterIssue, facts: IssueFacts, o: { token: string; audience: 'retail' | 'adviser'; path: string; isCurrent: boolean; email?: string; last?: { title: string; path: string } | null; sample?: boolean; head?: string; prefill?: string }): string {
     const so = { facts, strategyMember: false, token: o.token, firstName: null, baseUrl: BASE_URL, mailingAddress: ADDRESS, step: 1, n: 1 } as unknown as Seq7Opts;
     const d = new Date(`${issue.publishDate}T12:00:00Z`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
     const deep = issue.deepLinks.map((l) => `<a href="${esc(l.href)}" style="color:${C.blue};text-decoration:underline;font-weight:600;">${esc(l.label)} &rsaquo;</a>`).join('&nbsp;&nbsp;');
@@ -347,6 +362,7 @@ export function libraryIssueHtml(issue: NewsletterIssue, facts: IssueFacts, o: {
         flightHtml: issueBodyHtml(issue.body) + (deep ? `<div style="${F}font-size:14px;padding:2px 0 6px;color:${C.muted};">Go deeper: ${deep}</div>` : ''),
     };
     const em = o.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(o.email) ? o.email.trim() : '';
+    const pre = !em && o.prefill && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(o.prefill) ? o.prefill.trim() : '';
     const plansPath = em ? `/plans?email=${encodeURIComponent(em)}` : '/plans';
     const meet = o.audience === 'adviser'
         ? card(`<div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.green};padding-bottom:6px;">For advisers</div>${P('Want to talk it through? Book 20 minutes. We look at one issue together, the record and its limits, and whether it fits your process.', 14, C.body)}${btn(MEETING_URL, 'Book 20 minutes')}`)
@@ -362,7 +378,7 @@ export function libraryIssueHtml(issue: NewsletterIssue, facts: IssueFacts, o: {
         meet,
         em
             ? card(`<div style="${F}font-size:15px;font-weight:800;color:${C.fg};padding-bottom:4px;">You are on the free weekly list</div>${P(`The next issue arrives in your inbox. Unsubscribe any time from the link in each email.`, 14, C.muted)}`)
-            : (o.sample ? weeklySubscribe(o.token).replace('<a ', '<a data-sub ') : weeklySubscribe(o.token)),
+            : (o.sample ? (pre && !o.token ? weeklySubscribePrefill() : weeklySubscribe(o.token).replace('<a ', '<a data-sub ')) : weeklySubscribe(o.token)),
         last,
         row(`<p style="margin:0 0 2px;${F}font-size:15px;color:${C.fg};font-weight:700;">Eric Huang</p><p style="margin:0 0 20px;${F}font-size:13px;color:${C.muted};">Founder, TradeMind &middot; Queens, New York &middot; <a href="mailto:eric@trademind.bot" style="color:${C.blue};">eric@trademind.bot</a></p>`),
         footer(),
@@ -372,8 +388,8 @@ export function libraryIssueHtml(issue: NewsletterIssue, facts: IssueFacts, o: {
 <div class="top"><div class="auth">${auth}</div><div class="brand"><a href="/">AI Investor Copilot</a></div></div>
 <nav class="crumbs"><span><a href="/">TradeMind home</a> &rsaquo; <a href="/newsletter">Newsletter</a> &rsaquo; <a href="/newsletter/issues">All issues</a> &rsaquo; Issue ${issue.number} &middot; <b>${o.isCurrent ? 'Current issue' : 'Past issue'}</b> &middot; ${esc(d)} &middot; ${esc(issue.readTime)}</span></nav>
 <h1 class="ttl" aria-label="${esc(issue.title)}"><span aria-hidden="true">${words(issue.title)}</span></h1>
-${o.sample ? sampleNote(o.token, em) + sampleIntro(o.token, em) : ''}<nav class="tiles" aria-label="Explore">${tiles.map(([h, l]) => `<a href="${esc(h)}">${esc(l)}</a>`).join('')}</nav>
+${o.sample ? sampleNote(o.token, em, pre) + sampleIntro(o.token, em, pre) : ''}<nav class="tiles" aria-label="Explore">${tiles.map(([h, l]) => `<a href="${esc(h)}">${esc(l)}</a>`).join('')}</nav>
 <div class="grid">${shareRail(issue, o.path)}<div class="col">${content}${shareCard(issue, o.path)}</div></div>
-</div>${o.sample ? sampleModal(o.token) : ''}`;
+</div>${o.sample ? sampleModal(o.token, pre) : ''}`;
     return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>${esc(issue.title)} | TradeMind</title><meta name="description" content="${esc(issue.excerpt)}">${o.head ?? ''}<style>${SHARE_CSS}${o.sample ? SAMPLE_CSS : ''}</style></head><body>${body}${SCRIPT}${TITLE_SCRIPT}${o.sample ? SAMPLE_SCRIPT : ''}${ENGAGE_SCRIPT}</body></html>`;
 }

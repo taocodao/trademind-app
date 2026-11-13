@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     const prev = adjacentIssues(issue).prev;
     const last = prev ? { title: prev.title, path: issueUrl(prev) } : null;
     const facts = await liveFacts(new Date()).catch(() => SAMPLE_FACTS);
-    const html = libraryIssueHtml(issue, facts, { token, audience: 'adviser', path: issueUrl(issue), isCurrent: true, last, sample: true })
+    const html = libraryIssueHtml(issue, facts, { token, audience: 'adviser', path: issueUrl(issue), isCurrent: true, last, sample: true, prefill: !token ? (req.nextUrl.searchParams.get('email') ?? '').trim() : '' })
         .replace('<head>', '<head><meta name="robots" content="noindex">');
     return new Response(html, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'private, no-store' } });
 }

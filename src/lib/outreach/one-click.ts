@@ -92,3 +92,16 @@ export async function sendIssueNow(token: string): Promise<'sent' | 'wait' | 'fo
         return ok ? 'sent' : 'form';
     } catch { return 'form'; }
 }
+
+/** Get issue for a subscriber found by address (a link that carries the address). Same 10 minute limit. */
+export async function sendIssueNowByEmail(email: string): Promise<'sent' | 'wait' | 'form'> {
+    try {
+        const r = await query(`SELECT id, cadence FROM newsletter_subscribers WHERE lower(email) = $1 AND status = 'confirmed' ORDER BY id DESC LIMIT 1`, [email.toLowerCase()]);
+        const sub = r.rows?.[0] as { id: number; cadence: string } | undefined;
+        if (!sub) return 'form';
+        const recent = await query(`SELECT 1 FROM newsletter_send_log WHERE subscriber_id = $1 AND kind IN ('issue_now','welcome') AND created_at > NOW() - INTERVAL '10 minutes' LIMIT 1`, [sub.id]);
+        if (recent.rowCount) return 'wait';
+        const ok = await sendSubscriberLink({ email, subscriberId: sub.id, cadence: sub.cadence, again: true });
+        return ok ? 'sent' : 'form';
+    } catch { return 'form'; }
+}

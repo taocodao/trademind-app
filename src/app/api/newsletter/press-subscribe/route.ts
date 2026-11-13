@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validToken, getContact } from '@/lib/outreach/db';
-import { oneClickSubscribe, sendIssueNow, nextIssueText } from '@/lib/outreach/one-click';
+import { oneClickSubscribe, sendIssueNow, sendIssueNowByEmail, nextIssueText } from '@/lib/outreach/one-click';
 import { signupRateLimited } from '@/lib/newsletter/db';
 
 export const dynamic = 'force-dynamic';
@@ -14,6 +14,14 @@ export async function POST(req: NextRequest) {
     try {
         const body = await req.json().catch(() => ({}));
         const token = String(body?.token ?? '');
+        if (!token && body?.action === 'send') {
+            // Get issue for an address passed in the link: only for a confirmed subscriber, at most one send every 10 minutes.
+            const em = String(body?.email ?? '').trim().toLowerCase();
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return NextResponse.json({ result: 'form' });
+            const ip0 = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
+            if (await signupRateLimited(ip0)) return NextResponse.json({ result: 'form' });
+            return NextResponse.json({ result: await sendIssueNowByEmail(em), email: em, next: nextIssueText() });
+        }
         if (!validToken(token)) return NextResponse.json({ result: 'form' });
         const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
         const ua = req.headers.get('user-agent');

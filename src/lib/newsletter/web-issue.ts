@@ -380,8 +380,10 @@ export function libraryIssueHtml(issue: NewsletterIssue, facts: IssueFacts, o: {
             ? card(`<div style="${F}font-size:15px;font-weight:800;color:${C.fg};padding-bottom:4px;">You are on the free weekly list</div>${P(`The next issue arrives in your inbox. Unsubscribe any time from the link in each email.`, 14, C.muted)}`)
             : (o.sample ? (pre && !o.token ? weeklySubscribePrefill() : weeklySubscribe(o.token).replace('<a ', '<a data-sub ')) : weeklySubscribe(o.token)),
         last,
+        ...(issue.number > FIRST_PUBLISHED_NUMBER ? [] : [
         row(`<p style="margin:0 0 2px;${F}font-size:15px;color:${C.fg};font-weight:700;">Eric Huang</p><p style="margin:0 0 20px;${F}font-size:13px;color:${C.muted};">Founder, TradeMind &middot; Queens, New York &middot; <a href="mailto:eric@trademind.bot" style="color:${C.blue};">eric@trademind.bot</a></p>`),
-        footer(),
+            footer(),
+        ]),
     ].join(''));
     const auth = em ? '' : `<a class="lg" href="${BASE_URL}/signin">Log in</a>`;
     const body = `<div class="lw">

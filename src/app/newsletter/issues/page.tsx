@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import '../newsletter.css';
-import { ISSUES_DESC, formatDate, monthLabel } from '@/lib/newsletter/issues';
+import { PUBLISHED_DESC, publicNumber, formatDate, monthLabel } from '@/lib/newsletter/issues';
 import { TOPICS } from '@/lib/newsletter/topics';
 import { NewsletterFooter, Breadcrumb } from '@/components/newsletter/NewsletterShell';
 import ArchiveClient from '@/components/newsletter/ArchiveClient';
@@ -19,9 +19,9 @@ export const metadata: Metadata = {
 
 export default function NewsletterArchive() {
     // Serialize only what the client needs for filtering and rendering.
-    const items = ISSUES_DESC.map((i) => ({
+    const items = PUBLISHED_DESC.map((i) => ({
         slug: i.slug,
-        number: i.number,
+        number: publicNumber(i),
         title: i.title,
         excerpt: i.excerpt,
         publishDate: i.publishDate,

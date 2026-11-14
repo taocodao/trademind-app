@@ -1,7 +1,7 @@
 import { sendMail, type Transport } from './transport';
 import { query } from '@/lib/db';
 import { MAILING_ADDRESS } from '@/lib/newsletter/email';
-import { ISSUES, issueUrl } from '@/lib/newsletter/issues';
+import { PUBLISHED_ISSUES, publicNumber, issueUrl } from '@/lib/newsletter/issues';
 import { RECAP_HTML } from './recap-html';
 import { BASE_URL, CAMPAIGN, ensureOutreachTables, getSettings } from './db';
 import { etParts } from './sender';
@@ -39,9 +39,9 @@ export async function ensureRecapTables(): Promise<void> {
 function esc(v: string): string { return v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
 export function recapIssues(monthKey: string) {
-    return ISSUES.filter((i) => i.publishDate.startsWith(monthKey)).sort((a, b) => (a.publishDate < b.publishDate ? -1 : 1)).map((i) => {
+    return PUBLISHED_ISSUES.filter((i) => i.publishDate.startsWith(monthKey)).sort((a, b) => (a.publishDate < b.publishDate ? -1 : 1)).map((i) => {
         const [, m, d] = i.publishDate.split('-');
-        return { n: i.number, date: `${MON3[Number(m) - 1]} ${Number(d)}`, title: i.title, takeaway: i.subtitle, url: `${BASE_URL}${issueUrl(i)}` };
+        return { n: publicNumber(i), date: `${MON3[Number(m) - 1]} ${Number(d)}`, title: i.title, takeaway: i.subtitle, url: `${BASE_URL}${issueUrl(i)}` };
     });
 }
 

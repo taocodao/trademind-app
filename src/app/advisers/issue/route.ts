@@ -3,7 +3,7 @@ import { liveFacts } from '@/lib/newsletter/live-facts';
 import { libraryIssueHtml } from '@/lib/newsletter/web-issue';
 import { SAMPLE_FACTS } from '@/lib/outreach/copy-seq7';
 import { getContact, validToken } from '@/lib/outreach/db';
-import { ISSUES, issueUrl, adjacentIssues } from '@/lib/newsletter/issues';
+import { ISSUES, issueUrl, publishedAdjacent } from '@/lib/newsletter/issues';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     let contactEmail = '';
     if (raw && validToken(raw)) { try { const c = await getContact(raw); if (c) { token = raw; contactEmail = c.email; } } catch { /* no token */ } }
     const issue = ISSUES[ISSUES.length - 1];
-    const prev = adjacentIssues(issue).prev;
+    const prev = publishedAdjacent(issue).prev;
     const last = prev ? { title: prev.title, path: issueUrl(prev) } : null;
     const facts = await liveFacts(new Date()).catch(() => SAMPLE_FACTS);
     const html = libraryIssueHtml(issue, facts, { token, audience: 'adviser', path: issueUrl(issue), isCurrent: true, last, sample: true, contactEmail, prefill: !token ? (req.nextUrl.searchParams.get('email') ?? '').trim() : '' })

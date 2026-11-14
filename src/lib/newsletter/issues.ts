@@ -52,6 +52,21 @@ export const ISSUES_DESC: NewsletterIssue[] = [...ISSUES].sort(
     (a, b) => (a.publishDate < b.publishDate ? 1 : -1)
 );
 
+/**
+ * Public library. The newest issue is the first public issue; the fifteen before it are kept here as templates for
+ * future weekly issues and are not shown on the site, in the feed or in the sitemap. Emails and the weekly sender
+ * still read the full ISSUES list. Raise FIRST_PUBLISHED_NUMBER to publish the next issue.
+ */
+export const FIRST_PUBLISHED_NUMBER = 16;
+export const PUBLISHED_ISSUES: NewsletterIssue[] = ISSUES.filter((i) => i.number >= FIRST_PUBLISHED_NUMBER);
+export const PUBLISHED_DESC: NewsletterIssue[] = ISSUES_DESC.filter((i) => i.number >= FIRST_PUBLISHED_NUMBER);
+/** The number shown to readers: the first published issue is Issue 1. */
+export function publicNumber(issue: NewsletterIssue): number { return issue.number - FIRST_PUBLISHED_NUMBER + 1; }
+export function publishedAdjacent(issue: NewsletterIssue): { prev?: NewsletterIssue; next?: NewsletterIssue } {
+    const idx = PUBLISHED_ISSUES.findIndex((i) => i.slug === issue.slug);
+    return { prev: idx > 0 ? PUBLISHED_ISSUES[idx - 1] : undefined, next: idx >= 0 && idx < PUBLISHED_ISSUES.length - 1 ? PUBLISHED_ISSUES[idx + 1] : undefined };
+}
+
 export function getIssue(slug: string): NewsletterIssue | undefined {
     return ISSUES.find((i) => i.slug === slug);
 }

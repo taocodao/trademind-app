@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { ISSUES_DESC, issueUrl } from '@/lib/newsletter/issues';
+import { PUBLISHED_DESC as ISSUES_DESC, issueUrl } from '@/lib/newsletter/issues';
 import { GUIDE_CONTENT } from '@/lib/newsletter/guides';
 
 const BASE = 'https://trademind.bot';

@@ -12,6 +12,7 @@ import { query } from '@/lib/db';
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const FROM = process.env.TRANSACTIONAL_FROM ?? 'TradeMind <signals@trademind.bot>';
 const REPLY_TO = process.env.NEWSLETTER_REPLY_TO ?? 'support@trademind.bot';
+const LINKEDIN_URL = 'https://www.linkedin.com/in/eric-huang-85600513/';
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://trademind.bot';
 
 /**
@@ -45,7 +46,9 @@ export async function sendSubscriberLink(o: { email: string; subscriberId: numbe
         const m = (snd.host ? renderLinkEmailLight : renderLinkEmail)({
             subject: o.again ? `Your issue link: the brief for the ${facts.weekLabel.toLowerCase()}` : `You are subscribed. Read the brief for the ${facts.weekLabel.toLowerCase()}`,
             description: (o.again ? 'Here is the current issue, as you asked. ' : 'Welcome. ') + 'The current TradeMind brief is on the site: market weather, the copilot readout, a flight plan idea and a turbulence test, risk first. About five minutes.',
-            url: `${base}${currentIssuePath(o.cadence)}`,
+            // The signed reader key (k) lets the page recognise the subscriber, so it shows no subscribe button.
+            url: `${base}${currentIssuePath(o.cadence)}?k=${encodeURIComponent(tok)}`,
+            signatureLink: snd.host ? { label: 'LinkedIn', url: LINKEDIN_URL } : null,
             unsubscribeUrl,
             preferencesUrl: `${base}/newsletter/preferences?k=${encodeURIComponent(tok)}`,
             address: `TradeMind, ${MAILING_ADDRESS}`,

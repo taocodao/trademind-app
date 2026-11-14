@@ -5,7 +5,7 @@ import { SAMPLE_FACTS } from '@/lib/outreach/copy-seq7';
 import { query } from '@/lib/db';
 import { readDailyLinkToken } from '@/lib/newsletter/daily-link';
 import { getContact, validToken } from '@/lib/outreach/db';
-import { ISSUES, issueUrl, adjacentIssues, type NewsletterIssue } from '@/lib/newsletter/issues';
+import { ISSUES, issueUrl, publishedAdjacent, type NewsletterIssue } from '@/lib/newsletter/issues';
 
 const BASE = 'https://trademind.bot';
 const ADVISER_SEGMENTS = new Set(['consulti', 'independent', 'fidelity']);
@@ -32,7 +32,7 @@ export async function libraryPage(req: NextRequest, issue: NewsletterIssue, opts
     // On the sample page an address in the link is a reader who has not subscribed yet: prefill it, do not claim they are on the list.
     let prefill = '';
     if (!email && !token) { const e = (sp.get('email') ?? '').trim(); if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { if (opts.sample) prefill = e; else email = e; } }
-    const prev = adjacentIssues(issue).prev;
+    const prev = publishedAdjacent(issue).prev;
     const last = prev ? { title: prev.title, path: issueUrl(prev) } : null;
     const facts = await liveFacts(new Date()).catch(() => SAMPLE_FACTS);
     const url = BASE + issueUrl(issue);

@@ -8,7 +8,7 @@ import {
     C, F, row, sp, card, btn, btnPair, pill, P, esc, why, FOCUS, THEME, THEME_SUB, DISCOUNT, NOBROKER, weeklyIssue,
     MEETING_URL, type Seq7Opts, type IssueFacts, type FlightOverride,
 } from '@/lib/outreach/copy-seq7';
-import type { NewsletterIssue } from '@/lib/newsletter/issues';
+import { publicNumber, type NewsletterIssue } from '@/lib/newsletter/issues';
 
 const ADDRESS = process.env.NEWSLETTER_MAILING_ADDRESS || '151-58 24th Rd, Whitestone, NY 11357, United States';
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://trademind.bot';
@@ -386,9 +386,9 @@ export function libraryIssueHtml(issue: NewsletterIssue, facts: IssueFacts, o: {
     const auth = em ? '' : `<a class="lg" href="${BASE_URL}/signin">Log in</a>`;
     const body = `<div class="lw">
 <div class="top"><div class="auth">${auth}</div><div class="brand"><a href="/">AI Investor Copilot</a></div></div>
-<nav class="crumbs"><span><a href="/">TradeMind home</a> &rsaquo; <a href="/newsletter">Newsletter</a> &rsaquo; <a href="/newsletter/issues">All issues</a> &rsaquo; Issue ${issue.number} &middot; <b>${o.isCurrent ? 'Current issue' : 'Past issue'}</b> &middot; ${esc(d)} &middot; ${esc(issue.readTime)}</span></nav>
+<nav class="crumbs"><span><a href="/">TradeMind home</a> &rsaquo; <a href="/newsletter">Newsletter</a> &rsaquo; <a href="/newsletter/issues">All issues</a> &rsaquo; Issue ${publicNumber(issue)} &middot; <b>${o.isCurrent ? 'Current issue' : 'Past issue'}</b> &middot; ${esc(d)} &middot; ${esc(issue.readTime)}</span></nav>
 <h1 class="ttl" aria-label="${esc(issue.title)}"><span aria-hidden="true">${words(issue.title)}</span></h1>
-${o.sample ? sampleNote(o.token, em, pre) + sampleIntro(o.token, em, pre) : ''}<nav class="tiles" aria-label="Explore">${tiles.map(([h, l]) => `<a href="${esc(h)}">${esc(l)}</a>`).join('')}</nav>
+${o.sample ? sampleNote(o.token, em, pre) + sampleIntro(o.token, em, pre) : ''}${em ? '' : `<nav class="tiles" aria-label="Explore">${tiles.map(([h, l]) => `<a href="${esc(h)}">${esc(l)}</a>`).join('')}</nav>`}
 <div class="grid">${shareRail(issue, o.path)}<div class="col">${content}${shareCard(issue, o.path)}</div></div>
 </div>${o.sample ? sampleModal(o.token, pre, o.token ? (o.contactEmail ?? '') : pre) : ''}`;
     return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>${esc(issue.title)} | TradeMind</title><meta name="description" content="${esc(issue.excerpt)}">${o.head ?? ''}<style>${SHARE_CSS}${o.sample ? SAMPLE_CSS : ''}</style></head><body>${body}${SCRIPT}${TITLE_SCRIPT}${o.sample ? SAMPLE_SCRIPT : ''}${ENGAGE_SCRIPT}</body></html>`;

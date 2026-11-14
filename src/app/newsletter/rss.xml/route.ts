@@ -1,4 +1,4 @@
-import { ISSUES_DESC, issueUrl } from '@/lib/newsletter/issues';
+import { PUBLISHED_DESC as ISSUES_DESC, publicNumber, issueUrl } from '@/lib/newsletter/issues';
 
 const BASE = 'https://trademind.bot';
 
@@ -16,7 +16,7 @@ export function GET() {
     const items = ISSUES_DESC.map(
         (i) => `
     <item>
-      <title>${esc(`Issue ${i.number}: ${i.title}`)}</title>
+      <title>${esc(`Issue ${publicNumber(i)}: ${i.title}`)}</title>
       <link>${BASE}${issueUrl(i)}</link>
       <guid isPermaLink="true">${BASE}${issueUrl(i)}</guid>
       <pubDate>${new Date(i.publishDate + 'T12:00:00Z').toUTCString()}</pubDate>

@@ -4,14 +4,15 @@ import { currentIssueHtml } from '@/lib/newsletter/web-issue';
 import { getContact, validToken } from '@/lib/outreach/db';
 import { ISSUES } from '@/lib/newsletter/issues';
 import { libraryPage } from '@/lib/newsletter/library-page';
+import { publicSequence } from '@/lib/newsletter/weekly';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 /** The current weekly issue, on the website. Same layout as the first invitation email. */
 export async function GET(req: NextRequest) {
-    // The web page is the latest library issue in the new format. The embed view (used by the old adviser sample page) keeps the compact layout.
-    if (req.nextUrl.searchParams.get('embed') !== '1') return libraryPage(req, ISSUES[ISSUES.length - 1]);
+    // The web page is the newest weekly issue in the new format (the launch issue until the first weekly edition is published). The embed view (used by the old adviser sample page) keeps the compact layout.
+    if (req.nextUrl.searchParams.get('embed') !== '1') { const seq = await publicSequence(); return libraryPage(req, seq[seq.length - 1] ?? ISSUES[ISSUES.length - 1]); }
     const raw = req.nextUrl.searchParams.get('t') ?? req.cookies.get('tm_t')?.value ?? '';
     // A personal link turns the subscribe buttons into one-click links for that invited contact.
     let token = '';

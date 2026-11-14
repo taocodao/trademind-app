@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
             if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return NextResponse.json({ result: 'form' });
             const ip0 = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
             if (await signupRateLimited(ip0)) return NextResponse.json({ result: 'form' });
-            return NextResponse.json({ result: await sendIssueNowByEmail(em), email: em, next: nextIssueText() });
+            return NextResponse.json({ result: await sendIssueNowByEmail(em), email: em, next: await nextIssueText(em) });
         }
         if (!validToken(token)) return NextResponse.json({ result: 'form' });
         const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
         if (await signupRateLimited(ip)) return NextResponse.json({ result: 'form' });
         const c = await getContact(token);
         const email = c?.email ?? '';
-        const next = nextIssueText();
+        const next = await nextIssueText(email);
         if (body?.action === 'send') return NextResponse.json({ result: await sendIssueNow(token), email, next });
         const result = await oneClickSubscribe({ token, ip, ua, cadence: 'weekly', pressed: true });
         return NextResponse.json({ result, email, next });

@@ -3,6 +3,7 @@ import {
     signup, signupRateLimited, confirmInstantly, setCadence,
 } from '@/lib/newsletter/db';
 import { sendSubscriberLink } from '@/lib/newsletter/link-send';
+import { nextIssueText } from '@/lib/newsletter/weekly';
 import { markContactByToken, validToken } from '@/lib/outreach/db';
 
 export const dynamic = 'force-dynamic';
@@ -45,10 +46,10 @@ export async function POST(req: NextRequest) {
         const tok = body.outreachToken && validToken(String(body.outreachToken)) ? `&t=${String(body.outreachToken)}` : '';
         const thanks = (extra = '') => `/newsletter/thanks?c=${cadence === 'daily' ? 'daily' : 'weekly'}${tok}${extra}`;
         if (result.kind === 'already-confirmed') {
-            return NextResponse.json({ ok: true, status: 'already-confirmed', message: "You're already subscribed", redirect: thanks('&already=1') });
+            return NextResponse.json({ ok: true, status: 'already-confirmed', message: "You're already subscribed", next: await nextIssueText(String(body.email ?? '')), redirect: thanks('&already=1') });
         }
         if (result.kind === 'moved-confirmed') {
-            return NextResponse.json({ ok: true, status: 'already-confirmed', moved: true, message: 'This subscription is already active at your current address.', redirect: thanks('&already=1') });
+            return NextResponse.json({ ok: true, status: 'already-confirmed', moved: true, message: 'This subscription is already active at your current address.', next: await nextIssueText(String(body.email ?? '')), redirect: thanks('&already=1') });
         }
 
         // Every signup is instant: no confirmation email. The address is confirmed at once and the
@@ -61,6 +62,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({
                 ok: true, status: 'subscribed', returning,
                 message: returning ? 'Welcome back. You are subscribed.' : 'You are subscribed.',
+                next: await nextIssueText(conf.email),
                 redirect: thanks(),
             });
         }

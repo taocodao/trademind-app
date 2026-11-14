@@ -2,6 +2,8 @@ import { query } from '@/lib/db';
 import { getContact, hashIp, markContactByToken, CAMPAIGN } from '@/lib/outreach/db';
 import { signup, confirmInstantly, setCadence } from '@/lib/newsletter/db';
 import { sendSubscriberLink } from '@/lib/newsletter/link-send';
+import { nextIssueText } from '@/lib/newsletter/weekly';
+export { nextIssueText };
 
 export type OneClickResult = 'subscribed' | 'already' | 'form';
 
@@ -66,16 +68,6 @@ export async function oneClickSubscribe(o: {
         console.error('[one-click]', err);
         return 'form';
     }
-}
-
-/** Next weekly issue: the coming Monday at 9:00 AM Eastern, as a sentence. */
-export function nextIssueText(now = new Date()): string {
-    const et = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-    const dow = et.getDay();
-    let add = (1 - dow + 7) % 7;
-    if (add === 0 && (et.getHours() > 9 || (et.getHours() === 9 && et.getMinutes() >= 0))) add = 7;
-    const d = new Date(et.getFullYear(), et.getMonth(), et.getDate() + add);
-    return `${d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} at 9:00 AM ET`;
 }
 
 /** The "Get issue" button: sends the current issue link to the subscriber's inbox now. At most one send every 10 minutes. */

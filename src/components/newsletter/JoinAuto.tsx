@@ -9,7 +9,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 
 export default function JoinAuto({ token, fallback }: { token: string; fallback: ReactNode }) {
     const [state, setState] = useState<'working' | 'subscribed' | 'already' | 'form'>('working');
-    const [info, setInfo] = useState<{ email: string; next: string }>({ email: '', next: 'Monday at 9:00 AM ET' });
+    const [info, setInfo] = useState<{ email: string; next: string }>({ email: '', next: 'seven days from now' });
     const [note, setNote] = useState('');
     const [busy, setBusy] = useState(false);
 
@@ -28,7 +28,7 @@ export default function JoinAuto({ token, fallback }: { token: string; fallback:
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }),
         })
             .then((r) => r.json())
-            .then((d) => { if (!live) return; setInfo({ email: d.email ?? '', next: d.next ?? 'Monday at 9:00 AM ET' }); setState(d.result === 'subscribed' || d.result === 'already' ? d.result : 'form'); })
+            .then((d) => { if (!live) return; setInfo({ email: d.email ?? '', next: d.next ?? 'seven days from now' }); setState(d.result === 'subscribed' || d.result === 'already' ? d.result : 'form'); })
             .catch(() => { if (live) setState('form'); });
         return () => { live = false; };
     }, [token]);
@@ -51,7 +51,7 @@ export default function JoinAuto({ token, fallback }: { token: string; fallback:
                     : 'You are in. The next issue arrives in your inbox, and we also emailed you the link to the current issue.'}
             </p>
             {info.email && <p className="tm-nl-sub" style={{ fontWeight: 700 }}>Subscribed address: {info.email}</p>}
-            <p className="tm-nl-sub">The issue is emailed weekly. The next one arrives {info.next}.</p>
+            <p className="tm-nl-sub">Your first issue is on its way now. After that you get one issue a week, exactly seven days after the last one. The next one arrives {info.next}.</p>
             <p style={{ margin: '18px 0' }}>
                 <button type="button" className="tm-nl-btn" onClick={getIssue} disabled={busy}>Get issue</button>
                 {note && <span className="tm-nl-muted" style={{ marginLeft: 12, fontSize: 14 }}>{note}</span>}

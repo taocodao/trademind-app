@@ -3,7 +3,9 @@ import pool from '@/lib/db';
 import { contentHash, stable } from '@/lib/briefing/approval';
 import { etDate, etMinutes, schedule } from '@/lib/briefing/calendar';
 import { FLIGHT_PLAN_MODULES, RISK_MODULES } from '@/lib/emailgen/modules';
-import { ISSUES } from '../issues';
+import { ISSUES, FIRST_PUBLISHED_NUMBER } from '../issues';
+
+const TEMPLATES = ISSUES.filter((i) => i.number < FIRST_PUBLISHED_NUMBER);
 import { renderNewsletter, type EditionInput } from '../edition-render';
 import { searchSources, writeFromSources } from './sources';
 import { ensureEditionTables } from './db';
@@ -13,6 +15,8 @@ export interface PublicPayload {
     dateLabel: string; hook: string; preheader: string;
     context: EditionInput['context']; weekAhead: string[];
     idea: EditionInput['idea']; risk: string; lessonNumber: number | null; note?: string;
+    /** Old library issue used as the body of this edition, and a short sourced line tying the week to it. */
+    templateNumber?: number; tieIn?: string;
 }
 export interface Check { name: string; pass: boolean; detail?: string }
 
@@ -61,6 +65,12 @@ export function toInput(p: PublicPayload, date: string, extra: Partial<EditionIn
     };
 }
 
+/** The templates are the library issues before the launch issue, used in order, one per week, then round again. */
+export async function templateOrdinal(date: string): Promise<number> {
+    const r = await pool.query(`SELECT count(*)::int AS n FROM newsletter_edition WHERE kind = 'weekly' AND edition_date >= '2026-11-15' AND edition_date < $1::date`, [date]);
+    return r.rows[0]?.n ?? 0;
+}
+
 export type BuildResult = { stored: boolean; reason?: string; id?: number; status?: string; checks?: Check[] };
 
 /** Builds and stores one draft. Idempotent per kind and date. Never sends. */
@@ -69,8 +79,14 @@ export async function buildEdition(kind: 'weekly' | 'daily', date = etDate(), fa
     const have = await pool.query(`SELECT id FROM newsletter_edition WHERE kind = $1 AND edition_date = $2::date`, [kind, date]);
     if (have.rows[0]) return { stored: false, reason: 'already built', id: have.rows[0].id };
     const dateLabel = longLabel(date);
-    const hits = await searchSources(QUERIES[kind], { recency: kind === 'weekly' ? 'week' : 'day', maxResults: 8 });
-    const written = await writeFromSources(hits, dateLabel, kind);
+    // Up to three writing attempts; the first draft with no rule problems wins, otherwise the last one is held.
+    let hits = await searchSources(QUERIES[kind], { recency: kind === 'weekly' ? 'week' : 'day', maxResults: 8 });
+    let written = await writeFromSources(hits, dateLabel, kind);
+    for (let attempt = 1; attempt < 3 && (!written || written.problems.length); attempt++) {
+        const h2 = await searchSources(QUERIES[kind], { recency: kind === 'weekly' ? 'week' : 'day', maxResults: 8 });
+        const w2 = await writeFromSources(h2, dateLabel, kind);
+        if (w2 && (!written || w2.problems.length < written.problems.length)) { written = w2; hits = h2; }
+    }
     if (!written) return { stored: false, reason: hits.length ? 'writer unavailable' : 'no sources returned' };
 
     const n = Number((await pool.query(`SELECT count(*) FROM newsletter_edition WHERE kind = $1`, [kind])).rows[0].count);
@@ -78,11 +94,12 @@ export async function buildEdition(kind: 'weekly' | 'daily', date = etDate(), fa
     const ik = Object.keys(FLIGHT_PLAN_MODULES), rk = Object.keys(RISK_MODULES);
     const idea = FLIGHT_PLAN_MODULES[ik[(kind === 'weekly' ? n : day) % ik.length]];
     const risk = RISK_MODULES[rk[(kind === 'weekly' ? n : day) % rk.length]];
+    const tplIdx = kind === 'weekly' ? await templateOrdinal(date) : 0;
     const payload: PublicPayload = {
         kind, dateLabel, hook: written.hook, preheader: written.preheader, context: written.context, weekAhead: kind === 'weekly' ? written.weekAhead : [],
         idea: { title: idea.title, body: idea.body, why: 'Knowing the cost of a rule in advance makes it easier to keep following it.' }, risk: risk.body,
         lessonNumber: kind === 'weekly' ? ISSUES[n % ISSUES.length].number : null,
-        ...(kind === 'weekly' && n === 0 ? { note: 'The weekly email now arrives every Monday morning, with the same issue for every reader. Earlier issues stay in the archive on our site.' } : {}),
+        ...(kind === 'weekly' ? { templateNumber: TEMPLATES[tplIdx % TEMPLATES.length].number, tieIn: written.tieIn } : {}),
     };
     const r = renderNewsletter(toInput(payload, date, {}));
     const checks = checkEdition(r.subject, r.text, r.html, written.problems, payload);
@@ -93,14 +110,10 @@ export async function buildEdition(kind: 'weekly' | 'daily', date = etDate(), fa
          ON CONFLICT (kind, edition_date) DO NOTHING RETURNING id`,
         [kind, date, status, r.subject, JSON.stringify(payload), JSON.stringify(hits.slice(0, 10).map((h) => ({ title: h.title, url: h.url, date: h.date }))), JSON.stringify(checks), factsHash]);
     const id = ins.rows[0]?.id;
-    // Policy approval is off unless the owner turns it on and 20 daily or 4 weekly editions were already approved by hand.
-    if (id && pass && process.env.NEWSLETTER_AUTO_APPROVE === '1') {
-        const need = kind === 'weekly' ? 4 : 20;
-        const by = Number((await pool.query(`SELECT count(*) FROM newsletter_edition WHERE kind = $1 AND status IN ('approved','sent') AND approved_by <> 'policy'`, [kind])).rows[0].count);
-        if (by >= need) {
-            await pool.query(`UPDATE newsletter_edition SET status = 'approved', approved_by = 'policy', approved_at = NOW(), approved_hash = $2 WHERE id = $1`, [id, contentHash(r.subject, stable(payload))]);
-            return { stored: true, id, status: 'approved', checks };
-        }
+    // Weekly editions publish by themselves when every check passes; one that fails a check is held and the owner is told.
+    if (id && pass && kind === 'weekly') {
+        await pool.query(`UPDATE newsletter_edition SET status = 'approved', approved_by = 'auto', approved_at = NOW(), approved_hash = $2 WHERE id = $1`, [id, contentHash(r.subject, stable(payload))]);
+        return { stored: true, id, status: 'approved', checks };
     }
     return { stored: !!id, id, status, checks };
 }

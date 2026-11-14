@@ -263,7 +263,7 @@ const SAMPLE_SCRIPT = `<script>
   function open(){m.classList.add('on');document.body.style.overflow='hidden';}
   function close(){m.classList.remove('on');document.body.style.overflow='';}
   function show(v){if(info)info.hidden=v!=='info';if(th)th.hidden=v==='info';}
-  function say(h,p,done,d){d=d||{};var g=function(i){return document.getElementById(i);};g('tm-th-h').textContent=h;g('tm-th-p').textContent=p;g('tm-th-e').textContent=d.email?'Subscribed address: '+d.email:'';g('tm-th-n').textContent=done?'The issue is emailed weekly. The next one arrives '+(d.next||'Monday at 9:00 AM ET')+'.':'';g('tm-th-x').hidden=!done;g('tm-th-g').hidden=!done;}
+  function say(h,p,done,d){d=d||{};var g=function(i){return document.getElementById(i);};g('tm-th-h').textContent=h;g('tm-th-p').textContent=p;g('tm-th-e').textContent=d.email?'Subscribed address: '+d.email:'';g('tm-th-n').textContent=done?(p.indexOf('already')<0?'Your first issue is on its way now. After that you get one issue a week, exactly seven days after the last one. ':'You get one issue a week, exactly seven days after the last one. ')+'The next one arrives '+(d.next||'seven days from now')+'.':'';g('tm-th-x').hidden=!done;g('tm-th-g').hidden=!done;}
   var eml=m.getAttribute('data-e')||'';
   function press(){
     if(busy)return;busy=true;show('thanks');say('Subscribing you now','One moment.',false);open();
@@ -271,7 +271,7 @@ const SAMPLE_SCRIPT = `<script>
       fetch('/api/newsletter/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:eml,consent:true,source:'web-link',cadence:'weekly'})})
         .then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};});})
         .then(function(x){
-          if(x.ok){say('Thank you, you are subscribed',x.d.status==='already-confirmed'?'You were already on the list, so there is nothing more to do.':'You are in. We also emailed you the link to this issue.',true,{email:eml});busy=false;}
+          if(x.ok){say('Thank you, you are subscribed',x.d.status==='already-confirmed'?'You were already on the list, so there is nothing more to do.':'You are in. We also emailed you the link to this issue.',true,{email:eml,next:x.d.next});busy=false;}
           else{say('We could not subscribe you just now',x.d.error||'Please try again in a minute.',false);busy=false;}
         })
         .catch(function(){say('We could not subscribe you just now','Please try again in a minute.',false);busy=false;});

@@ -35,7 +35,7 @@ export function currentIssuePath(_cadence?: Cadence | string | null): string {
     return '/newsletter/current';
 }
 
-export async function sendSubscriberLink(o: { email: string; subscriberId: number; cadence: Cadence | string | null; again?: boolean }): Promise<boolean> {
+export async function sendSubscriberLink(o: { email: string; subscriberId: number; cadence: Cadence | string | null; again?: boolean; weekly?: { subject: string; description: string; path: string; slug?: string } }): Promise<boolean> {
     if (!RESEND_API_KEY) { console.warn('[link email] RESEND_API_KEY not configured'); return false; }
     try {
         const facts = await liveFacts(new Date());
@@ -44,10 +44,10 @@ export async function sendSubscriberLink(o: { email: string; subscriberId: numbe
         const base = snd.host ? `https://${snd.host}` : BASE_URL;
         const unsubscribeUrl = `${base}/newsletter/unsubscribe?token=${await makeLongUnsubscribeToken(o.subscriberId)}`;
         const m = (snd.host ? renderLinkEmailLight : renderLinkEmail)({
-            subject: o.again ? `Your issue link: the brief for the ${facts.weekLabel.toLowerCase()}` : `You are subscribed. Read the brief for the ${facts.weekLabel.toLowerCase()}`,
-            description: (o.again ? 'Here is the current issue, as you asked. ' : 'Welcome. ') + 'The current TradeMind brief is on the site: market weather, the copilot readout, a flight plan idea and a turbulence test, risk first. About five minutes.',
+            subject: o.weekly ? o.weekly.subject : o.again ? `Your issue link: the brief for the ${facts.weekLabel.toLowerCase()}` : `You are subscribed. Read the brief for the ${facts.weekLabel.toLowerCase()}`,
+            description: o.weekly ? o.weekly.description : (o.again ? 'Here is the current issue, as you asked. ' : 'Welcome. ') + 'The current TradeMind brief is on the site: market weather, the copilot readout, a flight plan idea and a turbulence test, risk first. About five minutes.',
             // The signed reader key (k) lets the page recognise the subscriber, so it shows no subscribe button.
-            url: `${base}${currentIssuePath(o.cadence)}?k=${encodeURIComponent(tok)}`,
+            url: `${base}${o.weekly ? o.weekly.path : currentIssuePath(o.cadence)}?k=${encodeURIComponent(tok)}`,
             signatureLink: snd.host ? { label: 'LinkedIn', url: LINKEDIN_URL } : null,
             unsubscribeUrl,
             preferencesUrl: `${base}/newsletter/preferences?k=${encodeURIComponent(tok)}`,
@@ -66,7 +66,7 @@ export async function sendSubscriberLink(o: { email: string; subscriberId: numbe
         });
         if (!res.ok) console.error('[link email] Resend failed:', res.status, await res.text());
         const ok = res.ok;
-        await logNewsletterSend({ email: o.email, subscriberId: o.subscriberId, kind: o.again ? 'issue_now' : 'welcome', ok });
+        await logNewsletterSend({ email: o.email, subscriberId: o.subscriberId, kind: o.weekly ? 'weekly_issue' : o.again ? 'issue_now' : 'welcome', issueSlug: o.weekly?.slug ?? null, ok });
         return ok;
     } catch (err) {
         console.error('[link email]', err);

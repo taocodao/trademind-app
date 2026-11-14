@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
     const expected = process.env.CRON_SECRET;
     if (!expected || req.headers.get('authorization') !== `Bearer ${expected}`) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const q = req.nextUrl.searchParams;
+    if (q.get('kind') !== 'daily' && !q.get('to') && q.get('dry') !== '1') return NextResponse.json({ skipped: 'weekly issues are sent one subscriber at a time by the weekly sender' });
     if (q.get('kind') === 'daily') return NextResponse.json({ skipped: 'the daily brief is retired' });
     const kind = 'weekly' as 'daily' | 'weekly';
     const dry = q.get('dry') === '1'; const to = q.get('to')?.toLowerCase() ?? null;

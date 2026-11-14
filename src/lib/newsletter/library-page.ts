@@ -5,7 +5,8 @@ import { SAMPLE_FACTS } from '@/lib/outreach/copy-seq7';
 import { query } from '@/lib/db';
 import { readDailyLinkToken } from '@/lib/newsletter/daily-link';
 import { getContact, validToken } from '@/lib/outreach/db';
-import { ISSUES, issueUrl, publishedAdjacent, type NewsletterIssue } from '@/lib/newsletter/issues';
+import { issueUrl, type NewsletterIssue } from '@/lib/newsletter/issues';
+import { publicSequence } from '@/lib/newsletter/weekly';
 
 const BASE = 'https://trademind.bot';
 const ADVISER_SEGMENTS = new Set(['consulti', 'independent', 'fidelity']);
@@ -32,13 +33,15 @@ export async function libraryPage(req: NextRequest, issue: NewsletterIssue, opts
     // On the sample page an address in the link is a reader who has not subscribed yet: prefill it, do not claim they are on the list.
     let prefill = '';
     if (!email && !token) { const e = (sp.get('email') ?? '').trim(); if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { if (opts.sample) prefill = e; else email = e; } }
-    const prev = publishedAdjacent(issue).prev;
+    const seq = await publicSequence();
+    const at = seq.findIndex((i) => i.slug === issue.slug);
+    const prev = at > 0 ? seq[at - 1] : undefined;
     const last = prev ? { title: prev.title, path: issueUrl(prev) } : null;
     const facts = await liveFacts(new Date()).catch(() => SAMPLE_FACTS);
     const url = BASE + issueUrl(issue);
     const ld = { '@context': 'https://schema.org', '@type': 'Article', headline: issue.title, description: issue.excerpt, datePublished: issue.publishDate, author: { '@type': 'Organization', name: 'TradeMind', url: BASE }, publisher: { '@type': 'Organization', name: 'TradeMind', url: BASE }, mainEntityOfPage: url, isPartOf: { '@type': 'Blog', name: 'The AI Systematic Investor', url: `${BASE}/newsletter` } };
     const head = `<link rel="canonical" href="${esc(url)}"><meta property="og:type" content="article"><meta property="og:title" content="${esc(issue.title)}"><meta property="og:description" content="${esc(issue.excerpt)}"><meta property="og:url" content="${esc(url)}"><meta property="og:image" content="${BASE}/share-card.png"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(issue.title)}"><meta name="twitter:description" content="${esc(issue.excerpt)}"><meta name="twitter:image" content="${BASE}/share-card.png"><script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>`;
-    const html = libraryIssueHtml(issue, facts, { token, audience: adviser ? 'adviser' : 'retail', path: issueUrl(issue), isCurrent: issue === ISSUES[ISSUES.length - 1], email, last, head, sample: opts.sample, prefill, contactEmail });
+    const html = libraryIssueHtml(issue, facts, { token, audience: adviser ? 'adviser' : 'retail', path: issueUrl(issue), isCurrent: at >= 0 && at === seq.length - 1, email, last, head, sample: opts.sample, prefill, contactEmail });
     const personal = !!(token || email || prefill || k);
     return new Response(html, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': personal ? 'private, no-store' : 'public, s-maxage=300, stale-while-revalidate=600' } });
 }

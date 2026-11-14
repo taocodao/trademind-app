@@ -36,16 +36,17 @@ export async function searchSources(queries: string[], opts: { maxResults?: numb
 }
 
 const SYSTEM = `You write short market context items for a QQQ research newsletter. You are given numbered sources. Use only facts stated in them.
-Return only JSON: {"hook": string, "preheader": string, "items": [{"headline": string, "body": string, "source": number}], "week_ahead": [{"text": string, "source": number}]}.
+Return only JSON: {"hook": string, "preheader": string, "items": [{"headline": string, "body": string, "source": number}], "week_ahead": [{"text": string, "source": number}], "tie_in": {"text": string, "source": number}}.
 Rules, all mandatory:
 - 3 items, each body 20 to 45 words, plain statements of what happened or what is scheduled. "source" is the number of the one source that states it.
 - week_ahead: 0 to 4 scheduled events (earnings, data releases, meetings) with dates, each stated in a source.
+- tie_in: one or two plain sentences, 20 to 45 words, that say why a week like this one is a reason to keep a written, repeatable investing process. It must rest on one fact in one source, and it must not advise or predict.
 - hook: one plain sentence under 16 words about the main item. preheader: under 14 words.
 - Any number you write must appear in that source. Never write prices, index levels or dollar amounts. Percent moves are allowed only if the source states them.
 - Do not predict, advise, or say what a reader should do. Do not use the words buy, sell, add, exit, enter, trim, rebalance. Do not say a move was caused by something unless the source says so.
 - No dashes of any kind, no exclamation points, no emojis. Plain text.`;
 
-export interface Written { hook: string; preheader: string; context: ContextItem[]; weekAhead: string[]; problems: string[] }
+export interface Written { hook: string; preheader: string; context: ContextItem[]; weekAhead: string[]; tieIn: string; problems: string[] }
 
 const nums = (s: string) => (s.match(/\d[\d,]*\.?\d*/g) || []).map((n) => n.replace(/,/g, '').replace(/\.$/, ''));
 const ACTION = /\b(buy|sell|add|exit|enter|trim|rebalance|should|must)\b/i;
@@ -79,6 +80,8 @@ export function validateWritten(raw: any, hits: SearchHit[]): Written {
         const text = String(it?.text ?? '').trim(); if (!text) continue;
         if (check(`week ahead ${k + 1}`, text, Number(it?.source))) ahead.push(text);
     }
+    let tieIn = '';
+    if (raw?.tie_in?.text) { tieIn = String(raw.tie_in.text).trim(); check('tie in', tieIn, Number(raw.tie_in.source)); }
     const hook = String(raw?.hook ?? '').trim(); const preheader = String(raw?.preheader ?? '').trim();
     if (!hook) problems.push('hook missing');
     for (const [l, t] of [['hook', hook], ['preheader', preheader]] as const) {
@@ -87,7 +90,7 @@ export function validateWritten(raw: any, hits: SearchHit[]): Written {
         const stray = nums(t).filter((n) => !hay.has(n)); if (stray.length) problems.push(`${l}: numbers not in sources`);
     }
     if (items.length < 2) problems.push(`only ${items.length} usable items`);
-    return { hook, preheader, context: items, weekAhead: ahead, problems };
+    return { hook, preheader, context: items, weekAhead: ahead, tieIn, problems };
 }
 
 export async function writeFromSources(hits: SearchHit[], dateLabel: string, kind: 'weekly' | 'daily'): Promise<Written | null> {

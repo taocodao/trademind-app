@@ -5,7 +5,7 @@
 import { MAILING_ADDRESS } from './email';
 import { makeLongUnsubscribeToken, logNewsletterSend } from './db';
 import { makeDailyLinkToken } from './daily-link';
-import { renderLinkEmail } from './link-email';
+import { renderLinkEmail, renderLinkEmailLight } from './link-email';
 import { liveFacts } from './live-facts';
 import { query } from '@/lib/db';
 
@@ -14,14 +14,17 @@ const FROM = process.env.TRANSACTIONAL_FROM ?? 'TradeMind <signals@trademind.bot
 const REPLY_TO = process.env.NEWSLETTER_REPLY_TO ?? 'support@trademind.bot';
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://trademind.bot';
 
-/** Sender for this email: outreach_settings keys subscriber_link_from and subscriber_link_reply_to override the defaults, so it can be switched without a deploy. */
-async function senderFor(): Promise<{ from: string; replyTo: string }> {
+/**
+ * Sender for this email: outreach_settings keys subscriber_link_from and subscriber_link_reply_to override the defaults, so it can be switched without a deploy.
+ * subscriber_link_host (for example go.echoads.tv) switches the email to the light HTML format with every link on that host, which must match the sender domain.
+ */
+async function senderFor(): Promise<{ from: string; replyTo: string; host: string }> {
     try {
-        const r = await query(`SELECT key, value FROM outreach_settings WHERE key IN ('subscriber_link_from','subscriber_link_reply_to')`);
+        const r = await query(`SELECT key, value FROM outreach_settings WHERE key IN ('subscriber_link_from','subscriber_link_reply_to','subscriber_link_host')`);
         const m: Record<string, string> = {};
         for (const row of r.rows as { key: string; value: string }[]) m[row.key] = row.value;
-        return { from: m.subscriber_link_from?.trim() || FROM, replyTo: m.subscriber_link_reply_to?.trim() || REPLY_TO };
-    } catch { return { from: FROM, replyTo: REPLY_TO }; }
+        return { from: m.subscriber_link_from?.trim() || FROM, replyTo: m.subscriber_link_reply_to?.trim() || REPLY_TO, host: (m.subscriber_link_host || '').trim().replace(/^https?:\/\//, '').replace(/\/+$/, '') };
+    } catch { return { from: FROM, replyTo: REPLY_TO, host: '' }; }
 }
 
 export type Cadence = 'weekly' | 'daily' | 'both';
@@ -36,22 +39,23 @@ export async function sendSubscriberLink(o: { email: string; subscriberId: numbe
     try {
         const facts = await liveFacts(new Date());
         const tok = makeDailyLinkToken(o.subscriberId);
-        const unsubscribeUrl = `${BASE_URL}/newsletter/unsubscribe?token=${await makeLongUnsubscribeToken(o.subscriberId)}`;
-        const m = renderLinkEmail({
+        const snd = await senderFor();
+        const base = snd.host ? `https://${snd.host}` : BASE_URL;
+        const unsubscribeUrl = `${base}/newsletter/unsubscribe?token=${await makeLongUnsubscribeToken(o.subscriberId)}`;
+        const m = (snd.host ? renderLinkEmailLight : renderLinkEmail)({
             subject: o.again ? `Your issue link: the brief for the ${facts.weekLabel.toLowerCase()}` : `You are subscribed. Read the brief for the ${facts.weekLabel.toLowerCase()}`,
             description: (o.again ? 'Here is the current issue, as you asked. ' : 'Welcome. ') + 'The current TradeMind brief is on the site: market weather, the copilot readout, a flight plan idea and a turbulence test, risk first. About five minutes.',
-            url: `${BASE_URL}${currentIssuePath(o.cadence)}`,
+            url: `${base}${currentIssuePath(o.cadence)}`,
             unsubscribeUrl,
-            preferencesUrl: `${BASE_URL}/newsletter/preferences?k=${encodeURIComponent(tok)}`,
+            preferencesUrl: `${base}/newsletter/preferences?k=${encodeURIComponent(tok)}`,
             address: `TradeMind, ${MAILING_ADDRESS}`,
         });
-        const snd = await senderFor();
         const res = await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                from: snd.from, reply_to: snd.replyTo, to: o.email, subject: m.subject, text: m.text,
-                headers: {
+                from: snd.from, reply_to: snd.replyTo, to: o.email, subject: m.subject, text: m.text, ...(m.html ? { html: m.html } : {}),
+                headers: snd.host ? undefined : {
                     'List-Unsubscribe': `<${unsubscribeUrl.replace('/newsletter/unsubscribe?', '/api/newsletter/unsubscribe?')}>`,
                     'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
                 },

@@ -75,3 +75,27 @@ ${H(i.address)}<br>${H(DISCLAIMER)}</td></tr>
 </table></td></tr></table></body></html>`;
     return { subject: i.subject, html, text: plain.text };
 }
+
+// ---------- Light HTML version (live for the single subscriber link email) ----------
+
+/**
+ * Light HTML subscriber email: plain Arial paragraphs, the link written out, and a short footer
+ * (reason, unsubscribe link, address). Tested at Microsoft 365 business and consumer mailboxes and Gmail:
+ * dark designs, hidden preheaders and long footers pushed it to Junk, this shape did not.
+ * Sender and every link in the email must share one domain. Pure rendering.
+ */
+export function renderLinkEmailLight(i: LinkEmailInput): { subject: string; html: string; text: string } {
+    const hi = i.firstName ? `Hi ${H(i.firstName)},` : 'Hi,';
+    const why = 'You are getting this because you subscribed to the free TradeMind brief.';
+    const text = [
+        i.firstName ? `Hi ${i.firstName},` : 'Hi,', '',
+        i.description, '',
+        `Read it here: ${i.url}`, '',
+        'Eric Huang',
+        'Founder, TradeMind', '',
+        `${why} Unsubscribe: ${i.unsubscribeUrl}`, '',
+        i.address,
+    ].join('\n');
+    const html = `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#222"><p>${hi}</p><p>${H(i.description)}</p><p>Read it here: <a href="${H(i.url)}">${H(i.url)}</a></p><p>Eric Huang<br>Founder, TradeMind</p><p style="font-size:12px;color:#777">${why} <a href="${H(i.unsubscribeUrl)}" style="color:#777">Unsubscribe</a><br><br>${H(i.address)}</p></div>`;
+    return { subject: i.subject, html, text };
+}

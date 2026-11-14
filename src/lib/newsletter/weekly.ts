@@ -26,7 +26,6 @@ export function editionBody(p: PublicPayload): string {
     out.push('');
     if (p.weekAhead?.length) { out.push('## The week ahead', ''); for (const w of p.weekAhead) out.push(`- ${w}`); out.push(''); }
     if (tpl) {
-        out.push(`## This week's flight plan: ${tpl.title}`, '');
         if (p.tieIn) out.push(p.tieIn, '');
         out.push(tpl.body, '');
     } else {
@@ -40,7 +39,7 @@ export function editionToIssue(row: { id: number; date: string; subject: string;
     const p = row.payload;
     return {
         number: FIRST_PUBLISHED_NUMBER + ordinal, slug: `flight-plan-week-of-${row.date}`,
-        title: `Flight Plan: week of ${longDate(row.date)}`, subtitle: p.hook, publishDate: row.date, readTime: '5 min',
+        title: (p.templateNumber ? ISSUES.find((i) => i.number === p.templateNumber)?.title : undefined) ?? `Flight Plan: week of ${longDate(row.date)}`, subtitle: p.hook, publishDate: row.date, readTime: '5 min',
         tags: ['Weekly Brief'], excerpt: p.hook, deepLinks: (p.templateNumber ? ISSUES.find((i) => i.number === p.templateNumber)?.deepLinks : undefined) ?? [], body: editionBody(p), emailSubject: row.subject, previewText: p.preheader,
     };
 }

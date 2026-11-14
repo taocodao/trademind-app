@@ -133,6 +133,7 @@ export function checkDraft(d: CxDraft): string[] {
 }
 
 export const CX_FOOTER_LINE = 'You are getting this note at your business address because your firm is listed as an investment professional.';
+export const CX_STOP_LINE = 'Reply stop and I will not write again.';
 export const CX_DISCLAIMER = 'TradeMind publishes educational research. It is not personalized investment advice. All performance shown is hypothetical simulation unless labeled as a virtual account. Options and leveraged ETFs involve substantial risk, including loss of the amount invested.';
 
 const KIND: Record<string, string> = { ADV: 'as', HOME: 'h', SIM: 'v', VA: 'va', SUB: 'sw', CAL: 'cal', STUDY: 'f' };
@@ -159,8 +160,9 @@ export function renderCx(d: { step: number; subject: string; body: string }, o: 
         // Legacy long email ("I built TradeMind ({{HOME}})") gets a sample line and an anchor; v2 emails carry their own link token in the text.
         const legacy = d.body.includes(' ({{HOME}})');
         const homeLink = legacy ? link('HOME') : '';
-        const stop = `${CX_FOOTER_LINE} Reply stop and I will not write again.`;
-        const text = `${paras.map(tokText).join('\n\n')}${homeLink ? `\n\nSample page: ${homeLink}` : ''}\n\nEric Huang\nFounder, TradeMind\n\n${stop}\n${CX_DISCLAIMER}\n\n${o.mailingAddress}`;
+        // Footer tested on Microsoft 365 business mailboxes (Nov 13, 2026): the stop line, one unsubscribe link on the sending domain, and the address.
+        const stop = CX_STOP_LINE;
+        const text = `${paras.map(tokText).join('\n\n')}${homeLink ? `\n\nSample page: ${homeLink}` : ''}\n\nEric Huang\nFounder, TradeMind\n\n${stop} Unsubscribe: ${o.unsubUrl}\n\n${o.mailingAddress}`;
         const ph = paras.map((t) => {
             if (t === LIMITS_LINE) return `<p style="${SMALL}">${esc(t)}</p>`;
             let h = esc(t);
@@ -168,7 +170,7 @@ export function renderCx(d: { step: number; subject: string; body: string }, o: 
             h = h.replace(/\{\{([A-Z]+)\}\}/g, (_m, k) => (KIND[k] ? `<a href="${esc(link(k))}">${esc(link(k))}</a>` : ''));
             return `<p>${h.replace(/\n/g, '<br>')}</p>`;
         }).join('');
-        const html = `<div style="${HTML_WRAP}">${ph}<p>Eric Huang<br>Founder, TradeMind</p><p style="${FOOT}">${esc(stop)}<br>${esc(CX_DISCLAIMER)}<br><br>${esc(o.mailingAddress)}</p></div>`;
+        const html = `<div style="${HTML_WRAP}">${ph}<p>Eric Huang<br>Founder, TradeMind</p><p style="${FOOT}">${esc(stop)} <a href="${esc(o.unsubUrl)}" style="color:#777">Unsubscribe</a><br><br>${esc(o.mailingAddress)}</p></div>`;
         return { subject: d.subject, text, html };
     }
     let body = d.body.replace(/\{\{([A-Z]+)\}\}/g, (_m, k) => (KIND[k] ? link(k) : ''));

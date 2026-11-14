@@ -66,6 +66,6 @@ t('stored body has greeting and one link token', stored.startsWith('Hi Dana,') &
 const h = C.renderCx({ step: 1, subject: fb1.subject, body: stored }, { token: 'tok1234567', linkBase: 'https://go.vochat.ai', unsubUrl: 'u', mailingAddress: 'ADDR', html: true });
 t('v2 render links to the adviser sample on the sending domain', h.html.includes('href="https://go.vochat.ai/r/tok1234567/as?s=1"') && h.text.includes('https://go.vochat.ai/r/tok1234567/as?s=1') && !h.text.includes('Sample page:') && !/trademind\.bot|\{\{/.test(h.html + h.text));
 const fbA = G.fallbackEmail(1, A, end1); const hA = C.renderCx({ step: 1, subject: fbA.subject, body: G.storedBody(fbA, 'ADV') }, { token: 'tok1234567', linkBase: 'https://go.vochat.ai', unsubUrl: 'u', mailingAddress: 'ADDR', html: true });
-t('arm A render has no link at all', !/https?:\/\//.test(hA.html + hA.text) && !hA.html.includes('<a '));
+t('arm A render has no sample link, only the unsubscribe link', !/https?:\/\//.test(hA.html + hA.text) && (hA.html.match(/<a /g) || []).length === 1 && hA.html.includes('>Unsubscribe</a>'));
 t('prompts mention the arm rule', G.userPrompt(1, base, [], end1).includes('[[LINK]]') && !G.userPrompt(1, A, [], end1).includes('[[LINK]]'));
 console.log(fail ? `${fail} FAILED` : 'ALL PASSED'); process.exit(fail ? 1 : 0);

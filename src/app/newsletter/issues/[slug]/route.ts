@@ -8,9 +8,10 @@ export const runtime = 'nodejs';
 /** One library issue in the new format at its permanent address. */
 export async function GET(req: NextRequest, ctx: { params: Promise<{ slug: string }> }) {
     const { slug } = await ctx.params;
-    const issue = PUBLISHED_ISSUES.find((i) => `${i.publishDate}-${i.slug}` === slug);
-    // Templates that are not published yet send the reader to the current issue.
-    if (!issue && ISSUES.some((i) => `${i.publishDate}-${i.slug}` === slug)) return new Response(null, { status: 308, headers: { location: '/newsletter/current' } });
+    const issue = ISSUES.find((i) => `${i.publishDate}-${i.slug}` === slug);
     if (!issue) return new Response('Not found', { status: 404, headers: { 'content-type': 'text/plain' } });
-    return libraryPage(req, issue);
+    const res = await libraryPage(req, issue);
+    // Templates that are not published stay reachable from emails already sent, but are unlisted and kept out of search.
+    if (!PUBLISHED_ISSUES.includes(issue)) res.headers.set('x-robots-tag', 'noindex');
+    return res;
 }

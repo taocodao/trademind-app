@@ -61,7 +61,7 @@ export const FIRST_PUBLISHED_NUMBER = 16;
 export const PUBLISHED_ISSUES: NewsletterIssue[] = ISSUES.filter((i) => i.number >= FIRST_PUBLISHED_NUMBER);
 export const PUBLISHED_DESC: NewsletterIssue[] = ISSUES_DESC.filter((i) => i.number >= FIRST_PUBLISHED_NUMBER);
 /** The number shown to readers: the first published issue is Issue 1. */
-export function publicNumber(issue: NewsletterIssue): number { return issue.number - FIRST_PUBLISHED_NUMBER + 1; }
+export function publicNumber(issue: NewsletterIssue): number { return issue.number >= FIRST_PUBLISHED_NUMBER ? issue.number - FIRST_PUBLISHED_NUMBER + 1 : issue.number; }
 export function publishedAdjacent(issue: NewsletterIssue): { prev?: NewsletterIssue; next?: NewsletterIssue } {
     const idx = PUBLISHED_ISSUES.findIndex((i) => i.slug === issue.slug);
     return { prev: idx > 0 ? PUBLISHED_ISSUES[idx - 1] : undefined, next: idx >= 0 && idx < PUBLISHED_ISSUES.length - 1 ? PUBLISHED_ISSUES[idx + 1] : undefined };

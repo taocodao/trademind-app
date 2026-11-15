@@ -42,6 +42,11 @@ export async function ensureCxTables(): Promise<void> {
     await query(`ALTER TABLE cx_draft ADD COLUMN IF NOT EXISTS meta JSONB`);
     await query(`ALTER TABLE cx_profile ADD COLUMN IF NOT EXISTS segment TEXT`);
     await query(`ALTER TABLE cx_profile ADD COLUMN IF NOT EXISTS arm TEXT`);
+    await query(`ALTER TABLE cx_profile ADD COLUMN IF NOT EXISTS seq TEXT`);
+    // Real actions by Consulti contacts, logged by hand or by the report: replies, calls, referrals. Clicks alone are not interest.
+    await query(`CREATE TABLE IF NOT EXISTS cx_outcomes (id SERIAL PRIMARY KEY, token TEXT NOT NULL REFERENCES outreach_contacts(token), kind TEXT NOT NULL, source TEXT NOT NULL DEFAULT 'manual', at TIMESTAMPTZ NOT NULL DEFAULT NOW(), note TEXT)`);
+    await query(`CREATE INDEX IF NOT EXISTS cx_outcomes_token_idx ON cx_outcomes (token, kind)`);
+    try { await query(`ALTER TABLE newsletter_subscribers ADD COLUMN IF NOT EXISTS subscribe_method TEXT`); } catch { /* table is created by the newsletter module */ }
     for (const [k, v] of CX_DEFAULTS) await query(`INSERT INTO outreach_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING`, [k, v]);
     ready = true;
 }

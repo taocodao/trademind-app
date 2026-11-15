@@ -1,9 +1,16 @@
 import { query } from '@/lib/db';
-import { getContact, hashIp, markContactByToken, CAMPAIGN } from '@/lib/outreach/db';
+import { getContact, getSettings, hashIp, markContactByToken, CAMPAIGN } from '@/lib/outreach/db';
 import { signup, confirmInstantly, setCadence } from '@/lib/newsletter/db';
 import { sendSubscriberLink } from '@/lib/newsletter/link-send';
 import { nextIssueText } from '@/lib/newsletter/weekly';
 export { nextIssueText };
+
+/** True when the wave must press a button to subscribe (setting press_required_waves). */
+export async function pressRequired(wave: string | null | undefined): Promise<boolean> {
+    if (!wave) return false;
+    const s = await getSettings();
+    return String(s.press_required_waves ?? '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean).includes(String(wave).toLowerCase());
+}
 
 export type OneClickResult = 'subscribed' | 'already' | 'form';
 
@@ -28,6 +35,8 @@ export async function oneClickSubscribe(o: {
         if (['unsubscribed', 'bounced', 'complained'].includes(c.status)) return 'form';
         const ipHash = hashIp(o.ip);
         if (!o.ip || !ipHash) return 'form';
+        // Waves listed in press_required_waves (comma separated) are only ever subscribed by a button press, never by opening the link.
+        if (!o.pressed && (await pressRequired(c.wave))) return 'form';
 
         if (!o.pressed) {
         const s = await query(`SELECT MAX(sent_at) AS m FROM outreach_sends WHERE token = $1`, [o.token]);
@@ -58,6 +67,7 @@ export async function oneClickSubscribe(o: {
         if (!('subscriberId' in result) || !result.subscriberId) return 'form';
 
         await setCadence(result.subscriberId, o.cadence);
+        void query(`UPDATE newsletter_subscribers SET subscribe_method = $2 WHERE id = $1`, [result.subscriberId, o.pressed ? 'press' : 'auto']).catch(() => {});
         const conf = await confirmInstantly(result.subscriberId);
         if (!conf) return 'form';
         void markContactByToken(o.token, c.email, 'subscribed');

@@ -1,3 +1,4 @@
+import { query } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import {
     signup, signupRateLimited, confirmInstantly, setCadence,
@@ -38,6 +39,9 @@ export async function POST(req: NextRequest) {
         // Invitation campaign: tie this signup to the contact whose personal link was used.
         if (body.outreachToken && 'email' in result && result.email) {
             void markContactByToken(String(body.outreachToken), String(result.email), 'subscribed');
+        }
+        if ('subscriberId' in result && result.subscriberId && body.outreachToken) {
+            void query(`UPDATE newsletter_subscribers SET subscribe_method = 'form' WHERE id = $1 AND subscribe_method IS NULL`, [result.subscriberId]).catch(() => {});
         }
         if ('subscriberId' in result && result.subscriberId && (body.cadence === 'daily' || body.cadence === 'weekly' || body.cadence === 'both')) {
             await setCadence(result.subscriberId, body.cadence);

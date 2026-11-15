@@ -7,6 +7,7 @@ import { cookies } from 'next/headers';
 import { getContact } from '@/lib/outreach/db';
 import { query } from '@/lib/db';
 import JoinAuto from '@/components/newsletter/JoinAuto';
+import { pressRequired } from '@/lib/outreach/one-click';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,7 +39,8 @@ export default async function JoinPage({
             if (c === 'daily' || c === 'weekly' || c === 'both') cadence = c;
         } catch { /* keep the default */ }
     }
-    const auto = !!t && !!contact && !next && !['unsubscribed', 'bounced', 'complained'].includes(contact.status);
+    // Waves in press_required_waves (Consulti) never subscribe by opening the page: they see the form and press Subscribe free.
+    const auto = !!t && !!contact && !next && !['unsubscribed', 'bounced', 'complained'].includes(contact.status) && !(await pressRequired(contact.wave));
     const formView = (
         <>
                 <h1 className="tm-nl-h1">Subscribe free</h1>

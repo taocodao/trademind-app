@@ -9,6 +9,19 @@ import type { ContextItem } from '../edition-render';
 
 export interface SearchHit { title: string; url: string; snippet: string; date: string | null }
 
+/** Primary sources: agencies, central banks, exchanges, company investor pages and press release wires. */
+const PRIMARY_HOSTS = /(^|\.)(bls\.gov|bea\.gov|census\.gov|treasury\.gov|federalreserve\.gov|newyorkfed\.org|stlouisfed\.org|sec\.gov|whitehouse\.gov|ecb\.europa\.eu|nasdaq\.com|cmegroup\.com|businesswire\.com|prnewswire\.com|globenewswire\.com)$|^(ir|investor|investors)\./;
+/** Major news outlets accepted as a source for a plain statement of what happened. */
+const OUTLET_HOSTS = /(^|\.)(reuters\.com|apnews\.com|wsj\.com|ft\.com|bloomberg\.com|cnbc\.com|marketwatch\.com|barrons\.com|nytimes\.com|washingtonpost\.com|axios\.com|npr\.org|morningstar\.com)$/;
+const hostOf = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, '').toLowerCase(); } catch { return ''; } };
+export const isPrimary = (u: string) => PRIMARY_HOSTS.test(hostOf(u));
+export const isApproved = (u: string) => isPrimary(u) || OUTLET_HOSTS.test(hostOf(u));
+/** Keeps approved sources only and puts primary sources first. */
+export function approvedFirst(hits: SearchHit[]): SearchHit[] {
+    const ok = hits.filter((h) => isApproved(h.url));
+    return [...ok.filter((h) => isPrimary(h.url)), ...ok.filter((h) => !isPrimary(h.url))];
+}
+
 const HEADERS = () => ({ Authorization: `Bearer ${process.env.PERPLEXITY_API_KEY}`, 'Content-Type': 'application/json' });
 
 export async function searchSources(queries: string[], opts: { maxResults?: number; recency?: 'day' | 'week' | 'month'; domainsDeny?: string[] } = {}): Promise<SearchHit[]> {
@@ -31,7 +44,7 @@ export async function searchSources(queries: string[], opts: { maxResults?: numb
             const url = String(r?.url ?? ''); if (!url || seen.has(url)) continue; seen.add(url);
             out.push({ title: String(r?.title ?? ''), url, snippet: String(r?.snippet ?? '').slice(0, 2500), date: r?.date ? String(r.date) : null });
         }
-        return out;
+        return approvedFirst(out);
     } catch { return []; }
 }
 
@@ -43,7 +56,7 @@ Rules, all mandatory:
 - tie_in: one or two plain sentences, 20 to 45 words, that say why a week like this one is a reason to keep a written, repeatable investing process. It must rest on one fact in one source, and it must not advise or predict.
 - hook: one plain sentence under 16 words about the main item. preheader: under 14 words.
 - Any number you write must appear in that source. Never write prices, index levels or dollar amounts. Percent moves are allowed only if the source states them.
-- Do not predict, advise, or say what a reader should do. Do not use the words buy, sell, add, exit, enter, trim, rebalance. Do not say a move was caused by something unless the source says so.
+- Do not predict, advise, or say what a reader should do. Do not use the words buy, sell, add, exit, enter, trim, rebalance. Never say why something happened. State what happened and when. Do not use because, due to, driven by, drove, caused, led to, as a result, thanks to, sparked, triggered, fueled, weighed on, or raised the odds.
 - No dashes of any kind, no exclamation points, no emojis. Plain text.`;
 
 export interface Written { hook: string; preheader: string; context: ContextItem[]; weekAhead: string[]; tieIn: string; problems: string[] }
@@ -51,6 +64,8 @@ export interface Written { hook: string; preheader: string; context: ContextItem
 const nums = (s: string) => (s.match(/\d[\d,]*\.?\d*/g) || []).map((n) => n.replace(/,/g, '').replace(/\.$/, ''));
 const ACTION = /\b(buy|sell|add|exit|enter|trim|rebalance|should|must)\b/i;
 const PRICE = /\$\s?\d|\bindex level\b|\b\d{1,3},\d{3}(\.\d+)?\b/;
+/** Cause wording is not allowed anywhere in the weekly text. */
+export const CAUSE = /\b(because|due to|driven by|drove|driving|caused|causing|led to|leading to|as a result|thanks to|on the back of|sparked|triggered|fueled|weighed on|raised the odds|raised expectations|behind the (move|rally|selloff|drop|gain))\b/i;
 const DASH = /[\u2013\u2014]|--/;
 const hostName = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return 'source'; } };
 
@@ -65,6 +80,8 @@ export function validateWritten(raw: any, hits: SearchHit[]): Written {
         if (stray.length) problems.push(`${label}: numbers not in source: ${stray.join(', ')}`);
         if (PRICE.test(text)) problems.push(`${label}: price or level`);
         if (ACTION.test(text)) problems.push(`${label}: action or advice word`);
+        if (CAUSE.test(text)) problems.push(`${label}: states a cause`);
+        if (!isApproved(hit.url)) problems.push(`${label}: source not on the approved list`);
         if (DASH.test(text) || /!/.test(text)) problems.push(`${label}: dash or exclamation`);
         const low = text.toLowerCase();
         for (const ph of rules.phrases) if (low.includes(ph)) problems.push(`${label}: banned phrase ${ph}`);
@@ -85,7 +102,7 @@ export function validateWritten(raw: any, hits: SearchHit[]): Written {
     const hook = String(raw?.hook ?? '').trim(); const preheader = String(raw?.preheader ?? '').trim();
     if (!hook) problems.push('hook missing');
     for (const [l, t] of [['hook', hook], ['preheader', preheader]] as const) {
-        if (DASH.test(t) || /!/.test(t) || ACTION.test(t) || PRICE.test(t)) problems.push(`${l}: wording rule`);
+        if (DASH.test(t) || /!/.test(t) || ACTION.test(t) || PRICE.test(t) || CAUSE.test(t)) problems.push(`${l}: wording rule`);
         const hay = new Set(nums(hits.map((h) => h.snippet + ' ' + h.title).join(' ')));
         const stray = nums(t).filter((n) => !hay.has(n)); if (stray.length) problems.push(`${l}: numbers not in sources`);
     }

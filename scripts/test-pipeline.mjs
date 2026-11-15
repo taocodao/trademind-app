@@ -19,9 +19,9 @@ const { checkEdition } = req(path.join(tmp, 'src/lib/newsletter/pipeline/build.j
 let fail = 0; const t = (n, c, d = '') => { if (!c) { fail++; console.log('FAIL', n, d); } else console.log('PASS', n); };
 
 const hits = [
-    { title: 'Fed holds rates', url: 'https://example.com/a', snippet: 'The Federal Reserve kept its target range at 3.75% to 4.00% in a 10 to 2 vote on October 28. Two members preferred a quarter point increase.', date: '2026-10-29' },
-    { title: 'QQQ month', url: 'https://example.org/b', snippet: 'QQQ fell 6.66% in October, its worst month since March 2025. The jobs report is due on November 6.', date: '2026-11-02' },
-    { title: 'Week ahead', url: 'https://example.net/c', snippet: 'Apple reports on Monday, November 2. The October jobs report arrives on Friday, November 6.', date: '2026-11-02' },
+    { title: 'Fed holds rates', url: 'https://www.federalreserve.gov/a', snippet: 'The Federal Reserve kept its target range at 3.75% to 4.00% in a 10 to 2 vote on October 28. Two members preferred a quarter point increase.', date: '2026-10-29' },
+    { title: 'QQQ month', url: 'https://www.reuters.com/b', snippet: 'QQQ fell 6.66% in October, its worst month since March 2025. The jobs report is due on November 6.', date: '2026-11-02' },
+    { title: 'Week ahead', url: 'https://www.bls.gov/c', snippet: 'Apple reports on Monday, November 2. The October jobs report arrives on Friday, November 6.', date: '2026-11-02' },
 ];
 const good = { hook: 'The Fed held and QQQ had a hard October.', preheader: 'What moved and what is next.', items: [
     { headline: 'The Fed held', body: 'The Federal Reserve kept its target range at 3.75% to 4.00% in a 10 to 2 vote, with two members preferring a quarter point increase.', source: 1 },
@@ -29,7 +29,7 @@ const good = { hook: 'The Fed held and QQQ had a hard October.', preheader: 'Wha
     week_ahead: [{ text: 'Friday, November 6: October jobs report.', source: 3 }] };
 const v = validateWritten(good, hits);
 t('good output has no problems', v.problems.length === 0, v.problems.join('; '));
-t('items carry source host', v.context[0].sourceName === 'example.com' && v.context[1].sourceUrl === 'https://example.org/b');
+t('items carry source host', v.context[0].sourceName === 'federalreserve.gov' && v.context[1].sourceUrl === 'https://www.reuters.com/b');
 const bad = (mut) => validateWritten(mut(JSON.parse(JSON.stringify(good))), hits).problems.join(' ');
 t('invented number rejected', /numbers not in source/.test(bad((g) => { g.items[0].body += ' It was 4.25% before.'; return g; })));
 t('wrong source for a number rejected', /numbers not in source/.test(bad((g) => { g.items[0].source = 2; return g; })));
@@ -37,6 +37,14 @@ t('unknown source rejected', /not in results/.test(bad((g) => { g.items[1].sourc
 t('price rejected', /price or level/.test(bad((g) => { g.items[1].body += ' It closed at $696.'; return g; })));
 t('advice word rejected', /action or advice/.test(bad((g) => { g.items[1].body += ' Readers should sell.'; return g; })));
 t('dash rejected', /dash/.test(bad((g) => { g.items[0].headline = 'The Fed held \u2014 again'; return g; })));
+t('cause wording rejected', /states a cause/.test(bad((g) => { g.items[1].body += ' Hotter inflation raised the odds of a hold.'; return g; })));
+t('because rejected in hook', /wording rule/.test(bad((g) => { g.hook = 'QQQ fell because of the Fed.'; return g; })));
+const odd = [{ ...hits[0], url: 'https://quantisnow.com/x' }, hits[1], hits[2]];
+t('unapproved source rejected', /approved list/.test(validateWritten(JSON.parse(JSON.stringify(good)), odd).problems.join(' ')));
+const { approvedFirst, isPrimary } = req(path.join(tmp, 'src/lib/newsletter/pipeline/sources.js'));
+const ranked = approvedFirst([{ ...hits[0], url: 'https://squawknews.com/z' }, hits[1], hits[0], hits[2]]);
+t('approved filter drops unknown hosts and ranks primary first', ranked.length === 3 && isPrimary(ranked[0].url) && ranked[2].url.includes('reuters'), ranked.map((r) => r.url).join(' '));
+t('investor relations hosts count as primary', isPrimary('https://investor.apple.com/news') && isPrimary('https://ir.nvidia.com/x') && !isPrimary('https://cnbc.com/a'));
 t('too few items rejected', /usable items/.test(bad((g) => { g.items = g.items.slice(0, 1); return g; })));
 
 const def = (status, weights, prev) => ({ strategy: 'TQQQ_TURBOCORE_PRO', display_name: 'QQQ Defensive', status, run_verified: status !== 'RUN_FAILED', weights, previous_weights: prev, instructions: [] });

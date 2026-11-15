@@ -68,4 +68,36 @@ t('v2 render links to the adviser sample on the sending domain', h.html.includes
 const fbA = G.fallbackEmail(1, A, end1); const hA = C.renderCx({ step: 1, subject: fbA.subject, body: G.storedBody(fbA, 'ADV') }, { token: 'tok1234567', linkBase: 'https://go.vochat.ai', unsubUrl: 'u', mailingAddress: 'ADDR', html: true });
 t('arm A render has no sample link, only the unsubscribe link', !/https?:\/\//.test(hA.html + hA.text) && (hA.html.match(/<a /g) || []).length === 1 && hA.html.includes('>Unsubscribe</a>'));
 t('prompts mention the arm rule', G.userPrompt(1, base, [], end1).includes('[[LINK]]') && !G.userPrompt(1, A, [], end1).includes('[[LINK]]'));
+
+// ---------- v3: checklist sequence ----------
+const V3A = { ...A, seq: 'v3' }; const V3B = { ...base, arm: 'B', seq: 'v3' };
+const m3A = model({ p: [p1, G.E1_P2, G.E1_P3_V3, G.ctaV3A(V3A.token)], f: fact });
+r = G.finishEmail(1, m3A, V3A, end1, []);
+t('v3 email 1 arm A passes', !!r.email, r.problems.join('; '));
+t('v3 email 1 words in range', r.email && r.email.words >= 65 && r.email.words <= 100, String(r.email?.words));
+r = G.finishEmail(1, model({ p: [p1, G.E1_P2, G.E1_P3, G.ctaV3A(V3A.token)], f: fact }), V3A, end1, []);
+t('v3 email 1 rejects the old sample offer', !r.email && r.problems.some((x) => /offer sentence/.test(x)), r.problems.join('; '));
+r = G.finishEmail(1, model({ p: [p1, G.E1_P2, G.E1_P3_V3, G.CTA_V3_B], f: fact }), V3B, end1, []);
+t('v3 email 1 arm B passes with one link', !!r.email, r.problems.join('; '));
+r = G.finishEmail(1, model({ p: [p1, G.E1_P2, G.E1_P3_V3, G.CTA_V3_B], f: fact }), V3A, end1, []);
+t('v3 arm A rejects a link', !r.email && r.problems.some((x) => x.includes('arm A')));
+for (const [lab, inp] of [['A', V3A], ['B', V3B]]) {
+    const e2 = G.fixedEmail2V3(inp);
+    const probs = G.checkEmail({ emailId: 2, subject: '', greeting: e2.greeting, paragraphs: e2.paragraphs, facts: [], level: 'none' }, inp, '', []);
+    t(`v3 email 2 arm ${lab} fixed text passes every check`, probs.length === 0, probs.join('; '));
+    const full = G.expand(e2.paragraphs.join(' '));
+    t(`v3 email 2 arm ${lab} has the simulation and limits sentences and one question`, full.includes(G.SIM_SENTENCE) && full.includes(G.LIMITS_SENTENCE) && (full.match(/\?/g) || []).length === 1);
+    t(`v3 email 2 arm ${lab} never says stop writing, last or final`, !/stop writing|will stop|\blast\b|\bfinal\b/i.test(full));
+}
+t('v3 email 2 arm A has no link and arm B has one', !G.fixedEmail2V3(V3A).paragraphs.join(' ').includes('[[LINK]]') && (G.fixedEmail2V3(V3B).paragraphs.join(' ').match(/\[\[LINK\]\]/g) || []).length === 1);
+const e3 = G.checkEmail({ emailId: 3, subject: 'Dana, qqq weekly brief', greeting: 'Hi Dana,', paragraphs: ['x'], facts: [], level: 'none' }, V3A, 'qqq weekly brief', []);
+t('v3 has only two emails', e3.some((x) => x.includes('only emails 1 and 2')));
+const st = G.storedBody(G.fixedEmail2V3(V3B), G.LINK_TOKEN_V3[2]);
+t('v3 stored body uses the checklist link token', st.includes('{{CK}}') && !st.includes('{{ADV}}'));
+const hv = C.renderCx({ step: 2, subject: '', body: st }, { token: 'tok1234567', linkBase: 'https://go.vochat.ai', unsubUrl: 'u', mailingAddress: 'ADDR', html: true });
+t('v3 render links to the checklist on the sending domain', hv.html.includes('href="https://go.vochat.ai/r/tok1234567/ck?s=2"') && hv.text.includes('/r/tok1234567/ck?s=2'));
+t('v3 prompt carries the checklist offer and not the sample offer', G.userPrompt(1, V3A, [], end1).includes(G.E1_P3_V3) && !G.userPrompt(1, V3A, [], end1).includes(G.E1_P3));
+t('v2 prompt is unchanged', G.userPrompt(1, A, [], end1).includes(G.E1_P3) && !G.userPrompt(1, A, [], end1).includes(G.E1_P3_V3));
+const fbv = G.fallbackEmail(1, V3B, end1);
+t('v3 fallback email 1 uses the checklist offer', fbv.paragraphs.includes(G.E1_P3_V3) && fbv.paragraphs[3] === G.CTA_V3_B);
 console.log(fail ? `${fail} FAILED` : 'ALL PASSED'); process.exit(fail ? 1 : 0);

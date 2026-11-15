@@ -12,7 +12,7 @@ const sel = JSON.parse(fs.readFileSync(selF, 'utf8')); const site = JSON.parse(f
 const rd = (f) => (fs.existsSync(path.join(dir, f)) ? fs.readFileSync(path.join(dir, f), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : []);
 const wr = (f, rows) => fs.writeFileSync(path.join(dir, f), rows.map((r) => JSON.stringify(r)).join('\n') + '\n');
 const cap = (s) => String(s || '').replace(/\s+/g, ' ').trim();
-const inputOf = (r) => ({ token: r.token, email: r.email, firstName: cap(r.first_name).replace(/^./, (c) => c.toUpperCase()), title: cap(r.title), firm: cap(r.firm), firmKey: r.firm_key, cityState: [r.city, r.state].filter(Boolean).join(', '), employees: String(r.employees || ''), keywords: cap(r.keywords).split(';').slice(0, 10).join('; '), websiteText: cap(site[r.token] || ''), linkedinText: '', segment: r.segment, arm: r.arm });
+const inputOf = (r) => ({ token: r.token, email: r.email, firstName: cap(r.first_name).replace(/^./, (c) => c.toUpperCase()), title: cap(r.title), firm: cap(r.firm), firmKey: r.firm_key, cityState: [r.city, r.state].filter(Boolean).join(', '), employees: String(r.employees || ''), keywords: cap(r.keywords).split(';').slice(0, 10).join('; '), websiteText: cap(site[r.token] || ''), linkedinText: '', segment: r.segment, arm: r.arm, seq: r.seq || 'v2' });
 const ending = (i, id) => (id === 2 || id === 4 ? '' : G.subjectEnding(i.token, i.firstName, id));
 const prior = (token) => { const out = []; for (let k = 1; k < eid; k++) { const d = rd(`d${k}.json`).find((x) => x.token === token); if (d) out.push(G.previousText(d.body)); } return out; };
 
@@ -21,6 +21,8 @@ if (mode === 'prompts') {
     for (const r of sel) {
         const i = inputOf(r);
         if (eid === 2 && i.segment === 'large_firm') continue;
+        if (eid === 2 && i.seq === 'v3') continue;          // v3 Email 2 is fixed text, no model
+        if (i.seq === 'v3' && eid > 2) continue;             // v3 has two emails
         if ((eid === 2 || eid === 3) && i.segment === 'large_firm') continue;
         rows.push({ id: r.token, system: G.SYSTEM_PROMPT, user: G.userPrompt(eid, i, prior(r.token), ending(i, eid)) });
     }
@@ -38,8 +40,15 @@ if (mode === 'prompts') {
     }
     if (!retry) { wr(`r${eid}.jsonl`, redo); console.log('first pass', stats); }
     else {
+        if (eid === 2) {
+            for (const r of sel) {
+                const i = inputOf(r); if (i.seq !== 'v3' || i.segment === 'large_firm') continue;
+                const e = G.fixedEmail2V3(i); e.problems = G.checkEmail({ emailId: 2, subject: '', greeting: e.greeting, paragraphs: e.paragraphs, facts: [], level: 'none' }, i, '', prior(r.token));
+                results.push({ token: r.token, source: 'fixed', problems: e.problems, email: e });
+            }
+        }
         const done = results.filter(Boolean);
-        fs.writeFileSync(path.join(dir, `d${eid}.json`), JSON.stringify(done.map((m) => ({ token: m.token, source: m.source, problems: m.problems, subject: m.email.subject, body: G.storedBody(m.email, G.LINK_TOKEN[eid]), words: m.email.words, facts: m.email.facts, level: m.email.level }))));
+        fs.writeFileSync(path.join(dir, `d${eid}.json`), JSON.stringify(done.map((m) => ({ token: m.token, source: m.source, problems: m.problems, subject: m.email.subject, body: G.storedBody(m.email, (sel.find((x) => x.token === m.token)?.seq === 'v3' ? G.LINK_TOKEN_V3 : G.LINK_TOKEN)[eid]), words: m.email.words, facts: m.email.facts, level: m.email.level }))));
         console.log('final', done.reduce((a, m) => ((a[m.source] = (a[m.source] || 0) + 1), a), {}));
     }
 }

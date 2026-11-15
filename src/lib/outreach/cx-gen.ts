@@ -12,6 +12,7 @@ import { LIMITS_LINE } from './cx-copy';
 export type Segment = 'owner' | 'adviser' | 'large_firm';
 export type Arm = 'A' | 'B';
 export type EmailId = 1 | 2 | 3 | 4;
+export type Seq = 'v2' | 'v3';
 
 export const SIM_SENTENCE = 'In a two year simulation (October 14, 2024 to October 13, 2026), QQQ LEAPS returned +229.48% against +49.46% for QQQ buy and hold, with a largest decline of 14.59% against 22.88%.';
 export const LIMITS_SENTENCE = LIMITS_LINE;
@@ -19,6 +20,13 @@ export const ML_SENTENCE = 'It follows fixed rules, and it is also fine tuned an
 
 export const E1_P2 = "I'm Eric. I built TradeMind, a QQQ research model that follows fixed rules. It only publishes research and never connects to a brokerage or places trades.";
 export const E1_P3 = 'The five minute research sample shows what the model reads now, why its most recent signal changed, and what would prove it wrong.';
+// v3 (checklist sequence): Email 1 offers a one page checklist, Email 2 carries the simulation and limits sentences.
+export const E1_P3_V3 = 'I wrote a one page checklist of five benchmarks to ask for before a QQQ strategy goes into a client plan.';
+const CTA_V3_A = ['Would you like me to send it?', 'Mind if I send it over?', 'Want me to send it?'];
+export const CTA_V3_B = 'Would you like to see it? [[LINK]]';
+export const E2_V3_P1 = 'Here is how the simulation compares with plain buy and hold QQQ.';
+export const E2_V3_CTA_A = 'Should I send the checklist, or close your file?';
+export const E2_V3_CTA_B = 'Here is the checklist if useful: [[LINK]] Should I close your file?';
 export const FALLBACK_HOOK = 'If a client asks whether QQQ still fits their plan, a second read can help.';
 
 export const SUBJECT_ENDINGS_1 = ['qqq question', 'quick qqq question', 'qqq second read', 'qqq rules question', 'question on qqq', 'qqq risk question', 'nasdaq question', 'qqq research sample', 'second read on qqq'];
@@ -27,10 +35,12 @@ export const SUBJECT_ENDING_3 = 'qqq weekly brief';
 export interface GenInput {
     token: string; email: string; firstName: string; title: string; firm: string; firmKey: string; cityState: string; employees: string;
     keywords: string; websiteText: string; linkedinText: string; segment: Segment; arm: Arm;
+    /** Sequence version. v3 is the two email checklist sequence. Missing means v2. */
+    seq?: Seq;
 }
 export interface FactUsed { fact: string; source_field: string; snippet: string }
 export interface GenEmail {
-    emailId: EmailId; subject: string; greeting: string; paragraphs: string[]; facts: FactUsed[]; level: string; words: number; source: 'model' | 'fallback'; problems: string[];
+    emailId: EmailId; subject: string; greeting: string; paragraphs: string[]; facts: FactUsed[]; level: string; words: number; source: 'model' | 'fallback' | 'fixed'; problems: string[];
 }
 
 // ---------- segment ----------
@@ -101,16 +111,27 @@ export const frameFor = (token: string) => FRAMES[hashInt(token, 'frame') % FRAM
 const CTA_A = ['Would you be open to reviewing the sample research?', 'Mind if I send over the sample summary?', 'Worth taking a look at the sample research?'];
 
 export function ctaA(token: string): string { return CTA_A[hashInt(token, 'cta') % CTA_A.length]; }
+export const ctaV3A = (token: string): string => CTA_V3_A[hashInt(token, 'ctav3') % CTA_V3_A.length];
+const isV3 = (i: { seq?: Seq }) => i.seq === 'v3';
+const e1p3 = (i: { seq?: Seq }) => (isV3(i) ? E1_P3_V3 : E1_P3);
+
+/** v3 Email 2 is fixed text, no model: the same paragraphs for everyone, one link only in arm B. */
+export function fixedEmail2V3(i: GenInput): GenEmail {
+    const paras = [E2_V3_P1, '[[SIM_SENTENCE]] [[LIMITS_SENTENCE]]', i.arm === 'A' ? E2_V3_CTA_A : E2_V3_CTA_B];
+    return { emailId: 2, subject: '', greeting: `Hi ${i.firstName},`, paragraphs: paras, facts: [], level: 'none', words: bodyWords(paras), source: 'fixed', problems: [] };
+}
 
 export function userPrompt(emailId: EmailId, i: GenInput, previous: string[], ending: string): string {
     const head = `first_name=${i.firstName} title=${i.title} firm=${i.firm} city_state=${i.cityState} employees=${i.employees}\nkeywords=${i.keywords}\nwebsite_text=${i.websiteText || '(none)'}\nlinkedin_text=${i.linkedinText || '(none)'}\nsegment=${i.segment} arm=${i.arm}`;
     const prev = previous.length ? `previous_emails=${previous.map((p, k) => `[email ${k + 1}]\n${p}`).join('\n\n')}` : 'previous_emails=(none)';
     if (emailId === 1) {
-        const p4 = i.arm === 'A'
+        const p4 = isV3(i)
+            ? (i.arm === 'A' ? `P4 (call to action): exactly this question and nothing else, no link: "${ctaV3A(i.token)}"` : `P4 (call to action): exactly "${CTA_V3_B}"`)
+            : i.arm === 'A'
             ? `P4 (call to action): exactly this question and nothing else, no link: "${ctaA(i.token)}"`
             : 'P4 (call to action): exactly "Would you be open to reviewing the sample research? [[LINK]]"';
         const seg = i.segment === 'large_firm' ? ' Add to P3 the sentence "This is not meant to replace your firm\'s research."' : '';
-        return `EMAIL 1\n${head}\nsubject_ending=${ending}\n\nsubject = "${i.firstName}, ${ending}"\nP1 (context, at most 30 words): one clear fact about what the firm does for clients taken from website_text or linkedin_text, then this second sentence or a close variant: "${frameFor(i.token)}" If there is no such fact (the title and keywords alone do not count), P1 is only the second sentence, facts_used is empty and personalization_level is "none". Never open with "As a <title>". Never quote legal or regulatory disclosure text, fragments, or text about licensing, registration or who offers services. You may use this phrase once if it reads naturally, never twice: "${SEG_WORDS[i.segment]}". Do not repeat any phrase inside P1. A website fact is better than a title fact; use the title only if nothing else is usable.\nP2 (who I am), exactly: "${E1_P2}"\nP3 (offer), exactly: "${E1_P3}"${seg}\n${p4}\nFallback P1 when no usable fact: "${FALLBACK_HOOK}"\nBody total: 70 to 100 words. Never use the words last or final. Use "${i.firstName}" only in the greeting and subject.`;
+        return `EMAIL 1\n${head}\nsubject_ending=${ending}\n\nsubject = "${i.firstName}, ${ending}"\nP1 (context, at most 30 words): one clear fact about what the firm does for clients taken from website_text or linkedin_text, then this second sentence or a close variant: "${frameFor(i.token)}" If there is no such fact (the title and keywords alone do not count), P1 is only the second sentence, facts_used is empty and personalization_level is "none". Never open with "As a <title>". Never quote legal or regulatory disclosure text, fragments, or text about licensing, registration or who offers services. You may use this phrase once if it reads naturally, never twice: "${SEG_WORDS[i.segment]}". Do not repeat any phrase inside P1. A website fact is better than a title fact; use the title only if nothing else is usable.\nP2 (who I am), exactly: "${E1_P2}"\nP3 (offer), exactly: "${e1p3(i)}"${seg}\n${p4}\nFallback P1 when no usable fact: "${FALLBACK_HOOK}"\nBody total: ${isV3(i) ? '65 to 100' : '70 to 100'} words. Never use the words last or final. Use "${i.firstName}" only in the greeting and subject.`;
     }
     if (emailId === 2) {
         const p3 = i.arm === 'A' ? 'Worth a look at the methodology?' : 'Worth a look at the methodology? [[LINK]]';
@@ -130,7 +151,8 @@ export function fallbackEmail(emailId: EmailId, i: GenInput, ending: string): Ge
     const hi = `Hi ${i.firstName},`;
     const seg = i.segment === 'owner' ? "your firm's view of QQQ" : i.segment === 'large_firm' ? 'your own reading' : 'your own prep';
     let paras: string[] = []; let subject = `${i.firstName}, ${ending}`;
-    if (emailId === 1) paras = [`${FALLBACK_HOOK} This note is about ${seg}.`, E1_P2, E1_P3 + (i.segment === 'large_firm' ? " This is not meant to replace your firm's research." : ''), i.arm === 'A' ? ctaA(i.token) : 'Would you be open to reviewing the sample research? [[LINK]]'];
+    if (emailId === 1) paras = [`${FALLBACK_HOOK} This note is about ${seg}.`, E1_P2, e1p3(i) + (i.segment === 'large_firm' ? " This is not meant to replace your firm's research." : ''), isV3(i) ? (i.arm === 'A' ? ctaV3A(i.token) : CTA_V3_B) : i.arm === 'A' ? ctaA(i.token) : 'Would you be open to reviewing the sample research? [[LINK]]'];
+    if (emailId === 2 && isV3(i)) return fixedEmail2V3(i);
     if (emailId === 2) { paras = ['The reason I asked: the drop and the limits matter more than the gain.', '[[SIM_SENTENCE]] [[LIMITS_SENTENCE]]', i.arm === 'A' ? 'Worth a look at the methodology?' : 'Worth a look at the methodology? [[LINK]]']; subject = ''; }
     if (emailId === 3) paras = ['You do not have to take the simulation on trust.', 'Two virtual accounts have followed the signals since mid October 2026, shown with a five day delay. They are not real money.', '[[ML_SENTENCE]]', i.arm === 'A' ? 'Open to getting the weekly brief?' : 'Open to getting the weekly brief? [[LINK]]'];
     if (emailId === 4) { paras = ['The sample and the weekly brief stay open to advisers if a second read on QQQ helps later.', i.arm === 'A' ? 'Should I send them, or close your file?' : 'Here they are if useful: [[LINK]] Should I close your file?']; subject = ''; }
@@ -150,6 +172,7 @@ export function bodyWords(paras: string[]): number {
 
 const BANNED = ['confidence', 'probability of profit', 'protect capital', 'compound quietly', 'tier', 'tiers', 'final', 'last', 'worst fall shallow', 'guarantee', 'guaranteed', 'risk free', 'advice', 'recommend', 'safe', 'proven', 'solo founder', 'checking in', 'bumping', 'following up', 'exposure tier'];
 const WORD_RANGE: Record<EmailId, [number, number]> = { 1: [70, 100], 2: [30, 79], 3: [30, 79], 4: [20, 44] };
+const V3_RANGE: Partial<Record<EmailId, [number, number]>> = { 1: [65, 100], 2: [60, 100] };
 const FIXED_TEXT = [SIM_SENTENCE, LIMITS_SENTENCE, ML_SENTENCE];
 const norm = (s: string) => s.toLowerCase().replace(/[\u2018\u2019]/g, "'").replace(/[\u201c\u201d]/g, '"').replace(/\s+/g, ' ').trim();
 
@@ -159,11 +182,11 @@ export function checkEmail(e: { emailId: EmailId; subject: string; greeting: str
     const full = expand(raw);
     // Own text: the body with the fixed sentences cut out, so hyphen and digit checks only apply to the model's words.
     let own = raw.replace(/\[\[(SIM_SENTENCE|LIMITS_SENTENCE|ML_SENTENCE|LINK)\]\]/g, '');
-    for (const f of [E1_P2, E1_P3]) own = own.split(f).join('');
+    for (const f of [E1_P2, E1_P3, E1_P3_V3, E2_V3_P1, E2_V3_CTA_A, E2_V3_CTA_B.replace(' [[LINK]]', ''), CTA_V3_B.replace(' [[LINK]]', ''), ...CTA_V3_A]) own = own.split(f).join('');
     const all = `${e.subject}\n${e.greeting}\n${full}`;
     if (!e.paragraphs.length || e.paragraphs.some((p) => !String(p).trim())) errs.push('empty paragraph');
     // words
-    const w = bodyWords(e.paragraphs); const [lo, hi] = WORD_RANGE[e.emailId];
+    const w = bodyWords(e.paragraphs); const [lo, hi] = isV3(i) ? V3_RANGE[e.emailId] ?? WORD_RANGE[e.emailId] : WORD_RANGE[e.emailId];
     if (w < lo || w > hi) errs.push(`word count ${w} outside ${lo} to ${hi}`);
     // links
     const links = (raw.match(/\[\[LINK\]\]/g) || []).length;
@@ -175,8 +198,9 @@ export function checkEmail(e: { emailId: EmailId; subject: string; greeting: str
     if (e.emailId === 2) { if (!raw.includes('[[SIM_SENTENCE]] [[LIMITS_SENTENCE]]')) errs.push('email 2 needs the simulation and limits tokens together, in order'); }
     else if (hasSim || hasLim) errs.push('simulation or limits tokens only belong in email 2');
     if (/\[\[(?!SIM_SENTENCE|LIMITS_SENTENCE|ML_SENTENCE|LINK)[A-Z_]+\]\]/.test(raw)) errs.push('unknown token');
-    if (e.emailId === 1) { if (!e.paragraphs.includes(E1_P2)) errs.push('P2 is not the exact fixed paragraph'); if (!norm(full).includes(norm(E1_P3))) errs.push('P3 offer sentence missing or altered'); }
-    if (e.emailId === 3 && !raw.includes('[[ML_SENTENCE]]')) errs.push('email 3 needs the machine learning token');
+    if (e.emailId === 1) { if (!e.paragraphs.includes(E1_P2)) errs.push('P2 is not the exact fixed paragraph'); if (!norm(full).includes(norm(e1p3(i)))) errs.push('P3 offer sentence missing or altered'); }
+    if (isV3(i) && (e.emailId === 3 || e.emailId === 4)) errs.push('v3 has only emails 1 and 2');
+    if (e.emailId === 3 && !isV3(i) && !raw.includes('[[ML_SENTENCE]]')) errs.push('email 3 needs the machine learning token');
     if (e.emailId !== 3 && raw.includes('[[ML_SENTENCE]]')) errs.push('machine learning token only belongs in email 3');
     // percentages and digits
     const allowed = new Set(['+229.48%', '+49.46%', '14.59%', '22.88%']);
@@ -257,11 +281,13 @@ export function finishEmail(emailId: EmailId, text: string, i: GenInput, ending:
 }
 
 /** Final stored text for one email: tokens swapped, links become merge tokens that renderCx turns into tracked links on the sending domain. */
-export function storedBody(e: GenEmail, linkToken: 'ADV' | 'SIM' | 'SUB'): string {
+export function storedBody(e: GenEmail, linkToken: 'ADV' | 'SIM' | 'SUB' | 'CK'): string {
     const body = expand(e.paragraphs.join('\n\n')).replace(/\[\[LINK\]\]/g, `{{${linkToken}}}`);
     return `${e.greeting}\n\n${body}`;
 }
-export const LINK_TOKEN: Record<EmailId, 'ADV' | 'SIM' | 'SUB'> = { 1: 'ADV', 2: 'SIM', 3: 'SUB', 4: 'ADV' };
+export const LINK_TOKEN: Record<EmailId, 'ADV' | 'SIM' | 'SUB' | 'CK'> = { 1: 'ADV', 2: 'SIM', 3: 'SUB', 4: 'ADV' };
+/** v3: both links open the checklist page. */
+export const LINK_TOKEN_V3: Record<EmailId, 'ADV' | 'SIM' | 'SUB' | 'CK'> = { 1: 'CK', 2: 'CK', 3: 'CK', 4: 'CK' };
 
 /** Plain text of a stored body without any link, used as the "previous email" context. */
 export const previousText = (stored: string) => stored.replace(/\{\{[A-Z]+\}\}/g, '').replace(/[ \t]+\n/g, '\n').trim();

@@ -15,6 +15,7 @@ import { MAILING_ADDRESS } from '@/lib/newsletter/email';
 import { buildDrafts, buildProfile, renderCx, type CxRaw } from './cx-copy';
 
 export const CX_STEP0 = 40;                       // steps 41 to 44
+export const CX_BDAYS_V3 = [0, 4];                 // v3 (checklist sequence): two emails, the second four business days after the first
 export const CX_BDAYS = [0, 3, 6, 10];             // business days after the first email for emails 1 to 4 (large firms get emails 1 and 4, email 4 on day 6)
 const MIN_GAP_BDAYS = 2;
 const FIRM_GAP_DAYS = 7;
@@ -288,7 +289,7 @@ async function run(s: Record<string, string>, et: { date: string; hour: number; 
 
     // Follow-ups due (same domain as the first email when it is usable).
     const fu = (await query(
-        `SELECT c.token, c.email, c.first_name, MAX(x.step)::int AS last_step, MIN(x.sent_at) AS first_at, MAX(x.sent_at) AS last_at, (array_agg(x.domain ORDER BY x.step))[1] AS domain, MAX(p.segment) AS segment
+        `SELECT c.token, c.email, c.first_name, MAX(x.step)::int AS last_step, MIN(x.sent_at) AS first_at, MAX(x.sent_at) AS last_at, (array_agg(x.domain ORDER BY x.step))[1] AS domain, MAX(p.segment) AS segment, MAX(p.seq) AS seq
          FROM outreach_contacts c JOIN cx_profile p ON p.token = c.token
          JOIN outreach_sends x ON x.token = c.token AND x.step BETWEEN 41 AND 44 AND x.status <> 'failed'
          WHERE c.wave = 'cx' AND ${BLOCK_SQL}
@@ -297,6 +298,11 @@ async function run(s: Record<string, string>, et: { date: string; hour: number; 
     const cands: Cand[] = [];
     for (const r of (s.cx_linkfree !== 'false' || s.cx_followups !== 'true' ? [] : fu)) {
         const n = Number(r.last_step) - CX_STEP0;       // emails already sent
+        if (r.seq === 'v3') {                            // v3: email 2 only, four business days after email 1, none for large firms
+            if (n !== 1 || r.segment === 'large_firm') continue;
+            if (bdaysBetween(etDate(r.first_at), et.date) >= CX_BDAYS_V3[1] && bdaysBetween(etDate(r.last_at), et.date) >= MIN_GAP_BDAYS) cands.push({ token: r.token, email: r.email, first_name: r.first_name, step: CX_STEP0 + 2, domain: r.domain });
+            continue;
+        }
         const large = r.segment === 'large_firm';        // large firms get email 1, then email 4 on day 6
         const nextN = large ? 3 : n;                     // index of the next email in CX_BDAYS
         if (large && n !== 1) continue;

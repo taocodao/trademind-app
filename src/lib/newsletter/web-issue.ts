@@ -236,7 +236,7 @@ function shareLinks(issue: NewsletterIssue, path: string) {
         x: `https://twitter.com/intent/tweet?text=${enc(title)}&url=${enc(u('x'))}&hashtags=${enc(SHARE_TAGS.join(','))}`,
         linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${enc(u('linkedin'))}`,
         facebook: `https://www.facebook.com/sharer/sharer.php?u=${enc(u('facebook'))}`,
-        threads: `https://www.threads.net/intent/post?text=${enc(full('threads'))}`,
+        threads: `https://www.threads.com/intent/post?text=${enc([title, line, tags].filter(Boolean).join('\n\n'))}&url=${enc(u('threads'))}`,
         whatsapp: `https://wa.me/?text=${enc(full('whatsapp'))}`,
         telegram: `https://t.me/share/url?url=${enc(u('telegram'))}&text=${enc([title, line, tags].filter(Boolean).join('\n\n'))}`,
         bluesky: `https://bsky.app/intent/compose?text=${enc(bsky)}`,

@@ -56,6 +56,7 @@ t('check catches a second link', V.checkV5({ step: 1, subject: 'Dana, qqq questi
 t('check catches altered who paragraph', V.checkV5({ step: 1, subject: 'Dana, qqq question', body: ds[0].body.replace('retail investor', 'investor') }, inp).length > 0);
 t('check catches a figure outside email 2', V.checkV5({ step: 3, subject: '', body: 'Hi Dana,\n\nOne more way in. ' + V.V5_CALL_LINE + ' {{CAL}} It is up 229.48%.' }, inp).length > 0);
 t('check catches a banned word', V.checkV5({ step: 3, subject: '', body: 'Hi Dana,\n\nThis is a safe way in. ' + V.V5_CALL_LINE + ' {{CAL}}' }, inp).length > 0);
+t('hyphenated first name is allowed in the greeting', V.checkV5({ step: 3, subject: '', body: 'Hi Mary-Beth,\n\n' + V.V5_DEFAULT_E3 + ' ' + V.V5_CALL_LINE + ' {{CAL}}' }, { ...inp, firstName: 'Mary-Beth' }).length === 0);
 // follow ups
 for (const k of Object.keys(V.V5_FOLLOW)) {
     const b = V.followBody(k, 'Dana'); const e = V.checkV5({ step: k, body: b }, inp);

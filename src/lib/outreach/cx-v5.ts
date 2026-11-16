@@ -43,7 +43,7 @@ export const FOLLOW_BODY: Record<FollowKind, string> = {
     page: 'The five benchmarks are also on a single printable page: {{CK}}\n\nIf a question stays open after you read them, the page has a button to book 20 minutes.',
     sim: 'The data files and method notes for the simulation are listed here: {{VD}}\n\nIf you find a weak spot, I would like to hear it.',
     study: 'The study has 20 seats. It is free for four months, and each monthly review you finish earns three more free months, up to twelve.\n\nDetails and the short application: {{STUDY}}',
-    sub: 'The weekly brief is free, and subscribers get 30% off a strategy subscription for 30 days after confirming.\n\nSubscribe here: {{JN}}',
+    sub: 'The weekly brief is free, and subscribers get 30% off a strategy subscription for 90 days after confirming.\n\nSubscribe here: {{JN}}',
 };
 
 // ---------- data shapes ----------
@@ -180,7 +180,7 @@ export function checkV5(d: { step: number | string; subject?: string; body: stri
     if (toks.length !== 1 || toks[0] !== `{{${TOKEN[key]}}}`) errs.push(`needs exactly one {{${TOKEN[key]}}} link, found ${toks.join(' ') || 'none'}`);
     if (!body.startsWith(i ? greeting(i.firstName) : 'Hi ') && !/^(Hi [A-Za-z'.]+|Hello),/.test(body)) errs.push('greeting missing');
     if (/https?:|www\.|@/i.test(body)) errs.push('url or address text in body');
-    const own = [V5_WHO, V5_OPEN, V5_STUDY_LINE, V5_CALL_LINE, SIM_SENTENCE, LIMITS_SENTENCE, ...Object.values(FOLLOW_BODY).flatMap((x) => x.split('\n\n'))].reduce((a, f) => a.split(f).join(''), body);
+    const own = [V5_WHO, V5_OPEN, V5_STUDY_LINE, V5_CALL_LINE, SIM_SENTENCE, LIMITS_SENTENCE, ...Object.values(FOLLOW_BODY).flatMap((x) => x.split('\n\n'))].reduce((a, f) => a.split(f).join(''), body.split('\n').slice(2).join('\n'));
     if (/[\u2013\u2014\u2212]|--/.test(body) || /-/.test(own)) errs.push('dash or hyphen');
     if (/[!*]|[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/u.test(body + (d.subject ?? ''))) errs.push('exclamation, asterisk or emoji');
     if ((body.match(/\?/g) || []).length > 1) errs.push('more than one question mark');

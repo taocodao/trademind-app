@@ -8,6 +8,8 @@ import {
     C, F, row, sp, card, btn, btnPair, pill, P, esc, why, FOCUS, THEME, THEME_SUB, DISCOUNT, NOBROKER, weeklyIssue,
     MEETING_URL, type Seq7Opts, type IssueFacts, type FlightOverride,
 } from '@/lib/outreach/copy-seq7';
+import { SIM_SENTENCE, LIMITS_SENTENCE } from '@/lib/outreach/cx-gen';
+import { CHECKLIST_TITLE, CHECKLIST_ITEMS } from '@/lib/advisers/checklist-text';
 import { FIRST_PUBLISHED_NUMBER, publicNumber, type NewsletterIssue } from '@/lib/newsletter/issues';
 
 const ADDRESS = process.env.NEWSLETTER_MAILING_ADDRESS || '151-58 24th Rd, Whitestone, NY 11357, United States';
@@ -352,7 +354,7 @@ ${shown ? `<p style="color:${C.fg};font-weight:700">Subscribing: ${esc(shown)}</
  * text) comes first; market weather, copilot readout and turbulence test are this week's live reading. The same
  * page serves both audiences; the adviser copy adds a card to book 20 minutes.
  */
-export function libraryIssueHtml(issue: NewsletterIssue, facts: IssueFacts, o: { token: string; audience: 'retail' | 'adviser'; path: string; isCurrent: boolean; email?: string; last?: { title: string; path: string } | null; sample?: boolean; head?: string; prefill?: string; contactEmail?: string }): string {
+export function libraryIssueHtml(issue: NewsletterIssue, facts: IssueFacts, o: { checklistOn?: boolean; token: string; audience: 'retail' | 'adviser'; path: string; isCurrent: boolean; email?: string; last?: { title: string; path: string } | null; sample?: boolean; head?: string; prefill?: string; contactEmail?: string }): string {
     const so = { facts, strategyMember: false, token: o.token, firstName: null, baseUrl: BASE_URL, mailingAddress: ADDRESS, step: 1, n: 1 } as unknown as Seq7Opts;
     const d = new Date(`${issue.publishDate}T12:00:00Z`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
     const deep = issue.deepLinks.map((l) => `<a href="${esc(l.href)}" style="color:${C.blue};text-decoration:underline;font-weight:600;">${esc(l.label)} &rsaquo;</a>`).join('&nbsp;&nbsp;');
@@ -365,8 +367,15 @@ export function libraryIssueHtml(issue: NewsletterIssue, facts: IssueFacts, o: {
     const pre = !em && o.prefill && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(o.prefill) ? o.prefill.trim() : '';
     const plansPath = em ? `/plans?email=${encodeURIComponent(em)}` : '/plans';
     const meet = o.audience === 'adviser'
-        ? card(`<div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.green};padding-bottom:6px;">For advisers</div>${P('Want to talk it through? Book 20 minutes. We look at one issue together, the record and its limits, and whether it fits your process.', 14, C.body)}${btn(MEETING_URL, 'Book 20 minutes')}`)
+        ? card(`<div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.green};padding-bottom:6px;">For advisers</div>${P('Want to talk it through? Book 20 minutes. We look at one issue together, the record and its limits, and whether it fits your process.', 14, C.body)}${btn(o.token ? `${BASE_URL}/r/${o.token}/mt?s=1` : MEETING_URL, 'Book 20 minutes')}`)
         : '';
+    const tl = (k: string, fb: string) => (o.token ? `${BASE_URL}/r/${o.token}/${k}?s=1` : fb);
+    const lab = (t: string, c: string) => `<div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${c};padding-bottom:6px;">${t}</div>`;
+    const advBlocks = o.audience === 'adviser' ? [
+        card(`${lab('Open simulation', C.blue)}${P(SIM_SENTENCE, 14, C.body)}${P(LIMITS_SENTENCE, 13, C.muted)}${P('The method, the limits and the data files are all published. If you can break it, I want to hear it.', 14, C.body)}${btn(tl('vd', '/simulated-record#data'), 'Open the data and method')}`),
+        card(`${lab('Checklist', C.green)}<div style="${F}font-size:16px;font-weight:800;color:${C.fg};padding-bottom:6px;">${esc(CHECKLIST_TITLE)}</div><ol style="margin:0 0 12px;padding-left:20px;${F}font-size:14px;line-height:1.6;color:${C.body};">${CHECKLIST_ITEMS.map((i) => `<li><b>${esc(i.name)}.</b> ${esc(i.question)}</li>`).join('')}</ol>${o.checklistOn ? btn(tl('ck', '/advisers/checklist'), 'Printable version', 'outline') : ''}`),
+        card(`${lab('Study program', C.blue)}${P('Four months free, with a virtual account on one strategy. Each monthly review you finish earns three more free months, up to twelve. A review is a short survey with at least three items of feedback, and a challenge to the simulation counts as feedback. 20 seats.', 14, C.body)}${btn(tl('f', '/founding'), 'See the study program')}`),
+    ].join('') : '';
     const tiles: [string, string][] = [[plansPath, 'Plans and pricing'], ['/founding', 'Study program'], ['/live-record?demo=1', 'Virtual accounts'], ['/', 'trademind.bot']];
     const last = o.last
         ? row(`<div style="${F}font-size:14px;padding:6px 4px 14px;color:${C.muted};">Last issue: <a href="${esc(o.last.path)}" style="color:${C.blue};text-decoration:underline;font-weight:600;">${esc(o.last.title)} &rsaquo;</a></div>`)
@@ -375,6 +384,7 @@ export function libraryIssueHtml(issue: NewsletterIssue, facts: IssueFacts, o: {
     const content = tbl([
         weeklyIssue(so, () => '/', true, ov),
         card(`<div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.blue};padding-bottom:6px;">Subscriber offer</div><div style="${F}font-size:17px;font-weight:800;color:${C.fg};padding-bottom:6px;">${esc(DISCOUNT)}</div>${P(NOBROKER, 14, C.muted)}${btn(`${BASE_URL}${plansPath}`, 'See the plans')}`),
+        advBlocks,
         meet,
         em
             ? card(`<div style="${F}font-size:15px;font-weight:800;color:${C.fg};padding-bottom:4px;">You are on the free weekly list</div>${P(`The next issue arrives in your inbox. Unsubscribe any time from the link in each email.`, 14, C.muted)}`)

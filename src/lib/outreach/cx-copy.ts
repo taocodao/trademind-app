@@ -170,7 +170,8 @@ export function renderCx(d: { step: number; subject: string; body: string }, o: 
             h = h.replace(/\{\{([A-Z]+)\}\}/g, (_m, k) => (KIND[k] ? `<a href="${esc(link(k))}">${esc(link(k))}</a>` : ''));
             return `<p>${h.replace(/\n/g, '<br>')}</p>`;
         }).join('');
-        const html = `<div style="${HTML_WRAP}">${ph}<p>Eric Huang<br>Founder, TradeMind</p><p style="${FOOT}">${esc(stop)} <a href="${esc(o.unsubUrl)}" style="color:#777">Unsubscribe</a><br><br>${esc(o.mailingAddress)}</p></div>`;
+        // A complete HTML document (doctype, html, head with charset and title, body), not a bare div.
+        const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(d.subject)}</title></head><body style="margin:0;padding:16px;background:#ffffff;"><div style="${HTML_WRAP}">${ph}<p>Eric Huang<br>Founder, TradeMind</p><p style="${FOOT}">${esc(stop)} <a href="${esc(o.unsubUrl)}" style="color:#777">Unsubscribe</a><br><br>${esc(o.mailingAddress)}</p></div></body></html>`;
         return { subject: d.subject, text, html };
     }
     let body = d.body.replace(/\{\{([A-Z]+)\}\}/g, (_m, k) => (KIND[k] ? link(k) : ''));

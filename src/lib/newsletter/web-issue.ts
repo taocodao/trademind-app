@@ -248,7 +248,7 @@ function shareLinks(issue: NewsletterIssue, path: string) {
 function shareRail(issue: NewsletterIssue, path: string): string {
     const s = shareLinks(issue, path);
     const a = (h: string, l: string) => `<a href="${esc(h)}" target="_blank" rel="noopener noreferrer">${l}</a>`;
-    return `<aside class="rail" aria-label="Share this issue"><button type="button" class="pri" data-share="${esc(s.native)}" data-title="${esc(issue.title)}" data-text="${esc(s.nativeText)}">Share</button><a href="#" data-copy="${esc(s.copy)}">Copy link</a><a href="#" data-copy="${esc(s.postText)}">Copy post text</a>${a(s.x, 'X')}${a(s.linkedin, 'LinkedIn')}${a(s.facebook, 'Facebook')}${a(s.threads, 'Threads')}${a(s.whatsapp, 'WhatsApp')}<div class="more" id="more-share">${a(s.bluesky, 'Bluesky')}${a(s.telegram, 'Telegram')}${a(s.reddit, 'Reddit')}${a(s.email, 'Email')}</div><button type="button" data-more="more-share">More</button></aside>`;
+    return `<aside class="rail" aria-label="Share this issue"><button type="button" class="pri" data-share="${esc(s.native)}" data-title="${esc(issue.title)}" data-text="${esc(s.nativeText)}">Share</button><a href="#" data-copy="${esc(s.copy)}">Copy link</a><a href="#" data-copy="${esc(s.postText)}">Copy post text</a>${a(s.x, 'X')}${a(s.linkedin, 'LinkedIn')}${a(s.facebook, 'Facebook')}${a(s.threads, 'Threads')}${a(s.whatsapp, 'WhatsApp')}${a(s.bluesky, 'Bluesky')}${a(s.telegram, 'Telegram')}${a(s.reddit, 'Reddit')}${a(s.email, 'Email')}</aside>`;
 }
 
 /** Share card shown on small screens, where the left rail is hidden. */

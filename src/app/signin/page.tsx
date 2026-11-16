@@ -15,11 +15,13 @@ function SignInInner() {
     const router = useRouter();
     const params = useSearchParams();
     const email = params.get('email') ?? '';
+    const nextRaw = params.get('next') ?? '';
+    const next = /^\/(?!\/)[A-Za-z0-9_\-\/]*$/.test(nextRaw) ? nextRaw : '/dashboard';
     const timedOut = params.get('reason') === 'timeout';
 
     useEffect(() => {
-        if (ready && authenticated) router.push('/dashboard');
-    }, [ready, authenticated, router]);
+        if (ready && authenticated) router.push(next);
+    }, [ready, authenticated, router, next]);
 
     return (
         <div className="min-h-screen bg-tm-bg flex flex-col items-center justify-center px-6 py-10">

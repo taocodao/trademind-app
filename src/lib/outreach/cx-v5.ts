@@ -43,7 +43,7 @@ export const FOLLOW_BODY: Record<FollowKind, string> = {
     page: 'The five benchmarks are also on a single printable page: {{CK}}\n\nIf a question stays open after you read them, the page has a button to book 20 minutes.',
     sim: 'The data files and method notes for the simulation are listed here: {{VD}}\n\nIf you find a weak spot, I would like to hear it.',
     study: 'The study has 20 seats. It is free for four months, and each monthly review you finish earns three more free months, up to twelve.\n\nDetails and the short application: {{STUDY}}',
-    sub: 'The weekly brief is free, and subscribers get 30% off a strategy subscription for 90 days after confirming.\n\nSubscribe here: {{JN}}',
+    sub: 'The weekly brief is free, and subscribers get 30% off the first year of a strategy subscription when they buy within 90 days of confirming.\n\nSubscribe here: {{JN}}',
 };
 
 // ---------- data shapes ----------

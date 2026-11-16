@@ -395,7 +395,7 @@ export function libraryIssueHtml(issue: NewsletterIssue, facts: IssueFacts, o: {
             footer(),
         ]),
     ].join(''));
-    const auth = em ? '' : `<a class="lg" href="${BASE_URL}/signin">Log in</a>`;
+    const auth = em ? `<a class="lg" href="${BASE_URL}/newsletter/mine">My newsletter</a>` : `<a class="lg" href="${BASE_URL}/signin?next=/newsletter/mine">Log in</a>`;
     const body = `<div class="lw">
 <div class="top"><div class="auth">${auth}</div><div class="brand"><a href="/">AI Investor Copilot</a></div></div>
 <nav class="crumbs"><span><a href="/">TradeMind home</a> &rsaquo; <a href="/newsletter">Newsletter</a> &rsaquo; <a href="/newsletter/issues">All issues</a> &rsaquo; Issue ${publicNumber(issue)} &middot; <b>${o.isCurrent ? 'Current issue' : 'Past issue'}</b> &middot; ${esc(d)} &middot; ${esc(issue.readTime)}</span></nav>

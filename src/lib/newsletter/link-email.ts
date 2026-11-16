@@ -14,6 +14,8 @@ export interface LinkEmailInput {
     address: string;
     /** Optional profile link shown under the signature (light HTML version only). */
     signatureLink?: { label: string; url: string } | null;
+    /** Text before the link in the plain text version. Default: Read it here. */
+    linkLabel?: string;
 }
 
 const DISCLAIMER = 'Educational research, not personalized investment advice. Investing involves risk, including loss.';
@@ -23,7 +25,7 @@ export function renderLinkEmail(i: LinkEmailInput): { subject: string; html: str
     const text = [
         hi, '',
         i.description, '',
-        `Read it here: ${i.url}`, '',
+        `${i.linkLabel ?? 'Read it here'}: ${i.url}`, '',
         'Eric Huang',
         'Founder, TradeMind', '',
         'You are getting this because you subscribed to the free TradeMind brief.',

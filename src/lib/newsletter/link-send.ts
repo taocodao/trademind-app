@@ -19,7 +19,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://trademind.bot';
  * Sender for this email: outreach_settings keys subscriber_link_from and subscriber_link_reply_to override the defaults, so it can be switched without a deploy.
  * subscriber_link_host (for example go.echoads.tv) switches the email to the light HTML format with every link on that host, which must match the sender domain.
  */
-async function senderFor(): Promise<{ from: string; replyTo: string; host: string }> {
+export async function senderFor(): Promise<{ from: string; replyTo: string; host: string }> {
     try {
         const r = await query(`SELECT key, value FROM outreach_settings WHERE key IN ('subscriber_link_from','subscriber_link_reply_to','subscriber_link_host')`);
         const m: Record<string, string> = {};

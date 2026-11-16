@@ -305,7 +305,9 @@ const SAMPLE_SCRIPT = `<script>
     if(!t)return;
     if(t.closest('.mdl'))return;
     if(t.hasAttribute('data-free'))return;
-    e.preventDefault();e.stopPropagation();show('info');open();
+    if(t.hasAttribute('data-open')){e.preventDefault();e.stopPropagation();show('info');open();return;}
+    var h=t.tagName==='A'?t.getAttribute('href'):null;
+    if(h&&h.charAt(0)!=='#'&&!/^(mailto|tel|javascript):/i.test(h)){e.preventDefault();e.stopPropagation();window.open(t.href,'_blank','noopener');}
   },true);
   m.addEventListener('click',function(e){if(e.target===m)close();});
   document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
@@ -315,7 +317,8 @@ const SAMPLE_SCRIPT = `<script>
 /** Top of the adviser sample page: subscribe button, then the problem and the approach. Every link on the page opens the subscribe popup. */
 function sampleNote(token: string, em: string, pre = ''): string {
     const link = em ? '' : ` To get the newsletter every week, <a href="#subscribe" ${token || pre ? 'data-sub' : 'data-open'}>subscribe free</a>.`;
-    return `<p class="snote"><b>You are reading the current issue as a sample.</b>${link}</p>\n`;
+    const terms = ' Confirmed subscribers are entitled to 30% off the first year of a yearly TradeMind Strategy subscription, using the same email within 90 days of subscribing. You can unsubscribe at any time from the link in each email.';
+    return `<p class="snote"><b>You are reading the current issue as a sample.</b>${link}${terms}</p>\n`;
 }
 
 function sampleIntro(token: string, em = '', pre = ''): string {

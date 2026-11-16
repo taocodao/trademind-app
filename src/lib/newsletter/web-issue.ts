@@ -197,7 +197,7 @@ const TITLE_SCRIPT = `<script>
     setTimeout(run,2200);setInterval(run,20000);
   }
   document.querySelectorAll('[data-copy]').forEach(function(a){a.addEventListener('click',function(e){e.preventDefault();var t=a.getAttribute('data-copy'),o=a.textContent;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){a.textContent='Copied';setTimeout(function(){a.textContent=o;},1500);},function(){a.textContent='Copy failed';});});});
-  document.querySelectorAll('[data-share]').forEach(function(b){b.addEventListener('click',function(){var u=b.getAttribute('data-share'),t=b.getAttribute('data-title');if(navigator.share){navigator.share({title:t,url:u}).catch(function(){});}else if(navigator.clipboard){navigator.clipboard.writeText(u);var o=b.textContent;b.textContent='Link copied';setTimeout(function(){b.textContent=o;},1500);}});});
+  document.querySelectorAll('[data-share]').forEach(function(b){b.addEventListener('click',function(){var u=b.getAttribute('data-share'),t=b.getAttribute('data-title'),x=b.getAttribute('data-text')||'';if(navigator.share){navigator.share(x?{title:t,text:x,url:u}:{title:t,url:u}).catch(function(){});}else if(navigator.clipboard){navigator.clipboard.writeText(u);var o=b.textContent;b.textContent='Link copied';setTimeout(function(){b.textContent=o;},1500);}});});
   document.querySelectorAll('[data-more]').forEach(function(b){b.addEventListener('click',function(){var m=document.getElementById(b.getAttribute('data-more'));m.classList.toggle('on');b.textContent=m.classList.contains('on')?'Less':'More';});});
 })();
 </script>`;
@@ -206,34 +206,57 @@ function words(text: string): string {
     return text.split(/\s+/).filter(Boolean).map((w, i) => `<span class="tm-wmask"><span class="tm-w" style="animation-delay:${140 + i * 90}ms">${Array.from(w).map((c) => `<span class="tm-l">${esc(c)}</span>`).join('')}</span></span>`).join(' ');
 }
 
+const SHARE_TAGS = ['QQQ', 'investing'];
+
+/** Words of the excerpt that fit in `max` characters, cut at a word boundary, ending with a full stop. */
+function shortLine(text: string, max: number): string {
+    const t = text.replace(/\s+/g, ' ').trim();
+    if (t.length <= max) return t;
+    const cut = t.slice(0, max).replace(/\s+\S*$/, '').replace(/[,;:\s]+$/, '');
+    return cut.replace(/[.!?]$/, '') + '.';
+}
+
 function shareLinks(issue: NewsletterIssue, path: string) {
     const base = `${BASE_URL}${path}`;
     const u = (src: string) => `${base}?utm_medium=share&utm_campaign=${encodeURIComponent(issue.slug)}&utm_source=${src}`;
-    const enc = encodeURIComponent; const text = `${issue.title} - The AI Systematic Investor by TradeMind`;
+    const enc = encodeURIComponent;
+    const tags = SHARE_TAGS.map((t) => `#${t}`).join(' ');
+    const title = issue.title;
+    const line = shortLine(issue.excerpt || '', 160);
+    const text = `${title} - The AI Systematic Investor by TradeMind`;
+    /** Post text with the link inside it, for the networks that take one text box. */
+    const full = (src: string, withLine = true) => [title, withLine && line ? line : '', u(src), tags].filter(Boolean).join('\n\n');
+    // Bluesky counts 300 characters, so drop the extra line when the post is too long.
+    const bsky = (() => { const f = full('bluesky'); return Array.from(f).length <= 290 ? f : full('bluesky', false); })();
     return {
         native: u('native'), copy: u('copy_link'),
-        email: `mailto:?subject=${enc(text)}&body=${enc(issue.excerpt + '\n\n' + u('email'))}`,
-        x: `https://twitter.com/intent/tweet?text=${enc(text)}&url=${enc(u('x'))}`,
+        postText: full('copy_text'),
+        nativeText: [title, line, tags].filter(Boolean).join('\n\n'),
+        email: `mailto:?subject=${enc(title)}&body=${enc(full('email').replace(/\n/g, '\r\n'))}`,
+        x: `https://twitter.com/intent/tweet?text=${enc(title)}&url=${enc(u('x'))}&hashtags=${enc(SHARE_TAGS.join(','))}`,
         linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${enc(u('linkedin'))}`,
         facebook: `https://www.facebook.com/sharer/sharer.php?u=${enc(u('facebook'))}`,
-        bluesky: `https://bsky.app/intent/compose?text=${enc(text + ' ' + u('bluesky'))}`,
-        reddit: `https://www.reddit.com/submit?url=${enc(u('reddit'))}&title=${enc(issue.title)}`,
+        threads: `https://www.threads.net/intent/post?text=${enc(full('threads'))}`,
+        whatsapp: `https://wa.me/?text=${enc(full('whatsapp'))}`,
+        telegram: `https://t.me/share/url?url=${enc(u('telegram'))}&text=${enc([title, line, tags].filter(Boolean).join('\n\n'))}`,
+        bluesky: `https://bsky.app/intent/compose?text=${enc(bsky)}`,
+        reddit: `https://www.reddit.com/submit?url=${enc(u('reddit'))}&title=${enc(title + ' ' + tags)}`,
         title: text,
     };
 }
 
 function shareRail(issue: NewsletterIssue, path: string): string {
     const s = shareLinks(issue, path);
-    const a = (h: string, l: string) => `<a href="${esc(h)}" target="_blank" rel="noopener">${l}</a>`;
-    return `<aside class="rail" aria-label="Share this issue"><button type="button" class="pri" data-share="${esc(s.native)}" data-title="${esc(s.title)}">Share</button><a href="#" data-copy="${esc(s.copy)}">Copy link</a>${a(s.email, 'Email')}${a(s.x, 'X')}${a(s.linkedin, 'LinkedIn')}${a(s.facebook, 'Facebook')}<div class="more" id="more-share">${a(s.bluesky, 'Bluesky')}${a(s.reddit, 'Reddit')}</div><button type="button" data-more="more-share">More</button></aside>`;
+    const a = (h: string, l: string) => `<a href="${esc(h)}" target="_blank" rel="noopener noreferrer">${l}</a>`;
+    return `<aside class="rail" aria-label="Share this issue"><button type="button" class="pri" data-share="${esc(s.native)}" data-title="${esc(issue.title)}" data-text="${esc(s.nativeText)}">Share</button><a href="#" data-copy="${esc(s.copy)}">Copy link</a><a href="#" data-copy="${esc(s.postText)}">Copy post text</a>${a(s.x, 'X')}${a(s.linkedin, 'LinkedIn')}${a(s.facebook, 'Facebook')}${a(s.threads, 'Threads')}${a(s.whatsapp, 'WhatsApp')}<div class="more" id="more-share">${a(s.bluesky, 'Bluesky')}${a(s.telegram, 'Telegram')}${a(s.reddit, 'Reddit')}${a(s.email, 'Email')}</div><button type="button" data-more="more-share">More</button></aside>`;
 }
 
 /** Share card shown on small screens, where the left rail is hidden. */
 function shareCard(issue: NewsletterIssue, path: string): string {
     const s = shareLinks(issue, path);
     const chip = `display:inline-block;${F}font-size:13px;font-weight:700;color:${C.blue};border:1px solid #3a4a70;border-radius:8px;padding:8px 12px;background:${C.card};text-decoration:none;`;
-    const links: [string, string][] = [['LinkedIn', s.linkedin], ['X', s.x], ['Facebook', s.facebook], ['Bluesky', s.bluesky], ['Reddit', s.reddit], ['Email', s.email]];
-    return `<div class="mshare">${card(`<div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.blue};padding-bottom:6px;">Share this issue</div>${P('Know someone who would use a process before the next prediction? Send them this issue. Anyone can subscribe free.', 14, C.body)}<div style="line-height:2.4;">${links.map(([l, h]) => `<a href="${esc(h)}" target="_blank" rel="noopener" style="${chip}">${l}</a>`).join(' ')} <a href="#" data-copy="${esc(s.copy)}" style="${chip}">Copy link</a></div>`)}</div>`;
+    const links: [string, string][] = [['X', s.x], ['LinkedIn', s.linkedin], ['Facebook', s.facebook], ['Threads', s.threads], ['WhatsApp', s.whatsapp], ['Bluesky', s.bluesky], ['Telegram', s.telegram], ['Reddit', s.reddit], ['Email', s.email]];
+    return `<div class="mshare">${card(`<div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${C.blue};padding-bottom:6px;">Share this issue</div>${P('Know someone who would use a process before the next prediction? Send them this issue. Anyone can subscribe free.', 14, C.body)}<div style="line-height:2.4;"><button type="button" data-share="${esc(s.native)}" data-title="${esc(issue.title)}" data-text="${esc(s.nativeText)}" style="${chip}cursor:pointer;">Share</button> ${links.map(([l, h]) => `<a href="${esc(h)}" target="_blank" rel="noopener noreferrer" style="${chip}">${l}</a>`).join(' ')} <a href="#" data-copy="${esc(s.copy)}" style="${chip}">Copy link</a> <a href="#" data-copy="${esc(s.postText)}" style="${chip}">Copy post text</a></div>`)}</div>`;
 }
 
 /** Weekly only subscribe card for the library issue pages (the daily option is retired). */

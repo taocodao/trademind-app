@@ -12,7 +12,8 @@ import { BASE_URL, ensureOutreachTables, getSettings, setSetting } from './db';
 import { sendMail } from './transport';
 import { etParts, isBusinessDay } from './sender';
 import { MAILING_ADDRESS } from '@/lib/newsletter/email';
-import { buildDrafts, buildProfile, renderCx, type CxRaw } from './cx-copy';
+import { buildDrafts, buildProfile, renderCx, cleanFirst, type CxRaw } from './cx-copy';
+import { V5_FOLLOW, followBody, followFor, checkV5, type FollowKind } from './cx-v5';
 
 export const CX_STEP0 = 40;                       // steps 41 to 44
 export const CX_BDAYS_V3 = [0, 4];                 // v3 (checklist sequence): two emails, the second four business days after the first
@@ -27,6 +28,7 @@ export const CX_DEFAULTS: [string, string][] = [
     ['cx_enabled', 'false'], ['cx_domains', 'vochat.ai,echoads.tv'],
     ['cx_start', '50'], ['cx_step', '20'], ['cx_cap', '500'], ['cx_total_cap', '1500'],
     ['cx_from_display', 'Eric Huang'], ['cx_reply_to', ''],
+    ['cx_clickfollow', 'false'],
 ];
 
 let ready = false;
@@ -44,6 +46,7 @@ export async function ensureCxTables(): Promise<void> {
     await query(`ALTER TABLE cx_profile ADD COLUMN IF NOT EXISTS segment TEXT`);
     await query(`ALTER TABLE cx_profile ADD COLUMN IF NOT EXISTS arm TEXT`);
     await query(`ALTER TABLE cx_profile ADD COLUMN IF NOT EXISTS seq TEXT`);
+    await query(`ALTER TABLE cx_profile ADD COLUMN IF NOT EXISTS enrich JSONB`);
     // Real actions by Consulti contacts, logged by hand or by the report: replies, calls, referrals. Clicks alone are not interest.
     await query(`CREATE TABLE IF NOT EXISTS cx_outcomes (id SERIAL PRIMARY KEY, token TEXT NOT NULL REFERENCES outreach_contacts(token), kind TEXT NOT NULL, source TEXT NOT NULL DEFAULT 'manual', at TIMESTAMPTZ NOT NULL DEFAULT NOW(), note TEXT)`);
     await query(`CREATE INDEX IF NOT EXISTS cx_outcomes_token_idx ON cx_outcomes (token, kind)`);
@@ -278,7 +281,7 @@ async function run(s: Record<string, string>, et: { date: string; hour: number; 
         if (remaining <= 0) { room.set(d.domain, 0); continue; }
         const interval = minsLeft / remaining;
         minInterval = Math.min(minInterval, interval);
-        const last = (await query(`SELECT MAX(sent_at) AS t FROM outreach_sends WHERE domain = $1 AND step BETWEEN 41 AND 44`, [d.domain])).rows[0].t;
+        const last = (await query(`SELECT MAX(sent_at) AS t FROM outreach_sends WHERE domain = $1 AND step BETWEEN 41 AND 48`, [d.domain])).rows[0].t;
         const sinceLast = last && etDate(last) === et.date ? (now.getTime() - new Date(String(last)).getTime()) / 60000 : 1e9;
         const jitter = 0.85 + Math.random() * 0.3;
         room.set(d.domain, Math.min(remaining, Math.floor(sinceLast / (interval * jitter))));
@@ -292,7 +295,7 @@ async function run(s: Record<string, string>, et: { date: string; hour: number; 
         `SELECT c.token, c.email, c.first_name, MAX(x.step)::int AS last_step, MIN(x.sent_at) AS first_at, MAX(x.sent_at) AS last_at, (array_agg(x.domain ORDER BY x.step))[1] AS domain, MAX(p.segment) AS segment, MAX(p.seq) AS seq
          FROM outreach_contacts c JOIN cx_profile p ON p.token = c.token
          JOIN outreach_sends x ON x.token = c.token AND x.step BETWEEN 41 AND 44 AND x.status <> 'failed'
-         WHERE c.wave = 'cx' AND ${BLOCK_SQL}
+         WHERE c.wave = 'cx' AND COALESCE(p.seq, '') <> 'v5' AND ${BLOCK_SQL}
          GROUP BY c.token, c.email, c.first_name, p.firm_key HAVING MAX(x.step) < 44
          ORDER BY MIN(x.sent_at) LIMIT 400`)).rows;
     const cands: Cand[] = [];
@@ -309,6 +312,9 @@ async function run(s: Record<string, string>, et: { date: string; hour: number; 
         const sinceFirst = bdaysBetween(etDate(r.first_at), et.date), sinceLast = bdaysBetween(etDate(r.last_at), et.date);
         if (sinceFirst >= (large ? CX_BDAYS[2] : CX_BDAYS[nextN]) && sinceLast >= MIN_GAP_BDAYS) cands.push({ token: r.token, email: r.email, first_name: r.first_name, step: CX_STEP0 + nextN + 1, domain: r.domain });
     }
+    // v5: email 2 four business days after email 1, email 3 five business days after email 2, none for anyone who clicked or acted;
+    // click follow ups (the next business day, at most 2 in 14 days) go to people whose human click opened an area of interest.
+    if (s.cx_linkfree === 'false' && (s.cx_followups === 'true' || s.cx_clickfollow === 'true')) cands.push(...await v5Candidates(s, et.date));
     // New first emails: one contact per firm per tick, none if the firm had a first email in the last 7 days.
     if (cands.length < want) {
         const nw = (await query(
@@ -349,6 +355,47 @@ async function run(s: Record<string, string>, et: { date: string; hour: number; 
 const MONITOR_TO = ['testtrademind@outlook.com', 'eric@trademindbot.onmicrosoft.com', 'eric@aicopliot.onmicrosoft.com'];
 const MONITOR_EVERY = 50;
 
+
+/** v5 candidates: second and third emails and click follow ups. Pure SQL plus the rules in cx-v5. */
+async function v5Candidates(s: Record<string, string>, today: string): Promise<Cand[]> {
+    const rows = (await query(
+        `SELECT c.token, c.email, c.first_name, MAX(p.segment) AS segment, (array_agg(x.domain ORDER BY x.step))[1] AS domain,
+                MIN(x.sent_at) FILTER (WHERE x.step = 41) AS e1_at, MAX(x.sent_at) FILTER (WHERE x.step = 42) AS e2_at, MAX(x.sent_at) AS last_at,
+                array_agg(x.step) AS steps, MAX(p.enrich->>'v5_from') AS v5_from
+         FROM outreach_contacts c JOIN cx_profile p ON p.token = c.token
+         JOIN outreach_sends x ON x.token = c.token AND x.step BETWEEN 41 AND 48 AND x.status <> 'failed'
+         WHERE c.wave = 'cx' AND p.seq = 'v5' AND ${BLOCK_SQL}
+           AND NOT EXISTS (SELECT 1 FROM cx_outcomes o WHERE o.token = c.token)
+         GROUP BY c.token, c.email, c.first_name, p.firm_key HAVING bool_or(x.step = 41)
+         ORDER BY MIN(x.sent_at) LIMIT 600`)).rows;
+    if (!rows.length) return [];
+    const clicks = (await query(`SELECT token, link_type, ts FROM outreach_click_events WHERE token = ANY($1) AND human_confirmed AND NOT is_bot ORDER BY ts`, [rows.map((r) => r.token)])).rows;
+    const byTok = new Map<string, { type: string; ts: Date }[]>();
+    for (const k of clicks) { const a = byTok.get(k.token) ?? []; a.push({ type: String(k.link_type), ts: new Date(k.ts) }); byTok.set(k.token, a); }
+    const out: Cand[] = [];
+    for (const r of rows) {
+        const steps: number[] = (r.steps as number[]).map(Number);
+        const all = byTok.get(r.token) ?? [];
+        const from = Math.max(new Date(r.e1_at).getTime(), r.v5_from ? new Date(r.v5_from).getTime() : 0);
+        const mine = all.filter((k) => k.ts.getTime() >= from);
+        const base = { token: r.token as string, email: r.email as string, first_name: r.first_name as string | null, domain: r.domain as string | null };
+        const sinceLast = bdaysBetween(etDate(r.last_at), today);
+        // click follow up
+        if (s.cx_clickfollow === 'true' && mine.length) {
+            const sent = (Object.keys(V5_FOLLOW) as FollowKind[]).filter((k) => steps.includes(V5_FOLLOW[k].step));
+            const recent = (await query(`SELECT COUNT(*)::int AS n FROM outreach_sends WHERE token = $1 AND step BETWEEN 45 AND 48 AND sent_at > NOW() - INTERVAL '14 days'`, [r.token])).rows[0].n;
+            const lastClick = mine[mine.length - 1].ts;
+            const kind = followFor(mine.map((k) => k.type), sent);
+            if (kind && recent < 2 && bdaysBetween(etDate(lastClick), today) >= 1 && sinceLast >= 1) { out.push({ ...base, step: V5_FOLLOW[kind].step }); continue; }
+        }
+        // emails 2 and 3: only for people who never clicked
+        if (s.cx_followups !== 'true' || all.length || r.segment === 'large_firm') continue;
+        if (!steps.includes(42) && !steps.includes(43)) { if (bdaysBetween(etDate(r.e1_at), today) >= 4 && sinceLast >= MIN_GAP_BDAYS) out.push({ ...base, step: 42 }); }
+        else if (steps.includes(42) && !steps.includes(43)) { if (bdaysBetween(etDate(r.e2_at), today) >= 5 && sinceLast >= MIN_GAP_BDAYS) out.push({ ...base, step: 43 }); }
+    }
+    return out;
+}
+
 /** Threaded follow-ups: email 2 answers email 1, email 4 answers email 3 (email 1 for large firms). Returns the earlier send to reply to. */
 async function threadParent(token: string, step: number): Promise<{ step: number; domain: string; subject: string } | null> {
     const want = step === 42 ? 41 : step === 44 ? 43 : 0;
@@ -364,7 +411,7 @@ const rfcId = (token: string, step: number, domain: string) => `<cx.${token}.${s
 /** After every 50th send from a domain, send the same production email (rendered as sent, with a seed token) to both Outlook seed mailboxes. */
 async function monitorCopy(c: Cand, domain: string, s: Record<string, string>): Promise<void> {
     const since = s.cx_epoch ? new Date(s.cx_epoch) : new Date(0);   // counting starts from zero at cx_epoch
-    const n = Number((await query(`SELECT COUNT(*)::int AS n FROM outreach_sends WHERE domain = $1 AND step BETWEEN 41 AND 44 AND status <> 'failed' AND sent_at >= $2`, [domain, since])).rows[0].n);
+    const n = Number((await query(`SELECT COUNT(*)::int AS n FROM outreach_sends WHERE domain = $1 AND step BETWEEN 41 AND 48 AND status <> 'failed' AND sent_at >= $2`, [domain, since])).rows[0].n);
     if (n < MONITOR_EVERY || n % MONITOR_EVERY !== 0) return;
     const dr = (await query(`SELECT subject, body FROM cx_draft WHERE token = $1 AND step = $2`, [c.token, c.step - CX_STEP0])).rows[0];
     if (!dr || !dr.subject) return;    // threaded emails have no subject of their own
@@ -411,11 +458,21 @@ async function linkBaseFor(domain: string, s: Record<string, string>): Promise<s
 }
 
 export async function sendCxOne(c: Cand, domain: string, s: Record<string, string>): Promise<'sent' | 'skipped' | 'failed'> {
-    const dr = (await query(`SELECT subject, body, errors FROM cx_draft WHERE token = $1 AND step = $2`, [c.token, c.step - CX_STEP0])).rows[0];
+    let dr: { subject: string; body: string; errors: string | null } | undefined;
+    if (c.step >= 45) {
+        // v5 click follow up: fixed text, built now, checked now
+        const kind = (Object.keys(V5_FOLLOW) as FollowKind[]).find((k) => V5_FOLLOW[k].step === c.step);
+        if (!kind) return 'skipped';
+        const body = followBody(kind, cleanFirst(c.first_name || ''));
+        const errs = checkV5({ step: kind, body });
+        dr = { subject: '', body, errors: errs.length ? errs.join('; ') : null };
+    } else dr = (await query(`SELECT subject, body, errors FROM cx_draft WHERE token = $1 AND step = $2`, [c.token, c.step - CX_STEP0])).rows[0];
     if (!dr || dr.errors) { if (c.step === 41) await query(`UPDATE cx_profile SET hold = TRUE, hold_reason = COALESCE(hold_reason, 'draft missing') WHERE token = $1`, [c.token]); return 'skipped'; }
     const base = await linkBaseFor(domain, s);
-    const parent = await threadParent(c.token, c.step);
-    if ((c.step === 42 || c.step === 44) && !parent) return 'skipped';
+    // v5 emails 3 and every click follow up have no subject of their own: they reply in the thread of email 1.
+    const v5Thread = c.step >= 45 || (c.step === 43 && !dr.subject);
+    const parent = v5Thread ? await threadParent(c.token, 42) : await threadParent(c.token, c.step);
+    if ((c.step === 42 || c.step === 44 || v5Thread) && !parent) return 'skipped';
     const subject = parent ? `Re: ${parent.subject.replace(/^Re:\s*/i, '')}` : dr.subject;
     const threadHeaders: Record<string, string> = { 'Message-ID': rfcId(c.token, c.step, domain) };
     if (parent) { const pid = rfcId(c.token, parent.step, parent.domain); threadHeaders['In-Reply-To'] = pid; threadHeaders['References'] = pid; }

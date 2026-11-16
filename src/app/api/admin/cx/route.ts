@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
         const c = (await query(`SELECT c.token, c.email, c.status, p.firm, p.title, p.hook_id, p.hold, p.hold_reason, p.keywords FROM outreach_contacts c JOIN cx_profile p ON p.token = c.token WHERE c.email = $1`, [email.trim().toLowerCase()])).rows[0];
         if (!c) return NextResponse.json({ error: 'No outreach contact with that email' }, { status: 404 });
         const d = (await query(`SELECT step, subject, body FROM cx_draft WHERE token = $1 ORDER BY step`, [c.token])).rows;
-        const sends = (await query(`SELECT step, domain, sent_at, status FROM outreach_sends WHERE token = $1 AND step BETWEEN 41 AND 44 ORDER BY step`, [c.token])).rows;
+        const sends = (await query(`SELECT step, domain, sent_at, status FROM outreach_sends WHERE token = $1 AND step BETWEEN 41 AND 48 ORDER BY step`, [c.token])).rows;
         const emails = d.map((x) => ({ step: x.step, subject: x.subject, text: renderCx(x, { token: c.token, linkBase: BASE_URL, unsubUrl: `${BASE_URL}/u/${c.token}`, mailingAddress: MAILING_ADDRESS }).text }));
         return NextResponse.json({ contact: { email: c.email, status: c.status, firm: c.firm, title: c.title, hook: c.hook_id, hold: c.hold, hold_reason: c.hold_reason }, emails, sends });
     }

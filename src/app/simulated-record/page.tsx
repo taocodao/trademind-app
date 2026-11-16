@@ -172,7 +172,7 @@ function Block({ s }: { s: Strat }) {
                     </tbody>
                 </table>
             </div>
-            <div className="sr-dl">
+            <div className="sr-dl" id="data">
                 {files.map((f) => (
                     <a key={f} href={`/simulated/simulated-${tag}-${f}.csv`} download>Download simulated {f.replace('-', ' ')} (CSV, every row marked SIMULATION)</a>
                 ))}

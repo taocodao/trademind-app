@@ -128,7 +128,7 @@ export function checkDraft(d: CxDraft): string[] {
     if (d.step === 1 && !d.body.includes(LIMITS_LINE)) e.push('limits line missing');
     if (d.step === 1 && !d.body.includes('{{HOME}}')) e.push('home link missing');
     if (d.step === 1 && !/\?\s*$/.test(d.body)) e.push('E1 must end with one question');
-    if (/\{\{/.test(d.body.replace(/\{\{(ADV|HOME|SIM|VA|SUB|CAL|STUDY|CK)\}\}/g, ''))) e.push('unknown merge token');
+    if (/\{\{/.test(d.body.replace(/\{\{(ADV|HOME|SIM|VA|SUB|CAL|STUDY|CK|VD|JN)\}\}/g, ''))) e.push('unknown merge token');
     return e;
 }
 
@@ -136,7 +136,7 @@ export const CX_FOOTER_LINE = 'You are getting this note at your business addres
 export const CX_STOP_LINE = 'Reply stop and I will not write again.';
 export const CX_DISCLAIMER = 'TradeMind publishes educational research. It is not personalized investment advice. All performance shown is hypothetical simulation unless labeled as a virtual account. Options and leveraged ETFs involve substantial risk, including loss of the amount invested.';
 
-const KIND: Record<string, string> = { ADV: 'as', HOME: 'h', SIM: 'v', VA: 'va', SUB: 'sw', CAL: 'cal', STUDY: 'f', CK: 'ck' };
+const KIND: Record<string, string> = { ADV: 'as', HOME: 'h', SIM: 'v', VA: 'va', SUB: 'sw', CAL: 'cal', STUDY: 'f', CK: 'ck', VD: 'vd', JN: 'jn' };
 
 const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const HTML_WRAP = 'font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#222';

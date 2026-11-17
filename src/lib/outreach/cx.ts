@@ -563,7 +563,7 @@ export async function sendCxTest(o: { domain: string; to: string; email?: string
         const m = renderCx(d, { token: seed, linkBase: base, unsubUrl: `${base}/u/${seed}`, mailingAddress: MAILING_ADDRESS, ...cxFormat(s) });
         const r = await sendMail({ transport: tp, from: `${s.cx_from_display || 'Eric Huang'} <eric@${dom}>`, to, replyTo: s[`reply_to_${dom}`] || s.cx_reply_to || s.reply_to || undefined, subject: m.subject, text: m.text, html: m.html,
             headers: {}, token: seed, step: 9, campaign: 'cx_test', idempotencyKey: `cxt-${seed}-${dom}-${d.step}-${Date.now()}` });
-        detail.push(`E${d.step}: ${r.ok ? 'accepted' : `failed ${r.status}`}`); if (r.ok) sent++;
+        detail.push(`E${d.step}: ${r.ok ? 'accepted' : `failed ${r.status} ${String(r.body || "").slice(0, 160)}`}`); if (r.ok) sent++;
         await new Promise((x) => setTimeout(x, 1200));
     }
     return { sent, detail };

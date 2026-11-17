@@ -45,6 +45,8 @@ export function SessionTimeout() {
         if (!read(ACTIVE_KEY)) write(ACTIVE_KEY, now());
 
         const expired = () => {
+            // The admin pages stay signed in: they are already locked to the one admin account, and being signed out mid-task breaks long jobs.
+            if (window.location.pathname.startsWith("/admin")) return false;
             const idleMs = now() - read(ACTIVE_KEY);
             const ageMs = now() - read(START_KEY);
             return idleMs > IDLE_MINUTES * 60_000 || ageMs > MAX_SESSION_HOURS * 3_600_000;

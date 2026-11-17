@@ -4,6 +4,7 @@
 // Order of evidence: MX host, then SPF includes, then the autodiscover record, for firms whose MX is a security filter.
 import pg from 'pg';
 const all = process.argv[2] === 'all';
+const refine = process.argv[2] === 'refine';   // re-check only domains currently marked other or unknown
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
 const doh = async (name, type) => {
     for (const base of ['https://dns.google/resolve', 'https://cloudflare-dns.com/dns-query']) {
@@ -31,9 +32,26 @@ async function classify(d) {
     if (g && !m) return ['google', 'spf'];
     const ad = await doh(`autodiscover.${d}`, 'CNAME');
     if (ad.data.some((x) => /outlook\.com|office365|microsoft/.test(x))) return ['microsoft', 'autodiscover'];
-    return ['other', 'mx_other'];
+    const hint = await extraHints(d, txt.data);
+    return hint || ['other', 'mx_other'];
 }
-const rows = (await pool.query(`SELECT DISTINCT split_part(c.email,'@',2) AS d FROM outreach_contacts c JOIN cx_profile p ON p.token=c.token WHERE c.wave='cx' ${all ? '' : 'AND p.mail_host IS NULL'}`)).rows.map((r) => r.d.toLowerCase());
+// Further Microsoft 365 evidence for firms behind a mail filter: DKIM selectors that point at onmicrosoft.com, Microsoft domain proof records, Lync and device registration records.
+async function extraHints(d, txtAll) {
+    if (txtAll.some((t) => /^ms=ms\d+/.test(t))) return ['microsoft', 'ms_verify'];
+    if (txtAll.some((t) => /^v=spf1/.test(t) && /spf\.protection\.outlook\.com/.test(t))) return ['microsoft', 'spf'];
+    for (const sel of ['selector1', 'selector2']) {
+        const r = await doh(`${sel}._domainkey.${d}`, 'CNAME');
+        if (r.data.some((x) => /onmicrosoft\.com|outlook\.com/.test(x))) return ['microsoft', 'dkim'];
+    }
+    for (const h of ['lyncdiscover', 'sip', 'enterpriseregistration', 'msoid']) {
+        const r = await doh(`${h}.${d}`, 'CNAME');
+        if (r.data.some((x) => /lync\.com|office\.com|microsoftonline|windows\.net|outlook\.com|office365/.test(x))) return ['microsoft', 'ms_cname'];
+    }
+    const g = await doh(`google._domainkey.${d}`, 'TXT');
+    if (g.data.some((x) => /v=dkim1/.test(x))) return ['google', 'dkim'];
+    return null;
+}
+const rows = (await pool.query(`SELECT DISTINCT split_part(c.email,'@',2) AS d FROM outreach_contacts c JOIN cx_profile p ON p.token=c.token WHERE c.wave='cx' ${all ? '' : refine ? "AND p.mail_host IN ('other','unknown')" : 'AND p.mail_host IS NULL'}`)).rows.map((r) => r.d.toLowerCase());
 console.log('domains', rows.length);
 const out = new Map(); let i = 0;
 await Promise.all(Array.from({ length: 12 }, async () => { while (i < rows.length) { const d = rows[i++]; out.set(d, await classify(d)); } }));

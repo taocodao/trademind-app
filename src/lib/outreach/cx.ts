@@ -30,7 +30,7 @@ export const CX_DEFAULTS: [string, string][] = [
     ['cx_from_display', 'Eric Huang'], ['cx_reply_to', ''],
     ['cx_clickfollow', 'false'],
     // Routing by who hosts the recipient's mailbox. Off by default: when off, sending is exactly as before.
-    ['cx_route', 'off'], ['cx_route_ms_domains', 'echoads.tv,vochat.ai'], ['cx_route_google_domains', 'vochat.ai'], ['cx_route_other', 'hold'],
+    ['cx_route', 'off'], ['cx_route_ms_domains', 'echoads.tv,vochat.ai'], ['cx_route_google_domains', 'vochat.ai'], ['cx_route_other', 'resend'],
 ];
 
 let ready = false;

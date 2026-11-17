@@ -581,17 +581,18 @@ const CONSULTI_SEEDS: [string, 'google' | 'microsoft'][] = [
 ];
 
 /** Sends one test email to each of the 20 Consulti seed inboxes through the same routing the adviser run would use (Microsoft seeds via Workspace, Google seeds via Resend). */
-export async function sendCxConsulti(code: string): Promise<{ sent: number; detail: string[] }> {
+export async function sendCxConsulti(code: string, o: { only?: 'google' | 'microsoft'; htmlOnly?: boolean } = {}): Promise<{ sent: number; detail: string[] }> {
     if (!/^IPT-[a-z0-9]+$/.test(code)) throw new Error('code must look like IPT-xxxxxxxx');
     const s = await getSettings();
     const detail: string[] = []; let sent = 0;
     const html = `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#222"><p>Hi Michael,</p><p>Caliber says its team of financial professionals helps clients handle it all through a holistic planning approach. A client question about the Nasdaq 100 needs more than an opinion.</p><p>I'm Eric, a retail investor in Queens. I wanted returns well above holding the Nasdaq 100, so I built TradeMind, a rules based research model that uses AI and machine learning. It only publishes research and never connects to a brokerage or places trades.</p><p>The simulation is open, with its method, limits and data on one page, so you can try to break it. The same page has a one page checklist of five benchmarks for a Nasdaq 100 client plan.</p><p>Here is the page: <a href="https://trademind.bot">trademind.bot</a></p><p>Eric Huang<br>Founder, TradeMind</p><p style="font-size:12px;color:#777">Reply stop and I will not write again.<br><br>151-58 24th Rd, Whitestone, NY 11357, United States</p></div><p>${code}</p>`;
     const text = html.replace(/<\/p>/g, '\n\n').replace(/<br>/g, '\n').replace(/<[^>]+>/g, '');
     for (const [to, host] of CONSULTI_SEEDS) {
+        if (o.only && host !== o.only) continue;
         const rc = routeChoice(host, s);
         const dom = rc?.domains[0];
         if (!rc || !dom) { detail.push(`${to}: no route (${host})`); continue; }
-        const r = await sendMail({ transport: rc.transport, from: `Eric Huang <eric@${dom}>`, to, subject: `Michael, a client question ${code}`, text, html, headers: {}, token: 'consulti', step: Math.floor(Math.random() * 1e6), campaign: 'cx_consulti', idempotencyKey: `cxc-${code}-${to}` });
+        const r = await sendMail({ transport: rc.transport, from: `Eric Huang <eric@${dom}>`, to, subject: `Michael, a client question ${code}`, text: o.htmlOnly ? '' : text, html, headers: {}, token: 'consulti', step: Math.floor(Math.random() * 1e6), campaign: 'cx_consulti', idempotencyKey: `cxc-${code}-${to}` });
         detail.push(`${to}: ${rc.transport} ${dom} ${r.ok ? 'accepted' : `failed ${r.status} ${String(r.body || '').slice(0, 120)}`}`); if (r.ok) sent++;
         await new Promise((x) => setTimeout(x, 1200));
     }

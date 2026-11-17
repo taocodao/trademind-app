@@ -62,7 +62,7 @@ async function sendViaWorkspace(m: MailInput): Promise<MailResult> {
     const messageId = headers['Message-ID'] || `<cx.${m.token}.${m.step}@${domain}>`;
     delete headers['Message-ID'];
     try {
-        await tr.sendMail({ from: m.from, to: m.to, replyTo: m.replyTo || undefined, subject: m.subject, text: m.text, ...(m.html ? { html: m.html } : {}), messageId, headers });
+        await tr.sendMail({ from: m.from, to: m.to, replyTo: m.replyTo || undefined, subject: m.subject, ...(m.text ? { text: m.text } : {}), ...(m.html ? { html: m.html } : {}), messageId, headers });
         return { ok: true, status: 250, id: messageId, body: '', permanent: false };
     } catch (e) {
         const err = e as { responseCode?: number; message?: string };

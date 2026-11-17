@@ -9,7 +9,7 @@
 import { randomBytes } from 'crypto';
 import pool, { query } from '@/lib/db';
 import { BASE_URL, ensureOutreachTables, getSettings, setSetting } from './db';
-import { sendMail } from './transport';
+import { sendMail, workspaceReady, type Transport } from './transport';
 import { etParts, isBusinessDay } from './sender';
 import { MAILING_ADDRESS } from '@/lib/newsletter/email';
 import { buildDrafts, buildProfile, renderCx, cleanFirst, type CxRaw } from './cx-copy';
@@ -29,6 +29,8 @@ export const CX_DEFAULTS: [string, string][] = [
     ['cx_start', '50'], ['cx_step', '20'], ['cx_cap', '500'], ['cx_total_cap', '1500'],
     ['cx_from_display', 'Eric Huang'], ['cx_reply_to', ''],
     ['cx_clickfollow', 'false'],
+    // Routing by who hosts the recipient's mailbox. Off by default: when off, sending is exactly as before.
+    ['cx_route', 'off'], ['cx_route_ms_domains', 'echoads.tv,vochat.ai'], ['cx_route_google_domains', 'vochat.ai'], ['cx_route_other', 'hold'],
 ];
 
 let ready = false;
@@ -335,13 +337,19 @@ async function run(s: Record<string, string>, et: { date: string; hour: number; 
         if (want <= 0) break;
         // Choose the domain: the first email's domain for a follow-up, else the usable domain with the most room.
         const primaries = String(s.cx_primary_domain || 'vochat.ai').toLowerCase().split(',').map((x) => x.trim()).filter(Boolean);
-        const restricted = await mxRestricted(c.email);
+        let transport: Transport = 'resend';
         let dom = c.domain && room.get(c.domain.toLowerCase()) ? c.domain.toLowerCase() : null;
-        if (restricted) { const best = primaries.map((p) => [p, room.get(p) ?? 0] as [string, number]).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1])[0]; dom = best ? best[0] : null; }
+        if (s.cx_route === 'on') {
+            const rc = routeChoice(await mailHostOf(c), s);
+            if (!rc) { out.skipped = Number(out.skipped) + 1; continue; }
+            transport = rc.transport;
+            const ok = rc.domains.filter((d) => (room.get(d) ?? 0) > 0);
+            dom = dom && rc.domains.includes(dom) ? dom : (ok.sort((a, b) => (room.get(b) ?? 0) - (room.get(a) ?? 0))[0] ?? null);
+        } else if (await mxRestricted(c.email)) { const best = primaries.map((p) => [p, room.get(p) ?? 0] as [string, number]).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1])[0]; dom = best ? best[0] : null; }
         else if (!dom) { const best = [...room.entries()].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1])[0]; dom = best ? best[0] : null; }
         if (!dom || !(room.get(dom) ?? 0)) continue;
         if (Number(out.sent) + Number(out.failed) > 0) await new Promise((x) => setTimeout(x, 5000 + Math.floor(Math.random() * 25000)));
-        const r = await sendCxOne(c, dom, s);
+        const r = await sendCxOne(c, dom, s, transport);
         out[r] = Number(out[r]) + 1;
         if (r === 'sent') {
             room.set(dom, (room.get(dom) ?? 1) - 1); want--; sentAll++;
@@ -429,6 +437,34 @@ async function monitorCopy(c: Cand, domain: string, s: Record<string, string>): 
     }
 }
 
+type MailHost = 'google' | 'microsoft' | 'other' | 'unknown';
+const HOST_CACHE = new Map<string, MailHost>();
+/** Who hosts the recipient's mailbox. Uses the value saved on cx_profile (scripts/cx-mailhost.mjs); a contact without one is looked up from the MX record. */
+async function mailHostOf(c: Cand): Promise<MailHost> {
+    const saved = (await query(`SELECT mail_host FROM cx_profile WHERE token = $1`, [c.token])).rows[0]?.mail_host as string | null | undefined;
+    if (saved === 'google' || saved === 'microsoft' || saved === 'other' || saved === 'unknown') return saved;
+    const dom = c.email.split('@')[1]?.toLowerCase() || '';
+    if (!dom) return 'unknown';
+    if (HOST_CACHE.has(dom)) return HOST_CACHE.get(dom)!;
+    let h: MailHost = 'unknown';
+    try {
+        const { resolveMx } = await import('dns/promises');
+        const hosts = (await resolveMx(dom)).map((m) => m.exchange.toLowerCase()).join(' ');
+        h = /google\.com|googlemail\.com/.test(hosts) ? 'google' : /protection\.outlook\.com|mail\.protection|outlook\.com/.test(hosts) ? 'microsoft' : hosts ? 'other' : 'unknown';
+    } catch { h = 'unknown'; }
+    HOST_CACHE.set(dom, h);
+    await query(`UPDATE cx_profile SET mail_host = $2, mail_host_via = 'mx_live', mail_host_at = NOW() WHERE token = $1 AND mail_host IS NULL`, [c.token, h]);
+    return h;
+}
+const csv = (v: string | undefined) => String(v || '').toLowerCase().split(',').map((x) => x.trim()).filter(Boolean);
+/** Where a contact's email goes when routing is on: Microsoft mailboxes through Workspace, Google mailboxes through Resend, the rest as set in cx_route_other (default hold). */
+export function routeChoice(host: MailHost, s: Record<string, string>): { transport: Transport; domains: string[] } | null {
+    const via = host === 'microsoft' ? 'workspace' : host === 'google' ? 'resend' : (s.cx_route_other === 'workspace' || s.cx_route_other === 'resend' ? s.cx_route_other : 'hold');
+    if (via === 'hold') return null;
+    if (via === 'workspace') return { transport: 'workspace', domains: csv(s.cx_route_ms_domains).filter(workspaceReady) };
+    return { transport: 'resend', domains: csv(s.cx_route_google_domains) };
+}
+
 const MX_CACHE = new Map<string, boolean>();
 const MX_GATEWAY = /(protection\.outlook\.com|mail\.protection|pphosted\.com|ppe-hosted\.com|mimecast|iphmx\.com|barracuda)/i;
 /** True when the recipient domain is behind Microsoft 365 or a security gateway. Those contacts send only from the best tested domain. */
@@ -457,7 +493,7 @@ async function linkBaseFor(domain: string, s: Record<string, string>): Promise<s
     return h ? `https://${h}` : BASE_URL;
 }
 
-export async function sendCxOne(c: Cand, domain: string, s: Record<string, string>): Promise<'sent' | 'skipped' | 'failed'> {
+export async function sendCxOne(c: Cand, domain: string, s: Record<string, string>, transport: Transport = 'resend'): Promise<'sent' | 'skipped' | 'failed'> {
     let dr: { subject: string; body: string; errors: string | null } | undefined;
     if (c.step >= 45) {
         // v5 click follow up: fixed text, built now, checked now
@@ -481,7 +517,7 @@ export async function sendCxOne(c: Cand, domain: string, s: Record<string, strin
     let res;
     try {
         res = await sendMail({
-            transport: 'resend', from, to: c.email, replyTo: s[`reply_to_${domain.toLowerCase()}`] || s.cx_reply_to || s.reply_to || undefined, subject: msg.subject, text: msg.text, html: msg.html,
+            transport, from, to: c.email, replyTo: s[`reply_to_${domain.toLowerCase()}`] || s.cx_reply_to || s.reply_to || undefined, subject: msg.subject, text: msg.text, html: msg.html,
             headers: s.cx_linkfree !== 'false' || s.cx_html !== 'false' ? threadHeaders : { ...threadHeaders, 'List-Unsubscribe': `<${base}/u/${c.token}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
             token: c.token, step: c.step, campaign: 'cx_adviser', idempotencyKey: `cx-${c.token}-${c.step}`,
         });

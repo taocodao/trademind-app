@@ -6,7 +6,7 @@
  * links and a one-click List-Unsubscribe header. token and step travel as custom_args so webhook events
  * can be matched to the send without relying on the provider message id.
  */
-export type Transport = 'resend' | 'sendgrid';
+export type Transport = 'resend' | 'sendgrid' | 'workspace';
 
 export interface MailInput {
     transport: Transport;
@@ -33,11 +33,47 @@ function parseFrom(from: string): { email: string; name?: string } {
 }
 
 export function transportKeyPresent(t: Transport): boolean {
+    if (t === 'workspace') return false;   // Workspace readiness is per sending domain, see workspaceReady
     return t === 'sendgrid' ? !!process.env.SENDGRID_API_KEY : !!process.env.RESEND_API_KEY;
+}
+
+/**
+ * Google Workspace over SMTP (smtp.gmail.com:587, app password). One login per sending domain, set by hand in the host environment:
+ *   WORKSPACE_SMTP_<DOMAIN>_USER and WORKSPACE_SMTP_<DOMAIN>_PASS, where <DOMAIN> is the domain upper cased with dots as underscores
+ *   (for example WORKSPACE_SMTP_ECHOADS_TV_USER). A domain without its own login falls back to WORKSPACE_SMTP_DEFAULT_USER and
+ *   WORKSPACE_SMTP_DEFAULT_PASS and sends as that domain's address, which works when the address is a Send mail as alias of that user.
+ */
+function wsCreds(domain: string): { user: string; pass: string } | null {
+    const k = domain.toUpperCase().replace(/[^A-Z0-9]+/g, '_');
+    const user = process.env[`WORKSPACE_SMTP_${k}_USER`] || process.env.WORKSPACE_SMTP_DEFAULT_USER;
+    const pass = process.env[`WORKSPACE_SMTP_${k}_PASS`] || process.env.WORKSPACE_SMTP_DEFAULT_PASS;
+    return user && pass ? { user, pass } : null;
+}
+export function workspaceReady(domain: string): boolean { return !!wsCreds(domain); }
+
+async function sendViaWorkspace(m: MailInput): Promise<MailResult> {
+    const from = parseFrom(m.from);
+    const domain = from.email.split('@')[1]?.toLowerCase() || '';
+    const creds = wsCreds(domain);
+    if (!creds) return { ok: false, status: 0, id: null, body: 'no Workspace login for ' + domain, permanent: false };
+    const nodemailer = (await import('nodemailer')).default;
+    const tr = nodemailer.createTransport({ host: 'smtp.gmail.com', port: 587, secure: false, requireTLS: true, auth: creds, connectionTimeout: 15000, socketTimeout: 30000 });
+    const headers = { ...(m.headers ?? {}) };
+    const messageId = headers['Message-ID'] || `<cx.${m.token}.${m.step}@${domain}>`;
+    delete headers['Message-ID'];
+    try {
+        await tr.sendMail({ from: m.from, to: m.to, replyTo: m.replyTo || undefined, subject: m.subject, text: m.text, ...(m.html ? { html: m.html } : {}), messageId, headers });
+        return { ok: true, status: 250, id: messageId, body: '', permanent: false };
+    } catch (e) {
+        const err = e as { responseCode?: number; message?: string };
+        const code = err.responseCode ?? 0;
+        return { ok: false, status: code, id: null, body: String(err.message || '').slice(0, 300), permanent: code === 550 || code === 553 || code === 551 };
+    } finally { tr.close(); }
 }
 
 export async function sendMail(m: MailInput): Promise<MailResult> {
     if (m.transport === 'sendgrid') return sendViaSendGrid(m);
+    if (m.transport === 'workspace') return sendViaWorkspace(m);
     return sendViaResend(m);
 }
 

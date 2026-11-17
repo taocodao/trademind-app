@@ -67,7 +67,8 @@ async function sendViaWorkspace(m: MailInput): Promise<MailResult> {
     } catch (e) {
         const err = e as { responseCode?: number; message?: string };
         const code = err.responseCode ?? 0;
-        return { ok: false, status: code, id: null, body: String(err.message || '').slice(0, 300), permanent: code === 550 || code === 553 || code === 551 };
+        const diag = ` [login user=${creds.user} passlen=${creds.pass.length} spaces=${/\s/.test(creds.pass)} quoted=${/^["']|["']$/.test(creds.pass)}]`;
+        return { ok: false, status: code, id: null, body: (String(err.message || '').slice(0, 200) + diag), permanent: code === 550 || code === 553 || code === 551 };
     } finally { tr.close(); }
 }
 

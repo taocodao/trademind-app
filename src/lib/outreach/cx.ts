@@ -517,7 +517,8 @@ export async function sendCxOne(c: Cand, domain: string, s: Record<string, strin
     let res;
     try {
         res = await sendMail({
-            transport, from, to: c.email, replyTo: s[`reply_to_${domain.toLowerCase()}`] || s.cx_reply_to || s.reply_to || undefined, subject: msg.subject, text: msg.text, html: msg.html,
+            // Workspace sends take replies in the Workspace mailbox the reader watches, so replies and bounces are seen.
+            transport, from, to: c.email, replyTo: (transport === 'workspace' ? process.env.WORKSPACE_SMTP_DEFAULT_USER : '') || s[`reply_to_${domain.toLowerCase()}`] || s.cx_reply_to || s.reply_to || undefined, subject: msg.subject, text: msg.text, html: msg.html,
             headers: s.cx_linkfree !== 'false' || s.cx_html !== 'false' ? threadHeaders : { ...threadHeaders, 'List-Unsubscribe': `<${base}/u/${c.token}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
             token: c.token, step: c.step, campaign: 'cx_adviser', idempotencyKey: `cx-${c.token}-${c.step}`,
         });

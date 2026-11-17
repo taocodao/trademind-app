@@ -49,18 +49,62 @@ function wsCreds(domain: string): { user: string; pass: string } | null {
     const pass = process.env[`WORKSPACE_SMTP_${k}_PASS`] || process.env.WORKSPACE_SMTP_DEFAULT_PASS;
     return user && pass ? { user, pass } : null;
 }
-export function workspaceReady(domain: string): boolean { return !!wsCreds(domain); }
+export function gmailApiReady(): boolean { return !!(process.env.GMAIL_CLIENT_ID && process.env.GMAIL_CLIENT_SECRET && process.env.GMAIL_REFRESH_TOKEN); }
+export function workspaceReady(domain: string): boolean { return gmailApiReady() || !!wsCreds(domain); }
+
+let gmTok: { v: string; exp: number } | null = null;
+async function gmailAccessToken(): Promise<string> {
+    if (gmTok && gmTok.exp > Date.now() + 60000) return gmTok.v;
+    const r = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        body: new URLSearchParams({ client_id: process.env.GMAIL_CLIENT_ID || '', client_secret: process.env.GMAIL_CLIENT_SECRET || '', refresh_token: process.env.GMAIL_REFRESH_TOKEN || '', grant_type: 'refresh_token' }),
+    });
+    const j = (await r.json().catch(() => ({}))) as { access_token?: string; expires_in?: number; error?: string };
+    if (!r.ok || !j.access_token) throw Object.assign(new Error('token ' + (j.error || r.status)), { responseCode: r.status });
+    gmTok = { v: j.access_token, exp: Date.now() + (j.expires_in ?? 3000) * 1000 };
+    return gmTok.v;
+}
+
+/** Gmail REST API (users.messages.send, OAuth refresh token, gmail.send scope). Used for Workspace sends unless the message asks for SMTP with header X-Via: smtp. */
+async function sendViaGmailApi(m: MailInput, messageId: string | undefined, headers: Record<string, string>): Promise<MailResult> {
+    try {
+        const MailComposer = (await import('nodemailer/lib/mail-composer')).default;
+        const buf = await new MailComposer({ from: m.from, to: m.to, replyTo: m.replyTo || undefined, subject: m.subject, ...(m.text ? { text: m.text } : {}), ...(m.html ? { html: m.html } : {}), messageId, headers, textEncoding: 'quoted-printable' }).compile().build();
+        const raw = buf.toString('base64url');
+        const tok = await gmailAccessToken();
+        const r = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+            method: 'POST', headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' }, body: JSON.stringify({ raw }),
+        });
+        const j = (await r.json().catch(() => ({}))) as { id?: string; error?: { message?: string } };
+        if (!r.ok) return { ok: false, status: r.status, id: null, body: ('gmail api ' + (j.error?.message || '')).slice(0, 250), permanent: r.status === 400 };
+        return { ok: true, status: r.status, id: messageId ?? j.id ?? null, body: '', permanent: false };
+    } catch (e) {
+        const err = e as { responseCode?: number; message?: string };
+        return { ok: false, status: err.responseCode ?? 0, id: null, body: String(err.message || '').slice(0, 250), permanent: false };
+    }
+}
 
 async function sendViaWorkspace(m: MailInput): Promise<MailResult> {
     const from = parseFrom(m.from);
     const domain = from.email.split('@')[1]?.toLowerCase() || '';
     const creds = wsCreds(domain);
+    const forceSmtp = (m.headers ?? {})['X-Via'] === 'smtp';
+    const useApi = gmailApiReady() && !forceSmtp;
+    if (!creds && !useApi) return { ok: false, status: 0, id: null, body: 'no Workspace login for ' + domain, permanent: false };
+    if (useApi) {
+        const h = { ...(m.headers ?? {}) };
+        const noId2 = h['X-Std-Id'] === '1';
+        delete h['X-Std-Id']; delete h['X-Via'];
+        const mid = noId2 ? undefined : (h['Message-ID'] || `<cx.${m.token}.${m.step}@${domain}>`);
+        delete h['Message-ID'];
+        return sendViaGmailApi(m, mid, h);
+    }
     if (!creds) return { ok: false, status: 0, id: null, body: 'no Workspace login for ' + domain, permanent: false };
     const nodemailer = (await import('nodemailer')).default;
     const tr = nodemailer.createTransport({ host: 'smtp.gmail.com', port: 587, secure: false, requireTLS: true, auth: creds, connectionTimeout: 15000, socketTimeout: 30000 });
     const headers = { ...(m.headers ?? {}) };
     const noId = headers['X-Std-Id'] === '1';   // test option: let Google generate the Message-ID
-    delete headers['X-Std-Id'];
+    delete headers['X-Std-Id']; delete headers['X-Via'];
     const messageId = noId ? undefined : (headers['Message-ID'] || `<cx.${m.token}.${m.step}@${domain}>`);
     delete headers['Message-ID'];
     try {

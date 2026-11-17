@@ -581,7 +581,7 @@ const CONSULTI_SEEDS: [string, 'google' | 'microsoft'][] = [
 ];
 
 /** Sends one test email to each of the 20 Consulti seed inboxes through the same routing the adviser run would use (Microsoft seeds via Workspace, Google seeds via Resend). */
-export async function sendCxConsulti(code: string, o: { only?: 'google' | 'microsoft'; htmlOnly?: boolean; stdId?: boolean } = {}): Promise<{ sent: number; detail: string[] }> {
+export async function sendCxConsulti(code: string, o: { only?: 'google' | 'microsoft'; htmlOnly?: boolean; stdId?: boolean; smtp?: boolean } = {}): Promise<{ sent: number; detail: string[] }> {
     if (!/^IPT-[a-z0-9]+$/.test(code)) throw new Error('code must look like IPT-xxxxxxxx');
     const s = await getSettings();
     const detail: string[] = []; let sent = 0;
@@ -592,7 +592,7 @@ export async function sendCxConsulti(code: string, o: { only?: 'google' | 'micro
         const rc = routeChoice(host, s);
         const dom = rc?.domains[0];
         if (!rc || !dom) { detail.push(`${to}: no route (${host})`); continue; }
-        const r = await sendMail({ transport: rc.transport, from: `Eric Huang <eric@${dom}>`, to, subject: `Michael, a client question ${code}`, text: o.htmlOnly ? '' : text, html, headers: o.stdId ? { 'X-Std-Id': '1' } : {}, token: 'consulti', step: Math.floor(Math.random() * 1e6), campaign: 'cx_consulti', idempotencyKey: `cxc-${code}-${to}` });
+        const r = await sendMail({ transport: rc.transport, from: `Eric Huang <eric@${dom}>`, to, subject: `Michael, a client question ${code}`, text: o.htmlOnly ? '' : text, html, headers: { ...(o.stdId ? { 'X-Std-Id': '1' } : {}), ...(o.smtp ? { 'X-Via': 'smtp' } : {}) }, token: 'consulti', step: Math.floor(Math.random() * 1e6), campaign: 'cx_consulti', idempotencyKey: `cxc-${code}-${to}` });
         detail.push(`${to}: ${rc.transport} ${dom} ${r.ok ? 'accepted' : `failed ${r.status} ${String(r.body || '').slice(0, 120)}`}`); if (r.ok) sent++;
         await new Promise((x) => setTimeout(x, 1200));
     }

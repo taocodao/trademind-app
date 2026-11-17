@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
                 const r = await query(`UPDATE outreach_contacts SET status = 'replied', updated_at = NOW() WHERE wave = 'cx' AND email = ANY($1::text[]) AND status NOT IN ('unsubscribed','complained') RETURNING email`, [list]);
                 return NextResponse.json({ stopped: r.rowCount });
             }
-            case 'test': return NextResponse.json(await sendCxTest({ domain: String(b.domain), to: String(b.to), email: b.email ? String(b.email) : undefined, steps: Array.isArray(b.steps) ? (b.steps as number[]) : undefined }));
+            case 'test': return NextResponse.json(await sendCxTest({ domain: String(b.domain), to: String(b.to), email: b.email ? String(b.email) : undefined, steps: Array.isArray(b.steps) ? (b.steps as number[]) : undefined, transport: b.transport === 'workspace' ? 'workspace' : 'resend' }));
             case 'regenerate': {
                 // Rebuild drafts for contacts that have not been sent their first email yet (after a copy change).
                 const rows = (await query(`SELECT c.token, c.email, c.first_name, p.firm, p.firm_key, p.title, p.website, p.linkedin, p.city, p.state, p.employees, p.keywords FROM outreach_contacts c JOIN cx_profile p ON p.token = c.token WHERE c.wave = 'cx' AND NOT EXISTS (SELECT 1 FROM outreach_sends x WHERE x.token = c.token AND x.step = 41)`)).rows;

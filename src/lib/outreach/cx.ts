@@ -535,14 +535,15 @@ export async function sendCxOne(c: Cand, domain: string, s: Record<string, strin
 
 // ---------- test sends (authorized addresses only) ----------
 
-export async function sendCxTest(o: { domain: string; to: string; email?: string; steps?: number[] }): Promise<{ sent: number; detail: string[] }> {
+export async function sendCxTest(o: { domain: string; to: string; email?: string; steps?: number[]; transport?: Transport }): Promise<{ sent: number; detail: string[] }> {
     await ensureCxTables();
     const to = o.to.trim().toLowerCase();
     if (!CX_TEST_ALLOW.has(to)) throw new Error('test address is not on the authorized list');
     const s = await getSettings();
-    const verified = await resendDomains(true);
+    const tp: Transport = o.transport === 'workspace' ? 'workspace' : 'resend';
     const dom = o.domain.toLowerCase();
-    if (verified[dom] !== 'verified') throw new Error(`${dom} is not verified in Resend yet`);
+    if (tp === 'workspace') { if (!workspaceReady(dom)) throw new Error(`no Workspace login is set for ${dom}`); }
+    else { const verified = await resendDomains(true); if (verified[dom] !== 'verified') throw new Error(`${dom} is not verified in Resend yet`); }
     let seed = (await query(`SELECT token FROM outreach_contacts WHERE email = $1`, [to])).rows[0]?.token as string | undefined;
     if (!seed) {
         seed = randomBytes(8).toString('base64url').slice(0, 10);
@@ -560,7 +561,7 @@ export async function sendCxTest(o: { domain: string; to: string; email?: string
     const base = await linkBaseFor(dom, s); const detail: string[] = []; let sent = 0;
     for (const d of drafts.filter((x) => !o.steps || o.steps.includes(x.step))) {
         const m = renderCx(d, { token: seed, linkBase: base, unsubUrl: `${base}/u/${seed}`, mailingAddress: MAILING_ADDRESS, ...cxFormat(s) });
-        const r = await sendMail({ transport: 'resend', from: `${s.cx_from_display || 'Eric Huang'} <eric@${dom}>`, to, replyTo: s[`reply_to_${dom}`] || s.cx_reply_to || s.reply_to || undefined, subject: m.subject, text: m.text, html: m.html,
+        const r = await sendMail({ transport: tp, from: `${s.cx_from_display || 'Eric Huang'} <eric@${dom}>`, to, replyTo: s[`reply_to_${dom}`] || s.cx_reply_to || s.reply_to || undefined, subject: m.subject, text: m.text, html: m.html,
             headers: {}, token: seed, step: 9, campaign: 'cx_test', idempotencyKey: `cxt-${seed}-${dom}-${d.step}-${Date.now()}` });
         detail.push(`E${d.step}: ${r.ok ? 'accepted' : `failed ${r.status}`}`); if (r.ok) sent++;
         await new Promise((x) => setTimeout(x, 1200));

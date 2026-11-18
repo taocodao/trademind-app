@@ -14,7 +14,7 @@ import { query } from '@/lib/db';
 import { MAILING_ADDRESS } from '@/lib/newsletter/email';
 import { BASE_URL, CAMPAIGN, getSettings } from './db';
 import { sendMail, transportKeyPresent, type Transport } from './transport';
-import { renderSeq7, STAGE_EMAIL1, SAMPLE_FACTS, stageForAge, isStageControl, STAGES, STAGE_HOURS, type IssueFacts, type Stage } from './copy-seq7';
+import { renderSeq7, SAMPLE_FACTS, stageForAge, isStageControl, STAGES, STAGE_HOURS, type IssueFacts, type Stage } from './copy-seq7';
 import { renderRia, RIA_DAYS } from './copy-ria';
 import { leanify } from './lean';
 import { etParts, zonedInstant, allocateBudget, activeDomains, isBusinessDay } from './sender';
@@ -464,11 +464,13 @@ export async function sendRetailPlacementTest(code: string, domain: string, mode
     return { sent, detail };
 }
 
-/** Sample of the simplified retail Email 1: plain text in a light HTML wrap, one subscribe link. Sent to an authorized test address only. */
-export async function sendRetailSimpleSample(o: { domain: string; to: string; stage: Stage; via?: Transport }): Promise<{ ok: boolean; subject: string; text: string; detail: string }> {
+/** Sample of the simplified retail emails (1 to 7): plain text in a light HTML wrap, one link. Sent to an authorized test address only. */
+export async function sendRetailSimpleSample(o: { domain: string; to: string; stage: Stage; n?: number; via?: Transport }): Promise<{ ok: boolean; subject: string; text: string; detail: string }> {
     const { CX_TEST_ALLOW } = await import('./cx');
+    const { renderRetailSimple } = await import('./retail-simple');
     const to = o.to.trim().toLowerCase();
     if (!CX_TEST_ALLOW.has(to)) throw new Error('test address is not on the authorized list');
+    const n = Math.min(Math.max(o.n ?? 1, 1), 7);
     const s = await getSettings();
     const transport: Transport = o.via ?? 'resend';
     if (!transportKeyPresent(transport)) throw new Error('transport key missing');
@@ -479,25 +481,8 @@ export async function sendRetailSimpleSample(o: { domain: string; to: string; st
     }
     const facts = await liveFacts(new Date());
     const linkBase = s[`link_host_${o.domain.toLowerCase()}`] ? `https://${s[`link_host_${o.domain.toLowerCase()}`]}` : BASE_URL;
-    const full = renderSeq7({ noChart: true, token: seed, firstName: 'Eric', baseUrl: linkBase, mailingAddress: MAILING_ADDRESS, step: 1, n: 1, facts, audience: 'retail', stage: o.stage });
-    const sim = (full.text.match(/^Simulation, .*$/m) || [''])[0];
-    if (!sim) throw new Error('simulation line not found');
-    const e = STAGE_EMAIL1[o.stage];
-    const sub = `${linkBase}/r/${seed}/sw?s=1`;
-    const paras = [
-        'Hi Eric,',
-        e.open,
-        'Each weekly brief has four parts: market weather, a readout of what the model indicates, a flight plan idea and a turbulence test. Risk comes first.',
-        sim,
-        'You keep your own brokerage account and place every order yourself. TradeMind never connects to a broker and never places trades.',
-        `Subscribe free (weekly by default): ${sub}`,
-        'Free subscribers get 30% off any TradeMind strategy plan.',
-    ];
-    const text = `${paras.join('\n\n')}\n\nEric Huang\nFounder, TradeMind\n\nReply stop and I will not write again.\n${MAILING_ADDRESS}\nEducational research, not personalized investment advice. Investing involves risk, including loss.`;
-    const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    const ph = paras.map((t) => t.startsWith('Subscribe free') ? `<p><a href="${esc(sub)}">Subscribe free</a> (weekly by default)</p>` : `<p>${esc(t)}</p>`).join('');
-    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(e.subject)}</title></head><body style="margin:0;padding:16px;background:#ffffff;"><div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#222;max-width:560px;">${ph}<p>Eric Huang<br>Founder, TradeMind</p><p style="font-size:12px;color:#777">Reply stop and I will not write again.<br>${esc(MAILING_ADDRESS)}<br>Educational research, not personalized investment advice. Investing involves risk, including loss.</p></div></body></html>`;
+    const r0 = renderRetailSimple({ token: seed, firstName: 'Eric', baseUrl: linkBase, linkBase, mailingAddress: MAILING_ADDRESS, step: 20 + n, n, facts, stage: o.stage });
     const from = `${s.from_display || 'Eric Huang'} <eric@${o.domain.toLowerCase()}>`;
-    const r = await sendMail({ transport, from, to, replyTo: s.reply_to || undefined, subject: e.subject, text, html, token: seed, step: 100000, campaign: CAMPAIGN, idempotencyKey: `rss-${seed}-${Date.now()}` });
-    return { ok: r.ok, subject: e.subject, text, detail: r.ok ? 'accepted' : `failed ${r.status} ${String(r.body || '').slice(0, 100)}` };
+    const r = await sendMail({ transport, from, to, replyTo: s.reply_to || undefined, subject: r0.subject, text: r0.text, html: r0.html, token: seed, step: 100000 + n, campaign: CAMPAIGN, idempotencyKey: `rss-${seed}-${n}-${Date.now()}` });
+    return { ok: r.ok, subject: r0.subject, text: r0.text, detail: r.ok ? 'accepted' : `failed ${r.status} ${String(r.body || '').slice(0, 100)}` };
 }

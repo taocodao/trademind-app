@@ -14,7 +14,7 @@ export const runtime = 'nodejs';
  * script after 3 visible seconds (POST /api/engage). No click ever subscribes anyone: the
  * subscribe link only opens a form the person submits themselves.
  */
-const KINDS = ['p', 's', 'i', 'h', 'n', 'v', 'c', 'f', 'x', 'br', 'st', 'ru', 'ch', 'vf', 'pn', 'qa', 'qb', 'qc', 'sw', 'sd', 'va', 'pl', 'mt', 'as', 'cal', 'ck', 'vd', 'jn'];
+const KINDS = ['p', 's', 'i', 'h', 'n', 'v', 'c', 'f', 'x', 'br', 'st', 'ru', 'ch', 'vf', 'pn', 'qa', 'qb', 'qc', 'sw', 'sd', 'va', 'pl', 'mt', 'as', 'cal', 'ck', 'vd', 'jn', 'is'];
 /** Start here sections: link kind to section key and page. */
 const SECTION_BY_KIND: Record<string, string> = { br: 'brief', st: 'strategies', ru: 'rules', ch: 'challenge', vf: 'verify', pn: 'panel' };
 
@@ -60,6 +60,7 @@ async function handle(req: NextRequest, params: Promise<{ token: string; kind: s
             ? `/advisers/sample?t=${token}&${utm}#${a}`
             : `/advisers/issue?t=${token}&${utm}`;
     }
+    else if (kind === 'is') dest = `/newsletter/sample?t=${token}&${utm}`;
     else if (kind === 'pl') dest = `/plans?t=${token}&${utm}`;
     else if (kind === 'i') {
         const a = req.nextUrl.searchParams.get('a') ?? '';

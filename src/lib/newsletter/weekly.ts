@@ -1,15 +1,15 @@
 /**
- * The weekly issue. Each Sunday evening an edition is built from sourced market context and, when every check
- * passes, published at once with no manual approval. Each subscriber then gets the link seven days after the last
- * issue email they were sent (the welcome email counts), so a new subscriber gets the first issue right away and one
- * issue a week after that. The edition is shown on the site in the same layout as every other issue.
+ * The weekly issue. Early every Sunday morning (ET) an edition is built from sourced market context and, when every
+ * check passes, published at once with no manual approval. Every Sunday at 9:00 AM ET each subscriber gets the link
+ * to it. A new subscriber gets the current issue right away (the welcome email) and the next one on the following
+ * Sunday at 9:00 AM ET. The edition is shown on the site in the same layout as every other issue.
  */
 import { query } from '@/lib/db';
 import type { PublicPayload } from './pipeline/build';
 import { ensureEditionTables } from './pipeline/db';
 import { FIRST_PUBLISHED_NUMBER, ISSUES, PUBLISHED_ISSUES, type NewsletterIssue } from './issues';
 
-/** Email kinds that start a subscriber's seven day clock. Get issue (issue_now) is a resend and does not. */
+/** Email kinds that count as the issue a subscriber last received. Get issue (issue_now) is a resend and does not. */
 export const CLOCK_KINDS = `('welcome','issue','weekly_issue')`;
 /** Editions built before this date were never published and are ignored. */
 const FIRST_EDITION_DATE = '2026-11-15';
@@ -71,17 +71,43 @@ export async function weeklySendOn(): Promise<boolean> {
     try { return (await query(`SELECT value FROM outreach_settings WHERE key = 'weekly_issue_send'`)).rows[0]?.value === 'on'; } catch { return false; }
 }
 
-/** Exact time of the subscriber's next issue: seven days after their last issue email, or seven days from now. */
+/** The instant that is the given Eastern time on a calendar date (handles daylight saving). */
+export function etAt(date: string, hour: number): Date {
+    const fmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', hourCycle: 'h23' });
+    for (const off of [4, 5]) {
+        const d = new Date(`${date}T${String(hour + off).padStart(2, '0')}:00:00Z`);
+        if (Number(fmt.format(d)) === hour) return d;
+    }
+    return new Date(`${date}T${String(hour + 5).padStart(2, '0')}:00:00Z`);
+}
+
+/** When a weekly edition goes out: 9:00 AM ET on the Sunday before its Monday date, or at once if it was built after that. */
+export function editionSendAt(editionDate: string, createdAt: Date): Date {
+    const d = new Date(`${editionDate}T12:00:00Z`); d.setUTCDate(d.getUTCDate() - 1);
+    const sunday = etAt(d.toISOString().slice(0, 10), 9);
+    return sunday.getTime() > createdAt.getTime() ? sunday : createdAt;
+}
+
+/** Exact time of the subscriber's next issue: the first Sunday 9:00 AM ET after now whose edition is built after their last issue email. */
 export async function nextIssueText(email?: string | null, now = new Date()): Promise<string> {
-    let base = now;
+    let last = now;
     if (email) {
         try {
             const r = await query(`SELECT max(l.created_at) AS last FROM newsletter_send_log l JOIN newsletter_subscribers s ON s.id = l.subscriber_id
                 WHERE lower(s.email) = lower($1) AND l.ok AND l.kind IN ${CLOCK_KINDS}`, [email]);
-            if (r.rows[0]?.last) base = new Date(r.rows[0].last);
+            if (r.rows[0]?.last) last = new Date(r.rows[0].last);
         } catch { /* use now */ }
     }
-    const due = new Date(base.getTime() + 7 * 86_400_000);
+    const etToday = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+    const base = new Date(`${etToday}T12:00:00Z`);
+    base.setUTCDate(base.getUTCDate() + ((7 - base.getUTCDay()) % 7));
+    let due = etAt(base.toISOString().slice(0, 10), 9);
+    for (let k = 0; k < 4; k++) {
+        const sunday = new Date(base.getTime() + k * 7 * 86_400_000).toISOString().slice(0, 10);
+        const at = etAt(sunday, 9);
+        if (at.getTime() > now.getTime() && last.getTime() < etAt(sunday, 4).getTime()) { due = at; break; }
+        due = at;
+    }
     const day = due.toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'long', day: 'numeric' });
     const time = due.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
     return `${day} at ${time} ET`;
@@ -103,7 +129,7 @@ export async function mailOwner(date: string, built: { stored: boolean; id?: num
         if (ed) {
             const due = await query(`SELECT count(*)::int AS n FROM newsletter_subscribers s WHERE s.status = 'confirmed' AND s.cadence IN ('weekly','both') AND EXISTS (SELECT 1 FROM newsletter_send_log l WHERE l.subscriber_id = s.id AND l.ok AND l.kind IN ${CLOCK_KINDS})`);
             subject = `[Copy] ${ed.subject}`;
-            text = [`This week's issue was built and published automatically. Each subscriber gets the link seven days after their last issue email.`, '',
+            text = [`This week's issue was built and published automatically. Each subscriber gets the link on Sunday at 9:00 AM ET.`, '',
                 `Read it: https://trademind.bot${ed.path}`, '', `Subject line: ${ed.subject}`, `Subscribers in the weekly cycle: ${due.rows[0]?.n ?? 0}`, '',
                 'Checks:', ...(((await query(`SELECT checks FROM newsletter_edition WHERE id = $1`, [ed.id])).rows[0]?.checks ?? []) as { name: string; pass: boolean }[]).map((c) => `- ${c.name}: ${c.pass ? 'pass' : 'FAIL'}`), '',
                 `Issue text:`, '', ed.issue.body].join('\n');

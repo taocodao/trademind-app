@@ -288,7 +288,7 @@ const SAMPLE_SCRIPT = `<script>
   function open(){m.classList.add('on');document.body.style.overflow='hidden';}
   function close(){m.classList.remove('on');document.body.style.overflow='';}
   function show(v){if(info)info.hidden=v!=='info';if(th)th.hidden=v==='info';}
-  function say(h,p,done,d){d=d||{};var g=function(i){return document.getElementById(i);};g('tm-th-h').textContent=h;g('tm-th-p').textContent=p;g('tm-th-e').textContent=d.email?'Subscribed address: '+d.email:'';g('tm-th-n').textContent=done?(p.indexOf('already')<0?'Your first issue is on its way now. After that you get one issue a week, exactly seven days after the last one. ':'You get one issue a week, exactly seven days after the last one. ')+'The next one arrives '+(d.next||'seven days from now')+'.':'';g('tm-th-x').hidden=!done;g('tm-th-g').hidden=!done;}
+  function say(h,p,done,d){d=d||{};var g=function(i){return document.getElementById(i);};g('tm-th-h').textContent=h;g('tm-th-p').textContent=p;g('tm-th-e').textContent=d.email?'Subscribed address: '+d.email:'';g('tm-th-n').textContent=done?(p.indexOf('already')<0?'Your first issue is on its way now. After that you get one issue every Sunday at 9:00 AM ET. ':'You get one issue every Sunday at 9:00 AM ET. ')+'The next one arrives '+(d.next||'Sunday at 9:00 AM ET')+'.':'';g('tm-th-x').hidden=!done;g('tm-th-g').hidden=!done;}
   var eml=m.getAttribute('data-e')||'';
   function press(){
     if(busy)return;busy=true;show('thanks');say('Subscribing you now','One moment.',false);open();
@@ -296,7 +296,7 @@ const SAMPLE_SCRIPT = `<script>
       fetch('/api/newsletter/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:eml,consent:true,source:'web-link',cadence:'weekly'})})
         .then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};});})
         .then(function(x){
-          if(x.ok){say('Thank you, you are subscribed',x.d.status==='already-confirmed'?'You were already on the list, so there is nothing more to do.':'You are in. We also emailed you the link to this issue.',true,{email:eml,next:x.d.next});busy=false;}
+          if(x.ok){say(x.d.status==='already-confirmed'?'You are already subscribed':'Thank you, you are subscribed',x.d.status==='already-confirmed'?'You are already on the weekly list, so there is nothing more to do.':'You are in. We also emailed you the link to the current issue.',true,{email:eml,next:x.d.next});busy=false;}
           else{say('We could not subscribe you just now',x.d.error||'Please try again in a minute.',false);busy=false;}
         })
         .catch(function(){say('We could not subscribe you just now','Please try again in a minute.',false);busy=false;});
@@ -306,7 +306,7 @@ const SAMPLE_SCRIPT = `<script>
       .then(function(r){return r.json();})
       .then(function(d){
         if(d.result==='subscribed'||d.result==='already'){
-          say('Thank you, you are subscribed',d.result==='already'?'You were already on the list, so there is nothing more to do.':'You are in. We also emailed you the link to this issue.',true,d);busy=false;
+          say(d.result==='already'?'You are already subscribed':'Thank you, you are subscribed',d.result==='already'?'You are already on the weekly list, so there is nothing more to do.':'You are in. We also emailed you the link to the current issue.',true,d);busy=false;
         }else{location.href='/newsletter/join?t='+encodeURIComponent(tok)+'&cadence=weekly';}
       })
       .catch(function(){location.href='/newsletter/join?t='+encodeURIComponent(tok)+'&cadence=weekly';});
@@ -372,7 +372,7 @@ function sampleModal(token: string, pre = '', shown = ''): string {
 <ul><li>It replaces impulsive reactions with predefined rules.</li><li>It distinguishes evidence from narrative.</li><li>It forces risk to be considered before expected return.</li><li>It makes outcomes easier to audit and improve over time.</li></ul>
 <p>Go deeper: <a href="https://trademind.bot/newsletter/start-here">Systematic Investing Framework</a></p>
 ${shown ? `<p style="color:${C.fg};font-weight:700">Subscribing: ${esc(shown)}</p>` : ''}${sub}</div>
-<div id="tm-thanks" hidden><h3 id="tm-th-h">Thank you, you are subscribed</h3><p id="tm-th-p"></p><p id="tm-th-e" style="color:${C.fg};font-weight:700"></p><p id="tm-th-n"></p><p id="tm-th-g"><button type="button" data-get style="border:1px solid ${C.line};background:transparent;color:${C.fg};border-radius:10px;padding:11px 20px;font:800 15px/1.2 ${SAMPLE_FONT};cursor:pointer">Get issue</button> <span id="tm-th-s" style="color:${C.muted};font-size:14px;margin-left:8px"></span></p><p style="color:${C.muted}">Confirmed subscribers are entitled to 30% off the first year of a yearly TradeMind Strategy subscription, using the same email within 90 days of subscribing. You can unsubscribe at any time from the link in each email.</p><p id="tm-th-x" hidden><button type="button" class="sbtn" data-close style="border:1px solid ${C.btn};background:${C.btn};color:#fff;border-radius:10px;padding:12px 22px;font:800 15px/1.2 ${SAMPLE_FONT};cursor:pointer">Close</button></p></div></div></div>`;
+<div id="tm-thanks" hidden><h3 id="tm-th-h">Thank you, you are subscribed</h3><p id="tm-th-p"></p><p id="tm-th-e" style="color:${C.fg};font-weight:700"></p><p id="tm-th-n"></p><p id="tm-th-g"><button type="button" data-get style="border:1px solid ${C.line};background:transparent;color:${C.fg};border-radius:10px;padding:11px 20px;font:800 15px/1.2 ${SAMPLE_FONT};cursor:pointer">Email me the current issue</button> <span id="tm-th-s" style="color:${C.muted};font-size:14px;margin-left:8px"></span></p><p style="color:${C.muted}">Confirmed subscribers are entitled to 30% off the first year of a yearly TradeMind Strategy subscription, using the same email within 90 days of subscribing. You can unsubscribe at any time from the link in each email.</p><p id="tm-th-x" hidden><button type="button" class="sbtn" data-close style="border:1px solid ${C.btn};background:${C.btn};color:#fff;border-radius:10px;padding:12px 22px;font:800 15px/1.2 ${SAMPLE_FONT};cursor:pointer">Close</button></p></div></div></div>`;
 }
 
 /**

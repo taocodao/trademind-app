@@ -3,7 +3,8 @@ import { liveFacts } from '@/lib/newsletter/live-facts';
 import { libraryIssueHtml } from '@/lib/newsletter/web-issue';
 import { SAMPLE_FACTS } from '@/lib/outreach/copy-seq7';
 import { getContact, validToken, getSettings } from '@/lib/outreach/db';
-import { ISSUES, issueUrl, publishedAdjacent } from '@/lib/newsletter/issues';
+import { issueUrl } from '@/lib/newsletter/issues';
+import { publicSequence } from '@/lib/newsletter/weekly';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -17,8 +18,10 @@ export async function GET(req: NextRequest) {
     let token = '';
     let contactEmail = '';
     if (raw && validToken(raw)) { try { const c = await getContact(raw); if (c) { token = raw; contactEmail = c.email; } } catch { /* no token */ } }
-    const issue = ISSUES[ISSUES.length - 1];
-    const prev = publishedAdjacent(issue).prev;
+    // The newest published issue: the latest weekly edition, or the launch issue until one exists.
+    const seq = await publicSequence();
+    const issue = seq[seq.length - 1];
+    const prev = seq.length > 1 ? seq[seq.length - 2] : undefined;
     const last = prev ? { title: prev.title, path: issueUrl(prev) } : null;
     const facts = await liveFacts(new Date()).catch(() => SAMPLE_FACTS);
     const st = await getSettings().catch(() => ({} as Record<string, string>));

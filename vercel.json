@@ -50,7 +50,7 @@
     },
     {
       "path": "/api/cron/newsletter-edition-draft?kind=weekly",
-      "schedule": "0,30 23 * * 0"
+      "schedule": "0,30 9-13 * * 0"
     },
     {
       "path": "/api/cron/newsletter-edition-draft?kind=weekly",

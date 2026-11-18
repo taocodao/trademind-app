@@ -13,10 +13,10 @@ export default async function ThanksPage({ searchParams }: { searchParams: Promi
         <main className="tm-nl">
             <div className="tm-nl-wrap-narrow">
                 <p className="tm-nl-eyebrow">AI Investor Copilot</p>
-                <h1 className="tm-nl-h1">Thank you, you are subscribed</h1>
+                <h1 className="tm-nl-h1">{already ? 'You are already subscribed' : 'Thank you, you are subscribed'}</h1>
                 <p className="tm-nl-sub">
                     {already
-                        ? 'You were already on the list, so there is nothing more to do. The current issue is one click away.'
+                        ? 'You are already on the weekly list, so there is nothing more to do. The current issue is one click away.'
                         : 'You are in. The current issue is one click away, and we also emailed you the link so you can open it any time.'}
                 </p>
                 <p style={{ margin: '18px 0' }}>

@@ -435,3 +435,31 @@ export async function sendSeq7(row: { id: number; token: string; step: number; d
     if (!isSeed) await query(`UPDATE outreach_contacts SET status = 'sent', updated_at = NOW() WHERE token = $1 AND status = 'pending'`, [row.token]);
     return 'sent';
 }
+
+/** Placement test: the production retail email (default email 1) sent from one sending domain to the Consulti seed panel, as HTML plus text or as plain text only. */
+export async function sendRetailPlacementTest(code: string, domain: string, mode: 'html' | 'text', n = 1): Promise<{ sent: number; detail: string[] }> {
+    if (!/^IPT-[a-z0-9]+$/.test(code)) throw new Error('code must look like IPT-xxxxxxxx');
+    const { CONSULTI_SEEDS } = await import('./cx');
+    const s = await getSettings();
+    const d = (await query(`SELECT domain, from_local, transport FROM outreach_domains WHERE domain = $1 AND status = 'active'`, [domain.toLowerCase()])).rows[0];
+    if (!d) throw new Error('not an active sending domain');
+    const transport = d.transport as Transport;
+    if (!transportKeyPresent(transport)) throw new Error('transport key missing');
+    const facts = await liveFacts(new Date());
+    const linkBase = s[`link_host_${domain.toLowerCase()}`] ? `https://${s[`link_host_${domain.toLowerCase()}`]}` : BASE_URL;
+    const token = 'ptest' + randomBytes(4).toString('hex').slice(0, 5);
+    const rendered = renderSeq7({ noChart: s.email5_chart === 'false', token, firstName: 'Michael', baseUrl: linkBase, mailingAddress: MAILING_ADDRESS, step: n, n, facts, audience: 'retail', stage: STAGES[0] });
+    const msg = s.lean_content === 'false' ? rendered : leanify(rendered);
+    const detail: string[] = []; let sent = 0;
+    for (const [to] of CONSULTI_SEEDS) {
+        const r = await sendMail({
+            transport, from: `${s.from_display || 'Eric Huang'} <${d.from_local}@${d.domain}>`, to, replyTo: s.reply_to || undefined, subject: `${msg.subject} ${code}`,
+            text: msg.text, html: mode === 'html' ? msg.html : null,
+            headers: s.list_unsub_header === 'false' ? undefined : { 'List-Unsubscribe': `<${msg.unsubUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
+            token, step: 100000 + n, campaign: CAMPAIGN, idempotencyKey: `rpt-${code}-${domain}-${to}`,
+        });
+        detail.push(`${to}: ${r.ok ? 'accepted' : `failed ${r.status} ${String(r.body || '').slice(0, 100)}`}`); if (r.ok) sent++;
+        await new Promise((x) => setTimeout(x, 400));
+    }
+    return { sent, detail };
+}

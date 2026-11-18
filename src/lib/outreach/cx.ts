@@ -572,7 +572,7 @@ export async function sendCxTest(o: { domain: string; to: string; email?: string
 
 // ---------- Consulti routed placement test ----------
 
-const CONSULTI_SEEDS: [string, 'google' | 'microsoft'][] = [
+export const CONSULTI_SEEDS: [string, 'google' | 'microsoft'][] = [
     ['consulti.seed1@gmail.com', 'google'], ['ellie@tryondemandfooddriver.com', 'google'], ['ellie@fooddriverondemand.com', 'google'], ['ellie@ondemandfooddeliverydriver.com', 'google'],
     ['ellie@ondemandfooddriver.com', 'google'], ['ellie@ondemandfoodrunners.com', 'google'], ['alvin@businessbuilders365.com', 'google'], ['alvin@businesbuilders365.com', 'google'],
     ['alvin@businessbuilder365.com', 'google'], ['alvin@rlbusinessbuilders.com', 'google'], ['alvin@rlbusinessbuilder.com', 'google'],

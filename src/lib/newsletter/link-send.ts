@@ -29,36 +29,68 @@ export async function senderFor(): Promise<{ from: string; replyTo: string; host
 }
 
 /**
- * Sender that matches the outreach. When setting newsletter_match_domain is 'on', a subscriber who came from outreach gets the email from the
- * same sending domain (and link host) that reached them, if that domain is in newsletter_match_domains (default vochat.ai,echoads.tv).
- * Microsoft mailboxes go through Workspace, everyone else through Resend. Anyone else gets the default sender.
+ * Sender that matches the outreach, in both sending domain and sending method (when setting newsletter_match_domain is 'on').
+ * The subscriber's outreach contact decides the lane:
+ *  - adviser lane on SendGrid (ria): the same adviser domain, through SendGrid.
+ *  - adviser lane routed (cx): the same routing as the outreach: Microsoft mailboxes through Workspace, the rest through Resend, from the domain that reached them when
+ *    it is one of the routed domains, otherwise the first routed domain.
+ *  - retail: the retail routing (Microsoft through Workspace, the rest through Resend, from the retail domain).
+ * A subscriber with no outreach contact (direct sign up) gets the default sender. Every matched domain must have a link host set.
  */
-export async function senderForSubscriber(email: string): Promise<{ from: string; replyTo: string; host: string; transport: 'resend' | 'workspace' }> {
+export type NewsletterTransport = 'resend' | 'workspace' | 'sendgrid';
+export async function senderForSubscriber(email: string): Promise<{ from: string; replyTo: string; host: string; transport: NewsletterTransport }> {
     const def = await senderFor();
-    const base = { ...def, transport: 'resend' as const };
+    const base = { ...def, transport: 'resend' as NewsletterTransport };
     try {
-        const r = await query(`SELECT key, value FROM outreach_settings WHERE key IN ('newsletter_match_domain','newsletter_match_domains','from_display') OR key LIKE 'link_host_%' OR key LIKE 'reply_to_%'`);
+        const r = await query(`SELECT key, value FROM outreach_settings WHERE key = 'from_display' OR key LIKE 'newsletter_match%' OR key LIKE 'link_host_%' OR key LIKE 'reply_to_%' OR key LIKE 'cx_route%' OR key LIKE 'retail_route%' OR key = 'ria_domains'`);
         const m: Record<string, string> = {};
         for (const row of r.rows as { key: string; value: string }[]) m[row.key] = row.value;
         if (m.newsletter_match_domain !== 'on') return base;
-        const allowed = String(m.newsletter_match_domains || 'vochat.ai,echoads.tv').toLowerCase().split(',').map((x) => x.trim()).filter(Boolean);
         const e = email.trim().toLowerCase();
-        const d = (await query(
-            `SELECT s.domain FROM outreach_sends s JOIN outreach_contacts c ON c.token = s.token
-             WHERE (lower(c.email) = $1 OR lower(COALESCE(c.subscriber_email, '')) = $1) AND s.step < 100 AND s.token NOT LIKE 'dt%' AND s.status <> 'failed' AND c.wave <> 'seed'
-             ORDER BY s.sent_at DESC LIMIT 1`, [e])).rows[0]?.domain as string | undefined;
-        const dom = (d || '').toLowerCase();
-        if (!dom || !allowed.includes(dom) || !m[`link_host_${dom}`]) return base;
-        const { mailHostOfEmail } = await import('@/lib/outreach/mailhost');
+        const c = (await query(
+            `SELECT c.wave, (SELECT s.domain FROM outreach_sends s WHERE s.token = c.token AND s.step < 100 AND s.status <> 'failed' ORDER BY s.sent_at DESC LIMIT 1) AS domain
+               FROM outreach_contacts c WHERE c.wave <> 'seed' AND (lower(c.email) = $1 OR lower(COALESCE(c.subscriber_email, '')) = $1)
+              ORDER BY (EXISTS (SELECT 1 FROM outreach_sends s WHERE s.token = c.token AND s.step < 100)) DESC LIMIT 1`, [e])).rows[0] as { wave: string; domain: string | null } | undefined;
+        if (!c) return base;
+        const { mailHostOfEmail, retailRouteFor } = await import('@/lib/outreach/mailhost');
         const { workspaceReady } = await import('@/lib/outreach/transport');
-        const ms = (await mailHostOfEmail(e)) === 'microsoft' && workspaceReady(dom);
+        const host = await mailHostOfEmail(e);
+        const csv = (v: string | undefined) => String(v || '').toLowerCase().split(',').map((x) => x.trim()).filter(Boolean);
+        const last = (c.domain || '').toLowerCase();
+        let dom = ''; let transport: NewsletterTransport = 'resend';
+        if (c.wave === 'ria') { dom = last || csv(m.ria_domains)[0] || ''; transport = 'sendgrid'; }
+        else if (c.wave === 'cx') {
+            if (host === 'microsoft') { const l = csv(m.cx_route_ms_domains || 'echoads.tv,vochat.ai').filter(workspaceReady); dom = l.includes(last) ? last : (l[0] || ''); transport = 'workspace'; }
+            else { const l = csv(m.cx_route_google_domains || 'vochat.ai'); dom = l.includes(last) ? last : (l[0] || ''); }
+        } else {
+            const rc = retailRouteFor(host, m);
+            if (rc) { dom = rc.domain; transport = rc.transport as NewsletterTransport; }
+        }
+        if (!dom || !m[`link_host_${dom}`]) return base;
         return {
             from: `${m.from_display || 'Eric Huang'} <eric@${dom}>`,
             replyTo: m[`reply_to_${dom}`] || def.replyTo,
             host: m[`link_host_${dom}`].trim().replace(/^https?:\/\//, '').replace(/\/+$/, ''),
-            transport: ms ? 'workspace' : 'resend',
+            transport,
         };
     } catch { return base; }
+}
+
+/** Sends one subscriber email by the method chosen in senderForSubscriber. */
+export async function deliverSubscriberMail(o: { snd: { from: string; replyTo: string; transport: NewsletterTransport }; to: string; subscriberId: number; subject: string; text: string; html?: string | null; headers?: Record<string, string> }): Promise<boolean> {
+    if (o.snd.transport === 'workspace' || o.snd.transport === 'sendgrid') {
+        const { sendMail } = await import('@/lib/outreach/transport');
+        const r = await sendMail({ transport: o.snd.transport, from: o.snd.from, to: o.to, replyTo: o.snd.replyTo, subject: o.subject, text: o.text, html: o.html ?? null, headers: o.headers, token: `nl${o.subscriberId}`, step: Date.now() % 1000000, campaign: 'newsletter' });
+        if (!r.ok) console.error(`[subscriber email] ${o.snd.transport} failed:`, r.status, r.body);
+        return r.ok;
+    }
+    const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: o.snd.from, reply_to: o.snd.replyTo, to: o.to, subject: o.subject, text: o.text, ...(o.html ? { html: o.html } : {}), headers: o.headers }),
+    });
+    if (!res.ok) console.error('[subscriber email] Resend failed:', res.status, await res.text());
+    return res.ok;
 }
 
 export type Cadence = 'weekly' | 'daily' | 'both';
@@ -90,21 +122,7 @@ export async function sendSubscriberLink(o: { email: string; subscriberId: numbe
             'List-Unsubscribe': `<${unsubscribeUrl.replace('/newsletter/unsubscribe?', '/api/newsletter/unsubscribe?')}>`,
             'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
         };
-        let ok = false;
-        if (snd.transport === 'workspace') {
-            const { sendMail } = await import('@/lib/outreach/transport');
-            const r = await sendMail({ transport: 'workspace', from: snd.from, to: o.email, replyTo: snd.replyTo, subject: m.subject, text: m.text, html: m.html ?? null, headers, token: `nl${o.subscriberId}`, step: Date.now() % 1000000, campaign: 'newsletter' });
-            ok = r.ok;
-            if (!ok) console.error('[link email] Workspace failed:', r.status, r.body);
-        } else {
-            const res = await fetch('https://api.resend.com/emails', {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ from: snd.from, reply_to: snd.replyTo, to: o.email, subject: m.subject, text: m.text, ...(m.html ? { html: m.html } : {}), headers }),
-            });
-            if (!res.ok) console.error('[link email] Resend failed:', res.status, await res.text());
-            ok = res.ok;
-        }
+        const ok = await deliverSubscriberMail({ snd, to: o.email, subscriberId: o.subscriberId, subject: m.subject, text: m.text, html: m.html, headers });
         await logNewsletterSend({ email: o.email, subscriberId: o.subscriberId, kind: o.weekly ? 'weekly_issue' : o.again ? 'issue_now' : 'welcome', issueSlug: o.weekly?.slug ?? null, ok });
         return ok;
     } catch (err) {

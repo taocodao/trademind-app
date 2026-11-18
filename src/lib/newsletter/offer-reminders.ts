@@ -8,7 +8,7 @@ import { MAILING_ADDRESS } from './email';
 import { makeLongUnsubscribeToken, logNewsletterSend, ensureNewsletterTables } from './db';
 import { makeDailyLinkToken } from './daily-link';
 import { renderLinkEmail } from './link-email';
-import { senderFor } from './link-send';
+import { senderForSubscriber, deliverSubscriberMail } from './link-send';
 import { MEETING_URL } from '@/lib/outreach/copy-seq7';
 
 /** Days after the offer starts. */
@@ -55,9 +55,9 @@ export async function runOfferReminders(o: { dry?: boolean; limit?: number } = {
     const due = rows.map((r) => ({ r, n: dueReminder(Math.floor((now.getTime() - new Date(r.window_start).getTime()) / DAY), r.sent || []) })).filter((x) => x.n > 0);
     if (o.dry || !key) return { due: due.length, sent: 0, failed: 0 };
     let sent = 0, failed = 0;
-    const snd = await senderFor();
-    const base = snd.host ? `https://${snd.host}` : BASE_URL;
     for (const { r, n } of due) {
+        const snd = await senderForSubscriber(r.email);
+        const base = snd.host ? `https://${snd.host}` : BASE_URL;
         const t = reminderText(n, new Date(r.window_end), now);
         const tok = makeDailyLinkToken(r.id);
         const unsubscribeUrl = `${base}/newsletter/unsubscribe?token=${await makeLongUnsubscribeToken(r.id)}`;
@@ -65,12 +65,9 @@ export async function runOfferReminders(o: { dry?: boolean; limit?: number } = {
             subject: t.subject, description: t.description, url: MEETING_URL, linkLabel: 'Book 20 minutes here',
             unsubscribeUrl, preferencesUrl: `${base}/newsletter/preferences?k=${encodeURIComponent(tok)}`, address: `TradeMind, ${MAILING_ADDRESS}`,
         });
-        const res = await fetch('https://api.resend.com/emails', {
-            method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ from: snd.from, reply_to: snd.replyTo, to: r.email, subject: m.subject, text: m.text }),
-        });
-        await logNewsletterSend({ email: r.email, subscriberId: r.id, kind: `offer_reminder_${n}`, ok: res.ok });
-        if (res.ok) sent++; else failed++;
+        const ok = await deliverSubscriberMail({ snd, to: r.email, subscriberId: r.id, subject: m.subject, text: m.text });
+        await logNewsletterSend({ email: r.email, subscriberId: r.id, kind: `offer_reminder_${n}`, ok });
+        if (ok) sent++; else failed++;
         await new Promise((x) => setTimeout(x, 300));
     }
     return { due: due.length, sent, failed };

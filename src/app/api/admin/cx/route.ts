@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
                 const snd = await senderForSubscriber(to, wave);
                 return NextResponse.json({ ok, from: snd.from, transport: snd.transport, host: snd.host, firstName: await firstNameFor(to) });
             }
-            case 'retailsimple': return NextResponse.json(await sendRetailSimpleSample({ domain: String(b.domain), to: String(b.to), stage: String(b.stage) as never, n: Number(b.n ?? 1), via: b.via === 'workspace' ? 'workspace' : b.via === 'resend' ? 'resend' : undefined }));
+            case 'retailsimple': return NextResponse.json(await sendRetailSimpleSample({ domain: String(b.domain), to: String(b.to), stage: String(b.stage) as never, n: Number(b.n ?? 1), via: b.via === 'workspace' ? 'workspace' : b.via === 'resend' ? 'resend' : b.via === 'namecheap' ? 'namecheap' : undefined }));
             case 'consulti': return NextResponse.json(await sendCxConsulti(String(b.code), { only: b.only === 'google' || b.only === 'microsoft' ? b.only : undefined, htmlOnly: b.htmlOnly === true, stdId: b.stdId === true, smtp: b.smtp === true }));
             case 'test': return NextResponse.json(await sendCxTest({ domain: String(b.domain), to: String(b.to), email: b.email ? String(b.email) : undefined, steps: Array.isArray(b.steps) ? (b.steps as number[]) : undefined, transport: b.transport === 'workspace' ? 'workspace' : 'resend' }));
             case 'regenerate': {

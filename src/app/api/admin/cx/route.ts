@@ -68,6 +68,24 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ stopped: r.rowCount });
             }
             case 'retailtest': return NextResponse.json(await sendRetailPlacementTest(String(b.code), String(b.domain), b.mode === 'text' ? 'text' : 'html', Number(b.n) || 1, b.via === 'resend' ? 'resend' : b.via === 'namecheap' ? 'namecheap' : undefined));
+            case 'retailgo': {
+                // Retail production switch. on: simple one link emails, Gmail and others through Resend, Microsoft through Workspace, all from vochat.ai;
+                // the two SendGrid retail domains stop; newsletter emails come from the domain that reached the subscriber. off reverses it.
+                const on = b.mode !== 'off';
+                const set = async (k: string, v: string) => setSetting(k, v);
+                await set('retail_route', on ? 'on' : 'off'); await set('retail_simple', on ? 'on' : 'off'); await set('newsletter_match_domain', on ? 'on' : 'off');
+                if (on) {
+                    await set('pd_start_vochat.ai', String(Number(b.start) || 80)); await set('pd_step_vochat.ai', String(Number(b.step) || 20));
+                    await set('pd_cap_vochat.ai', String(Number(b.cap) || 500)); await set('pd_jitter_vochat.ai', '5');
+                    await query(`INSERT INTO outreach_domains (domain, from_local, transport, status) VALUES ('vochat.ai','eric','resend','active')
+                                 ON CONFLICT (domain) DO UPDATE SET status = 'active', transport = 'resend', paused_reason = NULL`);
+                    await query(`UPDATE outreach_domains SET status = 'paused', paused_reason = 'retail moved to vochat.ai with Gmail and Outlook routing', paused_at = NOW() WHERE domain IN ('trademindcopilot.com','aicopliotupdate.com') AND status = 'active'`);
+                } else {
+                    await query(`UPDATE outreach_domains SET status = 'active', paused_reason = NULL WHERE domain IN ('trademindcopilot.com','aicopliotupdate.com')`);
+                    await query(`UPDATE outreach_domains SET status = 'paused', paused_reason = 'retail routing switched off', paused_at = NOW() WHERE domain = 'vochat.ai'`);
+                }
+                return NextResponse.json({ ok: true, mode: on ? 'on' : 'off', domains: (await query(`SELECT domain, status, transport FROM outreach_domains WHERE status = 'active' ORDER BY domain`)).rows });
+            }
             case 'retailsimple': return NextResponse.json(await sendRetailSimpleSample({ domain: String(b.domain), to: String(b.to), stage: String(b.stage) as never, n: Number(b.n ?? 1) }));
             case 'consulti': return NextResponse.json(await sendCxConsulti(String(b.code), { only: b.only === 'google' || b.only === 'microsoft' ? b.only : undefined, htmlOnly: b.htmlOnly === true, stdId: b.stdId === true, smtp: b.smtp === true }));
             case 'test': return NextResponse.json(await sendCxTest({ domain: String(b.domain), to: String(b.to), email: b.email ? String(b.email) : undefined, steps: Array.isArray(b.steps) ? (b.steps as number[]) : undefined, transport: b.transport === 'workspace' ? 'workspace' : 'resend' }));

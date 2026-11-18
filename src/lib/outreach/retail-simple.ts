@@ -10,7 +10,7 @@ const DISCLAIMER = 'Educational research, not personalized investment advice. In
 const DROP = /^(Decline \d+%:|Subscribe free:|Apply to|Would you have|A\. |B\. |C\. |Read the rules|See (a|the) |20 seats|THIS WEEK|Plans and pricing|Free subscribers|Reply to this|Eric Huang|Subscribe to the free weekly|EXPLORE:|Weekly by default)/;
 const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-export function renderRetailSimple(o: Seq7Opts & { linkBase: string }): { subject: string; text: string; html: string } {
+export function renderRetailSimple(o: Seq7Opts & { linkBase: string }): { subject: string; text: string; html: string; unsubUrl: string } {
     const n = o.n ?? 1;
     const token = o.token;
     const step = o.step;
@@ -50,5 +50,5 @@ export function renderRetailSimple(o: Seq7Opts & { linkBase: string }): { subjec
     const text = `${body.join('\n\n')}\n\nEric Huang\nFounder, TradeMind\n\n${STOP}\n${addr}\n${DISCLAIMER}`;
     const ph = body.map((t) => t.startsWith(`${label}:`) ? `<p><a href="${esc(url)}">${esc(label)}</a></p>` : `<p>${esc(t)}</p>`).join('');
     const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(full.subject)}</title></head><body style="margin:0;padding:16px;background:#ffffff;"><div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#222;max-width:560px;">${ph}<p>Eric Huang<br>Founder, TradeMind</p><p style="font-size:12px;color:#777">${esc(STOP)}<br>${esc(addr)}<br>${esc(DISCLAIMER)}</p></div></body></html>`;
-    return { subject: full.subject, text, html };
+    return { subject: full.subject, text, html, unsubUrl: (full as { unsubUrl?: string }).unsubUrl || `${o.linkBase}/u/${token}` };
 }

@@ -28,6 +28,39 @@ export async function senderFor(): Promise<{ from: string; replyTo: string; host
     } catch { return { from: FROM, replyTo: REPLY_TO, host: '' }; }
 }
 
+/**
+ * Sender that matches the outreach. When setting newsletter_match_domain is 'on', a subscriber who came from outreach gets the email from the
+ * same sending domain (and link host) that reached them, if that domain is in newsletter_match_domains (default vochat.ai,echoads.tv).
+ * Microsoft mailboxes go through Workspace, everyone else through Resend. Anyone else gets the default sender.
+ */
+export async function senderForSubscriber(email: string): Promise<{ from: string; replyTo: string; host: string; transport: 'resend' | 'workspace' }> {
+    const def = await senderFor();
+    const base = { ...def, transport: 'resend' as const };
+    try {
+        const r = await query(`SELECT key, value FROM outreach_settings WHERE key IN ('newsletter_match_domain','newsletter_match_domains','from_display') OR key LIKE 'link_host_%' OR key LIKE 'reply_to_%'`);
+        const m: Record<string, string> = {};
+        for (const row of r.rows as { key: string; value: string }[]) m[row.key] = row.value;
+        if (m.newsletter_match_domain !== 'on') return base;
+        const allowed = String(m.newsletter_match_domains || 'vochat.ai,echoads.tv').toLowerCase().split(',').map((x) => x.trim()).filter(Boolean);
+        const e = email.trim().toLowerCase();
+        const d = (await query(
+            `SELECT s.domain FROM outreach_sends s JOIN outreach_contacts c ON c.token = s.token
+             WHERE (lower(c.email) = $1 OR lower(COALESCE(c.subscriber_email, '')) = $1) AND s.step < 100 AND s.token NOT LIKE 'dt%' AND s.status <> 'failed' AND c.wave <> 'seed'
+             ORDER BY s.sent_at DESC LIMIT 1`, [e])).rows[0]?.domain as string | undefined;
+        const dom = (d || '').toLowerCase();
+        if (!dom || !allowed.includes(dom) || !m[`link_host_${dom}`]) return base;
+        const { mailHostOfEmail } = await import('@/lib/outreach/mailhost');
+        const { workspaceReady } = await import('@/lib/outreach/transport');
+        const ms = (await mailHostOfEmail(e)) === 'microsoft' && workspaceReady(dom);
+        return {
+            from: `${m.from_display || 'Eric Huang'} <eric@${dom}>`,
+            replyTo: m[`reply_to_${dom}`] || def.replyTo,
+            host: m[`link_host_${dom}`].trim().replace(/^https?:\/\//, '').replace(/\/+$/, ''),
+            transport: ms ? 'workspace' : 'resend',
+        };
+    } catch { return base; }
+}
+
 export type Cadence = 'weekly' | 'daily' | 'both';
 
 /** Where the current issue lives on the site. Everyone starts at the current weekly issue; the daily page is linked from daily edition emails. */
@@ -40,7 +73,7 @@ export async function sendSubscriberLink(o: { email: string; subscriberId: numbe
     try {
         const facts = await liveFacts(new Date());
         const tok = makeDailyLinkToken(o.subscriberId);
-        const snd = await senderFor();
+        const snd = await senderForSubscriber(o.email);
         const base = snd.host ? `https://${snd.host}` : BASE_URL;
         const unsubscribeUrl = `${base}/newsletter/unsubscribe?token=${await makeLongUnsubscribeToken(o.subscriberId)}`;
         const m = (snd.host ? renderLinkEmailLight : renderLinkEmail)({
@@ -53,19 +86,25 @@ export async function sendSubscriberLink(o: { email: string; subscriberId: numbe
             preferencesUrl: `${base}/newsletter/preferences?k=${encodeURIComponent(tok)}`,
             address: `TradeMind, ${MAILING_ADDRESS}`,
         });
-        const res = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                from: snd.from, reply_to: snd.replyTo, to: o.email, subject: m.subject, text: m.text, ...(m.html ? { html: m.html } : {}),
-                headers: snd.host ? undefined : {
-                    'List-Unsubscribe': `<${unsubscribeUrl.replace('/newsletter/unsubscribe?', '/api/newsletter/unsubscribe?')}>`,
-                    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-                },
-            }),
-        });
-        if (!res.ok) console.error('[link email] Resend failed:', res.status, await res.text());
-        const ok = res.ok;
+        const headers = snd.host ? undefined : {
+            'List-Unsubscribe': `<${unsubscribeUrl.replace('/newsletter/unsubscribe?', '/api/newsletter/unsubscribe?')}>`,
+            'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+        };
+        let ok = false;
+        if (snd.transport === 'workspace') {
+            const { sendMail } = await import('@/lib/outreach/transport');
+            const r = await sendMail({ transport: 'workspace', from: snd.from, to: o.email, replyTo: snd.replyTo, subject: m.subject, text: m.text, html: m.html ?? null, headers, token: `nl${o.subscriberId}`, step: Date.now() % 1000000, campaign: 'newsletter' });
+            ok = r.ok;
+            if (!ok) console.error('[link email] Workspace failed:', r.status, r.body);
+        } else {
+            const res = await fetch('https://api.resend.com/emails', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ from: snd.from, reply_to: snd.replyTo, to: o.email, subject: m.subject, text: m.text, ...(m.html ? { html: m.html } : {}), headers }),
+            });
+            if (!res.ok) console.error('[link email] Resend failed:', res.status, await res.text());
+            ok = res.ok;
+        }
         await logNewsletterSend({ email: o.email, subscriberId: o.subscriberId, kind: o.weekly ? 'weekly_issue' : o.again ? 'issue_now' : 'welcome', issueSlug: o.weekly?.slug ?? null, ok });
         return ok;
     } catch (err) {

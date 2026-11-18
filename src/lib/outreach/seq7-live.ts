@@ -13,7 +13,7 @@ import { liveFacts } from '@/lib/newsletter/live-facts';
 import { query } from '@/lib/db';
 import { MAILING_ADDRESS } from '@/lib/newsletter/email';
 import { BASE_URL, CAMPAIGN, getSettings } from './db';
-import { sendMail, transportKeyPresent, type Transport } from './transport';
+import { sendMail, transportKeyPresent, workspaceReady, type Transport } from './transport';
 import { renderSeq7, SAMPLE_FACTS, stageForAge, isStageControl, STAGES, STAGE_HOURS, type IssueFacts, type Stage } from './copy-seq7';
 import { renderRia, RIA_DAYS } from './copy-ria';
 import { leanify } from './lean';
@@ -385,8 +385,9 @@ export async function planSeq7(now: Date, s: Record<string, string>): Promise<Re
 export async function sendSeq7(row: { id: number; token: string; step: number; domain: string }, s: Record<string, string>, c: any, fromLocal: string, transport: Transport): Promise<'sent' | 'skipped' | 'failed'> {
     const skip = async (note: string) => { await query(`UPDATE outreach_queue SET state = 'skipped', note = $2 WHERE id = $1`, [row.id, note]); return 'skipped' as const; };
     const isSeed = c.wave === 'seed';
+    let dom = row.domain;
     const rd = riaDomains(s);
-    const ria = isSeed ? rd.has(row.domain.toLowerCase()) : c.wave === 'ria';
+    const ria = isSeed ? rd.has(dom.toLowerCase()) : c.wave === 'ria';
     const n = isSeed ? (row.step % 10 >= 1 && row.step % 10 <= (ria ? 6 : 7) ? row.step % 10 : 1) : row.step - 20;
     if (!isSeed && ria && n > 6) return skip('adviser sequence ends at email 6');
     const ownerTest = isOwnerTest(c.email);
@@ -399,6 +400,13 @@ export async function sendSeq7(row: { id: number; token: string; step: number; d
         if (applied.rowCount && !ownerTest) return skip('applied to program');
         if (ria && c.wave !== 'ria') return skip('audience mismatch');
     }
+    // Retail routing: Microsoft mailboxes go through Workspace, Gmail and everything else through Resend, all from the retail sending domain.
+    if (!isSeed && !ria && s.retail_route === 'on') {
+        const { retailRoute } = await import('./mailhost');
+        const rc = await retailRoute(String(c.email), s);
+        if (!rc) return skip('no retail route');
+        transport = rc.transport; dom = rc.domain;
+    }
     const facts = await liveFacts(new Date());
     // Life stage wording: from the age field; seeds rotate through the stages so the daily test shows each one.
     let stage: Stage | null = null;
@@ -406,11 +414,12 @@ export async function sendSeq7(row: { id: number; token: string; step: number; d
         if (isSeed) stage = STAGES[Math.floor(row.step / 10) % STAGES.length];
         else if (!isStageControl(c.token)) stage = stageForAge(c.age);
     }
-    const linkBase = s[`link_host_${row.domain.toLowerCase()}`] ? `https://${s[`link_host_${row.domain.toLowerCase()}`]}` : BASE_URL; // branded link host per sending domain, when enabled
-    const rendered = ria ? renderRia({ token: c.token, firstName: c.first_name, baseUrl: linkBase, mailingAddress: MAILING_ADDRESS, n, step: row.step < SEED_BASE ? row.step : 20 + n }) : renderSeq7({ noChart: s.email5_chart === 'false', token: c.token, firstName: c.first_name, baseUrl: linkBase, mailingAddress: MAILING_ADDRESS, step: n, n, facts, audience: ria ? 'ria' : 'retail', stage });
+    const linkBase = s[`link_host_${dom.toLowerCase()}`] ? `https://${s[`link_host_${dom.toLowerCase()}`]}` : BASE_URL; // branded link host per sending domain, when enabled
+    const useSimple = !ria && s.retail_simple === 'on';
+    const rendered = useSimple ? (await import('./retail-simple')).renderRetailSimple({ token: c.token, firstName: c.first_name, baseUrl: linkBase, linkBase, mailingAddress: MAILING_ADDRESS, n, step: row.step < SEED_BASE ? row.step : 20 + n, facts, stage }) : ria ? renderRia({ token: c.token, firstName: c.first_name, baseUrl: linkBase, mailingAddress: MAILING_ADDRESS, n, step: row.step < SEED_BASE ? row.step : 20 + n }) : renderSeq7({ noChart: s.email5_chart === 'false', token: c.token, firstName: c.first_name, baseUrl: linkBase, mailingAddress: MAILING_ADDRESS, step: n, n, facts, audience: ria ? 'ria' : 'retail', stage });
     const msg = s.lean_content === 'false' ? rendered : leanify(rendered);
-    if (!transportKeyPresent(transport)) return 'failed';
-    const from = `${s.from_display || 'Eric Huang'} <${fromLocal}@${row.domain}>`;
+    if (transport === 'workspace' ? !workspaceReady(dom) : !transportKeyPresent(transport)) return 'failed';
+    const from = `${s.from_display || 'Eric Huang'} <${fromLocal}@${dom}>`;
     let res;
     try {
         res = await sendMail({
@@ -427,10 +436,10 @@ export async function sendSeq7(row: { id: number; token: string; step: number; d
         return 'failed';
     }
     await query(`INSERT INTO outreach_sends (token, step, template, domain, from_addr, message_id) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (token, step) DO NOTHING`,
-        [row.token, row.step, `S7${ria ? 'R' : ''}_${n}`, row.domain, from, res.id ?? null]);
+        [row.token, row.step, `S7${ria ? 'R' : ''}_${n}`, dom, from, res.id ?? null]);
     await query(`UPDATE outreach_queue SET state = 'sent' WHERE id = $1`, [row.id]);
     if (s.ramp_mode === 'perdomain' && !isSeed && !ownerTest && !row.token.startsWith('dt')) {
-        await sendTestCopy({ transport, from, replyTo: s.reply_to || undefined, msg, domain: row.domain, step: row.step, sourceToken: row.token, headers: s.list_unsub_header !== 'false' }).catch(() => undefined);
+        await sendTestCopy({ transport, from, replyTo: s.reply_to || undefined, msg, domain: dom, step: row.step, sourceToken: row.token, headers: s.list_unsub_header !== 'false' }).catch(() => undefined);
     }
     if (!isSeed) await query(`UPDATE outreach_contacts SET status = 'sent', updated_at = NOW() WHERE token = $1 AND status = 'pending'`, [row.token]);
     return 'sent';

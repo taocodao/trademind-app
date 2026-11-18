@@ -127,6 +127,8 @@ async function planPerDomain(now: Date, s: Record<string, string>): Promise<Reco
                 WHERE ${ELIGIBLE} AND (s1.domain = $2 OR s1.domain <> ALL($3::text[]))
                 ORDER BY s1.sent_at ASC LIMIT 8000`, [ria, d.domain, activeNames]);
             const fuCap = Math.floor(budget * 0.85);
+            const deferLegacy = !ria && s.retail_defer_legacy === 'on'; // retail contacts first emailed from an older domain wait until the fresh contacts are used up
+            const legacy: { token: string; tz: string; step: number }[] = [];
             for (const r of fu.rows) {
                 if (picks.length >= fuCap) break;
                 const sent = new Set<number>(r.sent_steps), queued = new Set<number>(r.queued);
@@ -134,6 +136,7 @@ async function planPerDomain(now: Date, s: Record<string, string>): Promise<Reco
                 if (next === undefined || queued.has(next)) continue;
                 if (dayDiff(et.date, dstr(r.first_day)) < (ria ? RIA_DAYS : DAYS)[next - 21]) continue;
                 if (r.last_day && dayDiff(et.date, dstr(r.last_day)) < 4) continue;
+                if (deferLegacy && String(r.domain).toLowerCase() !== d.domain.toLowerCase()) { legacy.push({ token: r.token, tz: r.tz, step: next }); continue; }
                 picks.push({ token: r.token, tz: r.tz, step: next });
             }
             // New first emails: contacts never emailed come first, in a fixed order, so the list simply continues after the last one sent.
@@ -150,6 +153,7 @@ async function planPerDomain(now: Date, s: Record<string, string>): Promise<Reco
                     ORDER BY (NOT EXISTS (SELECT 1 FROM outreach_sends o WHERE o.token = c.token AND o.step < 100)) DESC, md5(c.token) LIMIT $2`, [ria, want, gmailOnly]);
                 for (const r of inv.rows) picks.push({ token: r.token, tz: r.tz, step: 21 });
             }
+            if (legacy.length && picks.length < budget) picks.push(...legacy.slice(0, budget - picks.length)); // the end of the list: only when no fresh contact is left to fill the day
             for (const p of picks) {
                 const localStart = ria ? 0 : zonedInstant(et.date, '09:00', p.tz || ET).getTime(); // retail: never before 9:00 AM local for the reader
                 const winStart = Math.max(startAt, localStart);

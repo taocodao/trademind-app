@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
                 // the two SendGrid retail domains stop; newsletter emails come from the domain that reached the subscriber. off reverses it.
                 const on = b.mode !== 'off';
                 const set = async (k: string, v: string) => setSetting(k, v);
-                await set('retail_route', on ? 'on' : 'off'); await set('retail_simple', on ? 'on' : 'off'); await set('newsletter_match_domain', on ? 'on' : 'off');
+                await set('retail_route', on ? 'on' : 'off'); await set('retail_simple', on ? 'on' : 'off'); await set('newsletter_match_domain', on ? 'on' : 'off'); await set('retail_defer_legacy', on ? 'on' : 'off');
                 if (on) {
                     await set('pd_start_vochat.ai', String(Number(b.start) || 80)); await set('pd_step_vochat.ai', String(Number(b.step) || 20));
                     await set('pd_cap_vochat.ai', String(Number(b.cap) || 500)); await set('pd_jitter_vochat.ai', '5');
@@ -85,6 +85,16 @@ export async function POST(req: NextRequest) {
                     await query(`UPDATE outreach_domains SET status = 'paused', paused_reason = 'retail routing switched off', paused_at = NOW() WHERE domain = 'vochat.ai'`);
                 }
                 return NextResponse.json({ ok: true, mode: on ? 'on' : 'off', domains: (await query(`SELECT domain, status, transport FROM outreach_domains WHERE status = 'active' ORDER BY domain`)).rows });
+            }
+            case 'nlsample': {
+                const { CX_TEST_ALLOW } = await import('@/lib/outreach/cx');
+                const to = String(b.to).trim().toLowerCase();
+                if (!CX_TEST_ALLOW.has(to)) return NextResponse.json({ error: 'not an authorized test address' }, { status: 400 });
+                const { sendSubscriberLink, senderForSubscriber, firstNameFor } = await import('@/lib/newsletter/link-send');
+                const wave = String(b.wave || 'W2_rollout');
+                const ok = await sendSubscriberLink({ email: to, subscriberId: 1068, cadence: 'weekly', sample: { wave } });
+                const snd = await senderForSubscriber(to, wave);
+                return NextResponse.json({ ok, from: snd.from, transport: snd.transport, host: snd.host, firstName: await firstNameFor(to) });
             }
             case 'retailsimple': return NextResponse.json(await sendRetailSimpleSample({ domain: String(b.domain), to: String(b.to), stage: String(b.stage) as never, n: Number(b.n ?? 1) }));
             case 'consulti': return NextResponse.json(await sendCxConsulti(String(b.code), { only: b.only === 'google' || b.only === 'microsoft' ? b.only : undefined, htmlOnly: b.htmlOnly === true, stdId: b.stdId === true, smtp: b.smtp === true }));

@@ -8,7 +8,7 @@ import { MAILING_ADDRESS } from './email';
 import { makeLongUnsubscribeToken, logNewsletterSend, ensureNewsletterTables } from './db';
 import { makeDailyLinkToken } from './daily-link';
 import { renderLinkEmail } from './link-email';
-import { senderForSubscriber, deliverSubscriberMail } from './link-send';
+import { senderForSubscriber, deliverSubscriberMail, firstNameFor, withFirstName } from './link-send';
 import { MEETING_URL } from '@/lib/outreach/copy-seq7';
 
 /** Days after the offer starts. */
@@ -62,7 +62,7 @@ export async function runOfferReminders(o: { dry?: boolean; limit?: number } = {
         const tok = makeDailyLinkToken(r.id);
         const unsubscribeUrl = `${base}/newsletter/unsubscribe?token=${await makeLongUnsubscribeToken(r.id)}`;
         const m = renderLinkEmail({
-            subject: t.subject, description: t.description, url: MEETING_URL, linkLabel: 'Book 20 minutes here',
+            subject: withFirstName(t.subject, await firstNameFor(r.email)), description: t.description, url: MEETING_URL, linkLabel: 'Book 20 minutes here',
             unsubscribeUrl, preferencesUrl: `${base}/newsletter/preferences?k=${encodeURIComponent(tok)}`, address: `TradeMind, ${MAILING_ADDRESS}`,
         });
         const ok = await deliverSubscriberMail({ snd, to: r.email, subscriberId: r.id, subject: m.subject, text: m.text });

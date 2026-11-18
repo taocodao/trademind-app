@@ -37,20 +37,42 @@ export async function senderFor(): Promise<{ from: string; replyTo: string; host
  *  - retail: the retail routing (Microsoft through Workspace, the rest through Resend, from the retail domain).
  * A subscriber with no outreach contact (direct sign up) gets the default sender. Every matched domain must have a link host set.
  */
+export const NEWSLETTER_FROM_NAME = 'Eric Huang From TradeMindBot Inc';
+const withName = (from: string, name: string) => { const a = from.match(/<([^>]+)>/); return `${name} <${a ? a[1] : from.trim()}>`; };
+
+/** First name for the subject line, from the outreach list or the newsletter directory. Empty when unknown. */
+export async function firstNameFor(email: string): Promise<string> {
+    try {
+        const e = email.trim().toLowerCase();
+        const r = await query(`SELECT first_name FROM outreach_contacts WHERE (lower(email) = $1 OR lower(COALESCE(subscriber_email, '')) = $1) AND COALESCE(first_name, '') <> '' ORDER BY (wave = 'seed') ASC LIMIT 1`, [e]);
+        let n = String(r.rows[0]?.first_name || '');
+        if (!n) n = String((await query(`SELECT first_name FROM newsletter_directory WHERE lower(email) = $1 AND COALESCE(first_name, '') <> '' LIMIT 1`, [e]).catch(() => ({ rows: [] as { first_name: string }[] }))).rows[0]?.first_name || '');
+        n = n.trim().split(/\s+/)[0];
+        if (!/^[A-Za-z][A-Za-z'\u2019-]{1,19}$/.test(n)) return '';
+        return n.charAt(0).toUpperCase() + n.slice(1).toLowerCase();
+    } catch { return ''; }
+}
+const LOWER_START = /^(You|Your|Here|The|This|Welcome|Read|Get|Start|Are|Is|Why|What|How|Not)\b/;
+export function withFirstName(subject: string, name: string): string {
+    if (!name) return subject;
+    return `${name}, ${LOWER_START.test(subject) ? subject.charAt(0).toLowerCase() + subject.slice(1) : subject}`;
+}
+
 export type NewsletterTransport = 'resend' | 'workspace' | 'sendgrid';
-export async function senderForSubscriber(email: string): Promise<{ from: string; replyTo: string; host: string; transport: NewsletterTransport }> {
+export async function senderForSubscriber(email: string, asWave?: string): Promise<{ from: string; replyTo: string; host: string; transport: NewsletterTransport }> {
     const def = await senderFor();
-    const base = { ...def, transport: 'resend' as NewsletterTransport };
+    const base = { ...def, from: withName(def.from, NEWSLETTER_FROM_NAME), transport: 'resend' as NewsletterTransport };
     try {
         const r = await query(`SELECT key, value FROM outreach_settings WHERE key = 'from_display' OR key LIKE 'newsletter_match%' OR key LIKE 'link_host_%' OR key LIKE 'reply_to_%' OR key LIKE 'cx_route%' OR key LIKE 'retail_route%' OR key = 'ria_domains'`);
         const m: Record<string, string> = {};
         for (const row of r.rows as { key: string; value: string }[]) m[row.key] = row.value;
         if (m.newsletter_match_domain !== 'on') return base;
         const e = email.trim().toLowerCase();
-        const c = (await query(
+        let c = (await query(
             `SELECT c.wave, (SELECT s.domain FROM outreach_sends s WHERE s.token = c.token AND s.step < 100 AND s.status <> 'failed' ORDER BY s.sent_at DESC LIMIT 1) AS domain
                FROM outreach_contacts c WHERE c.wave <> 'seed' AND (lower(c.email) = $1 OR lower(COALESCE(c.subscriber_email, '')) = $1)
               ORDER BY (EXISTS (SELECT 1 FROM outreach_sends s WHERE s.token = c.token AND s.step < 100)) DESC LIMIT 1`, [e])).rows[0] as { wave: string; domain: string | null } | undefined;
+        if (asWave) { c = { wave: asWave, domain: null }; }
         if (!c) return base;
         const { mailHostOfEmail, retailRouteFor } = await import('@/lib/outreach/mailhost');
         const { workspaceReady } = await import('@/lib/outreach/transport');
@@ -68,7 +90,7 @@ export async function senderForSubscriber(email: string): Promise<{ from: string
         }
         if (!dom || !m[`link_host_${dom}`]) return base;
         return {
-            from: `${m.from_display || 'Eric Huang'} <eric@${dom}>`,
+            from: `${NEWSLETTER_FROM_NAME} <eric@${dom}>`,
             replyTo: m[`reply_to_${dom}`] || def.replyTo,
             host: m[`link_host_${dom}`].trim().replace(/^https?:\/\//, '').replace(/\/+$/, ''),
             transport,
@@ -100,16 +122,17 @@ export function currentIssuePath(_cadence?: Cadence | string | null): string {
     return '/newsletter/current';
 }
 
-export async function sendSubscriberLink(o: { email: string; subscriberId: number; cadence: Cadence | string | null; again?: boolean; weekly?: { subject: string; description: string; path: string; slug?: string } }): Promise<boolean> {
+export async function sendSubscriberLink(o: { email: string; subscriberId: number; cadence: Cadence | string | null; again?: boolean; weekly?: { subject: string; description: string; path: string; slug?: string }; sample?: { wave: string } }): Promise<boolean> {
     if (!RESEND_API_KEY) { console.warn('[link email] RESEND_API_KEY not configured'); return false; }
     try {
         const facts = await liveFacts(new Date());
         const tok = makeDailyLinkToken(o.subscriberId);
-        const snd = await senderForSubscriber(o.email);
+        const snd = await senderForSubscriber(o.email, o.sample?.wave);
+        const fname = await firstNameFor(o.email);
         const base = snd.host ? `https://${snd.host}` : BASE_URL;
         const unsubscribeUrl = `${base}/newsletter/unsubscribe?token=${await makeLongUnsubscribeToken(o.subscriberId)}`;
         const m = (snd.host ? renderLinkEmailLight : renderLinkEmail)({
-            subject: o.weekly ? o.weekly.subject : o.again ? `Your issue link: the brief for the ${facts.weekLabel.toLowerCase()}` : `You are subscribed. Read the brief for the ${facts.weekLabel.toLowerCase()}`,
+            subject: withFirstName(o.weekly ? o.weekly.subject : o.again ? `Your issue link: the brief for the ${facts.weekLabel.toLowerCase()}` : `You are subscribed. Read the brief for the ${facts.weekLabel.toLowerCase()}`, fname),
             description: o.weekly ? o.weekly.description : (o.again ? 'Here is the current issue, as you asked. ' : 'Welcome. ') + 'The current TradeMind brief is on the site: market weather, the copilot readout, a flight plan idea and a turbulence test, risk first. About five minutes.',
             // The signed reader key (k) lets the page recognise the subscriber, so it shows no subscribe button.
             url: `${base}${o.weekly ? o.weekly.path : currentIssuePath(o.cadence)}?k=${encodeURIComponent(tok)}`,
@@ -123,7 +146,7 @@ export async function sendSubscriberLink(o: { email: string; subscriberId: numbe
             'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
         };
         const ok = await deliverSubscriberMail({ snd, to: o.email, subscriberId: o.subscriberId, subject: m.subject, text: m.text, html: m.html, headers });
-        await logNewsletterSend({ email: o.email, subscriberId: o.subscriberId, kind: o.weekly ? 'weekly_issue' : o.again ? 'issue_now' : 'welcome', issueSlug: o.weekly?.slug ?? null, ok });
+        if (!o.sample) await logNewsletterSend({ email: o.email, subscriberId: o.subscriberId, kind: o.weekly ? 'weekly_issue' : o.again ? 'issue_now' : 'welcome', issueSlug: o.weekly?.slug ?? null, ok });
         return ok;
     } catch (err) {
         console.error('[link email]', err);

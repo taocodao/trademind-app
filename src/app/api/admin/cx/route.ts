@@ -3,7 +3,7 @@ import { resolveAdmin } from '@/lib/admin-gate';
 import { query } from '@/lib/db';
 import { setSetting } from '@/lib/outreach/db';
 import { buildDrafts, renderCx } from '@/lib/outreach/cx-copy';
-import { sendRetailPlacementTest } from '@/lib/outreach/seq7-live';
+import { sendRetailPlacementTest, sendRetailSimpleSample } from '@/lib/outreach/seq7-live';
 import { MAILING_ADDRESS } from '@/lib/newsletter/email';
 import { BASE_URL } from '@/lib/outreach/db';
 import { CX_DEFAULTS, cxStatus, ensureCxTables, importCx, parseListFile, sendCxConsulti, sendCxTest, verifyResendDomains } from '@/lib/outreach/cx';
@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ stopped: r.rowCount });
             }
             case 'retailtest': return NextResponse.json(await sendRetailPlacementTest(String(b.code), String(b.domain), b.mode === 'text' ? 'text' : 'html', Number(b.n) || 1, b.via === 'resend' ? 'resend' : b.via === 'namecheap' ? 'namecheap' : undefined));
+            case 'retailsimple': return NextResponse.json(await sendRetailSimpleSample({ domain: String(b.domain), to: String(b.to), stage: String(b.stage) as never }));
             case 'consulti': return NextResponse.json(await sendCxConsulti(String(b.code), { only: b.only === 'google' || b.only === 'microsoft' ? b.only : undefined, htmlOnly: b.htmlOnly === true, stdId: b.stdId === true, smtp: b.smtp === true }));
             case 'test': return NextResponse.json(await sendCxTest({ domain: String(b.domain), to: String(b.to), email: b.email ? String(b.email) : undefined, steps: Array.isArray(b.steps) ? (b.steps as number[]) : undefined, transport: b.transport === 'workspace' ? 'workspace' : 'resend' }));
             case 'regenerate': {

@@ -54,6 +54,7 @@ export async function weeklyEditions(): Promise<WeeklyEdition[]> {
         const r = await query(`SELECT id, edition_date::text AS d, subject, payload, created_at FROM newsletter_edition
             WHERE kind = 'weekly' AND status IN ('approved','sent') AND edition_date >= $1::date ORDER BY edition_date`, [FIRST_EDITION_DATE]);
         const list = (r.rows as any[]).map((x, i) => {
+            x.subject = String(x.subject ?? '').trim().replace(/^["\u201c]+|["\u201d]+$/g, '');
             const issue = editionToIssue({ id: x.id, date: x.d, subject: x.subject, payload: x.payload }, i + 1);
             return { id: x.id, date: x.d, subject: x.subject, createdAt: new Date(x.created_at), issue, path: `/newsletter/issues/${issue.publishDate}-${issue.slug}` };
         });

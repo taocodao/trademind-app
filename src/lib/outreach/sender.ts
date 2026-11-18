@@ -793,56 +793,45 @@ export async function reportIfDue(now = new Date()): Promise<boolean> {
     const s = await getSettings();
     const et = etParts(now);
     if (s.paused !== 'false' || et.hour < 17 || s.last_report_date === et.date) return false;
-    const plan = await query(`SELECT day_index, budget, planned FROM outreach_plan_days WHERE plan_date = $1`, [et.date]);
-    if (!plan.rows[0]) return false;
-    const day = await query(`
-        SELECT s.domain, COUNT(*) AS sent,
-               COUNT(*) FILTER (WHERE s.status = 'delivered') AS delivered,
-               COUNT(*) FILTER (WHERE s.status = 'bounced') AS bounced,
-               COUNT(*) FILTER (WHERE s.complaint) AS complaints
-        FROM outreach_sends s WHERE (s.sent_at AT TIME ZONE 'America/New_York')::date = $1 GROUP BY s.domain ORDER BY s.domain`, [et.date]);
-    const tot = await query(`
-        SELECT COUNT(*) FILTER (WHERE status IN ('sent','delivered')) AS delivered_all,
-               (SELECT COUNT(*) FROM outreach_click_events WHERE human_confirmed) AS human_clicks,
-               (SELECT COUNT(*) FROM outreach_click_events WHERE is_bot) AS bot_clicks,
-               (SELECT COUNT(*) FROM outreach_contacts WHERE status = 'subscribed') AS subscribed,
-               (SELECT COUNT(*) FROM outreach_contacts WHERE status = 'confirmed') AS confirmed,
-               (SELECT COUNT(*) FROM outreach_contacts WHERE status = 'unsubscribed') AS unsub,
-               (SELECT COUNT(*) FROM outreach_contacts WHERE status = 'pending' AND wave <> 'seed') AS pending
-        FROM outreach_sends WHERE step = 1`);
-    const seg = await query(`
-        SELECT c.segment, COUNT(*) FILTER (WHERE s.status IN ('sent','delivered')) AS delivered,
-               COUNT(*) FILTER (WHERE c.status = 'confirmed') AS confirmed
-        FROM outreach_contacts c JOIN outreach_sends s ON s.token = c.token AND s.step = 1
-        WHERE c.wave = 'W1_pilot' GROUP BY c.segment ORDER BY c.segment`);
-    const dom = await query(`SELECT domain, status, paused_reason FROM outreach_domains ORDER BY domain`);
-    const fb = await query(`SELECT choice, COUNT(*)::int AS n FROM outreach_feedback WHERE ts > NOW() - INTERVAL '1 day' GROUP BY choice ORDER BY choice`);
-    const snz = await query(`SELECT COUNT(*) FILTER (WHERE status = 'snoozed')::int AS snoozed, COUNT(*) FILTER (WHERE status = 'monthly')::int AS monthly FROM outreach_contacts`);
-    const t = tot.rows[0];
-    // Seed mailbox placement (written by the seed reader on the server). Empty until seed_mailboxes is set and the reader has run.
+    const D = `(x.sent_at AT TIME ZONE 'America/New_York')::date = $1`;
+    const today = (await query(`SELECT x.domain, COUNT(*)::int AS sent, COUNT(*) FILTER (WHERE x.status = 'bounced')::int AS bounced, COUNT(*) FILTER (WHERE x.complaint)::int AS complaints
+        FROM outreach_sends x WHERE ${D} AND x.step < 100 AND x.token NOT LIKE 'dt%' AND x.token <> 'testcopy' GROUP BY x.domain ORDER BY x.domain`, [et.date])).rows;
+    const plan = (await query(`SELECT audience, day_index, budget, planned FROM outreach_plan_seq7 WHERE plan_date = $1 ORDER BY audience`, [et.date]).catch(() => ({ rows: [] }))).rows as { audience: string; day_index: number; budget: number; planned: number }[];
+    const subs = (await query(`
+        SELECT COALESCE((SELECT CASE WHEN c.wave IN ('W1_pilot','W2_rollout') THEN 'retail' WHEN c.wave = 'ria' THEN 'adviser (SendGrid)' WHEN c.wave = 'cx' THEN 'adviser (routed)' ELSE c.wave END
+                           FROM outreach_contacts c WHERE c.wave <> 'seed' AND (lower(c.email) = n.email OR lower(COALESCE(c.subscriber_email, '')) = n.email) LIMIT 1), 'direct sign up') AS lane, COUNT(*)::int AS n
+          FROM newsletter_subscribers n WHERE n.status = 'confirmed' AND (n.first_confirmed_at AT TIME ZONE 'America/New_York')::date = $1 GROUP BY 1 ORDER BY 2 DESC`, [et.date])).rows as { lane: string; n: number }[];
+    const tot = (await query(`SELECT COUNT(*) FILTER (WHERE status = 'confirmed')::int AS confirmed, COUNT(*) FILTER (WHERE status = 'unsubscribed')::int AS unsub,
+        COUNT(*) FILTER (WHERE status = 'unsubscribed' AND (unsubscribed_at AT TIME ZONE 'America/New_York')::date = $1)::int AS unsub_today FROM newsletter_subscribers`, [et.date]).catch(() => ({ rows: [{ confirmed: 0, unsub: 0, unsub_today: 0 }] }))).rows[0];
+    const clicks = (await query(`SELECT link_type, COUNT(*)::int AS n FROM outreach_click_events WHERE human_confirmed AND NOT is_bot AND (ts AT TIME ZONE 'America/New_York')::date = $1 GROUP BY 1 ORDER BY 2 DESC`, [et.date])).rows as { link_type: string; n: number }[];
+    const pool = (await query(`SELECT CASE WHEN wave IN ('W1_pilot','W2_rollout') THEN 'retail' WHEN wave = 'ria' THEN 'adviser (SendGrid)' ELSE wave END AS lane, COUNT(*) FILTER (WHERE status = 'pending')::int AS pending
+        FROM outreach_contacts WHERE wave IN ('W1_pilot','W2_rollout','ria','cx') GROUP BY 1 ORDER BY 1`)).rows as { lane: string; pending: number }[];
+    const dom = await query(`SELECT domain, status, paused_reason FROM outreach_domains WHERE status = 'active' OR paused_at > NOW() - INTERVAL '3 days' ORDER BY domain`);
     const seedRows = await query(`
         SELECT k.domain, r.mailbox, r.placement FROM outreach_seed_checks k JOIN outreach_seed_results r USING (token)
         WHERE k.sent_at > NOW() - INTERVAL '24 hours' AND r.stage = (SELECT MAX(x.stage) FROM outreach_seed_results x WHERE x.token = k.token AND x.mailbox = r.mailbox)
         ORDER BY k.sent_at DESC`).then((r) => r.rows).catch(() => [] as { domain: string; mailbox: string; placement: string }[]);
     const seedLines = seedRows.length
-        ? ['', 'Seed mailbox placement, last 24 hours (latest reading per mailbox):', ...[...new Set(seedRows.map((r) => r.domain))].map((d) => {
+        ? ['', 'Seed mailbox placement, last 24 hours:', ...[...new Set(seedRows.map((r) => r.domain))].map((d) => {
             const rs = seedRows.filter((r) => r.domain === d), c: Record<string, number> = {};
             rs.forEach((r) => { c[r.placement] = (c[r.placement] || 0) + 1; });
             return `- ${d}: ${Object.entries(c).map(([k, v]) => `${k} ${v}`).join(', ')}`;
         })]
-        : ['', 'Seed mailbox placement: no readings yet.'];
+        : [];
+    const sum = subs.reduce((a, r) => a + r.n, 0);
     const lines = [
-        `Invitation report for ${et.date}. Send day ${plan.rows[0].day_index}, budget ${plan.rows[0].budget}, planned ${plan.rows[0].planned}.`,
-        '', 'Today by domain (sent / delivered / bounced / complaints):',
-        ...day.rows.map((r) => `- ${r.domain}: ${r.sent} / ${r.delivered} / ${r.bounced} / ${r.complaints}`),
-        '', `Totals: delivered or sent step 1 ${t.delivered_all}, human clicks ${t.human_clicks}, bot-filtered clicks ${t.bot_clicks}, subscribe submissions ${t.subscribed}, confirmed ${t.confirmed}, unsubscribed ${t.unsub}, contacts still pending ${t.pending}.`,
-        '', 'Pilot gate by segment (delivered, confirmed, rate; needs 300 delivered and 1.5%):',
-        ...seg.rows.map((r) => `- ${r.segment}: ${r.delivered}, ${r.confirmed}, ${Number(r.delivered) ? (Number(r.confirmed) / Number(r.delivered) * 100).toFixed(2) : '0.00'}%`),
-        '', `Unsubscribe page choices in the last 24 hours: ${fb.rows.length ? fb.rows.map((r) => `${r.choice} ${r.n}`).join(', ') : 'none'}. Paused for a check-in: ${snz.rows[0].snoozed}. Asked for a monthly recap (nothing sent yet): ${snz.rows[0].monthly}.`,
+        `Outreach report for ${et.date} (through ${String(et.hour).padStart(2, '0')}:00 ET).`,
+        '', `New subscribers today: ${sum}${subs.length ? ` (${subs.map((r) => `${r.lane} ${r.n}`).join(', ')})` : ''}. Total confirmed: ${tot.confirmed}. Unsubscribed today: ${tot.unsub_today}, all time: ${tot.unsub}.`,
+        '', 'Emails sent today by domain (sent / bounced / complaints):',
+        ...(today.length ? today.map((r) => `- ${r.domain}: ${r.sent} / ${r.bounced} / ${r.complaints}`) : ['- none']),
+        '', 'Daily plan by domain (day, budget, planned):',
+        ...(plan.length ? plan.map((r) => `- ${r.audience.replace('dom:', '')}: day ${r.day_index}, ${r.budget}, ${r.planned}`) : ['- none']),
+        '', `Human clicks today: ${clicks.length ? clicks.map((r) => `${r.link_type} ${r.n}`).join(', ') : 'none'}.`,
+        '', `Contacts still pending: ${pool.map((r) => `${r.lane} ${r.pending}`).join(', ')}.`,
         ...seedLines,
         '', 'Domains:', ...dom.rows.map((r) => `- ${r.domain}: ${r.status}${r.paused_reason ? ` (${r.paused_reason})` : ''}`),
     ];
-    await sendAlert(`Invitation report ${et.date}`, lines.join('\n'));
+    await sendAlert(`Outreach report ${et.date}: ${sum} new subscribers`, lines.join('\n'));
     await setSetting('last_report_date', et.date);
     return true;
 }

@@ -6,7 +6,7 @@
  * links and a one-click List-Unsubscribe header. token and step travel as custom_args so webhook events
  * can be matched to the send without relying on the provider message id.
  */
-export type Transport = 'resend' | 'sendgrid' | 'workspace';
+export type Transport = 'resend' | 'sendgrid' | 'workspace' | 'namecheap';
 
 export interface MailInput {
     transport: Transport;
@@ -33,6 +33,7 @@ function parseFrom(from: string): { email: string; name?: string } {
 }
 
 export function transportKeyPresent(t: Transport): boolean {
+    if (t === 'namecheap') return !!(process.env.NAMECHEAP_SMTP_USER && process.env.NAMECHEAP_SMTP_PASS);
     if (t === 'workspace') return false;   // Workspace readiness is per sending domain, see workspaceReady
     return t === 'sendgrid' ? !!process.env.SENDGRID_API_KEY : !!process.env.RESEND_API_KEY;
 }
@@ -118,7 +119,24 @@ async function sendViaWorkspace(m: MailInput): Promise<MailResult> {
     } finally { tr.close(); }
 }
 
+/** Namecheap Private Email over SMTP (mail.privateemail.com:587). Login set by hand in the host environment: NAMECHEAP_SMTP_USER and NAMECHEAP_SMTP_PASS. */
+async function sendViaNamecheap(m: MailInput): Promise<MailResult> {
+    const user = process.env.NAMECHEAP_SMTP_USER, pass = process.env.NAMECHEAP_SMTP_PASS;
+    if (!user || !pass) return { ok: false, status: 0, id: null, body: 'no Namecheap login', permanent: false };
+    const nodemailer = (await import('nodemailer')).default;
+    const tr = nodemailer.createTransport({ host: 'mail.privateemail.com', port: 587, secure: false, requireTLS: true, auth: { user, pass }, connectionTimeout: 15000, socketTimeout: 30000 });
+    const headers = { ...(m.headers ?? {}) };
+    try {
+        await tr.sendMail({ from: m.from, to: m.to, replyTo: m.replyTo || undefined, subject: m.subject, ...(m.text ? { text: m.text } : {}), ...(m.html ? { html: m.html } : {}), headers });
+        return { ok: true, status: 250, id: null, body: '', permanent: false };
+    } catch (e) {
+        const err = e as { responseCode?: number; message?: string };
+        return { ok: false, status: err.responseCode ?? 0, id: null, body: String(err.message || '').slice(0, 200), permanent: false };
+    } finally { tr.close(); }
+}
+
 export async function sendMail(m: MailInput): Promise<MailResult> {
+    if (m.transport === 'namecheap') return sendViaNamecheap(m);
     if (m.transport === 'sendgrid') return sendViaSendGrid(m);
     if (m.transport === 'workspace') return sendViaWorkspace(m);
     return sendViaResend(m);

@@ -441,7 +441,7 @@ export async function sendRetailPlacementTest(code: string, domain: string, mode
     if (!/^IPT-[a-z0-9]+$/.test(code)) throw new Error('code must look like IPT-xxxxxxxx');
     const { CONSULTI_SEEDS } = await import('./cx');
     const s = await getSettings();
-    const d = (await query(`SELECT domain, from_local, transport FROM outreach_domains WHERE domain = $1 AND status = 'active'`, [domain.toLowerCase()])).rows[0];
+    const d = via === 'namecheap' ? { domain: 'vochat.ai', from_local: 'eric', transport: 'namecheap' } : (await query(`SELECT domain, from_local, transport FROM outreach_domains WHERE domain = $1 AND status = 'active'`, [domain.toLowerCase()])).rows[0];
     if (!d) throw new Error('not an active sending domain');
     const transport = (via ?? d.transport) as Transport;
     if (!transportKeyPresent(transport)) throw new Error('transport key missing');

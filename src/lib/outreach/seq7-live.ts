@@ -486,7 +486,7 @@ export async function sendRetailSimpleSample(o: { domain: string; to: string; st
     const n = Math.min(Math.max(o.n ?? 1, 1), 7);
     const s = await getSettings();
     const transport: Transport = o.via ?? 'resend';
-    if (!transportKeyPresent(transport)) throw new Error('transport key missing');
+    if (transport === 'workspace' ? !workspaceReady(o.domain.toLowerCase()) : !transportKeyPresent(transport)) throw new Error('transport key missing');
     let seed = (await query(`SELECT token FROM outreach_contacts WHERE email = $1`, [to])).rows[0]?.token as string | undefined;
     if (!seed) {
         seed = randomBytes(8).toString('base64url').slice(0, 10);

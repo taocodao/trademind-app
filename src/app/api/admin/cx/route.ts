@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
                 const r = await query(`UPDATE outreach_contacts SET status = 'replied', updated_at = NOW() WHERE wave = 'cx' AND email = ANY($1::text[]) AND status NOT IN ('unsubscribed','complained') RETURNING email`, [list]);
                 return NextResponse.json({ stopped: r.rowCount });
             }
-            case 'retailtest': return NextResponse.json(await sendRetailPlacementTest(String(b.code), String(b.domain), b.mode === 'text' ? 'text' : 'html', Number(b.n) || 1));
+            case 'retailtest': return NextResponse.json(await sendRetailPlacementTest(String(b.code), String(b.domain), b.mode === 'text' ? 'text' : 'html', Number(b.n) || 1, b.via === 'resend' ? 'resend' : undefined));
             case 'consulti': return NextResponse.json(await sendCxConsulti(String(b.code), { only: b.only === 'google' || b.only === 'microsoft' ? b.only : undefined, htmlOnly: b.htmlOnly === true, stdId: b.stdId === true, smtp: b.smtp === true }));
             case 'test': return NextResponse.json(await sendCxTest({ domain: String(b.domain), to: String(b.to), email: b.email ? String(b.email) : undefined, steps: Array.isArray(b.steps) ? (b.steps as number[]) : undefined, transport: b.transport === 'workspace' ? 'workspace' : 'resend' }));
             case 'regenerate': {

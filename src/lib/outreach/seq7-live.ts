@@ -437,13 +437,13 @@ export async function sendSeq7(row: { id: number; token: string; step: number; d
 }
 
 /** Placement test: the production retail email (default email 1) sent from one sending domain to the Consulti seed panel, as HTML plus text or as plain text only. */
-export async function sendRetailPlacementTest(code: string, domain: string, mode: 'html' | 'text', n = 1): Promise<{ sent: number; detail: string[] }> {
+export async function sendRetailPlacementTest(code: string, domain: string, mode: 'html' | 'text', n = 1, via?: Transport): Promise<{ sent: number; detail: string[] }> {
     if (!/^IPT-[a-z0-9]+$/.test(code)) throw new Error('code must look like IPT-xxxxxxxx');
     const { CONSULTI_SEEDS } = await import('./cx');
     const s = await getSettings();
     const d = (await query(`SELECT domain, from_local, transport FROM outreach_domains WHERE domain = $1 AND status = 'active'`, [domain.toLowerCase()])).rows[0];
     if (!d) throw new Error('not an active sending domain');
-    const transport = d.transport as Transport;
+    const transport = (via ?? d.transport) as Transport;
     if (!transportKeyPresent(transport)) throw new Error('transport key missing');
     const facts = await liveFacts(new Date());
     const linkBase = s[`link_host_${domain.toLowerCase()}`] ? `https://${s[`link_host_${domain.toLowerCase()}`]}` : BASE_URL;

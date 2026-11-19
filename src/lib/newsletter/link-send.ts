@@ -80,7 +80,7 @@ export async function senderForSubscriber(email: string, asWave?: string): Promi
         const csv = (v: string | undefined) => String(v || '').toLowerCase().split(',').map((x) => x.trim()).filter(Boolean);
         const last = (c.domain || '').toLowerCase();
         let dom = ''; let transport: NewsletterTransport = 'resend';
-        if (c.wave === 'ria') { dom = last || csv(m.ria_domains)[0] || ''; transport = 'sendgrid'; }
+        if (c.wave === 'ria') { const rd = csv(m.ria_domains); dom = rd.includes(last) ? last : (rd[0] || ''); transport = 'sendgrid'; }
         else if (c.wave === 'cx') {
             if (host === 'microsoft') { const l = csv(m.cx_route_ms_domains || 'echoads.tv,vochat.ai').filter(workspaceReady); dom = l.includes(last) ? last : (l[0] || ''); transport = 'workspace'; }
             else { const l = csv(m.cx_route_google_domains || 'vochat.ai'); dom = l.includes(last) ? last : (l[0] || ''); }

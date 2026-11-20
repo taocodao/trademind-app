@@ -86,6 +86,17 @@ export async function POST(req: NextRequest) {
                 }
                 return NextResponse.json({ ok: true, mode: on ? 'on' : 'off', domains: (await query(`SELECT domain, status, transport FROM outreach_domains WHERE status = 'active' ORDER BY domain`)).rows });
             }
+            case 'sendreport': {
+                const { CX_TEST_ALLOW } = await import('@/lib/outreach/cx');
+                const { buildOutreachReport, sendAlert } = await import('@/lib/outreach/sender');
+                const date = /^\d{4}-\d{2}-\d{2}$/.test(String(b.date)) ? String(b.date) : '';
+                if (!date) return NextResponse.json({ error: 'date YYYY-MM-DD required' }, { status: 400 });
+                const to = (Array.isArray(b.to) ? b.to : [b.to]).map((x: unknown) => String(x).trim().toLowerCase()).filter(Boolean);
+                if (!to.length || to.some((x: string) => !CX_TEST_ALLOW.has(x))) return NextResponse.json({ error: 'not an authorized address' }, { status: 400 });
+                const r = await buildOutreachReport(date, b.label ? String(b.label) : 'full day');
+                for (const addr of to) await sendAlert(`${r.subject} (resend)`, r.body, addr);
+                return NextResponse.json({ ok: true, to, subject: r.subject, chars: r.body.length });
+            }
             case 'nlsample': {
                 const { CX_TEST_ALLOW } = await import('@/lib/outreach/cx');
                 const to = String(b.to).trim().toLowerCase();

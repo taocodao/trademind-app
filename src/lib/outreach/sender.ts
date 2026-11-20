@@ -542,15 +542,15 @@ export async function evaluateGates(): Promise<{ paused: string[]; globalPause: 
     return { paused, globalPause };
 }
 
-async function sendAlert(subject: string, body: string): Promise<void> {
+export async function sendAlert(subject: string, body: string, to?: string): Promise<void> {
     try {
         const s = await getSettings();
         const from = process.env.TRANSACTIONAL_FROM ?? 'TradeMind <signals@trademind.bot>';
-        if (!RESEND_API_KEY || !s.alert_email) return;
+        if (!RESEND_API_KEY || !(to || s.alert_email)) return;
         await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ from, to: s.alert_email, subject, text: body }),
+            body: JSON.stringify({ from, to: to || s.alert_email, subject, text: body }),
         });
     } catch (e) { console.error('[outreach] alert failed', e); }
 }
@@ -792,24 +792,21 @@ export async function processDue(limit = 40, now = new Date()): Promise<Record<s
 const LANE_SQL = (col: string) => `CASE WHEN ${col} IN ('W1_pilot','W2_rollout') THEN 'Retail investor' WHEN ${col} = 'ria' THEN 'RIA' WHEN ${col} = 'cx' THEN 'Financial adviser (Consulti contacts)' ELSE 'Other' END`;
 const LANES = ['Retail investor', 'Financial adviser (Consulti contacts)', 'RIA'];
 
-export async function reportIfDue(now = new Date()): Promise<boolean> {
-    const s = await getSettings();
-    const et = etParts(now);
-    if (s.paused !== 'false' || et.hour < 17 || s.last_report_date === et.date) return false;
+export async function buildOutreachReport(date: string, label: string): Promise<{ subject: string; body: string }> {
     const day = `(x.sent_at AT TIME ZONE 'America/New_York')::date = $1`;
     const sends = (await query(`SELECT ${LANE_SQL('c.wave')} AS lane, x.domain, COUNT(*)::int AS sent, COUNT(*) FILTER (WHERE x.status = 'bounced')::int AS bounced, COUNT(*) FILTER (WHERE x.complaint)::int AS complaints
-        FROM outreach_sends x JOIN outreach_contacts c ON c.token = x.token WHERE ${day} AND x.step < 100 AND c.wave NOT IN ('seed','sample','testclone') AND x.token NOT LIKE 'dt%' GROUP BY 1, 2 ORDER BY 1, 2`, [et.date])).rows as { lane: string; domain: string; sent: number; bounced: number; complaints: number }[];
+        FROM outreach_sends x JOIN outreach_contacts c ON c.token = x.token WHERE ${day} AND x.step < 100 AND c.wave NOT IN ('seed','sample','testclone') AND x.token NOT LIKE 'dt%' GROUP BY 1, 2 ORDER BY 1, 2`, [date])).rows as { lane: string; domain: string; sent: number; bounced: number; complaints: number }[];
     const clicks = (await query(`SELECT ${LANE_SQL('c.wave')} AS lane, e.link_type, COUNT(DISTINCT e.token)::int AS n FROM outreach_click_events e JOIN outreach_contacts c ON c.token = e.token
-        WHERE e.human_confirmed AND NOT e.is_bot AND (e.ts AT TIME ZONE 'America/New_York')::date = $1 GROUP BY 1, 2 ORDER BY 1, 3 DESC`, [et.date])).rows as { lane: string; link_type: string; n: number }[];
+        WHERE e.human_confirmed AND NOT e.is_bot AND (e.ts AT TIME ZONE 'America/New_York')::date = $1 GROUP BY 1, 2 ORDER BY 1, 3 DESC`, [date])).rows as { lane: string; link_type: string; n: number }[];
     const pool = (await query(`SELECT ${LANE_SQL('wave')} AS lane, COUNT(*) FILTER (WHERE status = 'pending')::int AS pending, COUNT(*) FILTER (WHERE status <> 'pending')::int AS contacted,
         COUNT(*) FILTER (WHERE status IN ('clicked','subscribed'))::int AS engaged, COUNT(*) FILTER (WHERE status = 'subscribed')::int AS subscribed, COUNT(*) FILTER (WHERE status = 'unsubscribed')::int AS unsub, COUNT(*) FILTER (WHERE status = 'bounced')::int AS bounced
         FROM outreach_contacts WHERE wave IN ('W1_pilot','W2_rollout','ria','cx') GROUP BY 1`)).rows as { lane: string; pending: number; contacted: number; engaged: number; subscribed: number; unsub: number; bounced: number }[];
     const subs = (await query(`
         SELECT COALESCE((SELECT ${LANE_SQL('c.wave')} FROM outreach_contacts c WHERE c.wave NOT IN ('seed','sample','testclone') AND (lower(c.email) = lower(n.email) OR lower(COALESCE(c.subscriber_email, '')) = lower(n.email)) LIMIT 1), 'Direct sign up') AS lane,
                COUNT(*) FILTER (WHERE (n.first_confirmed_at AT TIME ZONE 'America/New_York')::date = $1)::int AS today, COUNT(*)::int AS total
-          FROM newsletter_subscribers n WHERE n.status = 'confirmed' AND n.confirmed_at IS NOT NULL AND n.source NOT IN ('seed-test','qa') GROUP BY 1`, [et.date])).rows as { lane: string; today: number; total: number }[];
-    const tot = (await query(`SELECT COUNT(*) FILTER (WHERE status = 'unsubscribed' AND (unsubscribed_at AT TIME ZONE 'America/New_York')::date = $1)::int AS unsub_today, COUNT(*) FILTER (WHERE status = 'unsubscribed')::int AS unsub FROM newsletter_subscribers`, [et.date]).catch(() => ({ rows: [{ unsub_today: 0, unsub: 0 }] }))).rows[0];
-    const plan = (await query(`SELECT audience, day_index, budget, planned FROM outreach_plan_seq7 WHERE plan_date = $1 ORDER BY audience`, [et.date]).catch(() => ({ rows: [] }))).rows as { audience: string; day_index: number; budget: number; planned: number }[];
+          FROM newsletter_subscribers n WHERE n.status = 'confirmed' AND n.confirmed_at IS NOT NULL AND n.source NOT IN ('seed-test','qa') GROUP BY 1`, [date])).rows as { lane: string; today: number; total: number }[];
+    const tot = (await query(`SELECT COUNT(*) FILTER (WHERE status = 'unsubscribed' AND (unsubscribed_at AT TIME ZONE 'America/New_York')::date = $1)::int AS unsub_today, COUNT(*) FILTER (WHERE status = 'unsubscribed')::int AS unsub FROM newsletter_subscribers`, [date]).catch(() => ({ rows: [{ unsub_today: 0, unsub: 0 }] }))).rows[0];
+    const plan = (await query(`SELECT audience, day_index, budget, planned FROM outreach_plan_seq7 WHERE plan_date = $1 ORDER BY audience`, [date]).catch(() => ({ rows: [] }))).rows as { audience: string; day_index: number; budget: number; planned: number }[];
     const dom = await query(`SELECT domain, status, paused_reason FROM outreach_domains WHERE status = 'active' OR paused_at > NOW() - INTERVAL '3 days' ORDER BY domain`);
     const seedRows = await query(`
         SELECT k.domain, r.mailbox, r.placement FROM outreach_seed_checks k JOIN outreach_seed_results r USING (token)
@@ -823,7 +820,7 @@ export async function reportIfDue(now = new Date()): Promise<boolean> {
         })]
         : [];
     const sumToday = subs.reduce((a, r) => a + r.today, 0), sumTotal = subs.reduce((a, r) => a + r.total, 0);
-    const lines: string[] = [`Outreach report for ${et.date} (through ${String(et.hour).padStart(2, '0')}:00 ET).`];
+    const lines: string[] = [`Outreach report for ${date} (${label}).`];
     lines.push('', `New subscribers today: ${sumToday}. Total confirmed: ${sumTotal}. Unsubscribed today: ${tot.unsub_today}, all time: ${tot.unsub}.`);
     for (const lane of [...LANES, 'Direct sign up']) {
         const sb = subs.find((r) => r.lane === lane); const sd = sends.filter((r) => r.lane === lane); const cl = clicks.filter((r) => r.lane === lane); const pl = pool.find((r) => r.lane === lane);
@@ -837,7 +834,15 @@ export async function reportIfDue(now = new Date()): Promise<boolean> {
     }
     lines.push('', 'Daily plan by domain (day, budget, planned):', ...(plan.length ? plan.map((r) => `- ${r.audience.replace('dom:', '')}: day ${r.day_index}, ${r.budget}, ${r.planned}`) : ['- none']));
     lines.push(...seedLines, '', 'Domains:', ...dom.rows.map((r) => `- ${r.domain}: ${r.status}${r.paused_reason ? ` (${r.paused_reason})` : ''}`));
-    await sendAlert(`Outreach report ${et.date}: ${sumToday} new subscribers`, lines.join('\n'));
+    return { subject: `Outreach report ${date}: ${sumToday} new subscribers`, body: lines.join('\n') };
+}
+
+export async function reportIfDue(now = new Date()): Promise<boolean> {
+    const s = await getSettings();
+    const et = etParts(now);
+    if (s.paused !== 'false' || et.hour < 17 || s.last_report_date === et.date) return false;
+    const r = await buildOutreachReport(et.date, `through ${String(et.hour).padStart(2, '0')}:00 ET`);
+    await sendAlert(r.subject, r.body);
     await setSetting('last_report_date', et.date);
     return true;
 }

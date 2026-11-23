@@ -16,16 +16,41 @@ const BATCH = 90;
  * It never sends to an address with no earlier issue email, so imported addresses are not touched.
  * On only when outreach_settings weekly_issue_send is 'on'.   ?dry=1 counts who is due and sends nothing.
  */
+/**
+ * Retries the welcome email for recent subscribers who have no successful issue email at all. The weekly sender only
+ * writes to addresses that already received one, so a failed welcome would otherwise leave that person out for good.
+ * At most 3 tries, one every 20 minutes, only for people confirmed in the last 7 days.
+ */
+async function retryWelcomes(): Promise<{ tried: number; sent: number }> {
+    const r = await query(
+        `SELECT s.id, s.email, s.cadence FROM newsletter_subscribers s
+          WHERE s.status = 'confirmed' AND s.confirmed_at > NOW() - INTERVAL '7 days'
+            AND NOT EXISTS (SELECT 1 FROM newsletter_suppression sup WHERE sup.email = s.email)
+            AND NOT EXISTS (SELECT 1 FROM newsletter_send_log l WHERE l.subscriber_id = s.id AND l.ok AND l.kind IN ${CLOCK_KINDS})
+            AND (SELECT count(*) FROM newsletter_send_log l WHERE l.subscriber_id = s.id AND l.kind = 'welcome') < 3
+            AND NOT EXISTS (SELECT 1 FROM newsletter_send_log l WHERE l.subscriber_id = s.id AND l.kind = 'welcome' AND l.created_at > NOW() - INTERVAL '20 minutes')
+            AND s.confirmed_at < NOW() - INTERVAL '10 minutes'
+          ORDER BY s.confirmed_at LIMIT 20`);
+    let sent = 0;
+    for (const s of r.rows as { id: number; email: string; cadence: string }[]) {
+        if (await sendSubscriberLink({ email: s.email, subscriberId: s.id, cadence: s.cadence })) sent++;
+        await new Promise((x) => setTimeout(x, 350));
+    }
+    return { tried: r.rowCount ?? 0, sent };
+}
+
 export async function GET(req: NextRequest) {
     const expected = process.env.CRON_SECRET;
     if (!expected || req.headers.get('authorization') !== `Bearer ${expected}`) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const dry = req.nextUrl.searchParams.get('dry') === '1';
     if (!dry && !(await weeklySendOn())) return NextResponse.json({ skipped: 'weekly issue sending is off' });
+    await ensureNewsletterTables();
+    const welcomeRetry = dry ? null : await retryWelcomes().catch(() => null);
     const editions = await weeklyEditions();
     const latest = editions[editions.length - 1];
     if (!latest) return NextResponse.json({ skipped: 'no published weekly edition yet' });
     const sendAt = editionSendAt(latest.date, latest.createdAt);
-    if (!dry && Date.now() < sendAt.getTime()) return NextResponse.json({ skipped: 'not yet send time', edition: latest.subject, sendAt: sendAt.toISOString() });
+    if (!dry && Date.now() < sendAt.getTime()) return NextResponse.json({ welcomeRetry, skipped: 'not yet send time', edition: latest.subject, sendAt: sendAt.toISOString() });
     await ensureNewsletterTables();
     const due = await query(
         `SELECT s.id, s.email, s.cadence, l.last FROM newsletter_subscribers s
@@ -46,5 +71,5 @@ export async function GET(req: NextRequest) {
         if (ok) sent++; else failed++;
         await new Promise((r) => setTimeout(r, 350));
     }
-    return NextResponse.json({ edition: latest.subject, due: due.rowCount, sent, failed });
+    return NextResponse.json({ welcomeRetry, edition: latest.subject, due: due.rowCount, sent, failed });
 }

@@ -32,10 +32,6 @@ export async function oneClickSubscribe(o: {
     try {
         const c = await getContact(o.token);
         if (!c) return 'form';
-        // Opening the page runs a script that posts here, so security software that renders pages can reach this point.
-        // Automatic enrollment from a personal link stays off unless the setting one_click_subscribe is set to 'on'.
-        const cfg = await getSettings();
-        if (String(cfg.one_click_subscribe ?? 'off').toLowerCase() !== 'on') return 'form';
         if (['unsubscribed', 'bounced', 'complained'].includes(c.status)) return 'form';
         const ipHash = hashIp(o.ip);
         if (!o.ip || !ipHash) return 'form';
